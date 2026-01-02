@@ -20,7 +20,7 @@ export default async function CataloguePage() {
         <div className="max-w-6xl mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Produk (Recipes)</h1>
+                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Product</h1>
                     <p className="text-muted-foreground">Manage your finished goods and their recipes/BOM.</p>
                 </div>
             </div>

@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { processBatchCheckout } from '@/app/actions/checkout'
-import { Search, ShoppingCart, Minus, Plus, Trash2, X } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import { useConfirmation } from '@/components/providers/modal-provider'
 
 type Product = {
     id: string
@@ -23,6 +24,9 @@ export default function POSSystem({ products }: { products: Product[] }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+    const [showReceipt, setShowReceipt] = useState(false)
+    const [receiptData, setReceiptData] = useState<CartItem[]>([])
+    const { showConfirmation } = useConfirmation()
 
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,17 +66,30 @@ export default function POSSystem({ products }: { products: Product[] }) {
     }
 
     const handleCheckout = async () => {
-        setLoading(true)
-        setMessage(null)
-        try {
-            await processBatchCheckout(cart.map(item => ({ productId: item.id, quantity: item.quantity })))
-            setCart([])
-            setMessage({ type: 'success', text: 'Order processed successfully!' })
-        } catch (e: any) {
-            setMessage({ type: 'error', text: e.message || 'Checkout failed' })
-        } finally {
-            setLoading(false)
-        }
+        showConfirmation({
+            type: 'confirm',
+            title: 'Complete Checkout',
+            message: 'Are you sure you want to complete this checkout? This action cannot be undone.',
+            action: async () => {
+                setLoading(true)
+                setMessage(null)
+                try {
+                    await processBatchCheckout(cart.map(item => ({ productId: item.id, quantity: item.quantity })))
+                    setReceiptData([...cart])
+                    setCart([])
+                    setShowReceipt(true)
+                    setMessage({ type: 'success', text: 'Order processed successfully!' })
+                } catch (e: any) {
+                    setMessage({ type: 'error', text: e.message || 'Checkout failed' })
+                } finally {
+                    setLoading(false)
+                }
+            }
+        })
+    }
+
+    const handlePrintReceipt = () => {
+        window.print()
     }
 
     const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0)
@@ -200,6 +217,104 @@ export default function POSSystem({ products }: { products: Product[] }) {
                     </button>
                 </div>
             </div>
+
+            {/* Receipt Modal */}
+            {showReceipt && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full">
+                        {/* Receipt Header - No Print */}
+                        <div className="p-4 border-b border-gray-200 flex justify-between items-center no-print">
+                            <h3 className="text-lg font-bold text-gray-900">Receipt</h3>
+                            <button
+                                onClick={() => setShowReceipt(false)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5 text-gray-600" />
+                            </button>
+                        </div>
+
+                        {/* Thermal Receipt - 70mm width */}
+                        <div id="receipt" className="receipt-print" style={{ width: '70mm', margin: '0 auto' }}>
+                            <style jsx global>{`
+                                @media print {
+                                    body * {
+                                        visibility: hidden;
+                                    }
+                                    .receipt-print, .receipt-print * {
+                                        visibility: visible;
+                                    }
+                                    .receipt-print {
+                                        position: absolute;
+                                        left: 0;
+                                        top: 0;
+                                        width: 70mm;
+                                        margin: 0;
+                                        padding: 5mm;
+                                    }
+                                    .no-print {
+                                        display: none !important;
+                                    }
+                                }
+                            `}</style>
+
+                            <div className="p-4 text-black" style={{ fontFamily: 'monospace' }}>
+                                {/* Store Header */}
+                                <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
+                                    <h2 className="text-xl font-bold">Ichibot Production</h2>
+                                    <p className="text-xs mt-1">Bill of Materials (BOM) Request</p>
+                                    <p className="text-xs mt-1">{new Date().toLocaleString()}</p>
+                                </div>
+
+                                {/* Items */}
+                                <div className="mb-4">
+                                    {receiptData.map((item, idx) => (
+                                        <div key={idx} className="mb-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-medium">{item.name}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs text-gray-600">
+                                                <span>{item.sku}</span>
+                                                <span>{item.quantity} pcs</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Total */}
+                                <div className="border-t-2 border-dashed border-gray-400 pt-3 mt-3">
+                                    <div className="flex justify-between font-bold text-base">
+                                        <span>TOTAL ITEMS:</span>
+                                        <span>{receiptData.reduce((acc, item) => acc + item.quantity, 0)} pcs</span>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="text-center mt-4 pt-3 border-t border-gray-300 text-xs">
+                                    <p>Thank you!</p>
+                                    <p className="mt-1">Powered by Ichibot</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons - No Print */}
+                        <div className="p-4 border-t border-gray-200 flex gap-3 no-print">
+                            <button
+                                onClick={() => setShowReceipt(false)}
+                                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={handlePrintReceipt}
+                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Printer className="w-4 h-4" />
+                                Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

@@ -43,6 +43,34 @@ export default function ProductList({
 
     // Add Stock Modal State
     const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null)
+    const [addImagePreview, setAddImagePreview] = useState<string | null>(null)
+    const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
+    const [addImageFile, setAddImageFile] = useState<File | null>(null)
+    const [editImageFile, setEditImageFile] = useState<File | null>(null)
+
+    const handleAddImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setAddImageFile(file)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setAddImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setEditImageFile(file)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setEditImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        }
+    }
 
     const handleDelete = async (id: string) => {
         showConfirmation({
@@ -56,17 +84,27 @@ export default function ProductList({
     }
 
     async function handleAddProduct(formData: FormData) {
+        if (addImageFile) {
+            formData.set('image', addImageFile)
+        }
         setIsLoading(true)
         await createProduct(formData)
         setIsLoading(false)
         setIsAdding(false)
+        setAddImagePreview(null)
+        setAddImageFile(null)
     }
 
     async function handleUpdateProduct(formData: FormData) {
+        if (editImageFile) {
+            formData.set('image', editImageFile)
+        }
         setIsLoading(true)
         await updateProduct(formData)
         setIsLoading(false)
         setEditingProduct(null)
+        setEditImagePreview(null)
+        setEditImageFile(null)
     }
 
     async function handleAddStock(formData: FormData) {
@@ -150,11 +188,27 @@ export default function ProductList({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Product Image</label>
-                                <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                    <input type="file" name="image" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-sm text-muted-foreground">Click or Drag to upload thumbnail</p>
-                                </div>
+                                {addImagePreview ? (
+                                    <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                        <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAddImagePreview(null)
+                                                setAddImageFile(null)
+                                            }}
+                                            className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
+                                        <input type="file" name="image" accept="image/*" onChange={handleAddImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                        <p className="text-sm text-muted-foreground">Click or Drag to upload thumbnail</p>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
@@ -193,11 +247,37 @@ export default function ProductList({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Change Image (Optional)</label>
-                                    <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                        <input type="file" name="image" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                        <p className="text-sm text-muted-foreground">Click or Drag to upload new thumbnail</p>
-                                    </div>
+                                    {editImagePreview ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={editImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setEditImagePreview(null)
+                                                    setEditImageFile(null)
+                                                }}
+                                                className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ) : editingProduct.image ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={editingProduct.image} alt="Current" className="w-full h-48 object-contain rounded" />
+                                            <div className="mt-2">
+                                                <label className="cursor-pointer inline-block px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-medium">
+                                                    Change Image
+                                                    <input type="file" name="image" accept="image/*" onChange={handleEditImageChange} className="hidden" />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
+                                            <input type="file" name="image" accept="image/*" onChange={handleEditImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                            <p className="text-sm text-muted-foreground">Click or Drag to upload new thumbnail</p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
