@@ -97,14 +97,12 @@ export default function IngredientManager({
         p.sku.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    async function handleAddIngredient(formData: FormData) {
-        if (!selectedProduct) return
-
-        // VALIDATION: Check checks for duplicates in the CURRENT section
+    // Handle product selection with duplicate check
+    const handleProductSelect = (product: Product) => {
         const targetSectionId = activeSectionId // null if general/uncategorized
 
         const existing = initialIngredients.find(ing =>
-            ing.product.id === selectedProduct.id &&
+            ing.product.id === product.id &&
             ing.sectionId === targetSectionId
         )
 
@@ -112,10 +110,16 @@ export default function IngredientManager({
             showConfirmation({
                 type: 'alert',
                 title: 'Duplicate Item',
-                message: `Item "${selectedProduct.name}" is already in this section!`
+                message: `Item "${product.name}" is already in this section!`
             })
             return
         }
+
+        setSelectedProduct(product)
+    }
+
+    async function handleAddIngredient(formData: FormData) {
+        if (!selectedProduct) return
 
         setIsLoading(true)
         formData.append('productId', selectedProduct.id)
@@ -388,7 +392,7 @@ export default function IngredientManager({
                                     {filteredProducts.map(p => (
                                         <button
                                             key={p.id}
-                                            onClick={() => setSelectedProduct(p)}
+                                            onClick={() => handleProductSelect(p)}
                                             className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors text-left"
                                         >
                                             <div className="w-8 h-8 rounded bg-muted relative overflow-hidden shrink-0">
