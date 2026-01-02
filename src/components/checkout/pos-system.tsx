@@ -89,7 +89,128 @@ export default function POSSystem({ products }: { products: Product[] }) {
     }
 
     const handlePrintReceipt = () => {
-        window.print()
+        const printWindow = window.open('', '_blank', 'width=280,height=600')
+        if (!printWindow) return
+
+        const receiptHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Receipt</title>
+                <style>
+                    @page {
+                        size: 70mm auto;
+                        margin: 0;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        width: 70mm;
+                        margin: 0;
+                        padding: 5mm;
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                        line-height: 1.4;
+                        color: #000;
+                        background: #fff;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 10px;
+                        padding-bottom: 10px;
+                        border-bottom: 2px dashed #000;
+                    }
+                    .header h1 {
+                        font-size: 18px;
+                        font-weight: bold;
+                        margin-bottom: 5px;
+                    }
+                    .header p {
+                        font-size: 10px;
+                        margin: 2px 0;
+                    }
+                    .item {
+                        margin-bottom: 8px;
+                    }
+                    .item-name {
+                        font-weight: bold;
+                        font-size: 12px;
+                    }
+                    .item-details {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 10px;
+                        color: #333;
+                    }
+                    .total {
+                        margin-top: 10px;
+                        padding-top: 10px;
+                        border-top: 2px dashed #000;
+                        display: flex;
+                        justify-content: space-between;
+                        font-weight: bold;
+                        font-size: 14px;
+                    }
+                    .footer {
+                        text-align: center;
+                        margin-top: 10px;
+                        padding-top: 10px;
+                        border-top: 1px solid #000;
+                        font-size: 10px;
+                    }
+                    @media print {
+                        body {
+                            width: 70mm;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Ichibot Production</h1>
+                    <p>Bill of Materials (BOM) Request</p>
+                    <p>${new Date().toLocaleString()}</p>
+                </div>
+                
+                <div class="items">
+                    ${receiptData.map(item => `
+                        <div class="item">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-details">
+                                <span>${item.sku}</span>
+                                <span>${item.quantity} pcs</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="total">
+                    <span>TOTAL ITEMS:</span>
+                    <span>${receiptData.reduce((acc, item) => acc + item.quantity, 0)} pcs</span>
+                </div>
+                
+                <div class="footer">
+                    <p>Thank you!</p>
+                    <p>Powered by Ichibot</p>
+                </div>
+                
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        // Auto close after print dialog is closed (optional)
+                        // window.onafterprint = function() { window.close(); }
+                    }
+                </script>
+            </body>
+            </html>
+        `
+
+        printWindow.document.write(receiptHTML)
+        printWindow.document.close()
     }
 
     const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0)
@@ -235,27 +356,6 @@ export default function POSSystem({ products }: { products: Product[] }) {
 
                         {/* Thermal Receipt - 70mm width */}
                         <div id="receipt" className="receipt-print" style={{ width: '70mm', margin: '0 auto' }}>
-                            <style jsx global>{`
-                                @media print {
-                                    body * {
-                                        visibility: hidden;
-                                    }
-                                    .receipt-print, .receipt-print * {
-                                        visibility: visible;
-                                    }
-                                    .receipt-print {
-                                        position: absolute;
-                                        left: 0;
-                                        top: 0;
-                                        width: 70mm;
-                                        margin: 0;
-                                        padding: 5mm;
-                                    }
-                                    .no-print {
-                                        display: none !important;
-                                    }
-                                }
-                            `}</style>
 
                             <div className="p-4 text-black" style={{ fontFamily: 'monospace' }}>
                                 {/* Store Header */}
