@@ -13,6 +13,13 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         include: {
             ingredients: {
                 include: { product: true }
+            },
+            sections: {
+                orderBy: { createdAt: 'asc' },
+                select: {
+                    id: true,
+                    name: true
+                }
             }
         }
     })
@@ -43,7 +50,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
 
                 <IngredientManager
                     recipeId={recipe.id}
+                    recipeName={recipe.name}
                     initialIngredients={recipe.ingredients}
+                    initialSections={recipe.sections}
                     allProducts={allProducts}
                 />
             </div>

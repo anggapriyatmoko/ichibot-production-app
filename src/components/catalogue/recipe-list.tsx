@@ -5,6 +5,7 @@ import { createRecipe, deleteRecipe } from '@/app/actions/recipe'
 import { Plus, BookOpen, Trash2, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useConfirmation } from '@/components/providers/modal-provider'
 
 type RecipeWithCount = {
     id: string
@@ -18,6 +19,7 @@ export default function RecipeList({ recipes }: { recipes: RecipeWithCount[] }) 
     const [isAdding, setIsAdding] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
+    const { showConfirmation } = useConfirmation()
 
     async function handleAdd(formData: FormData) {
         setIsLoading(true)
@@ -27,8 +29,14 @@ export default function RecipeList({ recipes }: { recipes: RecipeWithCount[] }) 
     }
 
     async function handleDelete(id: string) {
-        if (!confirm('Delete this recipe?')) return
-        await deleteRecipe(id)
+        showConfirmation({
+            title: 'Delete Product',
+            message: 'Are you sure you want to delete this product? This action cannot be undone.',
+            type: 'confirm',
+            action: async () => {
+                await deleteRecipe(id)
+            }
+        })
     }
 
     return (

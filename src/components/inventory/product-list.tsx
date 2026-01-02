@@ -6,6 +6,7 @@ import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, Chev
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { useConfirmation } from '@/components/providers/modal-provider'
 
 type Product = {
     id: string
@@ -31,6 +32,7 @@ export default function ProductList({
     currentPage: number
 }) {
     const router = useRouter()
+    const { showConfirmation } = useConfirmation()
     const [isAdding, setIsAdding] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
@@ -43,9 +45,14 @@ export default function ProductList({
     const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null)
 
     const handleDelete = async (id: string) => {
-        if (confirm('Are you sure?')) {
-            await deleteProduct(id)
-        }
+        showConfirmation({
+            title: 'Delete Product',
+            message: 'Are you sure you want to delete this item? This action cannot be undone.',
+            type: 'confirm',
+            action: async () => {
+                await deleteProduct(id)
+            }
+        })
     }
 
     async function handleAddProduct(formData: FormData) {

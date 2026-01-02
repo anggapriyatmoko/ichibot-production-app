@@ -49,6 +49,16 @@ model Recipe {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   ingredients RecipeIngredient[]
+  sections    RecipeSection[]
+}
+
+model RecipeSection {
+  id          String             @id @default(cuid())
+  name        String
+  recipeId    String
+  recipe      Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+  createdAt   DateTime           @default(now())
 }
 
 model RecipeIngredient {
@@ -57,6 +67,8 @@ model RecipeIngredient {
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id])
+  sectionId String?
+  section   RecipeSection? @relation(fields: [sectionId], references: [id])
   quantity  Int
   notes     String?
 }
