@@ -93,7 +93,7 @@ export default function RecipeList({ recipes }: { recipes: RecipeWithCount[] }) 
 
                             <div className="flex items-center justify-between pt-4 border-t border-border mt-2">
                                 <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
-                                    {recipe._count.ingredients} Ingredients
+                                    {recipe._count.ingredients} Sparepart
                                 </span>
                                 <span className="flex items-center text-xs text-primary font-medium">
                                     Manage <ChevronRight className="w-3 h-3 ml-1" />

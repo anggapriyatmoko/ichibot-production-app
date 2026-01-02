@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
     // 1. Fetch Stats
     const totalProducts = await prisma.product.count()
+    const totalRecipes = await prisma.recipe.count()
+    const totalSpareparts = await prisma.recipeIngredient.count()
 
     // Low stock count (doing this in JS to ensure accuracy with thresholds, or raw query)
     // For small datasets, fetching all is fine. For large, use raw query or aggregated view.
@@ -48,15 +50,27 @@ export default async function DashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400">
+                            <Package className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground">Total Produk</p>
+                            <p className="text-2xl font-bold text-foreground">{totalRecipes}</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400">
                             <Package className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Total Products</p>
-                            <p className="text-2xl font-bold text-foreground">{totalProducts}</p>
+                            <p className="text-sm text-muted-foreground">Total Sparepart</p>
+                            <p className="text-2xl font-bold text-foreground">{totalSpareparts}</p>
                         </div>
                     </div>
                 </div>

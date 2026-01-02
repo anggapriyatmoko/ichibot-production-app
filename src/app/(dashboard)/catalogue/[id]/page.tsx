@@ -43,11 +43,6 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
             </div>
 
             <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                <div className="p-6 border-b border-border">
-                    <h2 className="text-xl font-bold text-foreground">Ingredients (BOM)</h2>
-                    <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
-                </div>
-
                 <IngredientManager
                     recipeId={recipe.id}
                     recipeName={recipe.name}

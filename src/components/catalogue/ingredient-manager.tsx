@@ -158,8 +158,8 @@ export default function IngredientManager({
     async function handleRemoveIngredient(id: string) {
         showConfirmation({
             type: 'confirm',
-            title: 'Remove Ingredient',
-            message: 'Are you sure you want to remove this ingredient?',
+            title: 'Remove Sparepart',
+            message: 'Are you sure you want to remove this sparepart?',
             action: async () => {
                 await removeIngredient(id, recipeId)
             }
@@ -201,23 +201,58 @@ export default function IngredientManager({
                         left: 0;
                         top: 0;
                         width: 100%;
+                        padding: 20px;
                     }
                     .no-print {
                         display: none !important;
                     }
+                    .print-section {
+                        page-break-inside: avoid;
+                        margin-bottom: 30px;
+                    }
+                    .print-section table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    .print-section th,
+                    .print-section td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                        text-align: left;
+                    }
+                    .print-section h3 {
+                        font-size: 18px;
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                        color: #000;
+                    }
+                    .print-section h4 {
+                        font-size: 14px;
+                        font-weight: bold;
+                        margin: 20px 0 10px 0;
+                        color: #333;
+                    }
                 }
             `}</style>
 
-            <div className="flex justify-between items-center no-print">
-                <h2 className="text-xl font-bold">Manage Ingredients</h2>
+            {/* BOM Header with PDF Button */}
+            <div className="p-6 border-b border-border flex justify-between items-start no-print">
+                <div>
+                    <h2 className="text-xl font-bold text-foreground">Bill of Materials (BOM)</h2>
+                    <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
+                </div>
+                <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
+                >
+                    <Printer className="w-4 h-4" />
+                    Download PDF / Print
+                </button>
+            </div>
+
+            <div className="flex justify-between items-center no-print p-6">
+                <h2 className="text-xl font-bold">Manage Sparepart</h2>
                 <div className="flex gap-2">
-                    <button
-                        onClick={handlePrint}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
-                    >
-                        <Printer className="w-4 h-4" />
-                        Download PDF / Print
-                    </button>
                     <button
                         onClick={() => setIsAddingSection(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
@@ -230,7 +265,7 @@ export default function IngredientManager({
 
             {/* Render Sections */}
             {sections.map(section => (
-                <div key={section.id} className="border border-border rounded-xl overflow-hidden no-print">
+                <div key={section.id} className="border border-border rounded-xl overflow-hidden no-print print-section">
                     <div className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b border-border">
                         <div className="flex items-center gap-3">
                             <Folder className="w-4 h-4 text-blue-500" />
@@ -273,14 +308,14 @@ export default function IngredientManager({
 
             {/* Uncategorized / General Section */}
             {(ingredientsBySection['uncategorized']?.length > 0 || sections.length === 0) && (
-                <div className="border border-border rounded-xl overflow-hidden no-print">
+                <div className="border border-border rounded-xl overflow-hidden no-print print-section">
                     <div className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b border-border">
                         <div className="flex items-center gap-2">
                             {editingUncategorized ? (
                                 <form action={handleRenameUncategorized} className="flex items-center gap-2">
                                     <input
                                         name="name"
-                                        defaultValue="Other Ingredients"
+                                        defaultValue="Other Sparepart"
                                         className="h-7 px-2 bg-background border border-border rounded text-sm focus:border-primary outline-none"
                                         autoFocus
                                     />
@@ -289,7 +324,7 @@ export default function IngredientManager({
                                 </form>
                             ) : (
                                 <div className="flex items-center gap-2 group">
-                                    <h3 className="font-bold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Other Ingredients</h3>
+                                    <h3 className="font-bold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Other Sparepart</h3>
                                     <button onClick={() => setEditingUncategorized(true)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
                                         <Edit2 className="w-3 h-3" />
                                     </button>
@@ -309,7 +344,89 @@ export default function IngredientManager({
 
             {/* SUMMARY TABLE (Always Visible) */}
             <div className="mt-12 pt-8 border-t border-border print-area">
-                <h3 className="text-xl font-bold mb-4 text-foreground">All Ingredients (BOM) of {recipeName}</h3>
+                <h3 className="text-xl font-bold text-foreground mb-4">Bill of Materials (BOM) - {recipeName}</h3>
+
+                {/* Print: Section Tables */}
+                <div className="hidden print:block print-section">
+                    {sections.map(section => (
+                        <div key={section.id} className="mb-8">
+                            <h4 className="font-bold text-lg mb-3">{section.name}</h4>
+                            <table className="w-full text-left text-sm border-collapse">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="px-4 py-3 border">SKU</th>
+                                        <th className="px-4 py-3 border">Item</th>
+                                        <th className="px-4 py-3 border">Quantity</th>
+                                        <th className="px-4 py-3 border">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(ingredientsBySection[section.id] || []).map(ing => (
+                                        <tr key={ing.id}>
+                                            <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
+                                            <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
+                                            <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
+                                            <td className="px-4 py-3 border">{ing.notes || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
+
+                    {ingredientsBySection['uncategorized']?.length > 0 && (
+                        <div className="mb-8">
+                            <h4 className="font-bold text-lg mb-3">Other Sparepart</h4>
+                            <table className="w-full text-left text-sm border-collapse">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="px-4 py-3 border">SKU</th>
+                                        <th className="px-4 py-3 border">Item</th>
+                                        <th className="px-4 py-3 border">Quantity</th>
+                                        <th className="px-4 py-3 border">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(ingredientsBySection['uncategorized'] || []).map(ing => (
+                                        <tr key={ing.id}>
+                                            <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
+                                            <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
+                                            <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
+                                            <td className="px-4 py-3 border">{ing.notes || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    <div className="mt-8 pt-4 border-t-2 border-black">
+                        <h4 className="font-bold text-lg mb-3">All Sparepart (BOM) - {recipeName}</h4>
+                        <table className="w-full text-left text-sm border-collapse">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th className="px-4 py-3 border">SKU</th>
+                                    <th className="px-4 py-3 border">Item</th>
+                                    <th className="px-4 py-3 border">Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {aggregatedIngredients.map(ing => (
+                                    <tr key={ing.product.id}>
+                                        <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
+                                        <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
+                                        <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
+                                    </tr>
+                                ))}
+                                {initialIngredients.length === 0 && (
+                                    <tr><td colSpan={3} className="px-4 py-3 border text-center">No sparepart found.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Screen: Summary Table */}
                 <div className="border border-border rounded-xl overflow-hidden shadow-sm">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-muted/50 text-muted-foreground uppercase font-medium text-xs">
@@ -334,7 +451,7 @@ export default function IngredientManager({
                                 </tr>
                             ))}
                             {initialIngredients.length === 0 && (
-                                <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No ingredients found.</td></tr>
+                                <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No sparepart found.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -344,7 +461,7 @@ export default function IngredientManager({
             {/* If absolutely nothing exists */}
             {sections.length === 0 && (!ingredientsBySection['uncategorized'] || ingredientsBySection['uncategorized'].length === 0) && (
                 <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl no-print">
-                    No ingredients or sections. Start by categorizing with a section or adding items directly.
+                    No sparepart or sections. Start by categorizing with a section or adding items directly.
                 </div>
             )}
 
@@ -357,7 +474,7 @@ export default function IngredientManager({
                         <form action={handleCreateSection} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
-                                <input name="name" autoFocus required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. Dry Ingredients" />
+                                <input name="name" autoFocus required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. Dry Sparepart" />
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
@@ -368,12 +485,12 @@ export default function IngredientManager({
                 </div>
             )}
 
-            {/* Add Ingredient Modal */}
+            {/* Add Sparepart Modal */}
             {isAddingIngredient && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
                     <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-foreground mb-4">
-                            Add Ingredient {activeSectionId ? 'to Section' : ''}
+                            Add Sparepart {activeSectionId ? 'to Section' : ''}
                         </h3>
 
                         {!selectedProduct ? (
@@ -435,7 +552,7 @@ export default function IngredientManager({
                                 <div className="flex justify-end gap-3 pt-2">
                                     <button type="button" onClick={() => setIsAddingIngredient(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
                                     <button disabled={isLoading} type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">
-                                        {isLoading ? 'Adding...' : 'Add Ingredient'}
+                                        {isLoading ? 'Adding...' : 'Add Sparepart'}
                                     </button>
                                 </div>
                             </form>
@@ -451,7 +568,7 @@ export default function IngredientManager({
 
 function IngredientsTable({ ingredients, onRemove }: { ingredients: Ingredient[], onRemove: (id: string) => void }) {
     if (ingredients.length === 0) {
-        return <div className="p-8 text-center text-sm text-muted-foreground italic">No ingredients in this section.</div>
+        return <div className="p-8 text-center text-sm text-muted-foreground italic">No sparepart in this section.</div>
     }
 
     return (
