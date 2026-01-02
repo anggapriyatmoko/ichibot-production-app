@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
+import sharp from 'sharp'
 
 export async function createProduct(formData: FormData) {
     const name = formData.get('name') as string
@@ -16,6 +17,15 @@ export async function createProduct(formData: FormData) {
 
     if (imageFile && imageFile.size > 0) {
         const buffer = Buffer.from(await imageFile.arrayBuffer())
+
+        // Resize with Sharp
+        const resizedBuffer = await sharp(buffer)
+            .resize(700, 700, {
+                fit: 'inside',
+                withoutEnlargement: true
+            })
+            .toBuffer()
+
         const filename = Date.now() + '-' + imageFile.name.replace(/\s/g, '-')
         const uploadDir = path.join(process.cwd(), 'public', 'uploads')
 
@@ -24,7 +34,7 @@ export async function createProduct(formData: FormData) {
             await mkdir(uploadDir, { recursive: true })
         } catch (e) { }
 
-        await writeFile(path.join(uploadDir, filename), buffer)
+        await writeFile(path.join(uploadDir, filename), resizedBuffer)
         imagePath = '/uploads/' + filename
     }
 
@@ -40,6 +50,48 @@ export async function createProduct(formData: FormData) {
 
     revalidatePath('/inventory')
 }
+
+export async function updateProduct(formData: FormData) {
+    const id = formData.get('id') as string
+    const name = formData.get('name') as string
+    const sku = formData.get('sku') as string
+    const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
+    const imageFile = formData.get('image') as File | null
+
+    const data: any = {
+        name,
+        sku,
+        lowStockThreshold
+    }
+
+    if (imageFile && imageFile.size > 0) {
+        const buffer = Buffer.from(await imageFile.arrayBuffer())
+
+        // Resize with Sharp
+        const resizedBuffer = await sharp(buffer)
+            .resize(700, 700, {
+                fit: 'inside',
+                withoutEnlargement: true
+            })
+            .toBuffer()
+
+        const filename = Date.now() + '-' + imageFile.name.replace(/\s/g, '-')
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+
+        try { await mkdir(uploadDir, { recursive: true }) } catch (e) { }
+
+        await writeFile(path.join(uploadDir, filename), resizedBuffer)
+        data.image = '/uploads/' + filename
+    }
+
+    await prisma.product.update({
+        where: { id },
+        data
+    })
+
+    revalidatePath('/inventory')
+}
+
 
 export async function addStock(productId: string, quantity: number) {
     await prisma.$transaction([

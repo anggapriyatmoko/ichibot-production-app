@@ -13,8 +13,8 @@ export default async function CheckoutPage() {
     return (
         <div className="h-full">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-white tracking-tight">Point of Sale</h1>
-                <p className="text-sm text-gray-400">Select items to checkout from inventory.</p>
+                <h1 className="text-2xl font-bold text-foreground tracking-tight">Point of Sale</h1>
+                <p className="text-sm text-muted-foreground">Select items to checkout from inventory.</p>
             </div>
 
             <POSSystem products={products} />

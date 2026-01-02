@@ -2,23 +2,31 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
+
+
 const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Produk', href: '/catalogue', icon: BookOpen },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Checkout', href: '/checkout', icon: ShoppingCart },
     { name: 'History', href: '/history', icon: LayoutDashboard },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+    userProfile: React.ReactNode
+}
+
+export default function Sidebar({ userProfile }: SidebarProps) {
     const pathname = usePathname()
 
     return (
-        <div className="flex h-full w-64 flex-col bg-[#0a0a0a] border-r border-white/10">
-            <div className="flex h-16 items-center px-6 border-b border-white/10">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+        <div className="flex h-full w-64 flex-col bg-card border-r border-border">
+            <div className="flex h-16 items-center px-6 border-b border-border">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
                     StockManager
                 </h1>
             </div>
@@ -34,14 +42,14 @@ export default function Sidebar() {
                                 className={cn(
                                     'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                                     isActive
-                                        ? 'bg-blue-600/10 text-blue-400'
-                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        ? 'bg-primary/10 text-primary'
+                                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                                 )}
                             >
                                 <item.icon
                                     className={cn(
                                         'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
-                                        isActive ? 'text-blue-400' : 'text-gray-500 group-hover:text-white'
+                                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
                                     )}
                                 />
                                 {item.name}
@@ -51,15 +59,19 @@ export default function Sidebar() {
                 </nav>
             </div>
 
-            <div className="p-4 border-t border-white/10">
+            <div className="p-4 border-t border-border space-y-4">
+                {userProfile}
+
+
                 <button
                     onClick={() => signOut({ callbackUrl: '/login' })}
-                    className="flex w-full items-center px-3 py-2.5 text-sm font-medium text-red-400 rounded-lg hover:bg-red-400/10 transition-colors"
+                    className="flex flex-1 items-center justify-center px-3 py-2 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors"
                 >
-                    <LogOut className="mr-3 h-5 w-5" />
+                    <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                 </button>
             </div>
         </div>
+
     )
 }
