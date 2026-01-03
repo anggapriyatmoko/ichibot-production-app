@@ -14,7 +14,8 @@ export async function createProduct(formData: FormData) {
     const session: any = await getServerSession(authOptions)
 
     const name = formData.get('name') as string
-    const sku = formData.get('sku') as string
+    const rawSku = formData.get('sku') as string
+    const sku = rawSku && rawSku.trim() !== '' ? rawSku.trim() : null
     const stock = parseInt(formData.get('stock') as string)
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
     const imageFile = formData.get('image') as File | null
@@ -44,38 +45,47 @@ export async function createProduct(formData: FormData) {
         imagePath = '/uploads/' + filename
     }
 
-    const product = await prisma.product.create({
-        data: {
-            name,
-            sku,
-            stock,
-            lowStockThreshold,
-            image: imagePath
-        }
-    })
-
-    // Create transaction record if initial stock > 0
-    if (stock > 0) {
-        await prisma.transaction.create({
+    try {
+        const product = await prisma.product.create({
             data: {
-                type: 'IN',
-                quantity: stock,
-                productId: product.id,
-                userId: session?.user?.id || null
+                name,
+                sku: sku as any,
+                stock,
+                lowStockThreshold,
+                image: imagePath
             }
         })
-        console.log('Transaction created with userId:', session?.user?.id)
+
+        // Create transaction record if initial stock > 0
+        if (stock > 0) {
+            await prisma.transaction.create({
+                data: {
+                    type: 'IN',
+                    quantity: stock,
+                    productId: product.id,
+                    userId: session?.user?.id || null
+                }
+            })
+            console.log('Transaction created with userId:', session?.user?.id || 'system')
+        }
+    } catch (error: any) {
+        if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+            return { error: `SKU '${sku}' already exists.` }
+        }
+        return { error: error.message }
     }
 
     revalidatePath('/inventory')
     revalidatePath('/history')
+    return { success: true }
 }
 
 export async function updateProduct(formData: FormData) {
     await requireAdmin()
     const id = formData.get('id') as string
     const name = formData.get('name') as string
-    const sku = formData.get('sku') as string
+    const rawSku = formData.get('sku') as string
+    const sku = rawSku && rawSku.trim() !== '' ? rawSku.trim() : null
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
     const imageFile = formData.get('image') as File | null
 
@@ -105,12 +115,20 @@ export async function updateProduct(formData: FormData) {
         data.image = '/uploads/' + filename
     }
 
-    await prisma.product.update({
-        where: { id },
-        data
-    })
+    try {
+        await prisma.product.update({
+            where: { id },
+            data
+        })
+    } catch (error: any) {
+        if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+            return { error: `SKU '${sku}' already exists.` }
+        }
+        return { error: error.message }
+    }
 
     revalidatePath('/inventory')
+    return { success: true }
 }
 
 
@@ -149,4 +167,110 @@ export async function deleteProduct(id: string) {
         where: { id }
     })
     revalidatePath('/inventory')
+}
+
+export async function importProducts(products: any[]) {
+    await requireAdmin()
+    const session: any = await getServerSession(authOptions)
+
+    let successCount = 0
+    let errorCount = 0
+    const errors: string[] = []
+
+    for (const item of products) {
+        try {
+            // Validation: Name is required. SKU is optional.
+            if (!item.name) {
+                errorCount++
+                errors.push(`Row missing name: ${JSON.stringify(item)}`)
+                continue
+            }
+
+            const itemSku = item.sku ? String(item.sku).trim() : null
+            const sku = itemSku === '' ? null : itemSku
+            const name = String(item.name).trim()
+            const stock = item.stock ? parseInt(item.stock) : 0
+            const lowStockThreshold = item.lowStockThreshold ? parseInt(item.lowStockThreshold) : 10
+
+            // Check existing logic: Priority SKU -> Name
+            let existing = null
+
+            if (sku) {
+                existing = await prisma.product.findUnique({
+                    where: { sku }
+                })
+            }
+
+            if (!existing) {
+                // Determine uniqueness by Name if SKU not found or not provided
+                existing = await prisma.product.findFirst({
+                    where: { name }
+                })
+            }
+
+            if (existing) {
+                // Update
+                const updateData: any = {
+                    name,
+                    stock: stock,
+                    lowStockThreshold
+                }
+
+                // Only update SKU if provided and not empty
+                if (sku) {
+                    updateData.sku = sku
+                }
+                // If excel SKU is empty, we DO NOT clear the existing SKU. Preserve it.
+
+                await prisma.product.update({
+                    where: { id: existing.id },
+                    data: updateData
+                })
+
+                const diff = stock - existing.stock
+                if (diff !== 0) {
+                    await prisma.transaction.create({
+                        data: {
+                            type: diff > 0 ? 'IN' : 'OUT',
+                            quantity: Math.abs(diff),
+                            productId: existing.id,
+                            userId: session?.user?.id || null
+                        }
+                    })
+                }
+
+            } else {
+                // Create
+                const newProduct = await prisma.product.create({
+                    data: {
+                        name,
+                        sku: sku as any, // can be null
+                        stock,
+                        lowStockThreshold
+                    }
+                })
+
+                if (stock > 0) {
+                    await prisma.transaction.create({
+                        data: {
+                            type: 'IN',
+                            quantity: stock,
+                            productId: newProduct.id,
+                            userId: session?.user?.id || null
+                        }
+                    })
+                }
+            }
+            successCount++
+
+        } catch (error: any) {
+            errorCount++
+            errors.push(`Failed to import item ${item.name}: ${error.message}`)
+        }
+    }
+
+    revalidatePath('/inventory')
+    revalidatePath('/history')
+
+    return { success: successCount, errors }
 }

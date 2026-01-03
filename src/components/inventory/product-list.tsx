@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import { useAlert } from '@/hooks/use-alert'
+import ImportProductModal from './import-product-modal'
 
 type Product = {
     id: string
@@ -35,6 +37,14 @@ export default function ProductList({
 }) {
     const router = useRouter()
     const { showConfirmation } = useConfirmation()
+    const { showError } = useAlert()
+    const [addForm, setAddForm] = useState({
+        name: '',
+        sku: '',
+        stock: '',
+        lowStockThreshold: 5
+    })
+
     const [isAdding, setIsAdding] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
@@ -85,16 +95,36 @@ export default function ProductList({
         })
     }
 
-    async function handleAddProduct(formData: FormData) {
+    async function handleAddProduct(e: React.FormEvent) {
+        e.preventDefault()
+        setIsLoading(true)
+
+        const formData = new FormData()
+        formData.append('name', addForm.name)
+        formData.append('sku', addForm.sku)
+        formData.append('stock', String(addForm.stock))
+        formData.append('lowStockThreshold', String(addForm.lowStockThreshold))
+
         if (addImageFile) {
             formData.set('image', addImageFile)
         }
-        setIsLoading(true)
-        await createProduct(formData)
-        setIsLoading(false)
-        setIsAdding(false)
-        setAddImagePreview(null)
-        setAddImageFile(null)
+
+        try {
+            const result = await createProduct(formData)
+            if (result?.error) {
+                showError(`Failed to save product: ${result.error}`)
+                return
+            }
+            setIsAdding(false)
+            setAddImagePreview(null)
+            setAddImageFile(null)
+            setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5 })
+        } catch (error: any) {
+            console.error(error)
+            showError(`Unexpected error: ${error.message}`)
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     async function handleUpdateProduct(formData: FormData) {
@@ -102,11 +132,21 @@ export default function ProductList({
             formData.set('image', editImageFile)
         }
         setIsLoading(true)
-        await updateProduct(formData)
-        setIsLoading(false)
-        setEditingProduct(null)
-        setEditImagePreview(null)
-        setEditImageFile(null)
+        try {
+            const result = await updateProduct(formData)
+            if (result?.error) {
+                showError(`Failed to update product: ${result.error}`)
+                return
+            }
+            setEditingProduct(null)
+            setEditImagePreview(null)
+            setEditImageFile(null)
+        } catch (error: any) {
+            console.error(error)
+            showError(`Unexpected error: ${error.message}`)
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     async function handleAddStock(formData: FormData) {
@@ -171,15 +211,20 @@ export default function ProductList({
                     />
                 </div>
 
+
+
                 <div className="flex gap-3 w-full md:w-auto">
                     {userRole === 'ADMIN' && (
-                        <button
-                            onClick={() => setIsAdding(!isAdding)}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Add Product
-                        </button>
+                        <>
+                            <ImportProductModal />
+                            <button
+                                onClick={() => setIsAdding(!isAdding)}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add Product
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -188,7 +233,7 @@ export default function ProductList({
             {isAdding && (
                 <div className="bg-card border border-border rounded-xl p-6 mb-6 animate-in slide-in-from-top-4 fade-in duration-200 shadow-sm">
                     <h3 className="text-lg font-semibold text-foreground mb-4">New Product</h3>
-                    <form action={handleAddProduct} className="space-y-4">
+                    <form onSubmit={handleAddProduct} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Product Image</label>
@@ -216,19 +261,46 @@ export default function ProductList({
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
-                                <input name="name" required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" placeholder="e.g. Tepung Terigu" />
+                                <input
+                                    name="name"
+                                    value={addForm.name}
+                                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                                    required
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                    placeholder="e.g. Tepung Terigu"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
-                                <input name="sku" required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" placeholder="e.g. RM-001" />
+                                <input
+                                    name="sku"
+                                    value={addForm.sku}
+                                    onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                    placeholder="e.g. RM-001"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Initial Stock</label>
-                                <input name="stock" type="number" required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" placeholder="0" />
+                                <input
+                                    name="stock"
+                                    type="number"
+                                    value={addForm.stock}
+                                    onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                                    required
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                    placeholder="0"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
-                                <input name="lowStockThreshold" type="number" defaultValue={5} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
+                                <input
+                                    name="lowStockThreshold"
+                                    type="number"
+                                    value={addForm.lowStockThreshold}
+                                    onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: parseInt(e.target.value) || 0 })}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                />
                             </div>
                         </div>
                         <div className="flex justify-end gap-3 pt-2">
@@ -289,7 +361,7 @@ export default function ProductList({
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
-                                    <input name="sku" defaultValue={editingProduct.sku} required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
+                                    <input name="sku" defaultValue={editingProduct.sku} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>

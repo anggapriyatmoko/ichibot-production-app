@@ -1,0 +1,10 @@
+Product Name,SKU,Stock,Low Stock Threshold
+Item A,DUP-001,10,5
+Item B,DUP-001,20,5
+Item C,UNI-002,30,5
+Item D,UNI-003,40,5
+Item E,UNI-004,50,5
+Item F,UNI-005,60,5
+Item G,UNI-006,70,5
+Item H,UNI-007,80,5
+Item I,UNI-008,90,5

@@ -17,7 +17,7 @@ const navigation = [
 
 const adminNavigation = [
     { name: 'Users', href: '/users', icon: Users },
-    // { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 interface SidebarProps {
