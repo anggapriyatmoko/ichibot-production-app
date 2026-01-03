@@ -2,11 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
-
-
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -17,11 +15,17 @@ const navigation = [
     { name: 'History', href: '/history', icon: LayoutDashboard },
 ]
 
+const adminNavigation = [
+    { name: 'Users', href: '/users', icon: Users },
+    // { name: 'Settings', href: '/settings', icon: Settings },
+]
+
 interface SidebarProps {
     userProfile: React.ReactNode
+    userRole?: string
 }
 
-export default function Sidebar({ userProfile }: SidebarProps) {
+export default function Sidebar({ userProfile, userRole }: SidebarProps) {
     const pathname = usePathname()
 
     return (
@@ -57,6 +61,40 @@ export default function Sidebar({ userProfile }: SidebarProps) {
                             </Link>
                         )
                     })}
+
+                    {userRole === 'ADMIN' && (
+                        <>
+                            <div className="pt-4 pb-2">
+                                <div className="border-t border-border" />
+                                <p className="px-3 pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    Admin
+                                </p>
+                            </div>
+                            {adminNavigation.map((item) => {
+                                const isActive = pathname === item.href
+                                return (
+                                    <Link
+                                        key={item.name}
+                                        href={item.href}
+                                        className={cn(
+                                            'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                                            isActive
+                                                ? 'bg-primary/10 text-primary'
+                                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                        )}
+                                    >
+                                        <item.icon
+                                            className={cn(
+                                                'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
+                                                isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                                            )}
+                                        />
+                                        {item.name}
+                                    </Link>
+                                )
+                            })}
+                        </>
+                    )}
                 </nav>
             </div>
 

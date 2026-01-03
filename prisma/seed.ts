@@ -9,9 +9,11 @@ async function main() {
         update: {},
         create: {
             email: 'admin@example.com',
+            username: 'admin',
             name: 'Admin User',
             password: await hash('password', 12), // Hashed password
             role: 'ADMIN',
+            department: 'IT',
         },
     })
 
