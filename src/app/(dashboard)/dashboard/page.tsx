@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react'
+import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -35,6 +35,53 @@ export default async function DashboardPage() {
         .filter((t: { type: string }) => t.type === 'OUT')
         .reduce((acc: number, t: { quantity: number }) => acc + t.quantity, 0)
 
+    // Production Stats (This Month vs Last Month)
+    const currentMonth = today.getMonth() + 1
+    const currentYear = today.getFullYear()
+
+    const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const lastMonth = lastMonthDate.getMonth() + 1
+    const lastMonthYear = lastMonthDate.getFullYear()
+
+    const [currentMonthPlans, lastMonthPlans] = await Promise.all([
+        prisma.productionPlan.findMany({
+            where: { month: currentMonth, year: currentYear },
+            include: {
+                units: true,
+                recipe: {
+                    include: { sections: true }
+                }
+            }
+        }),
+        prisma.productionPlan.findMany({
+            where: { month: lastMonth, year: lastMonthYear },
+            include: { units: true }
+        })
+    ])
+
+    const calculateStats = (plans: any[]) => {
+        const planned = plans.reduce((acc, p) => acc + p.quantity, 0)
+        let packed = 0
+        let sold = 0
+        plans.forEach(p => {
+            const totalSections = p.recipe?.sections?.length || 0
+            p.units.forEach((u: any) => {
+                const completedCount = JSON.parse(u.completed || '[]').length
+                const isFullyChecked = totalSections > 0 && completedCount >= totalSections
+
+                if (u.isSold) {
+                    sold++
+                } else if (u.isPacked) {
+                    packed++
+                }
+            })
+        })
+        return { planned, packed, sold }
+    }
+
+    const currentStats = calculateStats(currentMonthPlans)
+    const lastStats = calculateStats(lastMonthPlans)
+
     // Recent Activity
     const recentActivity = await prisma.transaction.findMany({
         take: 5,
@@ -46,7 +93,111 @@ export default async function DashboardPage() {
         <div className="max-w-7xl mx-auto space-y-8">
             <div>
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>
-                <p className="text-muted-foreground">Overview of your inventory status today.</p>
+                <p className="text-muted-foreground">Overview of your inventory and production status.</p>
+            </div>
+
+            {/* Production Overview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* This Month - Detailed Breakdown */}
+                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-6">
+                        <Calendar className="w-5 h-5 text-primary" />
+                        Production This Month ({new Date().toLocaleString('default', { month: 'long' })})
+                    </h3>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
+                            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{currentStats.planned}</p>
+                        </div>
+                        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Packed</p>
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{currentStats.packed}</p>
+                        </div>
+                        <div className="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Sold</p>
+                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{currentStats.sold}</p>
+                        </div>
+                    </div>
+
+                    {/* Per Product List */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Product Breakdown</h4>
+                        <div className="divide-y divide-border">
+                            {currentMonthPlans.map((plan: any) => {
+                                let packedCount = 0
+                                let soldCount = 0
+                                const sections = plan.recipe?.sections || []
+                                const validSectionIds = sections.map((s: any) => s.id)
+                                const totalSections = sections.length
+
+                                plan.units.forEach((u: any) => {
+                                    const completedRaw = JSON.parse(u.completed || '[]')
+                                    const validCompletedCount = completedRaw.filter((id: string) => validSectionIds.includes(id)).length
+                                    const isFullyChecked = totalSections > 0 && validCompletedCount >= totalSections
+
+                                    if (u.isSold) {
+                                        soldCount++
+                                    } else if (u.isPacked) {
+                                        packedCount++
+                                    }
+                                })
+                                const notFinished = plan.quantity - packedCount - soldCount
+
+                                return (
+                                    <div key={plan.id} className="py-3 flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <p className="font-medium text-foreground">{plan.recipe.name}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            <div className="text-center w-16">
+                                                <p className="font-bold text-foreground">{plan.quantity}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase">Plan</p>
+                                            </div>
+                                            <div className="text-center w-16">
+                                                <p className="font-bold text-blue-600 dark:text-blue-400">{packedCount}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase">Packed</p>
+                                            </div>
+                                            <div className="text-center w-16">
+                                                <p className="font-bold text-emerald-600 dark:text-emerald-400">{soldCount}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase">Sold</p>
+                                            </div>
+                                            <div className="text-center w-16">
+                                                <p className="font-bold text-orange-600 dark:text-orange-400">{notFinished}</p>
+                                                <p className="text-[10px] text-muted-foreground uppercase">Pending</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm opacity-80 hover:opacity-100 transition-opacity">
+                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-6">
+                        <History className="w-5 h-5 text-muted-foreground" />
+                        Last Month ({lastMonthDate.toLocaleString('default', { month: 'long' })})
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-muted/30 p-4 rounded-xl">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
+                            <p className="text-2xl font-bold text-foreground">{lastStats.planned}</p>
+                            <span className="text-xs text-muted-foreground">units</span>
+                        </div>
+                        <div className="bg-muted/30 p-4 rounded-xl">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Packed</p>
+                            <p className="text-2xl font-bold text-blue-600/80 dark:text-blue-400/80">{lastStats.packed}</p>
+                            <span className="text-xs text-muted-foreground">{lastStats.planned > 0 ? Math.round((lastStats.packed / lastStats.planned) * 100) : 0}% rate</span>
+                        </div>
+                        <div className="bg-muted/30 p-4 rounded-xl">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Sold</p>
+                            <p className="text-2xl font-bold text-emerald-600/80 dark:text-emerald-400/80">{lastStats.sold}</p>
+                            <span className="text-xs text-muted-foreground">{lastStats.planned > 0 ? Math.round((lastStats.sold / lastStats.planned) * 100) : 0}% rate</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Stats Grid */}
@@ -81,7 +232,7 @@ export default async function DashboardPage() {
                             <AlertTriangle className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Low Stock Items</p>
+                            <p className="text-sm text-muted-foreground">Low Stock Sparepart</p>
                             <p className="text-2xl font-bold text-foreground">{lowStockCount}</p>
                         </div>
                     </div>

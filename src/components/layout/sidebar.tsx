@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +12,7 @@ const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Product', href: '/catalogue', icon: BookOpen },
     { name: 'Sparepart', href: '/inventory', icon: Package },
+    { name: 'Production Plan', href: '/production-plan', icon: Calendar },
     { name: 'Checkout', href: '/checkout', icon: ShoppingCart },
     { name: 'History', href: '/history', icon: LayoutDashboard },
 ]
@@ -27,7 +28,7 @@ export default function Sidebar({ userProfile }: SidebarProps) {
         <div className="flex h-full w-64 flex-col bg-card border-r border-border">
             <div className="flex h-16 items-center px-6 border-b border-border">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                    StockManager
+                    Ichibot Production
                 </h1>
             </div>
 

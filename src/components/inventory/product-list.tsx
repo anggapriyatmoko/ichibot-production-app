@@ -366,13 +366,36 @@ export default function ProductList({
                                         )}
                                     >
                                         <td className="px-6 py-4">
-                                            <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border">
-                                                {product.image ? (
-                                                    <Image src={product.image} alt={product.name} fill className="object-cover" />
-                                                ) : (
-                                                    <div className="flex items-center justify-center h-full text-gray-600">
-                                                        <ImageIcon className="w-4 h-4" />
-                                                    </div>
+                                            <div className="relative group">
+                                                <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
+                                                    {product.image ? (
+                                                        <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-gray-600">
+                                                            <ImageIcon className="w-4 h-4" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {/* Hover Preview - Auto position left or right */}
+                                                {product.image && (
+                                                    <>
+                                                        {/* Show on right side by default */}
+                                                        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none xl:block hidden">
+                                                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
+                                                                <div className="relative w-full h-full rounded-lg overflow-hidden">
+                                                                    <Image src={product.image} alt={product.name} fill className="object-contain" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {/* Show on left side for smaller screens or right edge */}
+                                                        <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none xl:hidden block">
+                                                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
+                                                                <div className="relative w-full h-full rounded-lg overflow-hidden">
+                                                                    <Image src={product.image} alt={product.name} fill className="object-contain" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </>
                                                 )}
                                             </div>
                                         </td>

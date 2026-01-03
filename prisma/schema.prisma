@@ -38,9 +38,9 @@ model Transaction {
   type      String // IN, OUT, BOM_ADD, BOM_REMOVE
   quantity  Int
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   recipeId  String?
-  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
 }
 
@@ -53,6 +53,38 @@ model Recipe {
   ingredients  RecipeIngredient[]
   sections     RecipeSection[]
   transactions Transaction[]
+  productionPlans ProductionPlan[]
+}
+
+model ProductionPlan {
+  id        String   @id @default(cuid())
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  quantity  Int
+  month     Int
+  year      Int
+  status    String   @default("PENDING") // PENDING, COMPLETED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  units     ProductionUnit[]
+}
+
+model ProductionUnit {
+  id               String   @id @default(cuid())
+  productionPlanId String
+  productionPlan   ProductionPlan @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
+  unitNumber       Int
+  productIdentifier String? // Serial Number / ID
+  completed        String   @default("[]") // JSON string of completed ingredient IDs
+  
+  // Sales & Packing Tracking
+  isPacked         Boolean  @default(false)
+  isSold           Boolean  @default(false)
+  marketplace      String?
+  customer         String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model RecipeSection {
@@ -61,6 +93,7 @@ model RecipeSection {
   recipeId    String
   recipe      Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
+  order       Int                @default(0)
   createdAt   DateTime           @default(now())
 }
 
@@ -69,7 +102,7 @@ model RecipeIngredient {
   recipeId  String
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   sectionId String?
   section   RecipeSection? @relation(fields: [sectionId], references: [id])
   quantity  Int

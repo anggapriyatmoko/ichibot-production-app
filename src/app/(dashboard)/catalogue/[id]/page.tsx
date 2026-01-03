@@ -15,7 +15,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                 include: { product: true }
             },
             sections: {
-                orderBy: { createdAt: 'asc' },
+                orderBy: [
+                    { order: 'asc' },
+                    { createdAt: 'asc' }
+                ],
                 select: {
                     id: true,
                     name: true

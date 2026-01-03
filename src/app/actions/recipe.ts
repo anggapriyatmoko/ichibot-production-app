@@ -47,6 +47,7 @@ export async function addIngredient(recipeId: string, formData: FormData) {
             type: 'BOM_ADD',
             quantity,
             productId,
+            // @ts-ignore
             recipeId
         }
     })
@@ -68,6 +69,7 @@ export async function removeIngredient(id: string, recipeId: string) {
                 type: 'BOM_REMOVE',
                 quantity: ingredient.quantity,
                 productId: ingredient.productId,
+                // @ts-ignore
                 recipeId
             }
         })
@@ -102,6 +104,7 @@ export async function deleteSection(id: string, recipeId: string) {
                 type: 'BOM_REMOVE',
                 quantity: ingredient.quantity,
                 productId: ingredient.productId,
+                // @ts-ignore
                 recipeId
             }
         })
@@ -144,5 +147,17 @@ export async function renameUncategorizedSection(recipeId: string, formData: For
         }
     })
 
+    revalidatePath(`/catalogue/${recipeId}`)
+}
+
+export async function reorderSections(recipeId: string, orderedSectionIds: string[]) {
+    await prisma.$transaction(
+        orderedSectionIds.map((id, index) =>
+            prisma.recipeSection.update({
+                where: { id },
+                data: { order: index }
+            })
+        )
+    )
     revalidatePath(`/catalogue/${recipeId}`)
 }

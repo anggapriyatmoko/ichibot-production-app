@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection } from '@/app/actions/recipe'
-import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer } from 'lucide-react'
+import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection, reorderSections } from '@/app/actions/recipe'
+import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer, ArrowUp, ArrowDown } from 'lucide-react'
 import Image from 'next/image'
 import { useConfirmation } from '@/components/providers/modal-provider'
 
@@ -23,6 +23,7 @@ type Ingredient = {
 type Section = {
     id: string
     name: string
+    order: number
 }
 
 type Product = {
@@ -264,10 +265,47 @@ export default function IngredientManager({
             </div>
 
             {/* Render Sections */}
-            {sections.map(section => (
+            {/* Render Sections */}
+            {[...sections].sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, index, arr) => (
                 <div key={section.id} className="border border-border rounded-xl overflow-hidden no-print print-section">
                     <div className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b border-border">
                         <div className="flex items-center gap-3">
+                            {/* Reorder Buttons */}
+                            <div className="flex flex-col gap-0.5">
+                                <button
+                                    onClick={async () => {
+                                        if (index === 0) return
+                                        const newSections = [...arr]
+                                        const temp = newSections[index]
+                                        newSections[index] = newSections[index - 1]
+                                        newSections[index - 1] = temp
+
+                                        // Update UI visually via optimistic update (if this was a proper state, here we trust the re-render)
+                                        // Actually we need to call server action with new order
+                                        await reorderSections(recipeId, newSections.map(s => s.id))
+                                    }}
+                                    disabled={index === 0}
+                                    className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
+                                >
+                                    <ArrowUp className="w-3 h-3" />
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (index === arr.length - 1) return
+                                        const newSections = [...arr]
+                                        const temp = newSections[index]
+                                        newSections[index] = newSections[index + 1]
+                                        newSections[index + 1] = temp
+
+                                        await reorderSections(recipeId, newSections.map(s => s.id))
+                                    }}
+                                    disabled={index === arr.length - 1}
+                                    className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
+                                >
+                                    <ArrowDown className="w-3 h-3" />
+                                </button>
+                            </div>
+
                             <Folder className="w-4 h-4 text-blue-500" />
                             {editingSectionId === section.id ? (
                                 <form action={handleUpdateSection} className="flex items-center gap-2">
@@ -441,8 +479,20 @@ export default function IngredientManager({
                             {aggregatedIngredients.map(ing => (
                                 <tr key={ing.product.id}>
                                     <td className="px-4 py-3">
-                                        <div className="w-10 h-10 rounded bg-muted relative overflow-hidden border border-border">
-                                            {ing.product.image && <Image src={ing.product.image} fill className="object-cover" alt={ing.product.name} />}
+                                        <div className="relative group">
+                                            <div className="w-10 h-10 rounded bg-muted relative overflow-hidden border border-border cursor-pointer">
+                                                {ing.product.image && <Image src={ing.product.image} fill className="object-cover" alt={ing.product.name} />}
+                                            </div>
+                                            {/* Hover Preview */}
+                                            {ing.product.image && (
+                                                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                                                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
+                                                        <div className="relative w-full h-full rounded-lg overflow-hidden">
+                                                            <Image src={ing.product.image} alt={ing.product.name} fill className="object-contain" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>

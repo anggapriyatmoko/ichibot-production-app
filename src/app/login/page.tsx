@@ -44,7 +44,7 @@ export default function LoginPage() {
             <div className="w-full max-w-md space-y-8">
                 <div className="text-center">
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent mb-2">
-                        StockManager
+                        Ichibot Production
                     </h1>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground">
                         Welcome back

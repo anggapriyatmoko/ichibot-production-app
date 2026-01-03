@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -9,7 +10,7 @@ async function main() {
         create: {
             email: 'admin@example.com',
             name: 'Admin User',
-            password: 'password', // In a real app we would hash this
+            password: await hash('password', 12), // Hashed password
             role: 'ADMIN',
         },
     })
