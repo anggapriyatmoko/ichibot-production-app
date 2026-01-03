@@ -18,6 +18,7 @@ type Product = {
     stock: number
     lowStockThreshold: number
     image: string | null
+    notes: string | null
 }
 
 type SortConfig = {
@@ -43,7 +44,8 @@ export default function ProductList({
         name: '',
         sku: '',
         stock: '',
-        lowStockThreshold: 5
+        lowStockThreshold: 5,
+        notes: ''
     })
 
     const [isAdding, setIsAdding] = useState(false)
@@ -105,6 +107,7 @@ export default function ProductList({
         formData.append('sku', addForm.sku)
         formData.append('stock', String(addForm.stock))
         formData.append('lowStockThreshold', String(addForm.lowStockThreshold))
+        formData.append('notes', addForm.notes)
 
         if (addImageFile) {
             formData.set('image', addImageFile)
@@ -119,7 +122,7 @@ export default function ProductList({
             setIsAdding(false)
             setAddImagePreview(null)
             setAddImageFile(null)
-            setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5 })
+            setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5, notes: '' })
         } catch (error: any) {
             console.error(error)
             showError(`Unexpected error: ${error.message}`)
@@ -163,8 +166,9 @@ export default function ProductList({
         setIsLoading(true)
         try {
             const data = await getAllProductsForExport()
-            const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold']
-            const rows = data.map(p => [p.name, p.sku || '', p.stock, p.lowStockThreshold])
+            const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Notes']
+            // @ts-ignore
+            const rows = data.map(p => [p.name, p.sku || '', p.stock, p.lowStockThreshold, p.notes || ''])
 
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
@@ -231,8 +235,6 @@ export default function ProductList({
                         className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                     />
                 </div>
-
-
 
                 <div className="flex gap-3 w-full md:w-auto">
                     {userRole === 'ADMIN' && (
@@ -331,6 +333,17 @@ export default function ProductList({
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
                                 />
                             </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                                <textarea
+                                    name="notes"
+                                    value={addForm.notes}
+                                    onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                    rows={2}
+                                    placeholder="Additional information..."
+                                />
+                            </div>
                         </div>
                         <div className="flex justify-end gap-3 pt-2">
                             <button type="button" onClick={() => setIsAdding(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
@@ -396,6 +409,10 @@ export default function ProductList({
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
                                     <input name="lowStockThreshold" type="number" defaultValue={editingProduct.lowStockThreshold} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
                                 </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
+                                    <textarea name="notes" defaultValue={editingProduct.notes || ''} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" rows={3} />
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
                                 <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
@@ -455,6 +472,7 @@ export default function ProductList({
                                 <th onClick={() => handleSort('stock')} className="px-6 py-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                                     <div className="flex items-center gap-1">Stock <SortIcon column="stock" /></div>
                                 </th>
+                                <th className="px-6 py-4">Notes</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -509,6 +527,9 @@ export default function ProductList({
                                         <td className={cn("px-6 py-4 font-bold text-base", isLowStock ? "text-red-500" : "text-emerald-500")}>
                                             {product.stock}
                                         </td>
+                                        <td className="px-6 py-4 max-w-[200px] truncate text-muted-foreground">
+                                            {product.notes || '-'}
+                                        </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center gap-1">
                                                 {isLowStock ? (
@@ -557,7 +578,7 @@ export default function ProductList({
                             })}
                             {filteredProducts.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                                         {searchTerm ? 'No products found matching your search.' : 'No products found. Start by adding one.'}
                                     </td>
                                 </tr>

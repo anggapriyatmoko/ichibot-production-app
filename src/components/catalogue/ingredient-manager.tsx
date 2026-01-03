@@ -20,6 +20,7 @@ type Ingredient = {
         stock: number
         image: string | null
         sku: string
+        notes: string | null
     }
 }
 
@@ -35,6 +36,7 @@ type Product = {
     stock: number
     image: string | null
     sku: string
+    notes: string | null
 }
 
 export default function IngredientManager({
@@ -128,7 +130,8 @@ export default function IngredientManager({
 
     const filteredProducts = allProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchQuery.toLowerCase())
+        p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.notes && p.notes.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
     // Handle product selection with duplicate check
@@ -448,7 +451,11 @@ export default function IngredientManager({
                                             <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
                                             <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
                                             <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
-                                            <td className="px-4 py-3 border">{ing.notes || '-'}</td>
+                                            <td className="px-4 py-3 border">
+                                                {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
+                                                {ing.product.notes && <div>{ing.product.notes}</div>}
+                                                {!ing.notes && !ing.product.notes && '-'}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -474,7 +481,11 @@ export default function IngredientManager({
                                             <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
                                             <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
                                             <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
-                                            <td className="px-4 py-3 border">{ing.notes || '-'}</td>
+                                            <td className="px-4 py-3 border">
+                                                {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
+                                                {ing.product.notes && <div>{ing.product.notes}</div>}
+                                                {!ing.notes && !ing.product.notes && '-'}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -540,7 +551,10 @@ export default function IngredientManager({
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>
-                                    <td className="px-4 py-3 font-medium">{ing.product.name}</td>
+                                    <td className="px-4 py-3 font-medium">
+                                        {ing.product.name}
+                                        {ing.product.notes && <div className="text-xs text-muted-foreground mt-0.5">{ing.product.notes}</div>}
+                                    </td>
                                     <td className="px-4 py-3 font-bold">{ing.quantity}</td>
                                 </tr>
                             ))}
@@ -690,7 +704,11 @@ function IngredientsTable({ ingredients, onRemove }: { ingredients: Ingredient[]
                                 </div>
                             </td>
                             <td className="px-4 py-3 font-bold text-foreground">{ing.quantity}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{ing.notes || '-'}</td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                                {ing.notes && <div><span className="text-foreground font-medium">Recipe:</span> {ing.notes}</div>}
+                                {ing.product.notes && <div>{ing.product.notes}</div>}
+                                {!ing.notes && !ing.product.notes && '-'}
+                            </td>
                             <td className="px-4 py-3 text-right">
                                 <button onClick={() => onRemove(ing.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
                                     <Trash2 className="w-4 h-4" />

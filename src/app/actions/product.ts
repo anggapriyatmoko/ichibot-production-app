@@ -18,6 +18,7 @@ export async function createProduct(formData: FormData) {
     const sku = rawSku && rawSku.trim() !== '' ? rawSku.trim() : null
     const stock = parseInt(formData.get('stock') as string)
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
+    const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
 
     let imagePath = null
@@ -52,6 +53,7 @@ export async function createProduct(formData: FormData) {
                 sku: sku as any,
                 stock,
                 lowStockThreshold,
+                notes,
                 image: imagePath
             }
         })
@@ -87,12 +89,14 @@ export async function updateProduct(formData: FormData) {
     const rawSku = formData.get('sku') as string
     const sku = rawSku && rawSku.trim() !== '' ? rawSku.trim() : null
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
+    const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
 
     const data: any = {
         name,
         sku,
-        lowStockThreshold
+        lowStockThreshold,
+        notes
     }
 
     if (imageFile && imageFile.size > 0) {
@@ -283,7 +287,8 @@ export async function getAllProductsForExport() {
             name: true,
             sku: true,
             stock: true,
-            lowStockThreshold: true
+            lowStockThreshold: true,
+            notes: true
         }
     })
 }
