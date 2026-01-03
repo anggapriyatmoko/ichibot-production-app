@@ -8,7 +8,6 @@ export default async function DashboardPage() {
     // 1. Fetch Stats
     const totalProducts = await prisma.product.count()
     const totalRecipes = await prisma.recipe.count()
-    const totalSpareparts = await prisma.recipeIngredient.count()
 
     // Low stock count (doing this in JS to ensure accuracy with thresholds, or raw query)
     // For small datasets, fetching all is fine. For large, use raw query or aggregated view.
@@ -223,7 +222,7 @@ export default async function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Total Sparepart</p>
-                            <p className="text-2xl font-bold text-foreground">{totalSpareparts}</p>
+                            <p className="text-2xl font-bold text-foreground">{totalProducts}</p>
                         </div>
                     </div>
                 </Link>

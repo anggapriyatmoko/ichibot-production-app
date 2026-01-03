@@ -3,6 +3,8 @@ import { Calendar, Plus, Trash2, Settings } from 'lucide-react'
 import { createProductionPlan, deleteProductionPlan } from '@/app/actions/production-plan'
 import Link from 'next/link'
 import ProductionPlanModal from './components/add-plan-modal'
+import AnalysisTable from './components/analysis-table'
+import PlanTargetEdit from './components/plan-target-edit'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
@@ -47,6 +49,103 @@ export default async function ProductionPlanPage({
         },
         orderBy: {
             createdAt: 'desc'
+        }
+    })
+
+    // Fetch Last Month Plans
+    const lastMonthDate = new Date(currentYear, currentMonth - 2, 1) // -2 because Month is 1-indexed in UI but 0-indexed in Date constructor, and we want previous month
+    const lastMonthValue = lastMonthDate.getMonth() + 1
+    const lastMonthYearValue = lastMonthDate.getFullYear()
+
+    const lastMonthPlans = await prisma.productionPlan.findMany({
+        where: {
+            month: lastMonthValue,
+            year: lastMonthYearValue
+        },
+        include: {
+            recipe: {
+                include: {
+                    ingredients: {
+                        include: { product: true }
+                    }
+                }
+            }
+        }
+    })
+
+    // Also need ingredients for current month plans to calculate demand
+    // (Optimization: We could have included ingredients in the main query, 
+    // but the main query is tailored for UI display with sections. 
+    // It might be cleaner to just fetch what we need for analysis or modify the main query.)
+    // Let's modify the main query slightly or just fetch ingredients here to be safe and clean.
+    // Actually, let's fetch ingredients for the *current plans* separately or include them above.
+    // To avoid changing the existing complex main query too much, let's just fetch the relevant recipes with ingredients.
+    const currentPlanRecipeIds = productionPlans.map(p => p.recipeId)
+    const currentRecipesWithIngredients = await prisma.recipe.findMany({
+        where: { id: { in: currentPlanRecipeIds } },
+        include: { ingredients: { include: { product: true } } }
+    })
+
+    // Map for easy lookup
+    const currentRecipeMap = new Map(currentRecipesWithIngredients.map(r => [r.id, r]))
+
+    // --- Analysis Calculation ---
+    interface SparepartDemand {
+        [productId: string]: {
+            product: any
+            neededThisMonth: number
+            neededLastMonth: number
+        }
+    }
+
+    const demandMap: SparepartDemand = {}
+
+    // Calculate This Month Demand
+    productionPlans.forEach(plan => {
+        const recipe = currentRecipeMap.get(plan.recipeId)
+        if (recipe) {
+            recipe.ingredients.forEach(ing => {
+                const totalNeeded = ing.quantity * plan.quantity
+                if (!demandMap[ing.productId]) {
+                    demandMap[ing.productId] = {
+                        product: ing.product,
+                        neededThisMonth: 0,
+                        neededLastMonth: 0
+                    }
+                }
+                demandMap[ing.productId].neededThisMonth += totalNeeded
+            })
+        }
+    })
+
+    // Calculate Last Month Demand
+    lastMonthPlans.forEach(plan => {
+        plan.recipe.ingredients.forEach(ing => {
+            const totalNeeded = ing.quantity * plan.quantity
+            if (!demandMap[ing.productId]) {
+                demandMap[ing.productId] = {
+                    product: ing.product,
+                    neededThisMonth: 0,
+                    neededLastMonth: 0
+                }
+            }
+            demandMap[ing.productId].neededLastMonth += totalNeeded
+        })
+    })
+
+    // Transform to Array
+    const analysisData = Object.values(demandMap).map(item => {
+        const totalNeeded = item.neededThisMonth + item.neededLastMonth
+        const balance = item.product.stock - totalNeeded
+        return {
+            id: item.product.id,
+            name: item.product.name,
+            stock: item.product.stock,
+            neededThisMonth: item.neededThisMonth,
+            neededLastMonth: item.neededLastMonth,
+            totalNeeded,
+            balance,
+            status: (balance >= 0 ? 'SAFE' : 'SHORT') as 'SAFE' | 'SHORT'
         }
     })
 
@@ -121,7 +220,7 @@ export default async function ProductionPlanPage({
                     <thead className="bg-muted text-foreground uppercase font-medium">
                         <tr>
                             <th className="px-6 py-4">Product Name & Progress</th>
-                            <th className="px-6 py-4 text-center">Quantity</th>
+                            <th className="px-6 py-4 text-center">Target</th>
                             <th className="px-6 py-4 text-center">Manage</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
@@ -187,7 +286,7 @@ export default async function ProductionPlanPage({
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-center font-bold text-lg align-top pt-6">
-                                        {plan.quantity} pcs
+                                        <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} />
                                     </td>
                                     <td className="px-6 py-4 text-center align-top pt-6">
                                         <Link href={`/production-plan/${plan.id}`} className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium">
@@ -218,6 +317,9 @@ export default async function ProductionPlanPage({
                     </tbody>
                 </table>
             </div>
+
+            {/* Analysis Table */}
+            <AnalysisTable data={analysisData} />
         </div>
     )
 }

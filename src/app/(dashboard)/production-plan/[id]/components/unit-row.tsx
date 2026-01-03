@@ -1,6 +1,6 @@
 'use client'
 
-import { updateUnitIdentifier, toggleUnitIngredient, updateUnitSalesData } from '@/app/actions/production-plan'
+import { updateUnitIdentifier, updateUnitCustomId, toggleUnitIngredient, updateUnitSalesData } from '@/app/actions/production-plan'
 import { Check, Box, ShoppingBag } from 'lucide-react'
 import { useState, useTransition } from 'react'
 
@@ -13,6 +13,7 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
     const [isPending, startTransition] = useTransition()
     const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed))
     const [identifier, setIdentifier] = useState(unit.productIdentifier || '')
+    const [customId, setCustomId] = useState(unit.customId || '')
 
     // Sales Data States
     const [isPacked, setIsPacked] = useState(unit.isPacked)
@@ -44,6 +45,14 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
         }
     }
 
+    const handleCustomIdBlur = () => {
+        if (customId !== unit.customId) {
+            startTransition(async () => {
+                await updateUnitCustomId(unit.id, customId)
+            })
+        }
+    }
+
     const handleSalesUpdate = (field: string, value: any) => {
         startTransition(async () => {
             await updateUnitSalesData(unit.id, { [field]: value })
@@ -61,8 +70,18 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     onBlur={handleIdentifierBlur}
-                    placeholder="Enter Serial No..."
+                    placeholder="Serial..."
                     className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-0.5 outline-none text-[10px] font-mono transition-all h-6"
+                />
+            </td>
+            <td className="px-2 py-1 border-r border-border sticky left-[208px] bg-card z-10 group-hover:bg-accent/30">
+                <input
+                    type="text"
+                    value={customId}
+                    onChange={(e) => setCustomId(e.target.value)}
+                    onBlur={handleCustomIdBlur}
+                    placeholder="ID..."
+                    className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-0.5 outline-none text-[10px] font-mono transition-all h-6 text-left"
                 />
             </td>
             {items.map(item => {

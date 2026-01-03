@@ -51,7 +51,10 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                                 No
                             </th>
                             <th className="px-2 py-2 w-40 border-b border-r border-border sticky left-12 bg-muted/50 z-10 text-[10px]">
-                                Serial / ID
+                                Serial
+                            </th>
+                            <th className="px-2 py-2 w-40 border-b border-r border-border sticky left-[208px] bg-muted/50 z-10 text-[10px]">
+                                ID
                             </th>
                             {(plan as any).recipe.sections.map((section: any) => (
                                 <th key={section.id} className="px-2 py-2 border-b border-border min-w-[100px] text-center text-[10px]">

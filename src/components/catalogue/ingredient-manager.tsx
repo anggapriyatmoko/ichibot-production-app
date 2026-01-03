@@ -127,6 +127,7 @@ export default function IngredientManager({
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [isEditing, setIsEditing] = useState(false) // Edit Mode State
 
     const filteredProducts = allProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -280,6 +281,13 @@ export default function IngredientManager({
                 </div>
                 <div className="flex gap-2">
                     <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+                    >
+                        {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                        {isEditing ? 'Done' : 'Edit'}
+                    </button>
+                    <button
                         onClick={handleExport}
                         disabled={isLoading}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
@@ -288,6 +296,7 @@ export default function IngredientManager({
                         Export BOM
                     </button>
                     <ImportRecipeModal />
+
                     <button
                         onClick={handlePrint}
                         className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
@@ -298,60 +307,64 @@ export default function IngredientManager({
                 </div>
             </div>
 
-            <div className="flex justify-between items-center no-print p-4">
-                <h2 className="text-xl font-bold">Manage Sparepart</h2>
+            <div className="flex justify-between items-center no-print py-2 px-1">
+                <div></div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsAddingSection(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
-                    >
-                        <FolderPlus className="w-4 h-4" />
-                        New Folders/Section
-                    </button>
+                    {isEditing && (
+                        <button
+                            onClick={() => setIsAddingSection(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
+                        >
+                            <FolderPlus className="w-4 h-4" />
+                            New Folders/Section
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Render Sections */}
             {/* Render Sections */}
             {[...sections].sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, index, arr) => (
-                <div key={section.id} className="border border-border rounded-xl overflow-hidden no-print print-section">
-                    <div className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b border-border">
+                <div key={section.id} className="mb-6 no-print print-section">
+                    <div className="px-1 py-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             {/* Reorder Buttons */}
-                            <div className="flex flex-col gap-0.5">
-                                <button
-                                    onClick={async () => {
-                                        if (index === 0) return
-                                        const newSections = [...arr]
-                                        const temp = newSections[index]
-                                        newSections[index] = newSections[index - 1]
-                                        newSections[index - 1] = temp
+                            {isEditing && (
+                                <div className="flex flex-col gap-0.5">
+                                    <button
+                                        onClick={async () => {
+                                            if (index === 0) return
+                                            const newSections = [...arr]
+                                            const temp = newSections[index]
+                                            newSections[index] = newSections[index - 1]
+                                            newSections[index - 1] = temp
 
-                                        // Update UI visually via optimistic update (if this was a proper state, here we trust the re-render)
-                                        // Actually we need to call server action with new order
-                                        await reorderSections(recipeId, newSections.map(s => s.id))
-                                    }}
-                                    disabled={index === 0}
-                                    className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
-                                >
-                                    <ArrowUp className="w-3 h-3" />
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (index === arr.length - 1) return
-                                        const newSections = [...arr]
-                                        const temp = newSections[index]
-                                        newSections[index] = newSections[index + 1]
-                                        newSections[index + 1] = temp
+                                            // Update UI visually via optimistic update (if this was a proper state, here we trust the re-render)
+                                            // Actually we need to call server action with new order
+                                            await reorderSections(recipeId, newSections.map(s => s.id))
+                                        }}
+                                        disabled={index === 0}
+                                        className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
+                                    >
+                                        <ArrowUp className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (index === arr.length - 1) return
+                                            const newSections = [...arr]
+                                            const temp = newSections[index]
+                                            newSections[index] = newSections[index + 1]
+                                            newSections[index + 1] = temp
 
-                                        await reorderSections(recipeId, newSections.map(s => s.id))
-                                    }}
-                                    disabled={index === arr.length - 1}
-                                    className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
-                                >
-                                    <ArrowDown className="w-3 h-3" />
-                                </button>
-                            </div>
+                                            await reorderSections(recipeId, newSections.map(s => s.id))
+                                        }}
+                                        disabled={index === arr.length - 1}
+                                        className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
+                                    >
+                                        <ArrowDown className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            )}
 
                             <Folder className="w-4 h-4 text-blue-500" />
                             {editingSectionId === section.id ? (
@@ -368,33 +381,40 @@ export default function IngredientManager({
                             ) : (
                                 <div className="flex items-center gap-2 group">
                                     <h3 className="font-bold text-foreground">{section.name}</h3>
-                                    <button onClick={() => setEditingSectionId(section.id)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
-                                        <Edit2 className="w-3 h-3" />
-                                    </button>
+                                    {isEditing && (
+                                        <button onClick={() => setEditingSectionId(section.id)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
+                                            <Edit2 className="w-3 h-3" />
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
-                                <Plus className="w-3 h-3" /> Add Item
-                            </button>
-                            <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
-                                <Trash2 className="w-3 h-3" />
-                            </button>
+                            {isEditing && (
+                                <>
+                                    <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
+                                        <Plus className="w-3 h-3" /> Add Item
+                                    </button>
+                                    <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 
                     <IngredientsTable
                         ingredients={ingredientsBySection[section.id] || []}
                         onRemove={handleRemoveIngredient}
+                        isEditing={isEditing}
                     />
                 </div>
             ))}
 
             {/* Uncategorized / General Section */}
             {(ingredientsBySection['uncategorized']?.length > 0 || sections.length === 0) && (
-                <div className="border border-border rounded-xl overflow-hidden no-print print-section">
-                    <div className="bg-muted/30 px-4 py-3 flex items-center justify-between border-b border-border">
+                <div className="mb-6 no-print print-section">
+                    <div className="px-1 py-2 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             {editingUncategorized ? (
                                 <form action={handleRenameUncategorized} className="flex items-center gap-2">
@@ -410,19 +430,24 @@ export default function IngredientManager({
                             ) : (
                                 <div className="flex items-center gap-2 group">
                                     <h3 className="font-bold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Other Sparepart</h3>
-                                    <button onClick={() => setEditingUncategorized(true)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
-                                        <Edit2 className="w-3 h-3" />
-                                    </button>
+                                    {isEditing && (
+                                        <button onClick={() => setEditingUncategorized(true)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
+                                            <Edit2 className="w-3 h-3" />
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
-                        <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
-                            <Plus className="w-3 h-3" /> Add Item
-                        </button>
+                        {isEditing && (
+                            <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
+                                <Plus className="w-3 h-3" /> Add Item
+                            </button>
+                        )}
                     </div>
                     <IngredientsTable
                         ingredients={ingredientsBySection['uncategorized'] || []}
                         onRemove={handleRemoveIngredient}
+                        isEditing={isEditing}
                     />
                 </div>
             )}
@@ -680,46 +705,48 @@ export default function IngredientManager({
     )
 }
 
-function IngredientsTable({ ingredients, onRemove }: { ingredients: Ingredient[], onRemove: (id: string) => void }) {
+function IngredientsTable({ ingredients, onRemove, isEditing }: { ingredients: Ingredient[], onRemove: (id: string) => void, isEditing: boolean }) {
     if (ingredients.length === 0) {
         return <div className="p-8 text-center text-sm text-muted-foreground italic">No sparepart in this section.</div>
     }
 
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-                <thead className="bg-muted/20 text-muted-foreground uppercase font-medium text-xs">
+        <div className="overflow-x-auto rounded-xl border border-border shadow-sm bg-card">
+            <table className="w-full text-left text-sm border-collapse">
+                <thead className="bg-[#F9FAFB] text-foreground uppercase font-medium text-xs">
                     <tr>
-                        <th className="px-3 py-2 w-[15%]">SKU</th>
-                        <th className="px-3 py-2 w-[40%]">Item</th>
-                        <th className="px-3 py-2 w-[15%]">Quantity</th>
-                        <th className="px-3 py-2 w-[20%]">Notes</th>
-                        <th className="px-3 py-2 w-[10%] text-right">Action</th>
+                        <th className="px-2 py-2 border-b border-r border-border w-[15%]">SKU</th>
+                        <th className="px-2 py-2 border-b border-r border-border w-[40%]">Item</th>
+                        <th className="px-2 py-2 border-b border-r border-border w-[15%]">Quantity</th>
+                        <th className={`px-2 py-2 border-b border-border ${isEditing ? 'border-r w-[20%]' : 'w-[30%]'}`}>Notes</th>
+                        {isEditing && <th className="px-2 py-2 border-b border-border w-[10%] text-center">Action</th>}
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                     {ingredients.map(ing => (
                         <tr key={ing.id} className="hover:bg-accent/30 transition-colors">
-                            <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>
-                            <td className="px-3 py-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-6 h-6 rounded bg-muted relative overflow-hidden border border-border">
+                            <td className="px-2 py-2 border-b border-r border-border font-mono text-xs text-muted-foreground bg-white">{ing.product.sku}</td>
+                            <td className="px-2 py-2 border-b border-r border-border bg-white">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded bg-muted relative overflow-hidden border border-border shrink-0">
                                         {ing.product.image && <Image src={ing.product.image} fill className="object-cover" alt={ing.product.name} />}
                                     </div>
                                     <span className="font-medium text-foreground">{ing.product.name}</span>
                                 </div>
                             </td>
-                            <td className="px-3 py-2 font-bold text-foreground">{ing.quantity}</td>
-                            <td className="px-3 py-2 text-muted-foreground">
+                            <td className="px-2 py-2 border-b border-r border-border font-bold text-foreground bg-white">{ing.quantity}</td>
+                            <td className={`px-2 py-2 border-b border-border text-muted-foreground bg-white text-xs ${isEditing ? 'border-r' : ''}`}>
                                 {ing.notes && <div><span className="text-foreground font-medium">Recipe:</span> {ing.notes}</div>}
                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                 {!ing.notes && !ing.product.notes && '-'}
                             </td>
-                            <td className="px-3 py-2 text-right">
-                                <button onClick={() => onRemove(ing.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </td>
+                            {isEditing && (
+                                <td className="px-2 py-2 border-b border-border text-center bg-white">
+                                    <button onClick={() => onRemove(ing.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            )}
                         </tr>
                     ))}
                 </tbody>

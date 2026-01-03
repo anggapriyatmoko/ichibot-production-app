@@ -81,6 +81,7 @@ model ProductionUnit {
   productionPlan   ProductionPlan @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
   unitNumber       Int
   productIdentifier String? // Serial Number / ID
+  customId         String? // Custom ID (manual input)
   completed        String   @default("[]") // JSON string of completed ingredient IDs
   
   // Sales & Packing Tracking
