@@ -439,10 +439,10 @@ export default function IngredientManager({
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="px-3 py-2 border">SKU</th>
-                                        <th className="px-3 py-2 border">Item</th>
-                                        <th className="px-3 py-2 border">Quantity</th>
-                                        <th className="px-3 py-2 border">Notes</th>
+                                        <th className="px-3 py-2 border w-[15%]">SKU</th>
+                                        <th className="px-3 py-2 border w-[45%]">Item</th>
+                                        <th className="px-3 py-2 border w-[15%]">Quantity</th>
+                                        <th className="px-3 py-2 border w-[25%]">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -469,10 +469,10 @@ export default function IngredientManager({
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="px-3 py-2 border">SKU</th>
-                                        <th className="px-3 py-2 border">Item</th>
-                                        <th className="px-3 py-2 border">Quantity</th>
-                                        <th className="px-3 py-2 border">Notes</th>
+                                        <th className="px-3 py-2 border w-[15%]">SKU</th>
+                                        <th className="px-3 py-2 border w-[45%]">Item</th>
+                                        <th className="px-3 py-2 border w-[15%]">Quantity</th>
+                                        <th className="px-3 py-2 border w-[25%]">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -498,9 +498,9 @@ export default function IngredientManager({
                         <table className="w-full text-left text-sm border-collapse">
                             <thead>
                                 <tr>
-                                    <th className="px-3 py-2 border">SKU</th>
-                                    <th className="px-3 py-2 border">Item</th>
-                                    <th className="px-3 py-2 border">Quantity</th>
+                                    <th className="px-3 py-2 border w-[20%]">SKU</th>
+                                    <th className="px-3 py-2 border w-[60%]">Item</th>
+                                    <th className="px-3 py-2 border w-[20%]">Quantity</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -690,11 +690,11 @@ function IngredientsTable({ ingredients, onRemove }: { ingredients: Ingredient[]
             <table className="w-full text-left text-sm">
                 <thead className="bg-muted/20 text-muted-foreground uppercase font-medium text-xs">
                     <tr>
-                        <th className="px-3 py-2">SKU</th>
-                        <th className="px-3 py-2">Item</th>
-                        <th className="px-3 py-2">Quantity</th>
-                        <th className="px-3 py-2">Notes</th>
-                        <th className="px-3 py-2 text-right">Action</th>
+                        <th className="px-3 py-2 w-[15%]">SKU</th>
+                        <th className="px-3 py-2 w-[40%]">Item</th>
+                        <th className="px-3 py-2 w-[15%]">Quantity</th>
+                        <th className="px-3 py-2 w-[20%]">Notes</th>
+                        <th className="px-3 py-2 w-[10%] text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

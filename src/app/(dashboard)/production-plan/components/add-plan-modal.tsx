@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { createProductionPlan } from '@/app/actions/production-plan'
+import { Combobox } from '@/components/ui/combobox'
 
 interface Recipe {
     id: string
@@ -17,6 +18,15 @@ interface ProductionPlanModalProps {
 
 export default function ProductionPlanModal({ recipes, month, year }: ProductionPlanModalProps) {
     const [isOpen, setIsOpen] = useState(false)
+    const [selectedRecipeId, setSelectedRecipeId] = useState('')
+
+    // Transform recipes to options for Combobox
+    const productOptions = recipes.map(r => ({
+        id: r.id,
+        label: r.name,
+        // image: r.image // Add this later if schema supports it
+        subtext: 'Ready for production'
+    }))
 
     return (
         <>
@@ -29,11 +39,11 @@ export default function ProductionPlanModal({ recipes, month, year }: Production
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-card w-full max-w-md rounded-xl shadow-xl border border-border">
-                        <div className="flex items-center justify-between p-4 border-b border-border">
-                            <h3 className="text-lg font-semibold">Add Production Plan</h3>
-                            <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-accent rounded-lg">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
+                            <h3 className="text-lg font-bold text-foreground">Add Production Plan</h3>
+                            <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -41,46 +51,54 @@ export default function ProductionPlanModal({ recipes, month, year }: Production
                         <form action={async (formData) => {
                             await createProductionPlan(formData)
                             setIsOpen(false)
-                        }} className="p-4 space-y-4">
+                            setSelectedRecipeId('')
+                        }} className="p-6 space-y-6">
                             <input type="hidden" name="month" value={month} />
                             <input type="hidden" name="year" value={year} />
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Product</label>
+                                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Product Target</label>
                                 {recipes.length > 0 ? (
-                                    <select name="recipeId" required className="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary">
-                                        <option value="">Select a product...</option>
-                                        {recipes.map(r => (
-                                            <option key={r.id} value={r.id}>{r.name}</option>
-                                        ))}
-                                    </select>
+                                    <Combobox
+                                        name="recipeId"
+                                        options={productOptions}
+                                        value={selectedRecipeId}
+                                        onChange={setSelectedRecipeId}
+                                        placeholder="Search product..."
+                                        required
+                                    />
                                 ) : (
-                                    <p className="text-sm text-muted-foreground p-2 bg-muted rounded-lg">
+                                    <div className="text-sm text-center py-4 text-muted-foreground bg-muted/50 rounded-lg border border-dashed border-border">
                                         All available products have been planned for this month.
-                                    </p>
+                                    </div>
                                 )}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-1">Quantity</label>
-                                <input
-                                    type="number"
-                                    name="quantity"
-                                    min="1"
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-primary"
-                                    placeholder="e.g. 10"
-                                />
+                                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Target Quantity</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        name="quantity"
+                                        min="1"
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg pl-3 pr-12 py-2.5 text-foreground focus:border-primary outline-none font-mono text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        placeholder="0"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">
+                                        PCS
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="pt-2 flex justify-end gap-2">
-                                <button type="button" onClick={() => setIsOpen(false)} className="px-4 py-2 text-sm font-medium hover:bg-accent rounded-lg">
+                            <div className="pt-2 flex justify-end gap-3">
+                                <button type="button" onClick={() => setIsOpen(false)} className="px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={recipes.length === 0}
-                                    className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                                    disabled={recipes.length === 0 || !selectedRecipeId}
+                                    className="px-6 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all hover:shadow-md active:scale-95"
                                 >
                                     Create Plan
                                 </button>
