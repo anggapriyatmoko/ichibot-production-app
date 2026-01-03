@@ -274,3 +274,16 @@ export async function importProducts(products: any[]) {
 
     return { success: successCount, errors }
 }
+
+export async function getAllProductsForExport() {
+    await requireAdmin()
+    return await prisma.product.findMany({
+        orderBy: { name: 'asc' },
+        select: {
+            name: true,
+            sku: true,
+            stock: true,
+            lowStockThreshold: true
+        }
+    })
+}

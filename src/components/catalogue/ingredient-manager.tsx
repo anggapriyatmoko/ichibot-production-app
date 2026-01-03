@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection, reorderSections } from '@/app/actions/recipe'
-import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer, ArrowUp, ArrowDown } from 'lucide-react'
+import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection, reorderSections, getRecipeForExport } from '@/app/actions/recipe'
+import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer, ArrowUp, ArrowDown, Download } from 'lucide-react'
 import Image from 'next/image'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import * as XLSX from 'xlsx'
+import ImportRecipeModal from './import-recipe-modal'
+import { useAlert } from '@/hooks/use-alert'
 
 type Ingredient = {
     id: string
@@ -82,6 +85,36 @@ export default function IngredientManager({
     const [isAddingIngredient, setIsAddingIngredient] = useState(false)
     const [isAddingSection, setIsAddingSection] = useState(false)
     const { showConfirmation } = useConfirmation()
+    const { showError } = useAlert()
+
+    async function handleExport() {
+        setIsLoading(true)
+        try {
+            const data = await getRecipeForExport(recipeId)
+            const headers = ['Recipe Name', 'Description', 'Section', 'Ingredient SKU', 'Ingredient Name', 'Quantity', 'Notes']
+            // @ts-ignore
+            const rows = data.map((item: any) => [
+                item.recipeName,
+                item.description,
+                item.section,
+                item.sku,
+                item.productName,
+                item.quantity,
+                item.notes
+            ])
+
+            const wb = XLSX.utils.book_new()
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+            XLSX.utils.book_append_sheet(wb, ws, 'Recipe')
+            XLSX.writeFile(wb, `Recipe_${recipeName}_${new Date().toISOString().split('T')[0]}.xlsx`)
+
+        } catch (error) {
+            console.error(error)
+            showError('Failed to export recipe')
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
     // Edit Section State
     const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
@@ -242,13 +275,24 @@ export default function IngredientManager({
                     <h2 className="text-xl font-bold text-foreground">Bill of Materials (BOM)</h2>
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
                 </div>
-                <button
-                    onClick={handlePrint}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
-                >
-                    <Printer className="w-4 h-4" />
-                    Download PDF / Print
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleExport}
+                        disabled={isLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
+                    >
+                        <Download className="w-4 h-4" />
+                        Export BOM
+                    </button>
+                    <ImportRecipeModal />
+                    <button
+                        onClick={handlePrint}
+                        className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
+                    >
+                        <Printer className="w-4 h-4" />
+                        Print Layout
+                    </button>
+                </div>
             </div>
 
             <div className="flex justify-between items-center no-print p-6">

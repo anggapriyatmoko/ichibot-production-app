@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { createProduct, deleteProduct, addStock, updateProduct } from '@/app/actions/product'
-import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport } from '@/app/actions/product'
+import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import * as XLSX from 'xlsx'
 import { useRouter } from 'next/navigation'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -158,6 +159,26 @@ export default function ProductList({
         setStockModalProduct(null)
     }
 
+    async function handleExport() {
+        setIsLoading(true)
+        try {
+            const data = await getAllProductsForExport()
+            const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold']
+            const rows = data.map(p => [p.name, p.sku || '', p.stock, p.lowStockThreshold])
+
+            const wb = XLSX.utils.book_new()
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+            XLSX.utils.book_append_sheet(wb, ws, 'Inventory')
+            XLSX.writeFile(wb, `Inventory_Export_${new Date().toISOString().split('T')[0]}.xlsx`)
+
+        } catch (error) {
+            console.error(error)
+            showError('Failed to export inventory')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     const handleSort = (key: keyof Product) => {
         setSortConfig((current) => {
             if (current.key === key) {
@@ -216,6 +237,14 @@ export default function ProductList({
                 <div className="flex gap-3 w-full md:w-auto">
                     {userRole === 'ADMIN' && (
                         <>
+                            <button
+                                onClick={handleExport}
+                                disabled={isLoading}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm disabled:opacity-50"
+                            >
+                                <Download className="w-4 h-4" />
+                                Export
+                            </button>
                             <ImportProductModal />
                             <button
                                 onClick={() => setIsAdding(!isAdding)}
