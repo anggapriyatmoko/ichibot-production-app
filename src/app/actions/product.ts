@@ -117,6 +117,11 @@ export async function updateProduct(formData: FormData) {
 export async function addStock(productId: string, quantity: number) {
     const session: any = await getServerSession(authOptions)
 
+    console.log('=== ADD STOCK DEBUG ===')
+    console.log('Session:', JSON.stringify(session, null, 2))
+    console.log('User ID:', session?.user?.id)
+    console.log('User:', session?.user)
+
     await prisma.$transaction([
         prisma.product.update({
             where: { id: productId },
@@ -127,10 +132,13 @@ export async function addStock(productId: string, quantity: number) {
                 type: 'IN',
                 quantity: quantity,
                 productId: productId,
-                userId: session?.user?.id
+                userId: session?.user?.id || null
             }
         })
     ])
+
+    console.log('Transaction created with userId:', session?.user?.id)
+
     revalidatePath('/inventory')
     revalidatePath('/history')
 }

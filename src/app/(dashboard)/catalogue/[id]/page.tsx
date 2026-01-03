@@ -21,7 +21,8 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                 ],
                 select: {
                     id: true,
-                    name: true
+                    name: true,
+                    order: true
                 }
             }
         }

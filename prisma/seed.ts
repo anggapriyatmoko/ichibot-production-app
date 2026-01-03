@@ -13,7 +13,7 @@ async function main() {
             name: 'Admin User',
             password: await hash('password', 12), // Hashed password
             role: 'ADMIN',
-            department: 'IT',
+            department: 'hokage',
         },
     })
 

@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { getSession } from '@/lib/auth'
 
 type CheckoutItem = {
     productId: string
@@ -10,6 +11,10 @@ type CheckoutItem = {
 
 export async function processBatchCheckout(items: CheckoutItem[]) {
     if (items.length === 0) throw new Error('No items to checkout')
+
+    // Get current user session
+    const session = await getSession()
+    const userId = session?.user?.id || null
 
     // 1. Validate Stock for all items
     const productIds = items.map(i => i.productId)
@@ -38,7 +43,8 @@ export async function processBatchCheckout(items: CheckoutItem[]) {
                 data: {
                     type: 'OUT',
                     quantity: item.quantity,
-                    productId: item.productId
+                    productId: item.productId,
+                    userId: userId
                 }
             })
         }
