@@ -146,29 +146,31 @@ export default async function DashboardPage() {
                                 const notFinished = plan.quantity - packedCount - soldCount
 
                                 return (
-                                    <div key={plan.id} className="py-3 flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <p className="font-medium text-foreground">{plan.recipe.name}</p>
+                                    <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2">
+                                        <div className="py-3 flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <p className="font-medium text-foreground">{plan.recipe.name}</p>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm">
+                                                <div className="text-center w-16">
+                                                    <p className="font-bold text-foreground">{plan.quantity}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase">Plan</p>
+                                                </div>
+                                                <div className="text-center w-16">
+                                                    <p className="font-bold text-blue-600 dark:text-blue-400">{packedCount}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase">Packed</p>
+                                                </div>
+                                                <div className="text-center w-16">
+                                                    <p className="font-bold text-emerald-600 dark:text-emerald-400">{soldCount}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase">Sold</p>
+                                                </div>
+                                                <div className="text-center w-16">
+                                                    <p className="font-bold text-orange-600 dark:text-orange-400">{notFinished}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase">Pending</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-4 text-sm">
-                                            <div className="text-center w-16">
-                                                <p className="font-bold text-foreground">{plan.quantity}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase">Plan</p>
-                                            </div>
-                                            <div className="text-center w-16">
-                                                <p className="font-bold text-blue-600 dark:text-blue-400">{packedCount}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase">Packed</p>
-                                            </div>
-                                            <div className="text-center w-16">
-                                                <p className="font-bold text-emerald-600 dark:text-emerald-400">{soldCount}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase">Sold</p>
-                                            </div>
-                                            <div className="text-center w-16">
-                                                <p className="font-bold text-orange-600 dark:text-orange-400">{notFinished}</p>
-                                                <p className="text-[10px] text-muted-foreground uppercase">Pending</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </Link>
                                 )
                             })}
                         </div>
@@ -202,7 +204,7 @@ export default async function DashboardPage() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                <Link href="/catalogue" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400">
                             <Package className="w-6 h-6" />
@@ -212,9 +214,9 @@ export default async function DashboardPage() {
                             <p className="text-2xl font-bold text-foreground">{totalRecipes}</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                <Link href="/inventory" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400">
                             <Package className="w-6 h-6" />
@@ -224,9 +226,9 @@ export default async function DashboardPage() {
                             <p className="text-2xl font-bold text-foreground">{totalSpareparts}</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                <Link href="/inventory" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-red-500/10 rounded-xl text-red-600 dark:text-red-400">
                             <AlertTriangle className="w-6 h-6" />
@@ -236,9 +238,9 @@ export default async function DashboardPage() {
                             <p className="text-2xl font-bold text-foreground">{lowStockCount}</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                <Link href="/history" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
                             <ArrowDownLeft className="w-6 h-6" />
@@ -248,9 +250,9 @@ export default async function DashboardPage() {
                             <p className="text-2xl font-bold text-foreground">+{itemsIn}</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+                <Link href="/history" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400">
                             <ArrowUpRight className="w-6 h-6" />
@@ -260,7 +262,7 @@ export default async function DashboardPage() {
                             <p className="text-2xl font-bold text-foreground">-{itemsOut}</p>
                         </div>
                     </div>
-                </div>
+                </Link>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
