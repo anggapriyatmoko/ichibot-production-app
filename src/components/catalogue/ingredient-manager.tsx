@@ -224,7 +224,7 @@ export default function IngredientManager({
     }
 
     return (
-        <div className="p-6 space-y-8">
+        <div className="p-4 space-y-4">
             <style jsx global>{`
                 @media print {
                     body * {
@@ -273,7 +273,7 @@ export default function IngredientManager({
             `}</style>
 
             {/* BOM Header with PDF Button */}
-            <div className="p-6 border-b border-border flex justify-between items-start no-print">
+            <div className="p-4 border-b border-border flex justify-between items-start no-print">
                 <div>
                     <h2 className="text-xl font-bold text-foreground">Bill of Materials (BOM)</h2>
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
@@ -298,7 +298,7 @@ export default function IngredientManager({
                 </div>
             </div>
 
-            <div className="flex justify-between items-center no-print p-6">
+            <div className="flex justify-between items-center no-print p-4">
                 <h2 className="text-xl font-bold">Manage Sparepart</h2>
                 <div className="flex gap-2">
                     <button
@@ -439,19 +439,19 @@ export default function IngredientManager({
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="px-4 py-3 border">SKU</th>
-                                        <th className="px-4 py-3 border">Item</th>
-                                        <th className="px-4 py-3 border">Quantity</th>
-                                        <th className="px-4 py-3 border">Notes</th>
+                                        <th className="px-3 py-2 border">SKU</th>
+                                        <th className="px-3 py-2 border">Item</th>
+                                        <th className="px-3 py-2 border">Quantity</th>
+                                        <th className="px-3 py-2 border">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(ingredientsBySection[section.id] || []).map(ing => (
                                         <tr key={ing.id}>
-                                            <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
-                                            <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
-                                            <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
-                                            <td className="px-4 py-3 border">
+                                            <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
+                                            <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
+                                            <td className="px-3 py-2 border font-bold">{ing.quantity}</td>
+                                            <td className="px-3 py-2 border">
                                                 {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                                 {!ing.notes && !ing.product.notes && '-'}
@@ -469,19 +469,19 @@ export default function IngredientManager({
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="px-4 py-3 border">SKU</th>
-                                        <th className="px-4 py-3 border">Item</th>
-                                        <th className="px-4 py-3 border">Quantity</th>
-                                        <th className="px-4 py-3 border">Notes</th>
+                                        <th className="px-3 py-2 border">SKU</th>
+                                        <th className="px-3 py-2 border">Item</th>
+                                        <th className="px-3 py-2 border">Quantity</th>
+                                        <th className="px-3 py-2 border">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(ingredientsBySection['uncategorized'] || []).map(ing => (
                                         <tr key={ing.id}>
-                                            <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
-                                            <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
-                                            <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
-                                            <td className="px-4 py-3 border">
+                                            <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
+                                            <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
+                                            <td className="px-3 py-2 border font-bold">{ing.quantity}</td>
+                                            <td className="px-3 py-2 border">
                                                 {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                                 {!ing.notes && !ing.product.notes && '-'}
@@ -496,23 +496,23 @@ export default function IngredientManager({
                     <div className="mt-8 pt-4 border-t-2 border-black">
                         <h4 className="font-bold text-lg mb-3">All Sparepart (BOM) - {recipeName}</h4>
                         <table className="w-full text-left text-sm border-collapse">
-                            <thead className="bg-gray-100">
+                            <thead>
                                 <tr>
-                                    <th className="px-4 py-3 border">SKU</th>
-                                    <th className="px-4 py-3 border">Item</th>
-                                    <th className="px-4 py-3 border">Quantity</th>
+                                    <th className="px-3 py-2 border">SKU</th>
+                                    <th className="px-3 py-2 border">Item</th>
+                                    <th className="px-3 py-2 border">Quantity</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {aggregatedIngredients.map(ing => (
                                     <tr key={ing.product.id}>
-                                        <td className="px-4 py-3 border font-mono text-xs">{ing.product.sku}</td>
-                                        <td className="px-4 py-3 border font-medium">{ing.product.name}</td>
-                                        <td className="px-4 py-3 border font-bold">{ing.quantity}</td>
+                                        <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
+                                        <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
+                                        <td className="px-3 py-2 border font-bold">{ing.quantity}</td>
                                     </tr>
                                 ))}
                                 {initialIngredients.length === 0 && (
-                                    <tr><td colSpan={3} className="px-4 py-3 border text-center">No sparepart found.</td></tr>
+                                    <tr><td colSpan={3} className="px-3 py-2 border text-center">No sparepart found.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -524,18 +524,18 @@ export default function IngredientManager({
                     <table className="w-full text-left text-sm">
                         <thead className="bg-muted/50 text-muted-foreground uppercase font-medium text-xs">
                             <tr>
-                                <th className="px-4 py-3">Image</th>
-                                <th className="px-4 py-3">SKU</th>
-                                <th className="px-4 py-3">Item</th>
-                                <th className="px-4 py-3">Quantity</th>
+                                <th className="px-3 py-2">Image</th>
+                                <th className="px-3 py-2">SKU</th>
+                                <th className="px-3 py-2">Item</th>
+                                <th className="px-3 py-2">Quantity</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border bg-card">
                             {aggregatedIngredients.map(ing => (
                                 <tr key={ing.product.id}>
-                                    <td className="px-4 py-3">
+                                    <td className="px-3 py-1.5">
                                         <div className="relative group">
-                                            <div className="w-10 h-10 rounded bg-muted relative overflow-hidden border border-border cursor-pointer">
+                                            <div className="w-8 h-8 rounded bg-muted relative overflow-hidden border border-border cursor-pointer">
                                                 {ing.product.image && <Image src={ing.product.image} fill className="object-cover" alt={ing.product.name} />}
                                             </div>
                                             {/* Hover Preview */}
@@ -550,12 +550,12 @@ export default function IngredientManager({
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>
-                                    <td className="px-4 py-3 font-medium">
+                                    <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>
+                                    <td className="px-3 py-2 font-medium">
                                         {ing.product.name}
                                         {ing.product.notes && <div className="text-xs text-muted-foreground mt-0.5">{ing.product.notes}</div>}
                                     </td>
-                                    <td className="px-4 py-3 font-bold">{ing.quantity}</td>
+                                    <td className="px-3 py-2 font-bold">{ing.quantity}</td>
                                 </tr>
                             ))}
                             {initialIngredients.length === 0 && (
@@ -567,110 +567,116 @@ export default function IngredientManager({
             </div>
 
             {/* If absolutely nothing exists */}
-            {sections.length === 0 && (!ingredientsBySection['uncategorized'] || ingredientsBySection['uncategorized'].length === 0) && (
-                <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl no-print">
-                    No sparepart or sections. Start by categorizing with a section or adding items directly.
-                </div>
-            )}
+            {
+                sections.length === 0 && (!ingredientsBySection['uncategorized'] || ingredientsBySection['uncategorized'].length === 0) && (
+                    <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl no-print">
+                        No sparepart or sections. Start by categorizing with a section or adding items directly.
+                    </div>
+                )
+            }
 
 
             {/* Create Section Modal */}
-            {isAddingSection && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
-                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="text-lg font-bold text-foreground mb-4">New Section</h3>
-                        <form action={handleCreateSection} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
-                                <input name="name" autoFocus required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. Dry Sparepart" />
-                            </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Create</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Add Sparepart Modal */}
-            {isAddingIngredient && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
-                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="text-lg font-bold text-foreground mb-4">
-                            Add Sparepart {activeSectionId ? 'to Section' : ''}
-                        </h3>
-
-                        {!selectedProduct ? (
-                            <div className="space-y-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <input
-                                        autoFocus
-                                        placeholder="Search inventory..."
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg outline-none focus:border-primary"
-                                    />
-                                </div>
-                                <div className="max-h-60 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-background/50">
-                                    {filteredProducts.map(p => (
-                                        <button
-                                            key={p.id}
-                                            onClick={() => handleProductSelect(p)}
-                                            className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors text-left"
-                                        >
-                                            <div className="w-8 h-8 rounded bg-muted relative overflow-hidden shrink-0">
-                                                {p.image ? <Image src={p.image} fill className="object-cover" alt={p.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-foreground">{p.name}</p>
-                                                <p className="text-xs text-muted-foreground">{p.sku} • Stock: {p.stock}</p>
-                                            </div>
-                                        </button>
-                                    ))}
-                                    {filteredProducts.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No items found.</p>}
-                                </div>
-                                <div className="flex justify-end">
-                                    <button onClick={() => setIsAddingIngredient(false)} className="px-4 py-2 text-sm text-muted-foreground">Cancel</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <form action={handleAddIngredient} className="space-y-4">
-                                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
-                                    <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
-                                        {selectedProduct.image ? <Image src={selectedProduct.image} fill className="object-cover" alt={selectedProduct.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-bold text-foreground">{selectedProduct.name}</p>
-                                        <p className="text-xs text-muted-foreground">{selectedProduct.sku}</p>
-                                    </div>
-                                    <button type="button" onClick={() => setSelectedProduct(null)} className="text-xs text-primary hover:underline">Change</button>
-                                </div>
-
+            {
+                isAddingSection && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-lg font-bold text-foreground mb-4">New Section</h3>
+                            <form action={handleCreateSection} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
-                                    <input name="quantity" type="number" min="1" required autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. 5" />
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
+                                    <input name="name" autoFocus required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. Dry Sparepart" />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
-                                    <input name="notes" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. grams" />
-                                </div>
-
                                 <div className="flex justify-end gap-3 pt-2">
-                                    <button type="button" onClick={() => setIsAddingIngredient(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">
-                                        {isLoading ? 'Adding...' : 'Add Sparepart'}
-                                    </button>
+                                    <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Create</button>
                                 </div>
                             </form>
-                        )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* Add Sparepart Modal */}
+            {
+                isAddingIngredient && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-lg font-bold text-foreground mb-4">
+                                Add Sparepart {activeSectionId ? 'to Section' : ''}
+                            </h3>
+
+                            {!selectedProduct ? (
+                                <div className="space-y-4">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <input
+                                            autoFocus
+                                            placeholder="Search inventory..."
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg outline-none focus:border-primary"
+                                        />
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-background/50">
+                                        {filteredProducts.map(p => (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => handleProductSelect(p)}
+                                                className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors text-left"
+                                            >
+                                                <div className="w-8 h-8 rounded bg-muted relative overflow-hidden shrink-0">
+                                                    {p.image ? <Image src={p.image} fill className="object-cover" alt={p.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-foreground">{p.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{p.sku} • Stock: {p.stock}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                        {filteredProducts.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No items found.</p>}
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <button onClick={() => setIsAddingIngredient(false)} className="px-4 py-2 text-sm text-muted-foreground">Cancel</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <form action={handleAddIngredient} className="space-y-4">
+                                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
+                                        <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
+                                            {selectedProduct.image ? <Image src={selectedProduct.image} fill className="object-cover" alt={selectedProduct.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-foreground">{selectedProduct.name}</p>
+                                            <p className="text-xs text-muted-foreground">{selectedProduct.sku}</p>
+                                        </div>
+                                        <button type="button" onClick={() => setSelectedProduct(null)} className="text-xs text-primary hover:underline">Change</button>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
+                                        <input name="quantity" type="number" min="1" required autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. 5" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                                        <input name="notes" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. grams" />
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-2">
+                                        <button type="button" onClick={() => setIsAddingIngredient(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                                        <button disabled={isLoading} type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">
+                                            {isLoading ? 'Adding...' : 'Add Sparepart'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
 
 
-        </div>
+        </div >
     )
 }
 
@@ -684,33 +690,33 @@ function IngredientsTable({ ingredients, onRemove }: { ingredients: Ingredient[]
             <table className="w-full text-left text-sm">
                 <thead className="bg-muted/20 text-muted-foreground uppercase font-medium text-xs">
                     <tr>
-                        <th className="px-4 py-3">SKU</th>
-                        <th className="px-4 py-3">Item</th>
-                        <th className="px-4 py-3">Quantity</th>
-                        <th className="px-4 py-3">Notes</th>
-                        <th className="px-4 py-3 text-right">Action</th>
+                        <th className="px-3 py-2">SKU</th>
+                        <th className="px-3 py-2">Item</th>
+                        <th className="px-3 py-2">Quantity</th>
+                        <th className="px-3 py-2">Notes</th>
+                        <th className="px-3 py-2 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                     {ingredients.map(ing => (
                         <tr key={ing.id} className="hover:bg-accent/30 transition-colors">
-                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{ing.product.sku}</td>
+                            <td className="px-3 py-2">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded bg-muted relative overflow-hidden border border-border">
+                                    <div className="w-6 h-6 rounded bg-muted relative overflow-hidden border border-border">
                                         {ing.product.image && <Image src={ing.product.image} fill className="object-cover" alt={ing.product.name} />}
                                     </div>
                                     <span className="font-medium text-foreground">{ing.product.name}</span>
                                 </div>
                             </td>
-                            <td className="px-4 py-3 font-bold text-foreground">{ing.quantity}</td>
-                            <td className="px-4 py-3 text-muted-foreground">
+                            <td className="px-3 py-2 font-bold text-foreground">{ing.quantity}</td>
+                            <td className="px-3 py-2 text-muted-foreground">
                                 {ing.notes && <div><span className="text-foreground font-medium">Recipe:</span> {ing.notes}</div>}
                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                 {!ing.notes && !ing.product.notes && '-'}
                             </td>
-                            <td className="px-4 py-3 text-right">
-                                <button onClick={() => onRemove(ing.id)} className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                            <td className="px-3 py-2 text-right">
+                                <button onClick={() => onRemove(ing.id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </td>
