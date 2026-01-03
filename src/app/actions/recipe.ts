@@ -2,8 +2,10 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/lib/auth'
 
 export async function createRecipe(formData: FormData) {
+    await requireAdmin()
     const name = formData.get('name') as string
     const description = formData.get('description') as string
 
@@ -17,6 +19,7 @@ export async function createRecipe(formData: FormData) {
 }
 
 export async function deleteRecipe(id: string) {
+    await requireAdmin()
     await prisma.recipe.delete({ where: { id } })
     revalidatePath('/catalogue')
 }

@@ -8,7 +8,8 @@ export default async function HistoryPage() {
     const transactions = await prisma.transaction.findMany({
         include: {
             product: true,
-            recipe: true
+            recipe: true,
+            user: true
         },
         orderBy: {
             createdAt: 'desc'
@@ -31,6 +32,7 @@ export default async function HistoryPage() {
                                 <th className="px-6 py-4">Type</th>
                                 <th className="px-6 py-4">Product</th>
                                 <th className="px-6 py-4">Recipe</th>
+                                <th className="px-6 py-4">User</th>
                                 <th className="px-6 py-4 text-right">Quantity</th>
                             </tr>
                         </thead>
@@ -69,6 +71,9 @@ export default async function HistoryPage() {
                                     <td className="px-6 py-4 text-foreground">
                                         {tx.recipe?.name || '-'}
                                     </td>
+                                    <td className="px-6 py-4 text-foreground">
+                                        {tx.user?.name || tx.user?.username || 'System'}
+                                    </td>
                                     <td className={cn("px-6 py-4 text-right font-bold text-base",
                                         tx.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' :
                                             tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
@@ -80,7 +85,7 @@ export default async function HistoryPage() {
                             ))}
                             {transactions.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                                         No transactions recorded yet.
                                     </td>
                                 </tr>

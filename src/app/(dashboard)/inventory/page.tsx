@@ -1,5 +1,7 @@
 import ProductList from '@/components/inventory/product-list'
 import prisma from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +11,7 @@ export default async function InventoryPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
     const params = await searchParams
+    const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const limit = 50
     const skip = (page - 1) * limit
@@ -35,6 +38,7 @@ export default async function InventoryPage({
                 initialProducts={products}
                 totalPages={totalPages}
                 currentPage={page}
+                userRole={session?.user?.role}
             />
         </div>
     )

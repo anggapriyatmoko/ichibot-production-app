@@ -5,8 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
+import { requireAdmin } from '@/lib/auth'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export async function createProduct(formData: FormData) {
+    await requireAdmin()
+    const session: any = await getServerSession(authOptions)
+
     const name = formData.get('name') as string
     const sku = formData.get('sku') as string
     const stock = parseInt(formData.get('stock') as string)
@@ -38,7 +44,7 @@ export async function createProduct(formData: FormData) {
         imagePath = '/uploads/' + filename
     }
 
-    await prisma.product.create({
+    const product = await prisma.product.create({
         data: {
             name,
             sku,
@@ -48,10 +54,25 @@ export async function createProduct(formData: FormData) {
         }
     })
 
+    // Create transaction record if initial stock > 0
+    if (stock > 0) {
+        await prisma.transaction.create({
+            data: {
+                type: 'IN',
+                quantity: stock,
+                productId: product.id,
+                userId: session?.user?.id || null
+            }
+        })
+        console.log('Transaction created with userId:', session?.user?.id)
+    }
+
     revalidatePath('/inventory')
+    revalidatePath('/history')
 }
 
 export async function updateProduct(formData: FormData) {
+    await requireAdmin()
     const id = formData.get('id') as string
     const name = formData.get('name') as string
     const sku = formData.get('sku') as string
@@ -94,6 +115,8 @@ export async function updateProduct(formData: FormData) {
 
 
 export async function addStock(productId: string, quantity: number) {
+    const session: any = await getServerSession(authOptions)
+
     await prisma.$transaction([
         prisma.product.update({
             where: { id: productId },
@@ -103,14 +126,17 @@ export async function addStock(productId: string, quantity: number) {
             data: {
                 type: 'IN',
                 quantity: quantity,
-                productId: productId
+                productId: productId,
+                userId: session?.user?.id
             }
         })
     ])
     revalidatePath('/inventory')
+    revalidatePath('/history')
 }
 
 export async function deleteProduct(id: string) {
+    await requireAdmin()
     await prisma.product.delete({
         where: { id }
     })

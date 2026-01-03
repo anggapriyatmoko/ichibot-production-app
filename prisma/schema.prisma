@@ -20,6 +20,7 @@ model User {
   role      String   @default("USER") // USER, ADMIN
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  transactions Transaction[]
 }
 
 model Product {
@@ -43,6 +44,8 @@ model Transaction {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   recipeId  String?
   recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 }
 

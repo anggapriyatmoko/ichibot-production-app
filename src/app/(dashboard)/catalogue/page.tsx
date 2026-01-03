@@ -3,10 +3,13 @@ import { Plus, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 import { createRecipe } from '@/app/actions/recipe'
 import RecipeList from '@/components/catalogue/recipe-list'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CataloguePage() {
+    const session: any = await getServerSession(authOptions)
     const recipes = await prisma.recipe.findMany({
         orderBy: { updatedAt: 'desc' },
         include: {
@@ -25,7 +28,7 @@ export default async function CataloguePage() {
                 </div>
             </div>
 
-            <RecipeList recipes={recipes} />
+            <RecipeList recipes={recipes} userRole={session?.user?.role} />
         </div>
     )
 }

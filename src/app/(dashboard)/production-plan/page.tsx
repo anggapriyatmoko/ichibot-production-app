@@ -3,6 +3,8 @@ import { Calendar, Plus, Trash2, Settings } from 'lucide-react'
 import { createProductionPlan, deleteProductionPlan } from '@/app/actions/production-plan'
 import Link from 'next/link'
 import ProductionPlanModal from './components/add-plan-modal'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +15,7 @@ export default async function ProductionPlanPage({
 }) {
     const today = new Date()
     const sp = await searchParams
+    const session: any = await getServerSession(authOptions)
     const currentMonth = sp.month ? parseInt(sp.month) : today.getMonth() + 1
     const currentYear = sp.year ? parseInt(sp.year) : today.getFullYear()
 
@@ -102,11 +105,13 @@ export default async function ProductionPlanPage({
                 </form>
 
                 <div className="w-full md:w-auto">
-                    <ProductionPlanModal
-                        recipes={availableRecipes}
-                        month={currentMonth}
-                        year={currentYear}
-                    />
+                    {session?.user?.role === 'ADMIN' && (
+                        <ProductionPlanModal
+                            recipes={availableRecipes}
+                            month={currentMonth}
+                            year={currentYear}
+                        />
+                    )}
                 </div>
             </div>
 

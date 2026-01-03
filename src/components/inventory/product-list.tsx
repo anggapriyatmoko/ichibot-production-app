@@ -25,11 +25,13 @@ type SortConfig = {
 export default function ProductList({
     initialProducts,
     totalPages,
-    currentPage
+    currentPage,
+    userRole
 }: {
     initialProducts: Product[]
     totalPages: number
     currentPage: number
+    userRole?: string
 }) {
     const router = useRouter()
     const { showConfirmation } = useConfirmation()
@@ -170,13 +172,15 @@ export default function ProductList({
                 </div>
 
                 <div className="flex gap-3 w-full md:w-auto">
-                    <button
-                        onClick={() => setIsAdding(!isAdding)}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Product
-                    </button>
+                    {userRole === 'ADMIN' && (
+                        <button
+                            onClick={() => setIsAdding(!isAdding)}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Product
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -421,13 +425,15 @@ export default function ProductList({
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => setEditingProduct(product)}
-                                                    className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
-                                                    title="Edit Product"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
+                                                {userRole === 'ADMIN' && (
+                                                    <button
+                                                        onClick={() => setEditingProduct(product)}
+                                                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
+                                                        title="Edit Product"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => setStockModalProduct(product)}
                                                     className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20"
@@ -435,12 +441,14 @@ export default function ProductList({
                                                 >
                                                     <PackagePlus className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(product.id)}
-                                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors group-hover:block"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {userRole === 'ADMIN' && (
+                                                    <button
+                                                        onClick={() => handleDelete(product.id)}
+                                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors group-hover:block"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

@@ -2,8 +2,10 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { requireAdmin } from '@/lib/auth'
 
 export async function createProductionPlan(formData: FormData) {
+    await requireAdmin()
     const recipeId = formData.get('recipeId') as string
     const quantity = parseInt(formData.get('quantity') as string)
     const month = parseInt(formData.get('month') as string)
