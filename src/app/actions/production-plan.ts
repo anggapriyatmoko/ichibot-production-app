@@ -69,9 +69,16 @@ export async function updateUnitSalesData(unitId: string, data: {
     marketplace?: string,
     customer?: string
 }) {
+    const updateData: any = { ...data }
+
+    // Set packedAt timestamp
+    if (data.isPacked !== undefined) {
+        updateData.packedAt = data.isPacked ? new Date() : null
+    }
+
     await prisma.productionUnit.update({
         where: { id: unitId },
-        data
+        data: updateData
     })
     revalidatePath('/production-plan/[id]')
 }
@@ -79,7 +86,15 @@ export async function updateUnitSalesData(unitId: string, data: {
 export async function toggleUnitIngredient(unitId: string, ingredientId: string, isCompleted: boolean) {
     const unit = await prisma.productionUnit.findUnique({
         where: { id: unitId },
-        select: { completed: true }
+        include: {
+            productionPlan: {
+                include: {
+                    recipe: {
+                        include: { sections: true }
+                    }
+                }
+            }
+        }
     })
 
     if (!unit) return
@@ -94,9 +109,24 @@ export async function toggleUnitIngredient(unitId: string, ingredientId: string,
         completedIds = completedIds.filter(id => id !== ingredientId)
     }
 
+    // Check if fully assembled
+    const totalSections = unit.productionPlan.recipe.sections.length
+    const isFullyChecked = totalSections > 0 && completedIds.length >= totalSections
+    const assembledAt = isFullyChecked ? new Date() : null
+
+    // If unchecking, and it was previously assembled, we might want to clear assembledAt or keep the original date?
+    // User logic: "Assembled" status depends on checks. If unchecked, it's no longer assembled.
+    // So we update assembledAt based on current state. 
+    // Optimization: Only update assembledAt if status changes? For now, simple is better.
+    // Actually, if we just unchecked an item, isFullyChecked becomes false, assembledAt becomes null. Correct.
+    // If we check the last item, isFullyChecked becomes true, assembledAt becomes now. Correct.
+
     await prisma.productionUnit.update({
         where: { id: unitId },
-        data: { completed: JSON.stringify(completedIds) }
+        data: {
+            completed: JSON.stringify(completedIds),
+            assembledAt: assembledAt
+        }
     })
 
     revalidatePath('/production-plan/[id]')
@@ -184,4 +214,30 @@ export async function updateProductionPlanQuantity(id: string, newQuantity: numb
     }
 
     revalidatePath('/production-plan')
+}
+
+export async function reportIssue(unitId: string, description: string) {
+    await prisma.productionIssue.create({
+        data: {
+            productionUnitId: unitId,
+            description
+        }
+    })
+    revalidatePath('/production-plan/[id]')
+}
+
+export async function resolveIssue(issueId: string) {
+    await prisma.productionIssue.update({
+        where: { id: issueId },
+        data: { isResolved: true }
+    })
+    revalidatePath('/production-plan/[id]')
+}
+
+export async function updateIssue(issueId: string, description: string) {
+    await prisma.productionIssue.update({
+        where: { id: issueId },
+        data: { description }
+    })
+    revalidatePath('/production-plan/[id]')
 }

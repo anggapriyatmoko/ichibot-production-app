@@ -1,0 +1,10 @@
+
+model ProductionIssue {
+  id               String   @id @default(cuid())
+  productionUnitId String
+  productionUnit   ProductionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade)
+  description      String
+  isResolved       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

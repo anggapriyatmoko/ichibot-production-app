@@ -19,7 +19,8 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                 }
             },
             units: {
-                orderBy: { unitNumber: 'asc' }
+                orderBy: { unitNumber: 'asc' },
+                include: { issues: true }
             }
         }
     })
