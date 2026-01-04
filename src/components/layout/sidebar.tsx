@@ -31,9 +31,12 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
     return (
         <div className="flex h-full w-64 flex-col bg-card border-r border-border">
             <div className="flex h-16 items-center px-6 border-b border-border">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                    Ichibot Production
-                </h1>
+                <div className="flex flex-col">
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent leading-none">
+                        Ichibot Production
+                    </h1>
+                    <span className="text-[10px] font-medium text-muted-foreground mt-1">Production Plan and Control (PPC)</span>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto py-6 px-3">

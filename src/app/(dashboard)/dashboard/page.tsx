@@ -62,6 +62,8 @@ export default async function DashboardPage() {
         const planned = plans.reduce((acc, p) => acc + p.quantity, 0)
         let packed = 0
         let sold = 0
+        let assembled = 0
+
         plans.forEach(p => {
             const totalSections = p.recipe?.sections?.length || 0
             p.units.forEach((u: any) => {
@@ -72,10 +74,12 @@ export default async function DashboardPage() {
                     sold++
                 } else if (u.isPacked) {
                     packed++
+                } else if (isFullyChecked) {
+                    assembled++
                 }
             })
         })
-        return { planned, packed, sold }
+        return { planned, packed, sold, assembled }
     }
 
     const currentStats = calculateStats(currentMonthPlans)
@@ -105,10 +109,14 @@ export default async function DashboardPage() {
                     </h3>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-3 gap-4 mb-8">
+                    <div className="grid grid-cols-4 gap-4 mb-8">
                         <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
                             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{currentStats.planned}</p>
+                        </div>
+                        <div className="bg-purple-50/50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/50">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Assembled</p>
+                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{currentStats.assembled}</p>
                         </div>
                         <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Packed</p>
@@ -127,6 +135,8 @@ export default async function DashboardPage() {
                             {currentMonthPlans.map((plan: any) => {
                                 let packedCount = 0
                                 let soldCount = 0
+                                let assembledCount = 0
+
                                 const sections = plan.recipe?.sections || []
                                 const validSectionIds = sections.map((s: any) => s.id)
                                 const totalSections = sections.length
@@ -140,9 +150,11 @@ export default async function DashboardPage() {
                                         soldCount++
                                     } else if (u.isPacked) {
                                         packedCount++
+                                    } else if (isFullyChecked) {
+                                        assembledCount++
                                     }
                                 })
-                                const notFinished = plan.quantity - packedCount - soldCount
+                                const notFinished = plan.quantity - packedCount - soldCount - assembledCount
 
                                 return (
                                     <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2">
@@ -154,6 +166,10 @@ export default async function DashboardPage() {
                                                 <div className="text-center w-16">
                                                     <p className="font-bold text-foreground">{plan.quantity}</p>
                                                     <p className="text-[10px] text-muted-foreground uppercase">Plan</p>
+                                                </div>
+                                                <div className="text-center w-16">
+                                                    <p className="font-bold text-purple-600 dark:text-purple-400">{assembledCount}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase">Assembled</p>
                                                 </div>
                                                 <div className="text-center w-16">
                                                     <p className="font-bold text-blue-600 dark:text-blue-400">{packedCount}</p>
