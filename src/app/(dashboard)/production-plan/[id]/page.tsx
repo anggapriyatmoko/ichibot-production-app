@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import UnitRow from './components/unit-row'
+import IssueAnalysisTable from './components/issue-analysis-table'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,6 +89,8 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                     </tbody>
                 </table>
             </div>
+
+            <IssueAnalysisTable units={(plan as any).units} />
         </div>
     )
 }

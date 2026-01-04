@@ -1,0 +1,219 @@
+'use client'
+
+import { useState } from 'react'
+import { AlertTriangle, Bot, BrainCircuit, Sparkles, CheckCircle, Edit2 } from 'lucide-react'
+import IssueModal from './issue-modal'
+
+interface Issue {
+    id: string
+    description: string
+    isResolved: boolean
+    createdAt: Date
+}
+
+interface Unit {
+    id: string
+    unitNumber: number
+    productIdentifier: string | null
+    customId: string | null
+    issues: Issue[]
+}
+
+interface IssueAnalysisTableProps {
+    units: Unit[]
+}
+
+export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
+    const problematicUnits = units.filter(u => u.issues?.some(i => !i.isResolved))
+
+    // State for managing modal from this table
+    const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
+    const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
+    const [resolveMode, setResolveMode] = useState(false)
+
+    const handleManageIssue = (unit: Unit, issue: Issue, isResolve: boolean) => {
+        setSelectedUnit(unit)
+        setSelectedIssue(issue)
+        setResolveMode(isResolve)
+    }
+
+    if (problematicUnits.length === 0) {
+        return (
+            <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm text-slate-600">
+                                <BrainCircuit className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                                    Neural Detection
+                                </h2>
+                                <p className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                                    <Sparkles className="w-3 h-3 text-amber-500" />
+                                    No active anomalies
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                                <tr>
+                                    <th className="px-6 py-4 font-medium">Unit Identity</th>
+                                    <th className="px-6 py-4 font-medium">Date</th>
+                                    <th className="px-6 py-4 font-medium">Detected Anomaly</th>
+                                    <th className="px-6 py-4 text-right font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-12 h-12 rounded-full bg-green-50 text-green-500 flex items-center justify-center">
+                                                <CheckCircle className="w-6 h-6" />
+                                            </div>
+                                            <p className="font-medium text-slate-600">No anomalies detected</p>
+                                            <p className="text-xs text-slate-400">All units are running within normal parameters.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium flex items-center gap-2">
+                        <Bot className="w-3 h-3" />
+                        <span>Automated anomaly tracking active. Efficiency impact calculated based on resolution time.</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                {/* Header - Sleek Light */}
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm text-slate-600">
+                            <BrainCircuit className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                                Neural Detection
+                            </h2>
+                            <p className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                                <Sparkles className="w-3 h-3 text-amber-500" />
+                                {problematicUnits.length} active anomalies detected
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Table Content */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                            <tr>
+                                <th className="px-6 py-4 font-medium">Unit Identity</th>
+                                <th className="px-6 py-4 font-medium">Date</th>
+                                <th className="px-6 py-4 font-medium">Detected Anomaly</th>
+                                <th className="px-6 py-4 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {problematicUnits.map((unit) => {
+                                const activeIssue = unit.issues.find(i => !i.isResolved)!
+                                return (
+                                    <tr key={unit.id} className="group hover:bg-slate-50/80 transition-colors">
+                                        <td className="px-6 py-4 align-top w-48">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-100 flex items-center justify-center font-bold text-xs shadow-sm">
+                                                    #{unit.unitNumber}
+                                                </div>
+                                                <div>
+                                                    <div className="font-semibold text-slate-900">
+                                                        {unit.productIdentifier || 'No Serial'}
+                                                    </div>
+                                                    <div className="text-xs text-slate-400 font-mono">
+                                                        {unit.customId || 'No ID'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 align-top w-32 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-700 font-medium">
+                                                    {new Date(activeIssue.createdAt).toLocaleDateString('id-ID', {
+                                                        day: 'numeric',
+                                                        month: 'short',
+                                                        year: 'numeric'
+                                                    })}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400">
+                                                    {new Date(activeIssue.createdAt).toLocaleTimeString('id-ID', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 align-top">
+                                            <div className="flex items-start gap-3">
+                                                <AlertTriangle className="w-4 h-4 text-amber-500 mt-1 shrink-0" />
+                                                <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap break-words max-w-2xl">
+                                                    {activeIssue.description}
+                                                </p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right align-top w-48">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleManageIssue(unit, activeIssue, true)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-xs font-semibold text-green-700 shadow-sm hover:bg-green-100 hover:border-green-300 transition-all active:scale-95"
+                                                >
+                                                    <CheckCircle className="w-3.5 h-3.5" />
+                                                    Solved
+                                                </button>
+                                                <button
+                                                    onClick={() => handleManageIssue(unit, activeIssue, false)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                    Edit
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Footer Insight */}
+                <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium flex items-center gap-2">
+                    <Bot className="w-3 h-3" />
+                    <span>Automated anomaly tracking active. Efficiency impact calculated based on resolution time.</span>
+                </div>
+            </div>
+
+            {/* Re-use the existing modal for management */}
+            {selectedUnit && (
+                <IssueModal
+                    isOpen={!!selectedUnit}
+                    onClose={() => {
+                        setSelectedUnit(null)
+                        setSelectedIssue(null)
+                    }}
+                    unitId={selectedUnit.id}
+                    unitNumber={selectedUnit.unitNumber}
+                    existingIssue={selectedIssue}
+                    initialResolveMode={resolveMode}
+                />
+            )}
+        </div>
+    )
+}

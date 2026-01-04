@@ -4,15 +4,19 @@ import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, X, Loader2, CheckCircle, Edit2 } from 'lucide-react'
 import { reportIssue, resolveIssue, updateIssue } from '@/app/actions/production-plan'
 
+import { createPortal } from 'react-dom'
+
 interface IssueModalProps {
     isOpen: boolean
     onClose: () => void
     unitId: string
     unitNumber: number
     existingIssue?: { id: string, description: string } | null
+    initialResolveMode?: boolean
 }
 
-export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existingIssue }: IssueModalProps) {
+export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existingIssue, initialResolveMode = false }: IssueModalProps) {
+    const [mounted, setMounted] = useState(false)
     const [description, setDescription] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -20,9 +24,15 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    useEffect(() => {
         if (isOpen) {
             setDescription(existingIssue ? existingIssue.description : '')
-            setIsEditing(!existingIssue) // If new issue, start in editing mode. If existing, start in read-only.
+            setIsEditing(!existingIssue)
+            setIsConfirmingResolve(initialResolveMode) // Initialize based on prop
+            setIsSubmitting(false)
 
             // Focus after animation only if editing
             if (!existingIssue) {
@@ -31,7 +41,7 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                 }, 100)
             }
         }
-    }, [isOpen, existingIssue])
+    }, [isOpen, existingIssue, initialResolveMode])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -87,12 +97,12 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
         }
     }
 
-    if (!isOpen) return null
+    if (!mounted || !isOpen) return null
 
     // Confirmation View
     if (isConfirmingResolve) {
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        return createPortal(
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-500/10 backdrop-blur-sm animate-in fade-in duration-200">
                 <div
                     className="bg-background w-full max-w-md rounded-2xl shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
@@ -108,7 +118,13 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
 
                         <div className="flex gap-3 pt-4">
                             <button
-                                onClick={() => setIsConfirmingResolve(false)}
+                                onClick={() => {
+                                    if (initialResolveMode) {
+                                        onClose()
+                                    } else {
+                                        setIsConfirmingResolve(false)
+                                    }
+                                }}
                                 disabled={isSubmitting}
                                 className="flex-1 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors"
                             >
@@ -124,12 +140,13 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
         )
     }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-blue-500/10 backdrop-blur-sm animate-in fade-in duration-200">
             <div
                 className="bg-background w-full max-w-md rounded-2xl shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
@@ -227,6 +244,7 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }
