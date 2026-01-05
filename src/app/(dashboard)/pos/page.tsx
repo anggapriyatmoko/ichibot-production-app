@@ -1,9 +1,9 @@
 import prisma from '@/lib/prisma'
-import POSSystem from '@/components/checkout/pos-system'
+import POSSystem from '@/components/pos/pos-system'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CheckoutPage() {
+export default async function POSPage() {
     const products = await prisma.product.findMany({
         orderBy: {
             name: 'asc'
@@ -17,7 +17,7 @@ export default async function CheckoutPage() {
                 <p className="text-sm text-muted-foreground">Select items to checkout from inventory.</p>
             </div>
 
-            <POSSystem products={products} />
+            <POSSystem products={products.map(p => ({ ...p, sku: p.sku || '' }))} />
         </div>
     )
 }

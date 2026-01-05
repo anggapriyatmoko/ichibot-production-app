@@ -5,12 +5,12 @@ import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
-import { requireAdmin } from '@/lib/auth'
+import { requireAdmin, requireAuth } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export async function createProduct(formData: FormData) {
-    await requireAdmin()
+    await requireAuth()
     const session: any = await getServerSession(authOptions)
 
     const name = formData.get('name') as string
@@ -65,7 +65,8 @@ export async function createProduct(formData: FormData) {
                     type: 'IN',
                     quantity: stock,
                     productId: product.id,
-                    userId: session?.user?.id || null
+                    userId: session?.user?.id || null,
+                    description: 'Initial Stock'
                 }
             })
             console.log('Transaction created with userId:', session?.user?.id || 'system')
@@ -83,7 +84,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(formData: FormData) {
-    await requireAdmin()
+    await requireAuth()
     const id = formData.get('id') as string
     const name = formData.get('name') as string
     const rawSku = formData.get('sku') as string
@@ -154,7 +155,8 @@ export async function addStock(productId: string, quantity: number) {
                 type: 'IN',
                 quantity: quantity,
                 productId: productId,
-                userId: session?.user?.id || null
+                userId: session?.user?.id || null,
+                description: 'Manual Stock Addition'
             }
         })
     ])
@@ -217,7 +219,8 @@ export async function importProducts(products: any[]) {
                 const updateData: any = {
                     name,
                     stock: stock,
-                    lowStockThreshold
+                    lowStockThreshold,
+                    image: item.image ? String(item.image).trim() : existing.image
                 }
 
                 // Only update SKU if provided and not empty
@@ -238,7 +241,8 @@ export async function importProducts(products: any[]) {
                             type: diff > 0 ? 'IN' : 'OUT',
                             quantity: Math.abs(diff),
                             productId: existing.id,
-                            userId: session?.user?.id || null
+                            userId: session?.user?.id || null,
+                            description: `Import Adjustment (${diff > 0 ? '+' : ''}${diff})`
                         }
                     })
                 }
@@ -250,7 +254,8 @@ export async function importProducts(products: any[]) {
                         name,
                         sku: sku as any, // can be null
                         stock,
-                        lowStockThreshold
+                        lowStockThreshold,
+                        image: item.image ? String(item.image).trim() : null
                     }
                 })
 
@@ -260,7 +265,8 @@ export async function importProducts(products: any[]) {
                             type: 'IN',
                             quantity: stock,
                             productId: newProduct.id,
-                            userId: session?.user?.id || null
+                            userId: session?.user?.id || null,
+                            description: 'Import Initial Stock'
                         }
                     })
                 }
@@ -288,7 +294,8 @@ export async function getAllProductsForExport() {
             sku: true,
             stock: true,
             lowStockThreshold: true,
-            notes: true
+            notes: true,
+            image: true
         }
     })
 }

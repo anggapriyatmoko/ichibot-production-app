@@ -3,21 +3,17 @@
 import { useState } from 'react'
 import { Upload, FileSpreadsheet, AlertTriangle, Check, Loader2, Download, Table, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { importProducts } from '@/app/actions/product'
+import { importProductionPlan } from '@/app/actions/production-plan' // You'll need to export this
+import { useAlert } from '@/hooks/use-alert'
 
 type ImportPreview = {
-    name: string
-    sku: string
-    stock: number
-    lowStockThreshold: number
-    image?: string
+    recipeName: string
+    quantity: number
     isValid: boolean
     errors: string[]
 }
 
-import { useAlert } from '@/hooks/use-alert'
-
-export default function ImportProductModal() {
+export default function ImportPlanModal({ month, year }: { month: number, year: number }) {
     const { showError } = useAlert()
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
@@ -26,10 +22,10 @@ export default function ImportProductModal() {
     const [importResult, setImportResult] = useState<{ success: number, errors: string[] } | null>(null)
 
     const downloadTemplate = (format: 'xlsx' | 'csv') => {
-        const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Image URL']
+        const headers = ['Recipe Name', 'Quantity']
         const sampleData = [
-            ['Sample Product A', 'SPA-001', 100, 10, 'https://example.com/image.jpg'],
-            ['Sample Product B', 'SPB-002', 50, 5, '']
+            ['Product A', 10],
+            ['Product B', 5]
         ]
 
         if (format === 'csv') {
@@ -37,13 +33,13 @@ export default function ImportProductModal() {
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
             const link = document.createElement('a')
             link.href = URL.createObjectURL(blob)
-            link.download = 'inventory_template.csv'
+            link.download = `production_plan_template.csv`
             link.click()
         } else {
             const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData])
             const wb = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(wb, ws, 'Template')
-            XLSX.writeFile(wb, 'inventory_template.xlsx')
+            XLSX.writeFile(wb, `production_plan_template.xlsx`)
         }
     }
 
@@ -70,68 +66,31 @@ export default function ImportProductModal() {
                 }
 
                 const headers = data[0].map((h: string) => h.toString().toLowerCase().trim())
+                const recipeIdx = headers.findIndex(h => h.includes('recipe') || h.includes('name'))
+                const qtyIdx = headers.findIndex(h => h.includes('quantity') || h.includes('qty') || h.includes('target'))
 
-                const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('nama'))
-                const skuIdx = headers.findIndex(h => h === ('sku'))
-                const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('stok'))
-                const thresholdIdx = headers.findIndex(h => h.includes('threshold') || h.includes('low') || h.includes('min'))
-                const imageIdx = headers.findIndex(h => h.includes('image') || h.includes('gambar') || h.includes('url'))
-
-                if (nameIdx === -1) {
-                    showError('Required column "Product Name" not found in headers.')
+                if (recipeIdx === -1 || qtyIdx === -1) {
+                    showError('Required columns "Recipe Name" and "Quantity" not found.')
                     setIsLoading(false)
                     return
                 }
 
                 const rows = data.slice(1)
-
-                // Track duplicate SKUs and Names
-                const skuCounts = new Map<string, number>()
-                const nameCounts = new Map<string, number>()
-
-                rows.forEach(row => {
-                    const sku = row[skuIdx]
-                    if (sku) {
-                        const cleanSku = String(sku).trim()
-                        skuCounts.set(cleanSku, (skuCounts.get(cleanSku) || 0) + 1)
-                    }
-
-                    const name = row[nameIdx]
-                    if (name) {
-                        const cleanName = String(name).trim().toLowerCase()
-                        nameCounts.set(cleanName, (nameCounts.get(cleanName) || 0) + 1)
-                    }
-                })
-
                 const parsed: ImportPreview[] = rows.map(row => {
-                    const name = row[nameIdx]
-                    const rawSku = row[skuIdx]
-                    const sku = rawSku ? String(rawSku).trim() : ''
-                    const stock = stockIdx !== -1 ? (row[stockIdx] || 0) : 0
-                    const lowStockThreshold = thresholdIdx !== -1 ? (row[thresholdIdx] || 10) : 10
-                    const image = imageIdx !== -1 ? (row[imageIdx] ? String(row[imageIdx]).trim() : '') : ''
+                    const recipeName = row[recipeIdx] ? String(row[recipeIdx]).trim() : ''
+                    const quantity = parseInt(row[qtyIdx]) || 0
 
                     const errors = []
-                    if (!name) errors.push('Missing Name')
-                    if (sku && (skuCounts.get(sku) || 0) > 1) {
-                        errors.push('Duplicate SKU in file')
-                    }
-
-                    const cleanName = name ? String(name).trim().toLowerCase() : ''
-                    if (cleanName && (nameCounts.get(cleanName) || 0) > 1) {
-                        errors.push('Duplicate Name in file')
-                    }
+                    if (!recipeName) errors.push('Missing Recipe Name')
+                    if (quantity <= 0) errors.push('Quantity must be > 0')
 
                     return {
-                        name,
-                        sku,
-                        stock,
-                        lowStockThreshold,
-                        image,
+                        recipeName,
+                        quantity,
                         isValid: errors.length === 0,
                         errors
                     }
-                }).filter(r => r.name || r.sku)
+                }).filter(r => r.recipeName) // Filter out empty rows
 
                 setPreviewData(parsed)
                 setFileStats({
@@ -157,15 +116,7 @@ export default function ImportProductModal() {
 
         setIsLoading(true)
         try {
-            const formData = validData.map(d => ({
-                name: d.name,
-                sku: d.sku,
-                stock: d.stock,
-                lowStockThreshold: d.lowStockThreshold,
-                image: d.image
-            }))
-
-            const result = await importProducts(formData)
+            const result = await importProductionPlan(validData, month, year)
             setImportResult(result)
             if (result.success > 0) {
                 setPreviewData([])
@@ -178,6 +129,8 @@ export default function ImportProductModal() {
         }
     }
 
+    const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' })
+
     return (
         <>
             <button
@@ -185,7 +138,7 @@ export default function ImportProductModal() {
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
             >
                 <FileSpreadsheet className="w-4 h-4" />
-                Import Excel/CSV
+                Import Plan
             </button>
 
             {isOpen && (
@@ -194,8 +147,10 @@ export default function ImportProductModal() {
                         {/* Header */}
                         <div className="p-6 border-b border-border flex justify-between items-start flex-shrink-0">
                             <div>
-                                <h2 className="text-xl font-bold text-foreground">Import Sparepart</h2>
-                                <p className="text-sm text-muted-foreground mt-1">Upload Excel (.xlsx) or CSV file to update inventory.</p>
+                                <h2 className="text-xl font-bold text-foreground">Import Production Plan</h2>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Target period: <span className="font-bold text-primary">{monthName} {year}</span>
+                                </p>
                             </div>
                             <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
                                 <span className="sr-only">Close</span>
@@ -229,13 +184,12 @@ export default function ImportProductModal() {
                                         <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
                                             <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
                                                 <AlertTriangle className="w-4 h-4" />
-                                                Format Requirements
+                                                Requirement
                                             </h3>
                                             <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
                                                 <li>First row must be <strong>Headers</strong></li>
-                                                <li>Required Columns: <strong>Product Name</strong></li>
-                                                <li>Optional Columns: <strong>SKU, Stock, Low Stock Threshold, Image URL</strong></li>
-                                                <li>Duplicate SKUs will flagged as <strong>ERROR</strong></li>
+                                                <li>Columns: <strong>Recipe Name</strong> and <strong>Quantity</strong></li>
+                                                <li>If plan exists, quantity will be updated.</li>
                                             </ul>
                                         </div>
 
@@ -244,17 +198,14 @@ export default function ImportProductModal() {
                                                 <Download className="w-4 h-4" />
                                                 Download Template
                                             </h3>
-                                            <p className="text-sm text-blue-900/80 dark:text-blue-400/80 mb-4">
-                                                Use our predefined template to ensure correct formatting.
-                                            </p>
                                             <div className="flex gap-3">
                                                 <button onClick={() => downloadTemplate('xlsx')} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-blue-500 text-blue-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
                                                     <FileSpreadsheet className="w-3 h-3" />
-                                                    Excel Template (.xlsx)
+                                                    Excel (.xlsx)
                                                 </button>
                                                 <button onClick={() => downloadTemplate('csv')} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-green-500 text-green-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
                                                     <FileText className="w-3 h-3" />
-                                                    CSV Template
+                                                    CSV
                                                 </button>
                                             </div>
                                         </div>
@@ -268,7 +219,7 @@ export default function ImportProductModal() {
                                     <div className="flex items-center justify-between flex-shrink-0">
                                         <div className="flex gap-4">
                                             <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
-                                                Total Rows: <span className="text-foreground">{fileStats?.total}</span>
+                                                Rows: <span className="text-foreground">{fileStats?.total}</span>
                                             </div>
                                             <div className="px-3 py-1 bg-green-500/10 rounded-full text-xs font-medium text-green-600">
                                                 Valid: <span className="font-bold">{fileStats?.valid}</span>
@@ -291,11 +242,8 @@ export default function ImportProductModal() {
                                                     <tr>
                                                         <th className="p-3 border-b border-border w-10 bg-muted">#</th>
                                                         <th className="p-3 border-b border-border bg-muted">Status</th>
-                                                        <th className="p-3 border-b border-border bg-muted">SKU</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Name</th>
-                                                        <th className="p-3 border-b border-border text-right bg-muted">Stock</th>
-                                                        <th className="p-3 border-b border-border text-right bg-muted">Threshold</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Image</th>
+                                                        <th className="p-3 border-b border-border bg-muted">Recipe Name</th>
+                                                        <th className="p-3 border-b border-border text-right bg-muted">Quantity</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border bg-card">
@@ -313,17 +261,8 @@ export default function ImportProductModal() {
                                                                     </span>
                                                                 )}
                                                             </td>
-                                                            <td className="p-3 font-mono text-xs">{row.sku}</td>
-                                                            <td className="p-3 font-medium">{row.name}</td>
-                                                            <td className="p-3 text-right tabular-nums">{row.stock}</td>
-                                                            <td className="p-3 text-right text-muted-foreground tabular-nums">{row.lowStockThreshold}</td>
-                                                            <td className="p-3">
-                                                                {row.image ? (
-                                                                    <div className="relative w-8 h-8 rounded overflow-hidden border border-border">
-                                                                        <img src={row.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                                                                    </div>
-                                                                ) : <span className="text-xs text-muted-foreground">-</span>}
-                                                            </td>
+                                                            <td className="p-3 font-medium">{row.recipeName}</td>
+                                                            <td className="p-3 text-right tabular-nums">{row.quantity}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -342,7 +281,7 @@ export default function ImportProductModal() {
                                     <div>
                                         <h3 className="text-2xl font-bold text-foreground">Import Completed!</h3>
                                         <p className="text-muted-foreground mt-2">
-                                            Successfully imported/updated <strong className="text-foreground">{importResult.success}</strong> items.
+                                            Successfully processed <strong className="text-foreground">{importResult.success}</strong> items.
                                         </p>
                                     </div>
 

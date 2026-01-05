@@ -105,8 +105,11 @@ export default function ImportRecipeModal() {
 
                     const errors = []
                     if (!recipeName) errors.push('Missing Recipe Name')
-                    if (!sku && !productName) errors.push('Missing Ingredient (SKU or Name)')
-                    if (quantity <= 0) errors.push('Invalid Quantity')
+                    // Only require ingredient/qty if it's NOT just a header row
+                    if (sku || productName || quantity > 0) {
+                        if (!sku && !productName) errors.push('Missing Ingredient (SKU or Name)')
+                        if (quantity <= 0) errors.push('Invalid Quantity')
+                    }
 
                     return {
                         originalRow: row, // Keep raw for server
@@ -298,11 +301,11 @@ export default function ImportRecipeModal() {
                                                             <td className="p-3 text-muted-foreground text-xs">{i + 1}</td>
                                                             <td className="p-3">
                                                                 {row.isValid ? (
-                                                                    <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30 rounded-full border border-green-200 dark:border-green-900/50">
+                                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-medium px-2.5 py-0.5 bg-emerald-500/15 rounded-full">
                                                                         <Check className="w-3 h-3" /> Ready
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="inline-flex items-center gap-1 text-red-600 text-xs font-medium px-2 py-0.5 bg-red-100 dark:bg-red-900/30 rounded-full border border-red-200 dark:border-red-900/50" title={row.errors.join(', ')}>
+                                                                    <span className="inline-flex items-center gap-1 text-red-600 text-xs font-medium px-2.5 py-0.5 bg-red-500/15 rounded-full" title={row.errors.join(', ')}>
                                                                         <AlertTriangle className="w-3 h-3" /> {row.errors[0]}
                                                                     </span>
                                                                 )}

@@ -1,10 +1,14 @@
 import prisma from '@/lib/prisma'
 import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History } from 'lucide-react'
+import ProductionOverviewTable from './components/production-overview-table'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
+    const params = await searchParams
+    const selectedYear = Number(params?.year) || new Date().getFullYear()
+
     // 1. Fetch Stats
     const totalProducts = await prisma.product.count()
     const totalRecipes = await prisma.recipe.count()
@@ -36,27 +40,77 @@ export default async function DashboardPage() {
 
     // Production Stats (This Month vs Last Month)
     const currentMonth = today.getMonth() + 1
-    const currentYear = today.getFullYear()
+    const currentYear = today.getFullYear() // For the top cards, keep using current real year
 
     const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
     const lastMonth = lastMonthDate.getMonth() + 1
     const lastMonthYear = lastMonthDate.getFullYear()
 
-    const [currentMonthPlans, lastMonthPlans] = await Promise.all([
+    const [currentMonthPlans, lastMonthPlans, allRecipes, annualPlans] = await Promise.all([
         prisma.productionPlan.findMany({
             where: { month: currentMonth, year: currentYear },
             include: {
                 units: true,
                 recipe: {
-                    include: { sections: true }
+                    include: {
+                        sections: true,
+                        category: true
+                    }
                 }
             }
         }),
         prisma.productionPlan.findMany({
             where: { month: lastMonth, year: lastMonthYear },
-            include: { units: true }
+            include: {
+                units: true,
+                recipe: {
+                    include: {
+                        sections: true,
+                        category: true
+                    }
+                }
+            }
+        }),
+        prisma.recipe.findMany({
+            orderBy: { name: 'asc' },
+            include: { sections: true, category: true }
+        }),
+        prisma.productionPlan.findMany({
+            where: { year: selectedYear },
+            include: {
+                units: true,
+                recipe: { include: { sections: true } }
+            }
         })
     ])
+
+    // Process data for Overview Table
+    const overviewData = allRecipes.map(recipe => {
+        const monthlyData = Array.from({ length: 12 }, (_, i) => {
+            const month = i + 1
+            const itemPlan = annualPlans.find(p => p.recipeId === recipe.id && p.month === month)
+
+            if (!itemPlan) return { month, plan: 0, done: 0 }
+
+            const totalSections = recipe.sections.length
+            const doneCount = itemPlan.units.filter(u => {
+                const completed = JSON.parse(u.completed || '[]').length
+                return totalSections > 0 && completed >= totalSections
+            }).length
+
+            return {
+                month,
+                plan: itemPlan.quantity,
+                done: doneCount // "Done" means assembled -> all ingredients checked
+            }
+        })
+
+        return {
+            productName: recipe.name,
+            category: recipe.category?.name || 'Uncategorized',
+            monthlyData
+        }
+    })
 
     const calculateStats = (plans: any[]) => {
         const planned = plans.reduce((acc, p) => acc + p.quantity, 0)
@@ -94,12 +148,17 @@ export default async function DashboardPage() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>
-                <p className="text-muted-foreground">Overview of your inventory and production status.</p>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>
+                    <p className="text-muted-foreground">Overview of your inventory and production status.</p>
+                </div>
             </div>
 
-            {/* Production Overview */}
+            {/* Annual Production Analysis Table (Top) */}
+            <ProductionOverviewTable data={overviewData} year={selectedYear} />
+
+            {/* Production Overview - Current Month */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* This Month - Detailed Breakdown */}
                 <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
@@ -110,19 +169,19 @@ export default async function DashboardPage() {
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-4 gap-4 mb-8">
-                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                        <div className="bg-indigo-100/50 dark:bg-indigo-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
                             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{currentStats.planned}</p>
                         </div>
-                        <div className="bg-purple-50/50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/50">
+                        <div className="bg-purple-100/50 dark:bg-purple-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Assembled</p>
                             <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{currentStats.assembled}</p>
                         </div>
-                        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                        <div className="bg-blue-100/50 dark:bg-blue-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Packed</p>
                             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{currentStats.packed}</p>
                         </div>
-                        <div className="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                        <div className="bg-emerald-100/50 dark:bg-emerald-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Sold</p>
                             <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{currentStats.sold}</p>
                         </div>
@@ -131,63 +190,79 @@ export default async function DashboardPage() {
                     {/* Per Product List */}
                     <div className="space-y-4">
                         <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Product Breakdown</h4>
-                        <div className="divide-y divide-border">
-                            {currentMonthPlans.map((plan: any) => {
-                                let packedCount = 0
-                                let soldCount = 0
-                                let assembledCount = 0
+                        <div className="space-y-4">
+                            {Object.entries(currentMonthPlans.reduce((acc: any, plan: any) => {
+                                const category = plan.recipe.category?.name || 'Uncategorized'
+                                if (!acc[category]) acc[category] = []
+                                acc[category].push(plan)
+                                return acc
+                            }, {})).sort((a: any, b: any) => a[0].localeCompare(b[0])).map(([category, plans]: [string, any]) => (
+                                <div key={category}>
+                                    <h5 className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-md inline-block mb-1">{category}</h5>
+                                    <div>
+                                        {plans.map((plan: any) => {
+                                            let packedCount = 0
+                                            let soldCount = 0
+                                            let assembledCount = 0
 
-                                const sections = plan.recipe?.sections || []
-                                const validSectionIds = sections.map((s: any) => s.id)
-                                const totalSections = sections.length
+                                            const sections = plan.recipe?.sections || []
+                                            const validSectionIds = sections.map((s: any) => s.id)
+                                            const totalSections = sections.length
 
-                                plan.units.forEach((u: any) => {
-                                    const completedRaw = JSON.parse(u.completed || '[]')
-                                    const validCompletedCount = completedRaw.filter((id: string) => validSectionIds.includes(id)).length
-                                    const isFullyChecked = totalSections > 0 && validCompletedCount >= totalSections
+                                            plan.units.forEach((u: any) => {
+                                                const completedRaw = JSON.parse(u.completed || '[]')
+                                                const validCompletedCount = completedRaw.filter((id: string) => validSectionIds.includes(id)).length
+                                                const isFullyChecked = totalSections > 0 && validCompletedCount >= totalSections
 
-                                    if (u.isSold) {
-                                        soldCount++
-                                    } else if (u.isPacked) {
-                                        packedCount++
-                                    } else if (isFullyChecked) {
-                                        assembledCount++
-                                    }
-                                })
-                                const notFinished = plan.quantity - packedCount - soldCount - assembledCount
+                                                if (u.isSold) {
+                                                    soldCount++
+                                                } else if (u.isPacked) {
+                                                    packedCount++
+                                                } else if (isFullyChecked) {
+                                                    assembledCount++
+                                                }
+                                            })
+                                            const notFinished = plan.quantity - packedCount - soldCount - assembledCount
 
-                                return (
-                                    <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2">
-                                        <div className="py-3 flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <p className="font-medium text-foreground">{plan.recipe.name}</p>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-sm">
-                                                <div className="text-center w-16">
-                                                    <p className="font-bold text-foreground">{plan.quantity}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase">Plan</p>
-                                                </div>
-                                                <div className="text-center w-16">
-                                                    <p className="font-bold text-purple-600 dark:text-purple-400">{assembledCount}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase">Assembled</p>
-                                                </div>
-                                                <div className="text-center w-16">
-                                                    <p className="font-bold text-blue-600 dark:text-blue-400">{packedCount}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase">Packed</p>
-                                                </div>
-                                                <div className="text-center w-16">
-                                                    <p className="font-bold text-emerald-600 dark:text-emerald-400">{soldCount}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase">Sold</p>
-                                                </div>
-                                                <div className="text-center w-16">
-                                                    <p className="font-bold text-orange-600 dark:text-orange-400">{notFinished}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase">Pending</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                )
-                            })}
+                                            return (
+                                                <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2 border-b border-border last:border-0 border-dashed">
+                                                    <div className="py-2 flex items-center justify-between">
+                                                        <div className="flex-1">
+                                                            <p className="font-medium text-foreground text-sm">{plan.recipe.name}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-4 text-xs">
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-foreground">{plan.quantity}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Plan</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-orange-600 dark:text-orange-400">{notFinished}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pending</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((notFinished / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-purple-600 dark:text-purple-400">{assembledCount}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Assembled</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((assembledCount / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-blue-600 dark:text-blue-400">{packedCount}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Packed</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((packedCount / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-emerald-600 dark:text-emerald-400">{soldCount}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Sold</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((soldCount / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -197,21 +272,101 @@ export default async function DashboardPage() {
                         <History className="w-5 h-5 text-muted-foreground" />
                         Last Month ({lastMonthDate.toLocaleString('default', { month: 'long' })})
                     </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-muted/30 p-4 rounded-xl">
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-indigo-100/50 dark:bg-indigo-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
-                            <p className="text-2xl font-bold text-foreground">{lastStats.planned}</p>
-                            <span className="text-xs text-muted-foreground">units</span>
+                            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{lastStats.planned}</p>
                         </div>
-                        <div className="bg-muted/30 p-4 rounded-xl">
+                        <div className="bg-purple-100/50 dark:bg-purple-500/10 p-4 rounded-xl">
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Assembled</p>
+                            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{lastStats.assembled}</p>
+                        </div>
+                        <div className="bg-blue-100/50 dark:bg-blue-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Packed</p>
-                            <p className="text-2xl font-bold text-blue-600/80 dark:text-blue-400/80">{lastStats.packed}</p>
-                            <span className="text-xs text-muted-foreground">{lastStats.planned > 0 ? Math.round((lastStats.packed / lastStats.planned) * 100) : 0}% rate</span>
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{lastStats.packed}</p>
                         </div>
-                        <div className="bg-muted/30 p-4 rounded-xl">
+                        <div className="bg-emerald-100/50 dark:bg-emerald-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Sold</p>
-                            <p className="text-2xl font-bold text-emerald-600/80 dark:text-emerald-400/80">{lastStats.sold}</p>
-                            <span className="text-xs text-muted-foreground">{lastStats.planned > 0 ? Math.round((lastStats.sold / lastStats.planned) * 100) : 0}% rate</span>
+                            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{lastStats.sold}</p>
+                        </div>
+                    </div>
+
+                    {/* Per Product List (Last Month) */}
+                    <div className="space-y-4 mt-8">
+                        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Product Breakdown</h4>
+                        <div className="space-y-4">
+                            {Object.entries(lastMonthPlans.reduce((acc: any, plan: any) => {
+                                const category = plan.recipe.category?.name || 'Uncategorized'
+                                if (!acc[category]) acc[category] = []
+                                acc[category].push(plan)
+                                return acc
+                            }, {})).sort((a: any, b: any) => a[0].localeCompare(b[0])).map(([category, plans]: [string, any]) => (
+                                <div key={category}>
+                                    <h5 className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-md inline-block mb-1">{category}</h5>
+                                    <div>
+                                        {plans.map((plan: any) => {
+                                            let packedCount = 0
+                                            let soldCount = 0
+                                            let assembledCount = 0
+
+                                            const sections = plan.recipe?.sections || []
+                                            const validSectionIds = sections.map((s: any) => s.id)
+                                            const totalSections = sections.length
+
+                                            plan.units.forEach((u: any) => {
+                                                const completedRaw = JSON.parse(u.completed || '[]')
+                                                const validCompletedCount = completedRaw.filter((id: string) => validSectionIds.includes(id)).length
+                                                const isFullyChecked = totalSections > 0 && validCompletedCount >= totalSections
+
+                                                if (u.isSold) {
+                                                    soldCount++
+                                                } else if (u.isPacked) {
+                                                    packedCount++
+                                                } else if (isFullyChecked) {
+                                                    assembledCount++
+                                                }
+                                            })
+                                            const notFinished = plan.quantity - packedCount - soldCount - assembledCount
+
+                                            return (
+                                                <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2 border-b border-border last:border-0 border-dashed">
+                                                    <div className="py-2 flex items-center justify-between">
+                                                        <div className="flex-1">
+                                                            <p className="font-medium text-foreground text-sm">{plan.recipe.name}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-4 text-xs scale-90 origin-right">
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-foreground">{plan.quantity}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Plan</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-orange-600 dark:text-orange-400">{notFinished}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pending</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((notFinished / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-purple-600 dark:text-purple-400">{assembledCount}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Done</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((assembledCount / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-blue-600 dark:text-blue-400">{packedCount}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pack</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((packedCount / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                            <div className="text-center w-14">
+                                                                <p className="font-bold text-base text-emerald-600 dark:text-emerald-400">{soldCount}</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Sold</p>
+                                                                <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((soldCount / plan.quantity) * 100) : 0}%</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -326,11 +481,13 @@ export default async function DashboardPage() {
                     <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20">
                         <h3 className="font-bold text-lg mb-2">Process Order</h3>
                         <p className="text-emerald-100 text-sm mb-4">Checkout materials for production.</p>
-                        <Link href="/checkout" className="block w-full py-3 bg-white text-emerald-600 font-bold text-center rounded-xl hover:bg-emerald-50 transition-colors">
+                        <Link href="/pos" className="block w-full py-3 bg-white text-emerald-600 font-bold text-center rounded-xl hover:bg-emerald-50 transition-colors">
                             Go to POS
                         </Link>
                     </div>
                 </div>
+
+
             </div>
         </div>
     )

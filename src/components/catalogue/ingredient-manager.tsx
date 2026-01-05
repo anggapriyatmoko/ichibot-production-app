@@ -19,7 +19,7 @@ type Ingredient = {
         name: string
         stock: number
         image: string | null
-        sku: string
+        sku: string | null
         notes: string | null
     }
 }
@@ -35,7 +35,7 @@ type Product = {
     name: string
     stock: number
     image: string | null
-    sku: string
+    sku: string | null
     notes: string | null
 }
 
@@ -44,13 +44,15 @@ export default function IngredientManager({
     recipeName,
     initialIngredients,
     initialSections,
-    allProducts
+    allProducts,
+    userRole
 }: {
     recipeId: string,
     recipeName: string,
     initialIngredients: Ingredient[],
     initialSections: Section[],
     allProducts: Product[]
+    userRole?: string
 }) {
     // Grouping Logic
     const sections = initialSections
@@ -131,7 +133,7 @@ export default function IngredientManager({
 
     const filteredProducts = allProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (p.notes && p.notes.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
@@ -280,22 +282,26 @@ export default function IngredientManager({
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsEditing(!isEditing)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
-                    >
-                        {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                        {isEditing ? 'Done' : 'Edit'}
-                    </button>
-                    <button
-                        onClick={handleExport}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
-                    >
-                        <Download className="w-4 h-4" />
-                        Export BOM
-                    </button>
-                    <ImportRecipeModal />
+                    {userRole === 'ADMIN' && (
+                        <>
+                            <button
+                                onClick={() => setIsEditing(!isEditing)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+                            >
+                                {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                                {isEditing ? 'Done' : 'Edit'}
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                disabled={isLoading}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
+                            >
+                                <Download className="w-4 h-4" />
+                                Export BOM
+                            </button>
+                            <ImportRecipeModal />
+                        </>
+                    )}
 
                     <button
                         onClick={handlePrint}
@@ -310,7 +316,7 @@ export default function IngredientManager({
             <div className="flex justify-between items-center no-print py-2 px-1">
                 <div></div>
                 <div className="flex gap-2">
-                    {isEditing && (
+                    {isEditing && userRole === 'ADMIN' && (
                         <button
                             onClick={() => setIsAddingSection(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
@@ -392,9 +398,11 @@ export default function IngredientManager({
                         <div className="flex items-center gap-2">
                             {isEditing && (
                                 <>
-                                    <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
-                                        <Plus className="w-3 h-3" /> Add Item
-                                    </button>
+                                    {userRole === 'ADMIN' && (
+                                        <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
+                                            <Plus className="w-3 h-3" /> Add Item
+                                        </button>
+                                    )}
                                     <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
                                         <Trash2 className="w-3 h-3" />
                                     </button>
@@ -438,7 +446,7 @@ export default function IngredientManager({
                                 </div>
                             )}
                         </div>
-                        {isEditing && (
+                        {isEditing && userRole === 'ADMIN' && (
                             <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
                                 <Plus className="w-3 h-3" /> Add Item
                             </button>

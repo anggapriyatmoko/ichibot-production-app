@@ -6,7 +6,6 @@ interface AnalysisTableProps {
         name: string
         stock: number
         neededThisMonth: number
-        neededLastMonth: number
         totalNeeded: number
         balance: number
         status: 'SAFE' | 'SHORT'
@@ -49,7 +48,6 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                                 <th className="px-6 py-3">Sparepart Name</th>
                                 <th className="px-6 py-3 text-center">Current Stock</th>
                                 <th className="px-6 py-3 text-center">Needed (This Month)</th>
-                                <th className="px-6 py-3 text-center">Needed (Last Month)</th>
                                 <th className="px-6 py-3 text-center">Total Needed</th>
                                 <th className="px-6 py-3 text-center">Balance</th>
                                 <th className="px-6 py-3 text-right">Status</th>
@@ -61,7 +59,6 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                                     <td className="px-6 py-3 font-medium text-foreground">{item.name}</td>
                                     <td className="px-6 py-3 text-center text-muted-foreground">{item.stock}</td>
                                     <td className="px-6 py-3 text-center">{item.neededThisMonth}</td>
-                                    <td className="px-6 py-3 text-center">{item.neededLastMonth}</td>
                                     <td className="px-6 py-3 text-center font-bold">{item.totalNeeded}</td>
                                     <td className={`px-6 py-3 text-center font-bold ${item.balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                         {item.balance > 0 ? '+' : ''}{item.balance}

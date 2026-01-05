@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { Calendar, Plus, Trash2, Settings } from 'lucide-react'
+import { Calendar, Plus, Trash2, Eye } from 'lucide-react'
 import { createProductionPlan, deleteProductionPlan } from '@/app/actions/production-plan'
 import Link from 'next/link'
 import ProductionPlanModal from './components/add-plan-modal'
@@ -7,6 +7,8 @@ import AnalysisTable from './components/analysis-table'
 import PlanTargetEdit from './components/plan-target-edit'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import ImportPlanModal from './components/import-plan-modal'
+import { ExportButton } from './components/export-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,26 +54,7 @@ export default async function ProductionPlanPage({
         }
     })
 
-    // Fetch Last Month Plans
-    const lastMonthDate = new Date(currentYear, currentMonth - 2, 1) // -2 because Month is 1-indexed in UI but 0-indexed in Date constructor, and we want previous month
-    const lastMonthValue = lastMonthDate.getMonth() + 1
-    const lastMonthYearValue = lastMonthDate.getFullYear()
 
-    const lastMonthPlans = await prisma.productionPlan.findMany({
-        where: {
-            month: lastMonthValue,
-            year: lastMonthYearValue
-        },
-        include: {
-            recipe: {
-                include: {
-                    ingredients: {
-                        include: { product: true }
-                    }
-                }
-            }
-        }
-    })
 
     // Also need ingredients for current month plans to calculate demand
     // (Optimization: We could have included ingredients in the main query, 
@@ -90,64 +73,54 @@ export default async function ProductionPlanPage({
     const currentRecipeMap = new Map(currentRecipesWithIngredients.map(r => [r.id, r]))
 
     // --- Analysis Calculation ---
+    // Only calculate for current or future months
+    const selectedDate = new Date(currentYear, currentMonth - 1, 1)
+    const currentDate = new Date(today.getFullYear(), today.getMonth(), 1)
+    const showAnalysis = selectedDate.getTime() >= currentDate.getTime()
+
     interface SparepartDemand {
         [productId: string]: {
             product: any
             neededThisMonth: number
-            neededLastMonth: number
         }
     }
 
     const demandMap: SparepartDemand = {}
+    let analysisData: any[] = []
 
-    // Calculate This Month Demand
-    productionPlans.forEach(plan => {
-        const recipe = currentRecipeMap.get(plan.recipeId)
-        if (recipe) {
-            recipe.ingredients.forEach(ing => {
-                const totalNeeded = ing.quantity * plan.quantity
-                if (!demandMap[ing.productId]) {
-                    demandMap[ing.productId] = {
-                        product: ing.product,
-                        neededThisMonth: 0,
-                        neededLastMonth: 0
+    if (showAnalysis) {
+        // Calculate This Month Demand
+        productionPlans.forEach(plan => {
+            const recipe = currentRecipeMap.get(plan.recipeId)
+            if (recipe) {
+                recipe.ingredients.forEach(ing => {
+                    const totalNeeded = ing.quantity * plan.quantity
+                    if (!demandMap[ing.productId]) {
+                        demandMap[ing.productId] = {
+                            product: ing.product,
+                            neededThisMonth: 0
+                        }
                     }
-                }
-                demandMap[ing.productId].neededThisMonth += totalNeeded
-            })
-        }
-    })
-
-    // Calculate Last Month Demand
-    lastMonthPlans.forEach(plan => {
-        plan.recipe.ingredients.forEach(ing => {
-            const totalNeeded = ing.quantity * plan.quantity
-            if (!demandMap[ing.productId]) {
-                demandMap[ing.productId] = {
-                    product: ing.product,
-                    neededThisMonth: 0,
-                    neededLastMonth: 0
-                }
+                    demandMap[ing.productId].neededThisMonth += totalNeeded
+                })
             }
-            demandMap[ing.productId].neededLastMonth += totalNeeded
         })
-    })
 
-    // Transform to Array
-    const analysisData = Object.values(demandMap).map(item => {
-        const totalNeeded = item.neededThisMonth + item.neededLastMonth
-        const balance = item.product.stock - totalNeeded
-        return {
-            id: item.product.id,
-            name: item.product.name,
-            stock: item.product.stock,
-            neededThisMonth: item.neededThisMonth,
-            neededLastMonth: item.neededLastMonth,
-            totalNeeded,
-            balance,
-            status: (balance >= 0 ? 'SAFE' : 'SHORT') as 'SAFE' | 'SHORT'
-        }
-    })
+        // Transform to Array
+        analysisData = Object.values(demandMap).map(item => {
+            const totalNeeded = item.neededThisMonth
+            const balance = item.product.stock - totalNeeded
+            return {
+                id: item.product.id,
+                name: item.product.name,
+                stock: item.product.stock,
+                neededThisMonth: item.neededThisMonth,
+                totalNeeded,
+                balance,
+                status: (balance >= 0 ? 'SAFE' : 'SHORT') as 'SAFE' | 'SHORT'
+            }
+        })
+    }
 
     // Filter out recipes that are already planned for this period
     const plannedRecipeIds = new Set(productionPlans.map(p => p.recipeId))
@@ -205,11 +178,15 @@ export default async function ProductionPlanPage({
 
                 <div className="w-full md:w-auto">
                     {session?.user?.role === 'ADMIN' && (
-                        <ProductionPlanModal
-                            recipes={availableRecipes}
-                            month={currentMonth}
-                            year={currentYear}
-                        />
+                        <div className="flex gap-2">
+                            <ExportButton month={currentMonth} year={currentYear} />
+                            <ImportPlanModal month={currentMonth} year={currentYear} />
+                            <ProductionPlanModal
+                                recipes={availableRecipes}
+                                month={currentMonth}
+                                year={currentYear}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
@@ -221,7 +198,6 @@ export default async function ProductionPlanPage({
                         <tr>
                             <th className="px-6 py-4">Product Name & Progress</th>
                             <th className="px-6 py-4 text-center">Target</th>
-                            <th className="px-6 py-4 text-center">Manage</th>
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -240,7 +216,7 @@ export default async function ProductionPlanPage({
                                         </div>
 
                                         {/* Unit Progress List */}
-                                        <div className="pl-11 flex flex-col gap-1 mt-2">
+                                        <div className="pl-11 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
                                             {(plan as any).units.map((unit: any) => {
                                                 const validSectionIds = new Set(plan.recipe.sections.map((s: any) => s.id))
                                                 const completedIds = JSON.parse(unit.completed)
@@ -286,23 +262,24 @@ export default async function ProductionPlanPage({
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-center font-bold text-lg align-top pt-6">
-                                        <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} />
-                                    </td>
-                                    <td className="px-6 py-4 text-center align-top pt-6">
-                                        <Link href={`/production-plan/${plan.id}`} className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium">
-                                            <Settings className="w-4 h-4" />
-                                            Manage
-                                        </Link>
+                                        <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} userRole={session?.user?.role} />
                                     </td>
                                     <td className="px-6 py-4 text-right align-top pt-6">
-                                        <form action={async () => {
-                                            'use server'
-                                            await deleteProductionPlan(plan.id)
-                                        }}>
-                                            <button type="submit" className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </form>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Link href={`/production-plan/${plan.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
+                                                <Eye className="w-4 h-4" />
+                                            </Link>
+                                            {session?.user?.role === 'ADMIN' && (
+                                                <form action={async () => {
+                                                    'use server'
+                                                    await deleteProductionPlan(plan.id)
+                                                }}>
+                                                    <button type="submit" className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </form>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             )
@@ -319,7 +296,7 @@ export default async function ProductionPlanPage({
             </div>
 
             {/* Analysis Table */}
-            <AnalysisTable data={analysisData} />
+            {showAnalysis && <AnalysisTable data={analysisData} />}
         </div>
     )
 }

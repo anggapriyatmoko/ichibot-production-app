@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { processBatchCheckout } from '@/app/actions/checkout'
+import { processBatchCheckout } from '@/app/actions/pos'
 import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'

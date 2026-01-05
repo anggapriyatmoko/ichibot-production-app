@@ -10,15 +10,35 @@ export async function createRecipe(formData: FormData) {
     await requireAdmin()
     const name = formData.get('name') as string
     const description = formData.get('description') as string
+    const categoryId = formData.get('categoryId') as string | null
 
     await prisma.recipe.create({
         data: {
             name,
-            description
+            description,
+            categoryId: categoryId === '' ? null : categoryId
         }
     })
     revalidatePath('/catalogue')
 }
+
+export async function updateRecipe(id: string, formData: FormData) {
+    await requireAdmin()
+    const name = formData.get('name') as string
+    const description = formData.get('description') as string
+    const categoryId = formData.get('categoryId') as string | null
+
+    await prisma.recipe.update({
+        where: { id },
+        data: {
+            name,
+            description,
+            categoryId: categoryId === '' ? null : categoryId
+        }
+    })
+    revalidatePath('/catalogue')
+}
+
 
 export async function deleteRecipe(id: string) {
     await requireAdmin()

@@ -19,6 +19,16 @@ export async function requireAdmin() {
     return session
 }
 
+export async function requireAuth() {
+    const session: any = await getServerSession(authOptions)
+
+    if (!session?.user) {
+        throw new Error('Unauthorized: Please login')
+    }
+
+    return session
+}
+
 export async function getUserRole() {
     const session: any = await getServerSession(authOptions)
     return session?.user?.role || null

@@ -9,7 +9,7 @@ interface PlanTargetEditProps {
     initialQuantity: number
 }
 
-export default function PlanTargetEdit({ id, initialQuantity }: PlanTargetEditProps) {
+export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTargetEditProps & { userRole?: string }) {
     const [isEditing, setIsEditing] = useState(false)
     const [quantity, setQuantity] = useState(initialQuantity)
     const [isLoading, setIsLoading] = useState(false)
@@ -67,6 +67,14 @@ export default function PlanTargetEdit({ id, initialQuantity }: PlanTargetEditPr
                 className="w-20 text-center font-bold text-lg bg-background border border-primary rounded px-1 py-0.5 outline-none"
                 disabled={isLoading}
             />
+        )
+    }
+
+    if (userRole !== 'ADMIN') {
+        return (
+            <div className="inline-flex items-center gap-2 px-2 py-1">
+                <span className="font-bold text-lg">{initialQuantity} pcs</span>
+            </div>
         )
     }
 

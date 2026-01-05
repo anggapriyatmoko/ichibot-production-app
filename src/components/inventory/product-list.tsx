@@ -166,9 +166,15 @@ export default function ProductList({
         setIsLoading(true)
         try {
             const data = await getAllProductsForExport()
-            const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Notes']
-            // @ts-ignore
-            const rows = data.map(p => [p.name, p.sku || '', p.stock, p.lowStockThreshold, p.notes || ''])
+            const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Notes', 'Image URL']
+            const rows = data.map(p => [
+                p.name,
+                p.sku || '',
+                p.stock,
+                p.lowStockThreshold,
+                p.notes || '',
+                p.image || ''
+            ])
 
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
@@ -195,14 +201,15 @@ export default function ProductList({
     const filteredProducts = initialProducts
         .filter(p =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+            p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
         )
         .sort((a, b) => {
             const { key, direction } = sortConfig
-            const aValue = a[key]
-            const bValue = b[key]
+            const aValue: any = a[key]
+            const bValue: any = b[key]
 
             if (aValue === null || bValue === null) return 0
+            if (aValue === undefined || bValue === undefined) return 0
 
             if (aValue < bValue) return direction === 'asc' ? -1 : 1
             if (aValue > bValue) return direction === 'asc' ? 1 : -1
@@ -229,7 +236,7 @@ export default function ProductList({
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search products or SKU (current page)..."
+                        placeholder="Search products or SKU..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
@@ -248,14 +255,16 @@ export default function ProductList({
                                 Export
                             </button>
                             <ImportProductModal />
-                            <button
-                                onClick={() => setIsAdding(!isAdding)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add Product
-                            </button>
                         </>
+                    )}
+                    {(userRole === 'ADMIN' || userRole === 'USER') && (
+                        <button
+                            onClick={() => setIsAdding(!isAdding)}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Product
+                        </button>
                     )}
                 </div>
             </div>
@@ -547,7 +556,7 @@ export default function ProductList({
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {userRole === 'ADMIN' && (
+                                                {(userRole === 'ADMIN' || userRole === 'USER') && (
                                                     <button
                                                         onClick={() => setEditingProduct(product)}
                                                         className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"

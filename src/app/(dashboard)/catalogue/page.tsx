@@ -10,25 +10,33 @@ export const dynamic = 'force-dynamic'
 
 export default async function CataloguePage() {
     const session: any = await getServerSession(authOptions)
-    const recipes = await prisma.recipe.findMany({
-        orderBy: { updatedAt: 'desc' },
-        include: {
-            _count: {
-                select: { ingredients: true }
-            }
-        }
-    })
+
+    const [recipes, categories] = await prisma.$transaction([
+        prisma.recipe.findMany({
+            include: {
+                _count: {
+                    select: { ingredients: true }
+                },
+                category: true
+            },
+            orderBy: { name: 'asc' }
+        }),
+        prisma.category.findMany({ orderBy: { name: 'asc' } })
+    ])
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Product</h1>
-                    <p className="text-muted-foreground">Manage your finished goods and their recipes/BOM.</p>
-                </div>
+        <div className="max-w-7xl mx-auto">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Product Catalogue</h1>
+                <p className="text-muted-foreground">Manage finished goods, recipes, and BOMs.</p>
             </div>
 
-            <RecipeList recipes={recipes} userRole={session?.user?.role} />
+            <RecipeList
+                // @ts-ignore
+                recipes={recipes}
+                categories={categories}
+                userRole={session?.user?.role}
+            />
         </div>
     )
 }

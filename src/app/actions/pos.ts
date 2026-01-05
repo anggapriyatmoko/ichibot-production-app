@@ -44,13 +44,14 @@ export async function processBatchCheckout(items: CheckoutItem[]) {
                     type: 'OUT',
                     quantity: item.quantity,
                     productId: item.productId,
-                    userId: userId
+                    userId: userId,
+                    description: 'Checkout via POS'
                 }
             })
         }
     })
 
     revalidatePath('/inventory')
-    revalidatePath('/checkout')
+    revalidatePath('/pos')
     revalidatePath('/history')
 }

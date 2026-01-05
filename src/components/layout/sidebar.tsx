@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
@@ -11,7 +13,7 @@ const navigation = [
     { name: 'Product', href: '/catalogue', icon: BookOpen },
     { name: 'Sparepart', href: '/inventory', icon: Package },
     { name: 'Production Plan', href: '/production-plan', icon: Calendar },
-    { name: 'Checkout', href: '/checkout', icon: ShoppingCart },
+    { name: 'POS', href: '/pos', icon: ShoppingCart },
     { name: 'History', href: '/history', icon: LayoutDashboard },
 ]
 
@@ -27,16 +29,36 @@ interface SidebarProps {
 
 export default function Sidebar({ userProfile, userRole }: SidebarProps) {
     const pathname = usePathname()
+    const [isOpen, setIsOpen] = useState(true)
+
+    if (!isOpen) {
+        return (
+            <div className="flex h-full w-12 flex-col bg-card border-r border-border items-center pt-4 transition-all duration-300">
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
+                >
+                    <PanelLeftOpen className="h-5 w-5" />
+                </button>
+            </div>
+        )
+    }
 
     return (
-        <div className="flex h-full w-64 flex-col bg-card border-r border-border">
-            <div className="flex h-16 items-center px-6 border-b border-border">
+        <div className="flex h-full w-64 flex-col bg-card border-r border-border transition-all duration-300">
+            <div className="flex h-16 items-center justify-between px-6 border-b border-border">
                 <div className="flex flex-col">
                     <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent leading-none">
                         Ichibot Production
                     </h1>
                     <span className="text-[10px] font-medium text-muted-foreground mt-1">Production Plan and Control (PPC)</span>
                 </div>
+                <button
+                    onClick={() => setIsOpen(false)}
+                    className="p-1 -mr-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
+                >
+                    <PanelLeftClose className="h-4 w-4" />
+                </button>
             </div>
 
             <div className="flex-1 overflow-y-auto py-6 px-3">
