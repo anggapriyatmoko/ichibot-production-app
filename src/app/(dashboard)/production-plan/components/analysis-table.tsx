@@ -41,7 +41,8 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="bg-muted/30 text-foreground uppercase font-medium text-xs">
                             <tr>
@@ -87,6 +88,53 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-border">
+                    {sortedData.map((item) => (
+                        <div key={item.id} className="p-4 hover:bg-accent/30 transition-colors">
+                            <div className="flex items-start justify-between mb-3">
+                                <h3 className="font-semibold text-foreground text-sm">{item.name}</h3>
+                                {item.status === 'SAFE' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Safe
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        <AlertTriangle className="w-3 h-3" />
+                                        Short
+                                    </span>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                    <div className="text-muted-foreground mb-1">Current Stock</div>
+                                    <div className="font-medium text-foreground">{item.stock}</div>
+                                </div>
+                                <div>
+                                    <div className="text-muted-foreground mb-1">Needed</div>
+                                    <div className="font-medium text-foreground">{item.neededThisMonth}</div>
+                                </div>
+                                <div>
+                                    <div className="text-muted-foreground mb-1">Total Needed</div>
+                                    <div className="font-bold text-foreground">{item.totalNeeded}</div>
+                                </div>
+                                <div>
+                                    <div className="text-muted-foreground mb-1">Balance</div>
+                                    <div className={`font-bold ${item.balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                        {item.balance > 0 ? '+' : ''}{item.balance}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {data.length === 0 && (
+                        <div className="px-6 py-8 text-center text-muted-foreground text-sm">
+                            No spare parts required for the current plans.
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

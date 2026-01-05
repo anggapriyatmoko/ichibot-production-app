@@ -182,10 +182,10 @@ export default function ImportProductModal() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
+                className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-sm"
+                title="Import Excel/CSV"
             >
                 <FileSpreadsheet className="w-4 h-4" />
-                Import Excel/CSV
             </button>
 
             {isOpen && (

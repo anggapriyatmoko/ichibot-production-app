@@ -147,7 +147,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     })
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className="w-[98%] max-w-[98%] mx-auto space-y-8">
             <div className="flex items-start justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>
@@ -168,7 +168,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     </h3>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
                         <div className="bg-indigo-100/50 dark:bg-indigo-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
                             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{currentStats.planned}</p>
@@ -226,31 +226,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
                                             return (
                                                 <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2 border-b border-border last:border-0 border-dashed">
-                                                    <div className="py-2 flex items-center justify-between">
+                                                    <div className="py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                                                         <div className="flex-1">
                                                             <p className="font-medium text-foreground text-sm">{plan.recipe.name}</p>
                                                         </div>
-                                                        <div className="flex items-center gap-4 text-xs">
-                                                            <div className="text-center w-14">
+                                                        <div className="grid grid-cols-5 gap-2 sm:flex sm:items-center sm:gap-4 text-xs w-full sm:w-auto">
+                                                            <div className="text-center sm:w-14 bg-muted/30 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-foreground">{plan.quantity}</p>
                                                                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Plan</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-orange-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-orange-600 dark:text-orange-400">{notFinished}</p>
-                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pending</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pend</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((notFinished / plan.quantity) * 100) : 0}%</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-purple-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-purple-600 dark:text-purple-400">{assembledCount}</p>
-                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Assembled</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Done</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((assembledCount / plan.quantity) * 100) : 0}%</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-blue-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-blue-600 dark:text-blue-400">{packedCount}</p>
-                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Packed</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pack</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((packedCount / plan.quantity) * 100) : 0}%</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-emerald-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-emerald-600 dark:text-emerald-400">{soldCount}</p>
                                                                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Sold</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((soldCount / plan.quantity) * 100) : 0}%</p>
@@ -272,7 +272,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         <History className="w-5 h-5 text-muted-foreground" />
                         Last Month ({lastMonthDate.toLocaleString('default', { month: 'long' })})
                     </h3>
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="bg-indigo-100/50 dark:bg-indigo-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>
                             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{lastStats.planned}</p>
@@ -330,31 +330,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
                                             return (
                                                 <Link key={plan.id} href={`/production-plan/${plan.id}`} className="block hover:bg-accent/50 transition-colors rounded-lg -mx-2 px-2 border-b border-border last:border-0 border-dashed">
-                                                    <div className="py-2 flex items-center justify-between">
+                                                    <div className="py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                                                         <div className="flex-1">
                                                             <p className="font-medium text-foreground text-sm">{plan.recipe.name}</p>
                                                         </div>
-                                                        <div className="flex items-center gap-4 text-xs scale-90 origin-right">
-                                                            <div className="text-center w-14">
+                                                        <div className="grid grid-cols-5 gap-2 sm:flex sm:items-center sm:gap-4 text-xs w-full sm:w-auto">
+                                                            <div className="text-center sm:w-14 bg-muted/30 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-foreground">{plan.quantity}</p>
                                                                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Plan</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-orange-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-orange-600 dark:text-orange-400">{notFinished}</p>
-                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pending</p>
+                                                                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pend</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((notFinished / plan.quantity) * 100) : 0}%</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-purple-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-purple-600 dark:text-purple-400">{assembledCount}</p>
                                                                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Done</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((assembledCount / plan.quantity) * 100) : 0}%</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-blue-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-blue-600 dark:text-blue-400">{packedCount}</p>
                                                                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pack</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((packedCount / plan.quantity) * 100) : 0}%</p>
                                                             </div>
-                                                            <div className="text-center w-14">
+                                                            <div className="text-center sm:w-14 bg-emerald-500/5 sm:bg-transparent rounded p-1 sm:p-0">
                                                                 <p className="font-bold text-base text-emerald-600 dark:text-emerald-400">{soldCount}</p>
                                                                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Sold</p>
                                                                 <p className="text-[9px] text-muted-foreground">{plan.quantity > 0 ? Math.round((soldCount / plan.quantity) * 100) : 0}%</p>

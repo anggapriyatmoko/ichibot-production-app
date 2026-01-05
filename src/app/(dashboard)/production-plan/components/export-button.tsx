@@ -52,10 +52,10 @@ export function ExportButton({ month, year }: { month: number, year: number }) {
         <button
             onClick={handleExport}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export Excel"
         >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Export Excel
         </button>
     )
 }

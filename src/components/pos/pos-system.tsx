@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { processBatchCheckout } from '@/app/actions/pos'
-import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { useConfirmation } from '@/components/providers/modal-provider'
@@ -26,6 +26,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [showReceipt, setShowReceipt] = useState(false)
     const [receiptData, setReceiptData] = useState<CartItem[]>([])
+    const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products')
     const { showConfirmation } = useConfirmation()
 
     const filteredProducts = products.filter(p =>
@@ -216,9 +217,12 @@ export default function POSSystem({ products }: { products: Product[] }) {
     const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0)
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] gap-6">
-            {/* Left: Product Grid */}
-            <div className="flex-1 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-180px)] lg:h-[calc(100vh-120px)] gap-6 relative">
+            {/* Left: Product Grid - Hidden on mobile if activeTab is 'cart' */}
+            <div className={cn(
+                "flex-1 flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm h-full",
+                activeTab === 'products' ? 'flex' : 'hidden lg:flex'
+            )}>
                 <div className="p-4 border-b border-border flex gap-4 bg-muted/30">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -233,7 +237,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 bg-background/50">
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
                         {filteredProducts.map(product => (
                             <button
                                 key={product.id}
@@ -271,8 +275,11 @@ export default function POSSystem({ products }: { products: Product[] }) {
                 </div>
             </div>
 
-            {/* Right: Cart */}
-            <div className="w-full lg:w-96 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-lg h-full">
+            {/* Right: Cart - Hidden on mobile if activeTab is 'products' */}
+            <div className={cn(
+                "w-full lg:w-96 flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-lg h-full",
+                activeTab === 'cart' ? 'flex' : 'hidden lg:flex'
+            )}>
                 <div className="p-4 border-b border-border bg-muted/30">
                     <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                         <ShoppingCart className="w-5 h-5 text-primary" />
@@ -280,7 +287,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                     </h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-background/50">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-background/50 pb-20 lg:pb-4">
                     {cart.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
                             <ShoppingCart className="w-12 h-12 mb-3" />
@@ -317,7 +324,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                     )}
                 </div>
 
-                <div className="p-4 border-t border-border bg-muted/30 space-y-4">
+                <div className="p-4 border-t border-border bg-muted/30 space-y-4 mb-16 lg:mb-0">
                     {message && (
                         <div className={cn("text-xs p-2 rounded text-center font-medium", message.type === 'success' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400')}>
                             {message.text}
@@ -337,6 +344,38 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         {loading ? 'Processing...' : 'Complete Checkout'}
                     </button>
                 </div>
+            </div>
+
+            {/* Bottom Navigation for Mobile */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 lg:hidden flex z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                <button
+                    onClick={() => setActiveTab('products')}
+                    className={cn(
+                        "flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors",
+                        activeTab === 'products' ? "text-blue-600 bg-blue-50/50" : "text-gray-500 hover:bg-gray-50"
+                    )}
+                >
+                    <Package className="w-6 h-6" />
+                    <span className="text-xs font-semibold">PRODUCTS</span>
+                </button>
+                <div className="w-[1px] bg-gray-200 h-full"></div>
+                <button
+                    onClick={() => setActiveTab('cart')}
+                    className={cn(
+                        "flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors relative",
+                        activeTab === 'cart' ? "text-blue-600 bg-blue-50/50" : "text-gray-500 hover:bg-gray-50"
+                    )}
+                >
+                    <div className="relative">
+                        <ShoppingCart className="w-6 h-6" />
+                        {totalItems > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center">
+                                {totalItems}
+                            </span>
+                        )}
+                    </div>
+                    <span className="text-xs font-semibold">CART</span>
+                </button>
             </div>
 
             {/* Receipt Modal */}

@@ -155,10 +155,10 @@ export default function RecipeList({
                     <button
                         onClick={handleExport}
                         disabled={isLoading}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Export Excel"
                     >
                         <Download className="w-4 h-4" />
-                        Export Excel
                     </button>
                     <button
                         onClick={() => {
@@ -166,10 +166,10 @@ export default function RecipeList({
                             setFormData({ name: '', description: '', categoryId: '' })
                             setIsAdding(true)
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm shadow-sm"
+                        className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
+                        title="New Product"
                     >
                         <Plus className="w-4 h-4" />
-                        New Product
                     </button>
                 </div>
             )}
@@ -318,7 +318,7 @@ function RecipeCard({ recipe, userRole, onEdit, onDelete }: { recipe: RecipeWith
         <div className="group relative bg-card border border-border rounded-xl p-3 hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between h-full">
             {/* Admin Actions - Absolute Top Right */}
             {userRole === 'ADMIN' && (
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-10">
                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md bg-card/80 backdrop-blur-sm border border-border shadow-sm">
                         <Edit2 className="w-3.5 h-3.5" />
                     </button>

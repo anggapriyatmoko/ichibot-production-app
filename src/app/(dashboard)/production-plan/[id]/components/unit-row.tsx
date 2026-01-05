@@ -2,7 +2,7 @@
 
 import { updateUnitIdentifier, updateUnitCustomId, toggleUnitIngredient, updateUnitSalesData, reportIssue, resolveIssue } from '@/app/actions/production-plan'
 import { Check, Box, ShoppingBag, AlertTriangle, AlertCircle } from 'lucide-react'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import IssueModal from './issue-modal'
 
 interface UnitRowProps {
@@ -24,6 +24,30 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
 
     // Calculate if all sections are checked
     const isAllSectionsChecked = items.length > 0 && items.every(item => completedIds.includes(item.id))
+
+    // Auto-uncheck Packed and Sold when production progress is incomplete
+    useEffect(() => {
+        if (!isAllSectionsChecked) {
+            if (isPacked) {
+                setIsPacked(false)
+                handleSalesUpdate('isPacked', false)
+            }
+            if (isSold) {
+                setIsSold(false)
+                handleSalesUpdate('isSold', false)
+            }
+        }
+    }, [isAllSectionsChecked])
+
+    // Auto-clear marketplace and customer when Sold is unchecked
+    useEffect(() => {
+        if (!isSold && (marketplace || customer)) {
+            setMarketplace('')
+            setCustomer('')
+            handleSalesUpdate('marketplace', '')
+            handleSalesUpdate('customer', '')
+        }
+    }, [isSold])
 
     const handleToggle = (itemId: string) => {
         const isCompleted = completedIds.includes(itemId)
@@ -163,14 +187,19 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
                 <td className="px-2 py-1 text-center border-r border-indigo-100 bg-indigo-50/30">
                     <button
                         onClick={() => {
-                            setIsSold(!isSold)
-                            handleSalesUpdate('isSold', !isSold)
+                            if (isAllSectionsChecked) {
+                                setIsSold(!isSold)
+                                handleSalesUpdate('isSold', !isSold)
+                            }
                         }}
+                        disabled={!isAllSectionsChecked}
                         className={`
                         w-4 h-4 rounded border flex items-center justify-center transition-all duration-200 mx-auto
                         ${isSold
                                 ? 'bg-indigo-500 border-indigo-500 text-white shadow-sm scale-100'
-                                : 'bg-white border-indigo-200 hover:border-indigo-400 text-transparent scale-90 hover:scale-100'
+                                : !isAllSectionsChecked
+                                    ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                                    : 'bg-white border-indigo-200 hover:border-indigo-400 text-transparent scale-90 hover:scale-100'
                             }
                     `}
                     >

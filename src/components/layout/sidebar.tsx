@@ -28,114 +28,157 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ userProfile, userRole }: SidebarProps) {
-    const pathname = usePathname()
     const [isOpen, setIsOpen] = useState(true)
+    const [isMobileOpen, setIsMobileOpen] = useState(false)
+    const pathname = usePathname()
 
-    if (!isOpen) {
+    // Helper for nav items to avoid duplication
+    const NavItem = ({ item, isCollapsed }: { item: any, isCollapsed: boolean }) => {
+        const isActive = pathname === item.href
         return (
-            <div className="flex h-full w-12 flex-col bg-card border-r border-border items-center pt-4 transition-all duration-300">
-                <button
-                    onClick={() => setIsOpen(true)}
-                    className="p-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
-                >
-                    <PanelLeftOpen className="h-5 w-5" />
-                </button>
-            </div>
+            <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setIsMobileOpen(false)}
+                title={isCollapsed ? item.name : undefined}
+                className={cn(
+                    'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                    isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                    isCollapsed && "md:justify-center md:px-2"
+                )}
+            >
+                <item.icon
+                    className={cn(
+                        'flex-shrink-0 transition-colors duration-200',
+                        'mr-3 h-5 w-5', // Base icon size and margin for expanded/mobile
+                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+                        isCollapsed && "md:mr-0 md:h-6 md:w-6" // Override for desktop collapsed
+                    )}
+                />
+                <span className={cn(
+                    "whitespace-nowrap transition-all duration-300",
+                    isCollapsed ? "md:hidden" : "block"
+                )}>
+                    {item.name}
+                </span>
+            </Link>
         )
     }
 
     return (
-        <div className="flex h-full w-64 flex-col bg-card border-r border-border transition-all duration-300">
-            <div className="flex h-16 items-center justify-between px-6 border-b border-border">
-                <div className="flex flex-col">
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent leading-none">
-                        Ichibot Production
-                    </h1>
-                    <span className="text-[10px] font-medium text-muted-foreground mt-1">Production Plan and Control (PPC)</span>
+        <>
+            {/* Mobile Header */}
+            <div className="md:hidden flex-shrink-0 sticky top-0 z-30 flex items-center justify-between p-4 bg-card border-b border-border">
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-accent text-muted-foreground">
+                        <PanelLeftOpen className="h-6 w-6" />
+                    </button>
+                    <Link href="/dashboard">
+                        <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                            Ichibot Production
+                        </span>
+                    </Link>
                 </div>
-                <button
-                    onClick={() => setIsOpen(false)}
-                    className="p-1 -mr-2 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
-                >
-                    <PanelLeftClose className="h-4 w-4" />
-                </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-6 px-3">
-                <nav className="space-y-1">
-                    {navigation.map((item) => {
-                        const isActive = pathname === item.href
-                        return (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className={cn(
-                                    'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                                    isActive
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                                )}
-                            >
-                                <item.icon
-                                    className={cn(
-                                        'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
-                                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                                    )}
-                                />
-                                {item.name}
-                            </Link>
-                        )
-                    })}
+            {/* Mobile Overlay */}
+            {isMobileOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+                    onClick={() => setIsMobileOpen(false)}
+                />
+            )}
+
+            {/* Sidebar Container */}
+            <div className={cn(
+                "fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border transition-all duration-300 transform",
+                // Mobile: Translate based on state
+                isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full w-64",
+                // Desktop: Always show, handle width based on isOpen state
+                "md:relative md:translate-x-0",
+                isOpen ? "md:w-64" : "md:w-20"
+            )}>
+                {/* Desktop Header / Collapse Toggle */}
+                <div className={cn(
+                    "hidden md:flex items-center border-b border-border h-16 transition-all duration-300",
+                    isOpen ? "justify-between px-6" : "justify-center"
+                )}>
+                    {isOpen && (
+                        <div className="flex flex-col overflow-hidden whitespace-nowrap">
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent leading-none">
+                                Ichibot Production
+                            </h1>
+                            <span className="text-[10px] font-medium text-muted-foreground mt-1">PPC System</span>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="p-1.5 rounded-lg hover:bg-accent hover:text-accent-foreground text-muted-foreground transition-colors"
+                        title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+                    >
+                        {isOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-5 w-5" />}
+                    </button>
+                </div>
+
+                {/* Mobile Sidebar Header (Close Button) */}
+                <div className="md:hidden flex items-center justify-between p-4 border-b border-border">
+                    <span className="font-bold text-lg">Menu</span>
+                    <button onClick={() => setIsMobileOpen(false)} className="p-2 rounded-lg hover:bg-accent text-muted-foreground">
+                        <PanelLeftClose className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto py-6 px-3">
+                    <nav className="space-y-1">
+                        {navigation.map((item) => (
+                            <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+                        ))}
+                    </nav>
 
                     {userRole === 'ADMIN' && (
                         <>
-                            <div className="pt-4 pb-2">
+                            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
                                 <div className="border-t border-border" />
-                                <p className="px-3 pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Admin
+                                <p className={cn(
+                                    "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                                    isOpen ? "px-3" : "text-center"
+                                )}>
+                                    {isOpen ? "Admin" : "..."}
                                 </p>
                             </div>
-                            {adminNavigation.map((item) => {
-                                const isActive = pathname === item.href
-                                return (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className={cn(
-                                            'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                                            isActive
-                                                ? 'bg-primary/10 text-primary'
-                                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                                        )}
-                                    >
-                                        <item.icon
-                                            className={cn(
-                                                'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
-                                                isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                                            )}
-                                        />
-                                        {item.name}
-                                    </Link>
-                                )
-                            })}
+                            <nav className="space-y-1">
+                                {adminNavigation.map((item) => (
+                                    <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+                                ))}
+                            </nav>
                         </>
                     )}
-                </nav>
+                </div>
+
+                <div className={cn("p-4 border-t border-border space-y-4", !isOpen && "md:items-center md:flex md:flex-col")}>
+                    {isOpen ? userProfile : (
+                        <div className="hidden md:flex justify-center" title="User Profile">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                U
+                            </div>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        className={cn(
+                            "flex items-center justify-center text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors",
+                            isOpen ? "w-full px-3 py-2" : "md:w-10 md:h-10 md:p-0"
+                        )}
+                        title="Sign Out"
+                    >
+                        <LogOut className={cn("h-4 w-4", isOpen && "mr-2")} />
+                        {isOpen && "Sign Out"}
+                    </button>
+                </div>
             </div>
-
-            <div className="p-4 border-t border-border space-y-4">
-                {userProfile}
-
-
-                <button
-                    onClick={() => signOut({ callbackUrl: '/login' })}
-                    className="flex flex-1 items-center justify-center px-3 py-2 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors"
-                >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                </button>
-            </div>
-        </div>
-
+        </>
     )
 }

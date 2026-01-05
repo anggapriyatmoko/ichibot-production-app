@@ -8,12 +8,12 @@ async function main() {
         where: { email: 'admin@example.com' },
         update: {},
         create: {
-            email: 'admin@example.com',
+            email: 'admin@ichibot.id',
             username: 'admin',
-            name: 'Admin User',
-            password: await hash('password', 12), // Hashed password
+            name: 'Hokage',
+            password: await hash('admin1234567890', 12), // Hashed password
             role: 'ADMIN',
-            department: 'hokage',
+            department: 'Hokage',
         },
     })
 
@@ -23,7 +23,7 @@ async function main() {
         where: { sku: 'RM-001' },
         update: {},
         create: {
-            name: 'Tepung Terigu',
+            name: 'Ultimate 5 Max',
             sku: 'RM-001',
             stock: 50,
             lowStockThreshold: 10

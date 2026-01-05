@@ -281,34 +281,34 @@ export default function IngredientManager({
                     <h2 className="text-xl font-bold text-foreground">Bill of Materials (BOM)</h2>
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                     {userRole === 'ADMIN' && (
                         <>
-                            <button
-                                onClick={() => setIsEditing(!isEditing)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
-                            >
-                                {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                                {isEditing ? 'Done' : 'Edit'}
-                            </button>
+                            <ImportRecipeModal />
                             <button
                                 onClick={handleExport}
                                 disabled={isLoading}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm"
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Export BOM"
                             >
                                 <Download className="w-4 h-4" />
-                                Export BOM
                             </button>
-                            <ImportRecipeModal />
+                            <button
+                                onClick={() => setIsEditing(!isEditing)}
+                                className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+                                title={isEditing ? 'Done' : 'Edit'}
+                            >
+                                {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                            </button>
                         </>
                     )}
 
                     <button
                         onClick={handlePrint}
-                        className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
+                        className="p-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors shadow-sm"
+                        title="Print Layout"
                     >
                         <Printer className="w-4 h-4" />
-                        Print Layout
                     </button>
                 </div>
             </div>

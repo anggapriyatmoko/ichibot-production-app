@@ -36,13 +36,21 @@ const getCategoryBadgeColor = (category: string) => {
     return 'bg-slate-200'
 }
 
+const getCategorySolidColor = (category: string) => {
+    const normalized = category.toLowerCase()
+    if (normalized.includes('robot') || normalized.includes('full')) return 'bg-emerald-50'
+    if (normalized.includes('sparepart')) return 'bg-blue-50'
+    if (normalized.includes('ichiduino') || normalized.includes('module')) return 'bg-purple-50'
+    return 'bg-slate-50'
+}
+
 export default function ProductionOverviewTable({ data, year }: ProductionOverviewTableProps) {
     // Unique categories for legend
     const categories = Array.from(new Set(data.map(d => d.category))).sort()
 
     return (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-2 md:p-6 border-b border-slate-100 flex items-center justify-between">
                 <div>
                     <h2 className="text-lg font-bold text-slate-900 tracking-tight">Production Overview</h2>
                     <p className="text-sm text-slate-500">Annual production planning and realization for {year}</p>
@@ -50,7 +58,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                 <YearSelector />
             </div>
 
-            <div className="overflow-x-auto p-1">
+            <div className="overflow-x-auto">
                 <table className="w-full text-center text-sm border-collapse">
                     <thead>
                         {/* Month Headers */}
@@ -88,7 +96,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
 
                             return (
                                 <tr key={row.productName} className={`transition-colors group border-b border-slate-100/50 ${getCategoryColor(row.category)}`}>
-                                    <td className={`px-2 py-2 text-left font-semibold text-slate-900 sticky left-0 z-10 border-r border-slate-200 text-xs ${getCategoryColor(row.category)}`}>
+                                    <td className={`px-2 py-2 text-left font-semibold text-slate-900 sticky left-0 z-10 border-r border-slate-200 text-xs ${getCategorySolidColor(row.category)}`}>
                                         {row.productName}
                                     </td>
                                     {MONTHS.map((_, index) => {
@@ -132,7 +140,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                     No products found.
                 </div>
             )}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="px-2 md:px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex gap-4 text-[10px] text-slate-500">
                     <span><span className="font-bold text-slate-700">P</span> : Plan</span>
                     <span><span className="font-bold text-slate-700">D</span> : Done (Assembled)</span>

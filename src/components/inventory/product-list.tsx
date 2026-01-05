@@ -14,7 +14,7 @@ import ImportProductModal from './import-product-modal'
 type Product = {
     id: string
     name: string
-    sku: string
+    sku: string | null
     stock: number
     lowStockThreshold: number
     image: string | null
@@ -231,8 +231,8 @@ export default function ProductList({
     return (
         <div className="space-y-6">
             {/* Header / Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="relative w-full md:w-96">
+            <div className="flex justify-between items-center gap-2">
+                <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                         type="text"
@@ -243,16 +243,16 @@ export default function ProductList({
                     />
                 </div>
 
-                <div className="flex gap-3 w-full md:w-auto">
+                <div className="flex gap-2 flex-shrink-0">
                     {userRole === 'ADMIN' && (
                         <>
                             <button
                                 onClick={handleExport}
                                 disabled={isLoading}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm disabled:opacity-50"
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                title="Export"
                             >
                                 <Download className="w-4 h-4" />
-                                Export
                             </button>
                             <ImportProductModal />
                         </>
@@ -260,10 +260,10 @@ export default function ProductList({
                     {(userRole === 'ADMIN' || userRole === 'USER') && (
                         <button
                             onClick={() => setIsAdding(!isAdding)}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-sm whitespace-nowrap shadow-sm"
+                            className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
+                            title="Add Product"
                         >
                             <Plus className="w-4 h-4" />
-                            Add Product
                         </button>
                     )}
                 </div>
@@ -412,7 +412,7 @@ export default function ProductList({
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
-                                    <input name="sku" defaultValue={editingProduct.sku} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
+                                    <input name="sku" defaultValue={editingProduct.sku || ''} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
@@ -465,9 +465,104 @@ export default function ProductList({
                 </div>
             )}
 
-            {/* Products Table */}
+            {/* Products Display */}
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-border">
+                    {filteredProducts.map((product) => {
+                        const isLowStock = product.stock <= product.lowStockThreshold
+                        return (
+                            <div
+                                key={product.id}
+                                className={cn(
+                                    "p-4 transition-colors",
+                                    isLowStock ? "bg-red-500/5" : ""
+                                )}
+                            >
+                                <div className="flex gap-3 mb-3">
+                                    {/* Image */}
+                                    <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
+                                        {product.image ? (
+                                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full text-gray-600">
+                                                <ImageIcon className="w-6 h-6" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Name and SKU */}
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-foreground text-sm mb-1 truncate">{product.name}</h3>
+                                        <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
+                                        {product.notes && (
+                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.notes}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Stock and Status */}
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Stock</p>
+                                        <p className={cn("text-xl font-bold", isLowStock ? "text-red-500" : "text-emerald-500")}>
+                                            {product.stock}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        {isLowStock ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                Low Stock
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                In Stock
+                                            </span>
+                                        )}
+                                        <p className="text-[10px] text-muted-foreground mt-1">Min: {product.lowStockThreshold}</p>
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2 pt-3 border-t border-border">
+                                    {(userRole === 'ADMIN' || userRole === 'USER') && (
+                                        <button
+                                            onClick={() => setEditingProduct(product)}
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20 text-sm font-medium"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                            Edit
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setStockModalProduct(product)}
+                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20 text-sm font-medium"
+                                    >
+                                        <PackagePlus className="w-4 h-4" />
+                                        Restock
+                                    </button>
+                                    {userRole === 'ADMIN' && (
+                                        <button
+                                            onClick={() => handleDelete(product.id)}
+                                            className="px-3 py-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-border"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
+                    {filteredProducts.length === 0 && (
+                        <div className="px-6 py-12 text-center text-muted-foreground">
+                            {searchTerm ? 'No products found matching your search.' : 'No products found. Start by adding one.'}
+                        </div>
+                    )}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-sm text-muted-foreground">
                         <thead className="bg-muted text-foreground uppercase font-medium">
                             <tr>

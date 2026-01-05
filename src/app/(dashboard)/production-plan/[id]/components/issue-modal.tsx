@@ -180,7 +180,7 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="e.g., Waiting for sparepart X, Machine failure, Paint defect..."
-                            className={`w-full h-32 p-4 bg-background border rounded-xl focus:ring-1 focus:ring-orange-400 focus:border-orange-400 text-foreground text-sm outline-none resize-none transition-all placeholder:text-muted-foreground/50 ${isEditing
+                            className={`w-full h-32 p-4 bg-background border rounded-xl focus:ring-1 focus:ring-orange-400 focus:border-orange-400 text-foreground text-base outline-none resize-none transition-all placeholder:text-muted-foreground/50 ${isEditing
                                 ? 'border-orange-200 dark:border-orange-800'
                                 : 'border-border text-foreground'
                                 }`}

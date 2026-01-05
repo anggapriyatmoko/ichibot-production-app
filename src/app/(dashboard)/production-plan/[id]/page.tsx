@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import UnitRow from './components/unit-row'
+import UnitCardMobile from './components/unit-card-mobile'
 import IssueAnalysisTable from './components/issue-analysis-table'
 
 export const dynamic = 'force-dynamic'
@@ -45,7 +46,8 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                 </div>
             </div>
 
-            <div className="bg-card border border-border rounded-xl shadow-sm overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-card border border-border rounded-xl shadow-sm overflow-x-auto">
                 <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="bg-muted/50 text-foreground uppercase font-medium text-xs">
                         <tr>
@@ -88,6 +90,17 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {(plan as any).units.map((unit: any) => (
+                    <UnitCardMobile
+                        key={unit.id}
+                        unit={unit}
+                        sections={(plan as any).recipe.sections}
+                    />
+                ))}
             </div>
 
             <IssueAnalysisTable units={(plan as any).units} />

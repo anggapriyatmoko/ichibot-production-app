@@ -67,8 +67,65 @@ export default function UserTable({ users }: UserTableProps) {
                 </button>
             </div>
 
-            {/* Table */}
-            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+            {/* Mobile Card View */}
+            <div className="block md:hidden space-y-4">
+                {filteredUsers.map((user) => (
+                    <div key={user.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
+                        <div className="flex justify-between items-start gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${user.role === 'ADMIN' ? 'text-purple-600' : 'text-teal-600'}`}>
+                                    {user.role === 'ADMIN' ? <Shield className="w-5 h-5" /> : <UserIcon className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-foreground text-base">{user.name}</p>
+                                    <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
+                                </div>
+                            </div>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${user.role === 'ADMIN'
+                                ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+                                : 'bg-teal-500/10 text-teal-600 border-teal-500/20'
+                                }`}>
+                                {user.role}
+                            </span>
+                        </div>
+
+                        <div className="text-sm text-muted-foreground space-y-1 pl-[3.5rem]">
+                            <p className="truncate">{user.email}</p>
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                                    {user.department || 'No Dept'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-3 border-t border-border mt-2">
+                            <button
+                                onClick={() => handleEdit(user)}
+                                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                            >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit
+                            </button>
+                            <button
+                                onClick={() => handleDelete(user.id)}
+                                disabled={isDeleting === user.id}
+                                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isDeleting === user.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                ))}
+                {filteredUsers.length === 0 && (
+                    <div className="text-center py-12 bg-card border border-border rounded-xl text-muted-foreground text-sm">
+                        No users found matches your search.
+                    </div>
+                )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>

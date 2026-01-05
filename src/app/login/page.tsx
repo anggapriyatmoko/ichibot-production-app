@@ -74,7 +74,7 @@ export default function LoginPage() {
                                     autoComplete="email"
                                     required
                                     className="block w-full rounded-lg border border-border bg-muted px-4 py-3 text-foreground shadow-sm focus:border-primary focus:ring-primary sm:text-sm outline-none transition-all"
-                                    placeholder="admin@example.com"
+                                    placeholder="user@ichibot.id"
                                 />
                             </div>
                         </div>

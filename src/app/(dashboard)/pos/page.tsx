@@ -12,7 +12,7 @@ export default async function POSPage() {
 
     return (
         <div className="h-full">
-            <div className="mb-6">
+            <div className="mb-6 hidden md:block">
                 <h1 className="text-2xl font-bold text-foreground tracking-tight">Point of Sale</h1>
                 <p className="text-sm text-muted-foreground">Select items to checkout from inventory.</p>
             </div>

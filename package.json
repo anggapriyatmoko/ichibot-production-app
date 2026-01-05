@@ -2,11 +2,15 @@
   "name": "produksi",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:prep": "node prep-deploy.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -27,7 +31,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^18",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

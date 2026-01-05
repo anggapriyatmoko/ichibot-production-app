@@ -53,7 +53,7 @@ export default function LoginForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white placeholder-gray-500 transition-all font-light"
-                    placeholder="admin@example.com"
+                    placeholder="user@ichibot.id"
                     required
                 />
             </div>
@@ -91,7 +91,7 @@ export default function LoginForm() {
             </button>
 
             <div className="text-center text-xs text-gray-400 mt-4">
-                Default: admin@example.com / password
+
             </div>
         </form>
     )

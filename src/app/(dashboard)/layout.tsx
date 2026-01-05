@@ -13,7 +13,7 @@ export default async function DashboardLayout({
     const session: any = await getServerSession(authOptions)
 
     return (
-        <div className="flex h-screen bg-background overflow-hidden">
+        <div className="flex h-screen bg-background overflow-hidden flex-col md:flex-row">
             <Sidebar userProfile={<UserProfile />} userRole={session?.user?.role} />
             <main className="flex-1 flex flex-col overflow-hidden relative">
                 {/* Top gradient accent */}
@@ -21,7 +21,7 @@ export default async function DashboardLayout({
 
 
 
-                <div className="flex-1 overflow-auto p-8 relative z-10">
+                <div className="flex-1 overflow-auto px-2 md:px-8 py-4 md:py-8 relative z-10">
                     {children}
                 </div>
             </main>

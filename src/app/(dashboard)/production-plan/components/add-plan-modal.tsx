@@ -32,10 +32,10 @@ export default function ProductionPlanModal({ recipes, month, year }: Production
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-2 w-full md:w-auto justify-center"
+                className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
+                title="Add Plan"
             >
                 <Plus className="w-4 h-4" />
-                Add Plan
             </button>
 
             {isOpen && (
