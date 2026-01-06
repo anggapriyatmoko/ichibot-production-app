@@ -45,7 +45,7 @@ export function QuantityInput({ value, onChange, min, max, step = 'any', classNa
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             handleBlur()
-            e.currentTarget.blur()
+                (e.currentTarget as HTMLInputElement).blur()
         }
     }
 
