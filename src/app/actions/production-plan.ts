@@ -457,7 +457,7 @@ export async function getProductionPlanForExport(month: number, year: number) {
                 let status = 'In Production'
                 if (unit.isSold) status = `Sold (${unit.customer || '-'})`
                 else if (unit.isPacked) status = 'Packed'
-                else if (unit.completed === '[]') status = 'Planned'
+                else if ((unit.completed || '[]') === '[]') status = 'Planned'
 
                 flattened.push({
                     month,
@@ -468,8 +468,8 @@ export async function getProductionPlanForExport(month: number, year: number) {
                     serialNumber: unit.productIdentifier || '',
                     customId: unit.customId || '',
                     status: status,
-                    progress: unit.completed === '[]' ? 0 : JSON.parse(unit.completed).length, // Raw step count
-                    completedSteps: unit.completed
+                    progress: (unit.completed || '[]') === '[]' ? 0 : JSON.parse(unit.completed || '[]').length, // Raw step count
+                    completedSteps: unit.completed || '[]'
                 })
             }
         }
