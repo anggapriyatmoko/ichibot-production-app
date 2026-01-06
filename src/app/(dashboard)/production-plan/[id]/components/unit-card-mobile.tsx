@@ -13,7 +13,13 @@ interface UnitCardMobileProps {
 
 export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) {
     const [isPending, startTransition] = useTransition()
-    const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed || '[]'))
+    const [completedIds, setCompletedIds] = useState<string[]>(() => {
+        try {
+            return JSON.parse(unit.completed || '[]')
+        } catch {
+            return []
+        }
+    })
 
     const activeIssue = unit.issues?.find((i: any) => !i.isResolved)
     const hasIssue = !!activeIssue

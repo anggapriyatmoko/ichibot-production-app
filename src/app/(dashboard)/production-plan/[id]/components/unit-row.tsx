@@ -16,7 +16,13 @@ interface UnitRowProps {
 
 export default function UnitRow({ unit, items, recipeProductionId, year, month }: UnitRowProps) {
     const [isPending, startTransition] = useTransition()
-    const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed || '[]'))
+    const [completedIds, setCompletedIds] = useState<string[]>(() => {
+        try {
+            return JSON.parse(unit.completed || '[]')
+        } catch {
+            return []
+        }
+    })
     // const [identifier, setIdentifier] = useState(unit.productIdentifier || '') // Handled by computed serial
 
     // Compute Serial: ProdID + Year + Month(2) + Unit(3)

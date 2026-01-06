@@ -30,9 +30,15 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
     if (!plan) return notFound()
 
     // Use sections snapshot if available, otherwise fallback to live sections (backward compatibility)
-    const sections = plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
-        ? JSON.parse(plan.sectionsSnapshot)
-        : (plan as any).recipe.sections
+    // Use sections snapshot if available, otherwise fallback to live sections (backward compatibility)
+    let sections = (plan as any).recipe.sections
+    try {
+        if (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]") {
+            sections = JSON.parse(plan.sectionsSnapshot)
+        }
+    } catch (e) {
+        console.error("Failed to parse sectionsSnapshot", e)
+    }
 
     return (
         <div className="max-w-[1600px] mx-auto">
