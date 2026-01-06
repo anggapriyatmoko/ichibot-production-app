@@ -217,13 +217,18 @@ export default async function ProductionPlanPage({
                                             {/* Unit Progress List */}
                                             <div className="hidden md:grid pl-11 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
                                                 {(plan as any).units.map((unit: any) => {
-                                                    const validSectionIds = new Set(plan.recipe.sections.map((s: any) => s.id))
+                                                    // Use snapshot if available, otherwise fallback to live sections
+                                                    const sections = plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
+                                                        ? JSON.parse(plan.sectionsSnapshot)
+                                                        : plan.recipe.sections
+
+                                                    const validSectionIds = new Set(sections.map((s: any) => s.id))
                                                     const completedIds = JSON.parse(unit.completed)
 
                                                     // Only count IDs that are valid sections for this recipe
                                                     const validCompletedCount = completedIds.filter((id: string) => validSectionIds.has(id)).length
 
-                                                    const totalSections = plan.recipe.sections.length
+                                                    const totalSections = sections.length
 
                                                     const rawProgress = totalSections > 0
                                                         ? Math.round((validCompletedCount / totalSections) * 100)
@@ -246,10 +251,13 @@ export default async function ProductionPlanPage({
                                                         statusElement = <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded ml-2">Packed</span>
                                                     }
 
+                                                    // Compute Serial using same logic as UnitRow
+                                                    const computedSerial = `${plan.recipe.productionId}${plan.year}${plan.month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
+
                                                     return (
                                                         <div key={unit.id} className={`flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded border ${colorClass}`}>
                                                             <span className="flex items-center flex-wrap gap-1">
-                                                                {unit.unitNumber}. {unit.productIdentifier || <span className="opacity-50">No Serial</span>}
+                                                                {unit.unitNumber}. {unit.productIdentifier || computedSerial}
                                                                 {statusElement}
                                                             </span>
                                                             <span className="font-bold">

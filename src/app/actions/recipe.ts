@@ -9,12 +9,14 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 export async function createRecipe(formData: FormData) {
     await requireAdmin()
     const name = formData.get('name') as string
+    const productionId = formData.get('productionId') as string
     const description = formData.get('description') as string
     const categoryId = formData.get('categoryId') as string | null
 
     await prisma.recipe.create({
         data: {
             name,
+            productionId,
             description,
             categoryId: categoryId === '' ? null : categoryId
         }
@@ -25,6 +27,7 @@ export async function createRecipe(formData: FormData) {
 export async function updateRecipe(id: string, formData: FormData) {
     await requireAdmin()
     const name = formData.get('name') as string
+    const productionId = formData.get('productionId') as string
     const description = formData.get('description') as string
     const categoryId = formData.get('categoryId') as string | null
 
@@ -32,6 +35,7 @@ export async function updateRecipe(id: string, formData: FormData) {
         where: { id },
         data: {
             name,
+            productionId,
             description,
             categoryId: categoryId === '' ? null : categoryId
         }
@@ -244,7 +248,39 @@ export async function getAllRecipesForExport() {
     // Flatten for export
     const flattened: any[] = []
     for (const r of recipes) {
-        if (r.ingredients.length === 0) {
+        const coveredSectionIds = new Set<string>()
+
+        // 1. Process Ingredients
+        for (const ing of r.ingredients) {
+            if (ing.sectionId) coveredSectionIds.add(ing.sectionId)
+            flattened.push({
+                recipeName: r.name,
+                description: r.description,
+                section: ing.section?.name || 'Main',
+                sku: ing.product.sku || '',
+                productName: ing.product.name,
+                quantity: ing.quantity,
+                notes: ing.notes || ''
+            })
+        }
+
+        // 2. Process Empty Sections (that had no ingredients)
+        for (const sec of r.sections) {
+            if (!coveredSectionIds.has(sec.id)) {
+                flattened.push({
+                    recipeName: r.name,
+                    description: r.description,
+                    section: sec.name,
+                    sku: '',
+                    productName: '',
+                    quantity: 0,
+                    notes: ''
+                })
+            }
+        }
+
+        // 3. Process Completely Empty Recipe (No ingredients, No sections)
+        if (r.ingredients.length === 0 && r.sections.length === 0) {
             flattened.push({
                 recipeName: r.name,
                 description: r.description,
@@ -254,18 +290,6 @@ export async function getAllRecipesForExport() {
                 quantity: 0,
                 notes: ''
             })
-        } else {
-            for (const ing of r.ingredients) {
-                flattened.push({
-                    recipeName: r.name,
-                    description: r.description,
-                    section: ing.section?.name || 'Main',
-                    sku: ing.product.sku || '',
-                    productName: ing.product.name,
-                    quantity: ing.quantity,
-                    notes: ing.notes || ''
-                })
-            }
         }
     }
     return flattened
@@ -331,17 +355,29 @@ export async function importRecipes(rows: any[]) {
                 })
             }
 
-            // 2. Add Ingredients from Excel
+            // 2. Add Sections and Ingredients from Excel
             // Cache sections for this recipe to avoid duplicate creates
             const sectionCache: { [key: string]: string } = {}
 
             for (const item of items) {
-                if (!item.productName && !item.sku) continue // Skip null rows
+                const sectionName = item.section ? String(item.section).trim() : 'Main'
+
+                // Handle Section Creation FIRST (even if no ingredient)
+                let sectionId = sectionCache[sectionName]
+                if (!sectionId && sectionName) { // Allow blank section to mean 'uncategorized' if we want, but 'Main' is default above
+                    const section = await prisma.recipeSection.create({
+                        data: { name: sectionName, recipeId: recipe.id }
+                    })
+                    sectionId = section.id
+                    sectionCache[sectionName] = sectionId
+                }
+
+                // Skip if no ingredient info (just a section placeholder row)
+                if (!item.productName && !item.sku) continue
 
                 const sku = item.sku ? String(item.sku).trim() : null
                 const productName = String(item.productName).trim()
                 const quantity = parseFloat(item.quantity) || 0
-                const sectionName = item.section ? String(item.section).trim() : 'Main'
                 const notes = item.notes || ''
 
                 if (quantity <= 0) continue
@@ -358,16 +394,6 @@ export async function importRecipes(rows: any[]) {
                 if (!product) {
                     errors.push(`Recipe "${name}": Product not found (SKU: ${sku}, Name: ${productName})`)
                     continue
-                }
-
-                // Handle Section
-                let sectionId = sectionCache[sectionName]
-                if (!sectionId) {
-                    const section = await prisma.recipeSection.create({
-                        data: { name: sectionName, recipeId: recipe.id }
-                    })
-                    sectionId = section.id
-                    sectionCache[sectionName] = sectionId
                 }
 
                 // Create Ingredient

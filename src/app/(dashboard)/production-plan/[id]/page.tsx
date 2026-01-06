@@ -29,6 +29,11 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
 
     if (!plan) return notFound()
 
+    // Use sections snapshot if available, otherwise fallback to live sections (backward compatibility)
+    const sections = plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
+        ? JSON.parse(plan.sectionsSnapshot)
+        : (plan as any).recipe.sections
+
     return (
         <div className="max-w-[1600px] mx-auto">
             <div className="mb-6">
@@ -51,18 +56,18 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                 <table className="w-full text-left text-sm whitespace-nowrap">
                     <thead className="bg-muted/50 text-foreground uppercase font-medium text-xs">
                         <tr>
-                            <th className="px-2 py-2 w-12 text-center border-b border-r border-border sticky left-0 bg-muted/50 z-10 text-[10px]">
+                            <th className="p-[3px] w-[45px] min-w-[45px] text-center shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-0 bg-muted z-30 text-[10px]">
                                 No
                             </th>
-                            <th className="px-2 py-2 w-40 border-b border-r border-border sticky left-12 bg-muted/50 z-10 text-[10px]">
+                            <th className="p-[3px] w-[100px] min-w-[100px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[45px] bg-muted z-30 text-[10px]">
                                 Serial
                             </th>
-                            <th className="px-2 py-2 w-40 border-b border-r border-border sticky left-[208px] bg-muted/50 z-10 text-[10px]">
+                            <th className="p-[3px] w-[100px] min-w-[100px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[145px] bg-muted z-30 text-[10px]">
                                 ID
                             </th>
-                            {(plan as any).recipe.sections.map((section: any) => (
-                                <th key={section.id} className="px-2 py-2 border-b border-border min-w-[100px] text-center text-[10px]">
-                                    <span className="font-bold">{section.name}</span>
+                            {sections.map((section: any) => (
+                                <th key={section.id} className="p-[3px] border-b border-border w-[80px] min-w-[80px] max-w-[80px] text-center text-[10px] whitespace-normal leading-[1.1] align-middle">
+                                    <span className="font-bold block w-full">{section.name}</span>
                                 </th>
                             ))}
                             {/* Sales & Packing Columns */}
@@ -88,7 +93,10 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                             <UnitRow
                                 key={unit.id}
                                 unit={unit}
-                                items={(plan as any).recipe.sections}
+                                items={sections}
+                                recipeProductionId={(plan as any).recipe.productionId}
+                                year={(plan as any).year}
+                                month={(plan as any).month}
                             />
                         ))}
                     </tbody>
@@ -101,7 +109,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                     <UnitCardMobile
                         key={unit.id}
                         unit={unit}
-                        sections={(plan as any).recipe.sections}
+                        sections={sections}
                     />
                 ))}
             </div>

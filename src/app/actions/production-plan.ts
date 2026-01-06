@@ -26,17 +26,42 @@ export async function createProductionPlan(formData: FormData) {
         throw new Error('Plan for this product already exists in this period')
     }
 
+    // Get Recipe with Production ID and Sections for snapshot
+    const recipe = await prisma.recipe.findUnique({
+        where: { id: recipeId },
+        include: {
+            sections: {
+                select: { id: true, name: true },
+                orderBy: { createdAt: 'asc' }
+            }
+        }
+    })
+
+    if (!recipe) throw new Error('Recipe not found')
+
+    // Create sections snapshot
+    const sectionsSnapshot = JSON.stringify(
+        recipe.sections.map(s => ({ id: s.id, name: s.name }))
+    )
+
     const plan = await prisma.productionPlan.create({
         data: {
             recipeId,
             quantity,
             month,
             year,
+            sectionsSnapshot, // Save snapshot
             units: {
-                create: Array.from({ length: quantity }).map((_, i) => ({
-                    unitNumber: i + 1,
-                    completed: '[]' // Initialize with empty array
-                }))
+                create: Array.from({ length: quantity }).map((_, i) => {
+                    const unitNumber = i + 1
+                    const serial = `${recipe.productionId}${year}${month.toString().padStart(2, '0')}${unitNumber.toString().padStart(3, '0')}`
+
+                    return {
+                        unitNumber,
+                        productIdentifier: serial,
+                        completed: '[]' // Initialize with empty array
+                    }
+                })
             }
         }
     })

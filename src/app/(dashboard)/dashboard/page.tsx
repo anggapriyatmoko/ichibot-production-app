@@ -3,13 +3,20 @@ import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, H
 import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import ProductionOverviewTable from './components/production-overview-table'
+import MonthYearSelector from './components/month-year-selector'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ year?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ year?: string, lastMonth?: string, lastYear?: string }> }) {
     const params = await searchParams
     const selectedYear = Number(params?.year) || new Date().getFullYear()
+
+    // Calculate default last month
+    const today = new Date()
+    const defaultLastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const selectedLastMonth = Number(params?.lastMonth) || (defaultLastMonthDate.getMonth() + 1)
+    const selectedLastYear = Number(params?.lastYear) || defaultLastMonthDate.getFullYear()
 
     // 1. Fetch Stats
     const totalProducts = await prisma.product.count()
@@ -24,8 +31,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     })
     const lowStockCount = allProducts.filter((p: { stock: number; lowStockThreshold: number }) => p.stock <= p.lowStockThreshold).length
 
-    // Today's stats
-    const today = new Date()
+    // Today's stats (reuse today from above)
     today.setHours(0, 0, 0, 0)
 
     const todaysTransactions = await prisma.transaction.findMany({
@@ -40,13 +46,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         .filter((t: { type: string }) => t.type === 'OUT')
         .reduce((acc: number, t: { quantity: number }) => acc + t.quantity, 0)
 
-    // Production Stats (This Month vs Last Month)
+    // Production Stats (This Month vs Selected Last Month)
     const currentMonth = today.getMonth() + 1
     const currentYear = today.getFullYear() // For the top cards, keep using current real year
-
-    const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const lastMonth = lastMonthDate.getMonth() + 1
-    const lastMonthYear = lastMonthDate.getFullYear()
 
     const [currentMonthPlans, lastMonthPlans, allRecipes, annualPlans] = await Promise.all([
         prisma.productionPlan.findMany({
@@ -62,7 +64,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             }
         }),
         prisma.productionPlan.findMany({
-            where: { month: lastMonth, year: lastMonthYear },
+            where: { month: selectedLastMonth, year: selectedLastYear },
             include: {
                 units: true,
                 recipe: {
@@ -260,10 +262,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
 
                 <div className="bg-card border border-border p-6 rounded-2xl shadow-sm opacity-80 hover:opacity-100 transition-opacity">
-                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-6">
-                        <History className="w-5 h-5 text-muted-foreground" />
-                        Last Month ({lastMonthDate.toLocaleString('default', { month: 'long' })})
-                    </h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                            <History className="w-5 h-5 text-muted-foreground" />
+                            Last Month ({new Date(selectedLastYear, selectedLastMonth - 1).toLocaleString('default', { month: 'long' })} {selectedLastYear})
+                        </h3>
+                        <MonthYearSelector selectedMonth={selectedLastMonth} selectedYear={selectedLastYear} />
+                    </div>
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="bg-indigo-100/50 dark:bg-indigo-500/10 p-4 rounded-xl">
                             <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Planned</p>

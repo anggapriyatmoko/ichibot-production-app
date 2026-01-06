@@ -98,6 +98,7 @@ export async function updateProduct(formData: FormData) {
         sku,
         lowStockThreshold,
         notes
+
     }
 
     if (imageFile && imageFile.size > 0) {

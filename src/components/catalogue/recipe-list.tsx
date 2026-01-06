@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createRecipe, deleteRecipe, updateRecipe, getAllRecipesForExport } from '@/app/actions/recipe'
 import { createCategory } from '@/app/actions/category'
-import { Plus, BookOpen, Trash2, ChevronRight, Tag, Edit2, Download } from 'lucide-react'
+import { Plus, BookOpen, Trash2, ChevronRight, Tag, Edit2, Download, Hash, Barcode } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import ImportRecipeModal from './import-recipe-modal'
 import Link from 'next/link'
@@ -19,6 +19,7 @@ type Category = {
 type RecipeWithCount = {
     id: string
     name: string
+    productionId: string
     description: string | null
     categoryId: string | null
     category?: Category | null
@@ -44,6 +45,7 @@ export default function RecipeList({
     // Form State
     const [formData, setFormData] = useState({
         name: '',
+        productionId: '',
         description: '',
         categoryId: ''
     })
@@ -58,6 +60,7 @@ export default function RecipeList({
         setIsLoading(true)
         const submitData = new FormData()
         submitData.append('name', formData.name)
+        submitData.append('productionId', formData.productionId)
         submitData.append('description', formData.description)
         submitData.append('categoryId', formData.categoryId)
 
@@ -69,12 +72,14 @@ export default function RecipeList({
         setIsLoading(false)
         setIsAdding(false)
         setEditingRecipeId(null)
-        setFormData({ name: '', description: '', categoryId: '' })
+        setEditingRecipeId(null)
+        setFormData({ name: '', productionId: '', description: '', categoryId: '' })
     }
 
     function handleEdit(recipe: RecipeWithCount) {
         setFormData({
             name: recipe.name,
+            productionId: recipe.productionId || '',
             description: recipe.description || '',
             categoryId: recipe.categoryId || ''
         })
@@ -163,7 +168,7 @@ export default function RecipeList({
                     <button
                         onClick={() => {
                             setEditingRecipeId(null)
-                            setFormData({ name: '', description: '', categoryId: '' })
+                            setFormData({ name: '', productionId: '', description: '', categoryId: '' })
                             setIsAdding(true)
                         }}
                         className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
@@ -188,6 +193,17 @@ export default function RecipeList({
                                     autoFocus
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
                                     placeholder="e.g. Roti Tawar"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Production ID <span className="text-red-500">*</span></label>
+                                <input
+                                    value={formData.productionId}
+                                    onChange={e => setFormData({ ...formData, productionId: e.target.value })}
+                                    required
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                    placeholder="e.g. PID-001"
                                 />
                             </div>
 
@@ -330,9 +346,9 @@ function RecipeCard({ recipe, userRole, onEdit, onDelete }: { recipe: RecipeWith
 
             <Link href={`/catalogue/${recipe.id}`} className="block flex-1">
                 {/* Header: Icon + Product Info */}
-                <div className="flex gap-3 mb-2">
-                    <div className="flex-shrink-0">
-                        <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <div className="flex gap-6 mb-2">
+                    <div className="flex-shrink-0 self-stretch">
+                        <div className="h-full aspect-square p-2 bg-primary/10 rounded-lg text-primary flex items-center justify-center">
                             <BookOpen className="w-5 h-5" />
                         </div>
                     </div>
@@ -341,14 +357,19 @@ function RecipeCard({ recipe, userRole, onEdit, onDelete }: { recipe: RecipeWith
                         <h3 className="font-bold text-foreground text-sm leading-tight truncate pr-6 group-hover:text-primary transition-colors">
                             {recipe.name}
                         </h3>
-                        {recipe.category ? (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                <Tag className="w-3 h-3" />
-                                <span className="truncate">{recipe.category.name}</span>
-                            </div>
-                        ) : (
-                            <div className="mt-1 h-4"></div> /* Spacer */
-                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                            {recipe.category && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-md px-2 py-0.5">
+                                    <Tag className="w-3 h-3" />
+                                    <span className="truncate">{recipe.category.name}</span>
+                                </div>
+                            )}
+                            {recipe.productionId && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-md px-2 py-0.5">
+                                    <span className="font-mono">Product ID: {recipe.productionId}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

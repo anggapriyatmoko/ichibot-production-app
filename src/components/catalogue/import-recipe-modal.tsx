@@ -78,7 +78,7 @@ export default function ImportRecipeModal() {
                 const descIdx = headers.findIndex(h => h.includes('description') || h.includes('desc'))
                 const sectionIdx = headers.findIndex(h => h.includes('section'))
                 const skuIdx = headers.findIndex(h => h.includes('sku'))
-                const productIdx = headers.findIndex(h => h.includes('product') || h.includes('ingredient'))
+                const productIdx = headers.findIndex(h => h.includes('product') || (h.includes('ingredient') && !h.includes('sku')))
                 const qtyIdx = headers.findIndex(h => h.includes('quantity') || h.includes('qty'))
                 const notesIdx = headers.findIndex(h => h.includes('notes'))
 

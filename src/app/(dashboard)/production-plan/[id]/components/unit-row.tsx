@@ -8,12 +8,19 @@ import IssueModal from './issue-modal'
 interface UnitRowProps {
     unit: any
     items: any[]
+    recipeProductionId: string
+    year: number
+    month: number
 }
 
-export default function UnitRow({ unit, items }: UnitRowProps) {
+export default function UnitRow({ unit, items, recipeProductionId, year, month }: UnitRowProps) {
     const [isPending, startTransition] = useTransition()
     const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed))
-    const [identifier, setIdentifier] = useState(unit.productIdentifier || '')
+    // const [identifier, setIdentifier] = useState(unit.productIdentifier || '') // Handled by computed serial
+
+    // Compute Serial: ProdID + Year + Month(2) + Unit(3)
+    const computedSerial = `${recipeProductionId}${year}${month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
+
     const [customId, setCustomId] = useState(unit.customId || '')
 
     // Sales Data States
@@ -77,13 +84,7 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
         })
     }
 
-    const handleIdentifierBlur = () => {
-        if (identifier !== unit.productIdentifier) {
-            startTransition(async () => {
-                await updateUnitIdentifier(unit.id, identifier)
-            })
-        }
-    }
+    // Identifier blur removed as it matches computed serial now
 
     const handleCustomIdBlur = () => {
         if (customId !== unit.customId) {
@@ -117,36 +118,35 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
                 unitNumber={unit.unitNumber}
                 existingIssue={activeIssue}
             />
-            <tr className={`transition-colors ${hasIssue ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-accent/30'}`}>
-                <td className={`px-2 py-1 text-center border-r border-border font-medium text-muted-foreground sticky left-0 z-20 text-[10px] group-cell relative ${hasIssue ? 'bg-red-50 dark:bg-red-900/10' : 'bg-card group-hover:bg-accent/30'}`}>
-                    <div className="flex items-center justify-center gap-1 group/issue h-full w-full">
-                        <span>{unit.unitNumber}</span>
+            <tr className={`transition-colors ${hasIssue ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-muted/50'}`}>
+                <td className={`p-[3px] text-center shadow-[inset_-1px_-1px_0_0_#E5E7EB] font-medium text-muted-foreground sticky left-0 z-20 text-[10px] relative ${hasIssue ? 'bg-red-50 dark:bg-red-900' : 'bg-background group-hover:bg-muted'} w-[45px] min-w-[45px]`}>
+                    <div className="flex items-center justify-center gap-1 h-full w-full relative">
                         <button
                             onClick={handleIssueClick}
                             title={hasIssue ? activeIssue.description : "Report Issue"}
                             className={`
-                            w-4 h-4 rounded-full flex items-center justify-center transition-all absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-30
+                            w-4 h-4 rounded-full flex items-center justify-center transition-all absolute left-0 top-1/2 -translate-y-1/2 z-30 scale-75
                             ${hasIssue
-                                    ? 'bg-red-500 text-white shadow-sm ring-2 ring-background'
-                                    : 'opacity-0 group-hover/issue:opacity-100 bg-yellow-100 hover:bg-yellow-400 text-yellow-700 hover:text-white'
+                                    ? 'bg-red-500 text-white shadow-sm'
+                                    : 'opacity-0 hover:opacity-100 bg-yellow-100 hover:bg-yellow-400 text-yellow-700 hover:text-white'
                                 }
                         `}
                         >
                             <AlertTriangle className="w-2.5 h-2.5" />
                         </button>
+                        <span>{unit.unitNumber}</span>
                     </div>
                 </td>
-                <td className="px-2 py-1 border-r border-border sticky left-12 bg-card z-10 group-hover:bg-accent/30">
+                <td className="p-[3px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[45px] z-20 box-border w-[100px] min-w-[100px] bg-background group-hover:bg-muted">
                     <input
                         type="text"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        onBlur={handleIdentifierBlur}
+                        value={computedSerial}
+                        readOnly
                         placeholder="Serial..."
-                        className="w-full bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-2 py-0.5 outline-none text-[10px] font-mono transition-all h-6"
+                        className="w-full bg-transparent border border-transparent rounded px-2 py-0.5 outline-none text-[10px] font-mono h-6 text-muted-foreground cursor-default"
                     />
                 </td>
-                <td className="px-2 py-1 border-r border-border sticky left-[208px] bg-card z-10 group-hover:bg-accent/30">
+                <td className="p-[3px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[145px] z-20 box-border w-[100px] min-w-[100px] bg-background group-hover:bg-muted">
                     <input
                         type="text"
                         value={customId}
@@ -159,7 +159,7 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
                 {items.map(item => {
                     const isChecked = completedIds.includes(item.id)
                     return (
-                        <td key={item.id} className="px-2 py-1 text-center border-r border-border">
+                        <td key={item.id} className="p-[3px] text-center border-r border-border">
                             <button
                                 onClick={() => handleToggle(item.id)}
                                 className={`

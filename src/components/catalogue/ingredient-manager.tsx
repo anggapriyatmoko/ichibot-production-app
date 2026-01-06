@@ -306,24 +306,14 @@ export default function IngredientManager({
                 </div>
                 <div className="flex gap-3">
                     {userRole === 'ADMIN' && (
-                        <>
-                            <ImportRecipeModal />
-                            <button
-                                onClick={handleExport}
-                                disabled={isLoading}
-                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Export BOM"
-                            >
-                                <Download className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setIsEditing(!isEditing)}
-                                className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
-                                title={isEditing ? 'Done' : 'Edit'}
-                            >
-                                {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                            </button>
-                        </>
+
+                        <button
+                            onClick={() => setIsEditing(!isEditing)}
+                            className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+                            title={isEditing ? 'Done' : 'Edit'}
+                        >
+                            {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                        </button>
                     )}
 
                     <button
@@ -353,137 +343,141 @@ export default function IngredientManager({
 
             {/* Render Sections */}
             {/* Render Sections */}
-            {[...sections].sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, index, arr) => (
-                <div key={section.id} className="mb-6 no-print print-section">
-                    <div className="px-1 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            {/* Reorder Buttons */}
-                            {isEditing && (
-                                <div className="flex flex-col gap-0.5">
-                                    <button
-                                        onClick={async () => {
-                                            if (index === 0) return
-                                            const newSections = [...arr]
-                                            const temp = newSections[index]
-                                            newSections[index] = newSections[index - 1]
-                                            newSections[index - 1] = temp
+            {
+                [...sections].sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, index, arr) => (
+                    <div key={section.id} className="mb-6 no-print print-section">
+                        <div className="px-1 py-2 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                {/* Reorder Buttons */}
+                                {isEditing && (
+                                    <div className="flex flex-col gap-0.5">
+                                        <button
+                                            onClick={async () => {
+                                                if (index === 0) return
+                                                const newSections = [...arr]
+                                                const temp = newSections[index]
+                                                newSections[index] = newSections[index - 1]
+                                                newSections[index - 1] = temp
 
-                                            // Update UI visually via optimistic update (if this was a proper state, here we trust the re-render)
-                                            // Actually we need to call server action with new order
-                                            await reorderSections(recipeId, newSections.map(s => s.id))
-                                        }}
-                                        disabled={index === 0}
-                                        className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
-                                    >
-                                        <ArrowUp className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (index === arr.length - 1) return
-                                            const newSections = [...arr]
-                                            const temp = newSections[index]
-                                            newSections[index] = newSections[index + 1]
-                                            newSections[index + 1] = temp
-
-                                            await reorderSections(recipeId, newSections.map(s => s.id))
-                                        }}
-                                        disabled={index === arr.length - 1}
-                                        className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
-                                    >
-                                        <ArrowDown className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            )}
-
-                            <Folder className="w-4 h-4 text-blue-500" />
-                            {editingSectionId === section.id ? (
-                                <form action={handleUpdateSection} className="flex items-center gap-2">
-                                    <input
-                                        name="name"
-                                        defaultValue={section.name}
-                                        className="h-7 px-2 bg-background border border-border rounded text-sm focus:border-primary outline-none"
-                                        autoFocus
-                                    />
-                                    <button type="submit" className="p-1 hover:bg-green-100 text-green-600 rounded"><Check className="w-4 h-4" /></button>
-                                    <button type="button" onClick={() => setEditingSectionId(null)} className="p-1 hover:bg-red-100 text-red-600 rounded"><X className="w-4 h-4" /></button>
-                                </form>
-                            ) : (
-                                <div className="flex items-center gap-2 group">
-                                    <h3 className="font-bold text-foreground">{section.name}</h3>
-                                    {isEditing && (
-                                        <button onClick={() => setEditingSectionId(section.id)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
-                                            <Edit2 className="w-3 h-3" />
+                                                // Update UI visually via optimistic update (if this was a proper state, here we trust the re-render)
+                                                // Actually we need to call server action with new order
+                                                await reorderSections(recipeId, newSections.map(s => s.id))
+                                            }}
+                                            disabled={index === 0}
+                                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
+                                        >
+                                            <ArrowUp className="w-3 h-3" />
                                         </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {isEditing && (
-                                <>
-                                    {userRole === 'ADMIN' && (
-                                        <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
-                                            <Plus className="w-3 h-3" /> Add Item
-                                        </button>
-                                    )}
-                                    <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                                        <button
+                                            onClick={async () => {
+                                                if (index === arr.length - 1) return
+                                                const newSections = [...arr]
+                                                const temp = newSections[index]
+                                                newSections[index] = newSections[index + 1]
+                                                newSections[index + 1] = temp
 
-                    <IngredientsTable
-                        ingredients={ingredientsBySection[section.id] || []}
-                        onRemove={handleRemoveIngredient}
-                        onEdit={handleEditIngredient}
-                        isEditing={isEditing}
-                    />
-                </div>
-            ))}
+                                                await reorderSections(recipeId, newSections.map(s => s.id))
+                                            }}
+                                            disabled={index === arr.length - 1}
+                                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
+                                        >
+                                            <ArrowDown className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                <Folder className="w-4 h-4 text-blue-500" />
+                                {editingSectionId === section.id ? (
+                                    <form action={handleUpdateSection} className="flex items-center gap-2">
+                                        <input
+                                            name="name"
+                                            defaultValue={section.name}
+                                            className="h-7 px-2 bg-background border border-border rounded text-sm focus:border-primary outline-none"
+                                            autoFocus
+                                        />
+                                        <button type="submit" className="p-1 hover:bg-green-100 text-green-600 rounded"><Check className="w-4 h-4" /></button>
+                                        <button type="button" onClick={() => setEditingSectionId(null)} className="p-1 hover:bg-red-100 text-red-600 rounded"><X className="w-4 h-4" /></button>
+                                    </form>
+                                ) : (
+                                    <div className="flex items-center gap-2 group">
+                                        <h3 className="font-bold text-foreground">{section.name}</h3>
+                                        {isEditing && (
+                                            <button onClick={() => setEditingSectionId(section.id)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
+                                                <Edit2 className="w-3 h-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isEditing && (
+                                    <>
+                                        {userRole === 'ADMIN' && (
+                                            <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
+                                                <Plus className="w-3 h-3" /> Add Item
+                                            </button>
+                                        )}
+                                        <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        <IngredientsTable
+                            ingredients={ingredientsBySection[section.id] || []}
+                            onRemove={handleRemoveIngredient}
+                            onEdit={handleEditIngredient}
+                            isEditing={isEditing}
+                        />
+                    </div >
+                ))
+            }
 
             {/* Uncategorized / General Section */}
-            {(ingredientsBySection['uncategorized']?.length > 0 || sections.length === 0) && (
-                <div className="mb-6 no-print print-section">
-                    <div className="px-1 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            {editingUncategorized ? (
-                                <form action={handleRenameUncategorized} className="flex items-center gap-2">
-                                    <input
-                                        name="name"
-                                        defaultValue="Other Sparepart"
-                                        className="h-7 px-2 bg-background border border-border rounded text-sm focus:border-primary outline-none"
-                                        autoFocus
-                                    />
-                                    <button type="submit" className="p-1 hover:bg-green-100 text-green-600 rounded"><Check className="w-4 h-4" /></button>
-                                    <button type="button" onClick={() => setEditingUncategorized(false)} className="p-1 hover:bg-red-100 text-red-600 rounded"><X className="w-4 h-4" /></button>
-                                </form>
-                            ) : (
-                                <div className="flex items-center gap-2 group">
-                                    <h3 className="font-bold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Other Sparepart</h3>
-                                    {isEditing && (
-                                        <button onClick={() => setEditingUncategorized(true)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
-                                            <Edit2 className="w-3 h-3" />
-                                        </button>
-                                    )}
-                                </div>
+            {
+                (ingredientsBySection['uncategorized']?.length > 0) && (
+                    <div className="mb-6 no-print print-section">
+                        <div className="px-1 py-2 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                {editingUncategorized ? (
+                                    <form action={handleRenameUncategorized} className="flex items-center gap-2">
+                                        <input
+                                            name="name"
+                                            defaultValue="Other Sparepart"
+                                            className="h-7 px-2 bg-background border border-border rounded text-sm focus:border-primary outline-none"
+                                            autoFocus
+                                        />
+                                        <button type="submit" className="p-1 hover:bg-green-100 text-green-600 rounded"><Check className="w-4 h-4" /></button>
+                                        <button type="button" onClick={() => setEditingUncategorized(false)} className="p-1 hover:bg-red-100 text-red-600 rounded"><X className="w-4 h-4" /></button>
+                                    </form>
+                                ) : (
+                                    <div className="flex items-center gap-2 group">
+                                        <h3 className="font-bold text-foreground text-sm uppercase tracking-wider text-muted-foreground">Other Sparepart</h3>
+                                        {isEditing && (
+                                            <button onClick={() => setEditingUncategorized(true)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
+                                                <Edit2 className="w-3 h-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {isEditing && userRole === 'ADMIN' && (
+                                <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
+                                    <Plus className="w-3 h-3" /> Add Item
+                                </button>
                             )}
                         </div>
-                        {isEditing && userRole === 'ADMIN' && (
-                            <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
-                                <Plus className="w-3 h-3" /> Add Item
-                            </button>
-                        )}
+                        <IngredientsTable
+                            ingredients={ingredientsBySection['uncategorized'] || []}
+                            onRemove={handleRemoveIngredient}
+                            onEdit={handleEditIngredient}
+                            isEditing={isEditing}
+                        />
                     </div>
-                    <IngredientsTable
-                        ingredients={ingredientsBySection['uncategorized'] || []}
-                        onRemove={handleRemoveIngredient}
-                        onEdit={handleEditIngredient}
-                        isEditing={isEditing}
-                    />
-                </div>
-            )}
+                )
+            }
 
             {/* SUMMARY TABLE (Always Visible) */}
             <div className="mt-12 pt-8 border-t border-border print-area">
@@ -734,54 +728,56 @@ export default function IngredientManager({
             }
 
             {/* Edit Ingredient Modal */}
-            {editingIngredient && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
-                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="text-lg font-bold text-foreground mb-4">Edit Sparepart</h3>
+            {
+                editingIngredient && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-lg font-bold text-foreground mb-4">Edit Sparepart</h3>
 
-                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
-                            <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
-                                {editingIngredient.product.image ? <Image src={editingIngredient.product.image} fill className="object-cover" alt={editingIngredient.product.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
+                                <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
+                                    {editingIngredient.product.image ? <Image src={editingIngredient.product.image} fill className="object-cover" alt={editingIngredient.product.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-bold text-foreground">{editingIngredient.product.name}</p>
+                                    <p className="text-xs text-muted-foreground">{editingIngredient.product.sku}</p>
+                                </div>
                             </div>
-                            <div className="flex-1">
-                                <p className="font-bold text-foreground">{editingIngredient.product.name}</p>
-                                <p className="text-xs text-muted-foreground">{editingIngredient.product.sku}</p>
-                            </div>
+
+                            <form action={handleUpdateIngredient} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
+                                    <input
+                                        name="quantity"
+                                        type="number"
+                                        min="0"
+                                        step="any"
+                                        required
+                                        defaultValue={editingIngredient.quantity}
+                                        autoFocus
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                                    <input
+                                        name="notes"
+                                        defaultValue={editingIngredient.notes || ''}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button type="button" onClick={() => setEditingIngredient(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
+                                        {isLoading ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-
-                        <form action={handleUpdateIngredient} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
-                                <input
-                                    name="quantity"
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    required
-                                    defaultValue={editingIngredient.quantity}
-                                    autoFocus
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
-                                <input
-                                    name="notes"
-                                    defaultValue={editingIngredient.notes || ''}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => setEditingIngredient(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
-                                    {isLoading ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
+                )
+            }
 
 
         </div >

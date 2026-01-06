@@ -63,6 +63,7 @@ model Transaction {
 model Recipe {
   id           String             @id @default(cuid())
   name         String
+  productionId String             @default("-") // Required Production ID (moved from Product)
   description  String?
   categoryId   String?
   category     Category?          @relation(fields: [categoryId], references: [id])
@@ -75,16 +76,17 @@ model Recipe {
 }
 
 model ProductionPlan {
-  id        String   @id @default(cuid())
-  recipeId  String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  quantity  Float
-  month     Int
-  year      Int
-  status    String   @default("PENDING") // PENDING, COMPLETED
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  units     ProductionUnit[]
+  id               String   @id @default(cuid())
+  recipeId         String
+  recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  quantity         Float
+  month            Int
+  year             Int
+  status           String   @default("PENDING") // PENDING, COMPLETED
+  sectionsSnapshot String   @default("[]") @db.Text // JSON snapshot of sections at creation time
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  units            ProductionUnit[]
 }
 
 model ProductionUnit {
