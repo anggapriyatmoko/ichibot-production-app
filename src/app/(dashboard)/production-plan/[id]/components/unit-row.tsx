@@ -1,9 +1,10 @@
 'use client'
 
-import { updateUnitIdentifier, updateUnitCustomId, toggleUnitIngredient, updateUnitSalesData, reportIssue, resolveIssue } from '@/app/actions/production-plan'
+import { updateUnitIdentifier, updateUnitCustomId, toggleUnitSection, updateUnitSalesData, reportIssue, resolveIssue } from '@/app/actions/production-plan'
 import { Check, Box, ShoppingBag, AlertTriangle, AlertCircle, Hammer } from 'lucide-react'
 import { useState, useTransition, useEffect } from 'react'
 import IssueModal from './issue-modal'
+import ConfirmModal from './confirm-modal'
 
 interface UnitRowProps {
     unit: any
@@ -15,11 +16,11 @@ interface UnitRowProps {
 
 export default function UnitRow({ unit, items, recipeProductionId, year, month }: UnitRowProps) {
     const [isPending, startTransition] = useTransition()
-    const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed))
+    const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed || '[]'))
     // const [identifier, setIdentifier] = useState(unit.productIdentifier || '') // Handled by computed serial
 
     // Compute Serial: ProdID + Year + Month(2) + Unit(3)
-    const computedSerial = `${recipeProductionId}${year}${month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
+    const computedSerial = `${recipeProductionId}${year.toString()}${month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
 
     const [customId, setCustomId] = useState(unit.customId || '')
 
@@ -30,44 +31,54 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
     const [marketplace, setMarketplace] = useState(unit.marketplace || '')
     const [customer, setCustomer] = useState(unit.customer || '')
 
+    // Issue Tracking
+    const [isIssueModalOpen, setIsIssueModalOpen] = useState(false)
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    })
+    const activeIssue = unit.issues?.find((i: any) => !i.isResolved)
+    const hasIssue = !!activeIssue
+
+    useEffect(() => {
+        if (unit.customId) setCustomId(unit.customId)
+    }, [unit.customId])
+
     // Calculate if all sections are checked
     const isAllSectionsChecked = items.length > 0 && items.every(item => completedIds.includes(item.id))
 
     // Auto-uncheck Assembled, Packed and Sold when production progress is incomplete
     useEffect(() => {
-        if (!isAllSectionsChecked) {
-            if (isAssembled) {
-                setIsAssembled(false)
-                handleSalesUpdate('isAssembled', false)
-            }
+        if (!isAllSectionsChecked && isAssembled) {
+            setIsAssembled(false)
+            handleSalesUpdate('isAssembled', false)
         }
     }, [isAllSectionsChecked])
 
     useEffect(() => {
-        if (!isAssembled) {
-            if (isPacked) {
-                setIsPacked(false)
-                handleSalesUpdate('isPacked', false)
-            }
+        if (!isAssembled && isPacked) {
+            setIsPacked(false)
+            handleSalesUpdate('isPacked', false)
         }
     }, [isAssembled])
 
     useEffect(() => {
-        if (!isPacked) {
-            if (isSold) {
-                setIsSold(false)
-                handleSalesUpdate('isSold', false)
-            }
+        if (!isPacked && isSold) {
+            setIsSold(false)
+            handleSalesUpdate('isSold', false)
+            handleSalesUpdate('marketplace', '')
+            handleSalesUpdate('customer', '')
+            setMarketplace('')
+            setCustomer('')
         }
     }, [isPacked])
 
     // Auto-clear marketplace and customer when Sold is unchecked
     useEffect(() => {
-        if (!isSold && (marketplace || customer)) {
-            setMarketplace('')
-            setCustomer('')
-            handleSalesUpdate('marketplace', '')
-            handleSalesUpdate('customer', '')
+        if (!isSold) {
+            // Optional: clear if needed, but usually we just keep it or clear on uncheck action
         }
     }, [isSold])
 
@@ -80,7 +91,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
         setCompletedIds(newCompletedIds) // Optimistic update
 
         startTransition(async () => {
-            await toggleUnitIngredient(unit.id, itemId, !isCompleted)
+            await toggleUnitSection(unit.id, itemId, !isCompleted)
         })
     }
 
@@ -100,10 +111,35 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
         })
     }
 
-    // Issue Tracking
-    const [isIssueModalOpen, setIsIssueModalOpen] = useState(false)
-    const activeIssue = unit.issues?.find((i: any) => !i.isResolved)
-    const hasIssue = !!activeIssue
+    const handleStatusToggle = (type: 'Assembled' | 'Packed' | 'Sold', currentValue: boolean) => {
+        const nextValue = !currentValue
+
+        if (nextValue === false) { // Unchecking requires confirmation
+            setConfirmModal({
+                isOpen: true,
+                title: `Uncheck ${type}?`,
+                message: `Are you sure you want to uncheck ${type}?\nThis action cannot be undone and might affect next steps.`,
+                onConfirm: () => {
+                    updateStatus(type, false)
+                }
+            })
+        } else {
+            updateStatus(type, true)
+        }
+    }
+
+    const updateStatus = (type: string, value: boolean) => {
+        if (type === 'Assembled') {
+            setIsAssembled(value)
+            handleSalesUpdate('isAssembled', value)
+        } else if (type === 'Packed') {
+            setIsPacked(value)
+            handleSalesUpdate('isPacked', value)
+        } else if (type === 'Sold') {
+            setIsSold(value)
+            handleSalesUpdate('isSold', value)
+        }
+    }
 
     const handleIssueClick = () => {
         setIsIssueModalOpen(true)
@@ -118,35 +154,41 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                 unitNumber={unit.unitNumber}
                 existingIssue={activeIssue}
             />
-            <tr className={`transition-colors ${hasIssue ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-muted/50'}`}>
-                <td className={`p-[3px] text-center shadow-[inset_-1px_-1px_0_0_#E5E7EB] font-medium text-muted-foreground sticky left-0 z-20 text-[10px] relative ${hasIssue ? 'bg-red-50 dark:bg-red-900' : 'bg-background group-hover:bg-muted'} w-[45px] min-w-[45px]`}>
-                    <div className="flex items-center justify-center gap-1 h-full w-full relative">
-                        <button
-                            onClick={handleIssueClick}
-                            title={hasIssue ? activeIssue.description : "Report Issue"}
-                            className={`
-                            w-4 h-4 rounded-full flex items-center justify-center transition-all absolute left-0 top-1/2 -translate-y-1/2 z-30 scale-75
-                            ${hasIssue
-                                    ? 'bg-red-500 text-white shadow-sm'
-                                    : 'opacity-0 hover:opacity-100 bg-yellow-100 hover:bg-yellow-400 text-yellow-700 hover:text-white'
-                                }
-                        `}
-                        >
-                            <AlertTriangle className="w-2.5 h-2.5" />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText="Yes, Uncheck"
+                isDangerous={true}
+            />
+
+            <tr className={`border-b text-xs hover:bg-slate-50 transition-colors ${hasIssue ? 'bg-red-50 hover:bg-red-50' : ''}`}>
+                <td className="p-1 border-r border-indigo-100 bg-indigo-50/50 text-center font-medium text-slate-500">
+                    {activeIssue ? (
+                        <button onClick={() => setIsIssueModalOpen(true)}>
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-500 animate-pulse mx-auto" />
                         </button>
-                        <span>{unit.unitNumber}</span>
-                    </div>
+                    ) : (
+                        <div className="flex justify-center group relative">
+                            <span className="cursor-default">{unit.unitNumber}</span>
+                            <button
+                                onClick={() => setIsIssueModalOpen(true)}
+                                className="absolute -right-2 top-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-slate-200 rounded"
+                                title="Report Issue"
+                            >
+                                <AlertCircle className="w-3 h-3 text-slate-400" />
+                            </button>
+                        </div>
+                    )}
                 </td>
-                <td className="p-[3px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[45px] z-20 box-border w-[100px] min-w-[100px] bg-background group-hover:bg-muted">
-                    <input
-                        type="text"
-                        value={computedSerial}
-                        readOnly
-                        placeholder="Serial..."
-                        className="w-full bg-transparent border border-transparent rounded px-2 py-0.5 outline-none text-[10px] font-mono h-6 text-muted-foreground cursor-default"
-                    />
+                <td className="p-1 border-r border-indigo-100 bg-indigo-50/30 font-mono text-slate-600 text-center select-all">
+                    {/* Display Computed Serial */}
+                    {computedSerial}
                 </td>
-                <td className="p-[3px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[145px] z-20 box-border w-[100px] min-w-[100px] bg-background group-hover:bg-muted">
+                <td className="p-1 border-r border-indigo-100 bg-indigo-50/30">
                     <input
                         type="text"
                         value={customId}
@@ -181,8 +223,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                     <button
                         onClick={() => {
                             if (isAllSectionsChecked) {
-                                setIsAssembled(!isAssembled)
-                                handleSalesUpdate('isAssembled', !isAssembled)
+                                handleStatusToggle('Assembled', isAssembled)
                             }
                         }}
                         disabled={!isAllSectionsChecked}
@@ -203,8 +244,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                     <button
                         onClick={() => {
                             if (isAssembled) {
-                                setIsPacked(!isPacked)
-                                handleSalesUpdate('isPacked', !isPacked)
+                                handleStatusToggle('Packed', isPacked)
                             }
                         }}
                         disabled={!isAssembled}
@@ -225,8 +265,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                     <button
                         onClick={() => {
                             if (isPacked) {
-                                setIsSold(!isSold)
-                                handleSalesUpdate('isSold', !isSold)
+                                handleStatusToggle('Sold', isSold)
                             }
                         }}
                         disabled={!isPacked}
@@ -248,9 +287,10 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         type="text"
                         value={marketplace}
                         onChange={(e) => setMarketplace(e.target.value)}
-                        onBlur={(e) => handleSalesUpdate('marketplace', e.target.value)}
-                        placeholder="Tokopedia"
-                        className="w-full bg-white/50 border border-indigo-100 hover:border-indigo-300 focus:border-indigo-500 rounded px-2 py-0.5 outline-none text-[10px] text-indigo-900 placeholder:text-indigo-300 transition-all h-6"
+                        onBlur={() => handleSalesUpdate('marketplace', marketplace)}
+                        placeholder="Marketplace"
+                        disabled={!isSold}
+                        className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </td>
                 <td className="px-2 py-1 bg-indigo-50/30">
@@ -258,12 +298,14 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         type="text"
                         value={customer}
                         onChange={(e) => setCustomer(e.target.value)}
-                        onBlur={(e) => handleSalesUpdate('customer', e.target.value)}
-                        placeholder="Customer Name"
-                        className="w-full bg-white/50 border border-indigo-100 hover:border-indigo-300 focus:border-indigo-500 rounded px-2 py-0.5 outline-none text-[10px] text-indigo-900 placeholder:text-indigo-300 transition-all h-6"
+                        onBlur={() => handleSalesUpdate('customer', customer)}
+                        placeholder="Customer"
+                        disabled={!isSold}
+                        className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                 </td>
             </tr>
         </>
     )
 }
+

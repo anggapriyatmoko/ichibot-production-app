@@ -223,7 +223,7 @@ export default async function ProductionPlanPage({
                                                         : plan.recipe.sections
 
                                                     const validSectionIds = new Set(sections.map((s: any) => s.id))
-                                                    const completedIds = JSON.parse(unit.completed)
+                                                    const completedIds = JSON.parse(unit.completed || '[]')
 
                                                     // Only count IDs that are valid sections for this recipe
                                                     const validCompletedCount = completedIds.filter((id: string) => validSectionIds.has(id)).length

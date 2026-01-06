@@ -96,7 +96,7 @@ model ProductionUnit {
   unitNumber       Int
   productIdentifier String? // Serial Number / ID
   customId         String? // Custom ID (manual input)
-  completed        String   @default("[]") // JSON string of completed ingredient IDs
+  completed        String?  @db.Text // JSON string of completed ingredient IDs (nullable for MySQL TEXT compatibility)
   
   // Sales & Packing Tracking
   isPacked         Boolean  @default(false)

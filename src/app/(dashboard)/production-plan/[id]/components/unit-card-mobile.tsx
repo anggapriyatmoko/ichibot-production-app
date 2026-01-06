@@ -1,8 +1,9 @@
 'use client'
 
-import { toggleUnitIngredient, updateUnitSalesData } from '@/app/actions/production-plan'
+import { toggleUnitSection, updateUnitSalesData } from '@/app/actions/production-plan'
 import { Box, ShoppingBag, AlertTriangle, Hammer, Check } from 'lucide-react'
 import { useState, useTransition, useEffect } from 'react'
+import ConfirmModal from './confirm-modal'
 import IssueModal from './issue-modal'
 
 interface UnitCardMobileProps {
@@ -12,7 +13,7 @@ interface UnitCardMobileProps {
 
 export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) {
     const [isPending, startTransition] = useTransition()
-    const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed))
+    const [completedIds, setCompletedIds] = useState<string[]>(JSON.parse(unit.completed || '[]'))
 
     const activeIssue = unit.issues?.find((i: any) => !i.isResolved)
     const hasIssue = !!activeIssue
@@ -20,6 +21,12 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     const [isIssueModalOpen, setIsIssueModalOpen] = useState(false)
     const [isSalesModalOpen, setIsSalesModalOpen] = useState(false)
     const [isUnitInfoModalOpen, setIsUnitInfoModalOpen] = useState(false)
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    })
 
     // Temporary states for editing unit info
     const [tempSerial, setTempSerial] = useState(unit.productIdentifier || '')
@@ -72,7 +79,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
         setCompletedIds(newCompletedIds) // Optimistic update
 
         startTransition(async () => {
-            await toggleUnitIngredient(unit.id, itemId, !isCompleted)
+            await toggleUnitSection(unit.id, itemId, !isCompleted)
         })
     }
 
@@ -82,15 +89,44 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
         })
     }
 
+    const handleStatusToggle = (type: 'Assembled' | 'Packed' | 'Sold', currentValue: boolean) => {
+        const nextValue = !currentValue
+
+        if (nextValue === false) { // Unchecking requires confirmation
+            setConfirmModal({
+                isOpen: true,
+                title: `Uncheck ${type}?`,
+                message: `Are you sure you want to uncheck ${type}?\nThis action cannot be undone and might affect next steps.`,
+                onConfirm: () => {
+                    updateStatus(type, false)
+                    setConfirmModal({ ...confirmModal, isOpen: false }) // Close modal after confirmation
+                }
+            })
+        } else {
+            updateStatus(type, true)
+        }
+    }
+
+    const updateStatus = (type: string, value: boolean) => {
+        if (type === 'Assembled') {
+            setIsAssembled(value)
+            handleSalesUpdate('isAssembled', value)
+        } else if (type === 'Packed') {
+            setIsPacked(value)
+            handleSalesUpdate('isPacked', value)
+        } else if (type === 'Sold') {
+            setIsSold(value)
+            handleSalesUpdate('isSold', value)
+        }
+    }
+
     const handleSoldClick = () => {
         if (isPacked) {
             if (!isSold) {
                 // Opening modal to input marketplace and customer
                 setIsSalesModalOpen(true)
             } else {
-                // Unchecking sold
-                setIsSold(false)
-                handleSalesUpdate('isSold', false)
+                handleStatusToggle('Sold', true) // Will trigger confirm modal for uncheck
             }
         }
     }
@@ -125,6 +161,16 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
 
     return (
         <>
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText="Yes, Uncheck"
+                isDangerous={true}
+            />
+
             <IssueModal
                 isOpen={isIssueModalOpen}
                 onClose={() => setIsIssueModalOpen(false)}
@@ -168,7 +214,11 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                         </div>
                         <div className="flex gap-3 mt-6">
                             <button
-                                onClick={() => setIsSalesModalOpen(false)}
+                                onClick={() => {
+                                    setMarketplace(unit.marketplace || '')
+                                    setCustomer(unit.customer || '')
+                                    setIsSalesModalOpen(false)
+                                }}
                                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium"
                             >
                                 Cancel
@@ -300,8 +350,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                             <button
                                 onClick={() => {
                                     if (isAllSectionsChecked) {
-                                        setIsAssembled(!isAssembled)
-                                        handleSalesUpdate('isAssembled', !isAssembled)
+                                        handleStatusToggle('Assembled', isAssembled)
                                     }
                                 }}
                                 disabled={!isAllSectionsChecked || isPending}
@@ -315,8 +364,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                             <button
                                 onClick={() => {
                                     if (isAssembled) {
-                                        setIsPacked(!isPacked)
-                                        handleSalesUpdate('isPacked', !isPacked)
+                                        handleStatusToggle('Packed', isPacked)
                                     }
                                 }}
                                 disabled={!isAssembled || isPending}
