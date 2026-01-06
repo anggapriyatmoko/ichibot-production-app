@@ -1,7 +1,7 @@
 'use client'
 
 import { toggleUnitIngredient, updateUnitSalesData } from '@/app/actions/production-plan'
-import { Check, Box, ShoppingBag, AlertTriangle } from 'lucide-react'
+import { Box, ShoppingBag, AlertTriangle, Hammer, Check } from 'lucide-react'
 import { useState, useTransition, useEffect } from 'react'
 import IssueModal from './issue-modal'
 
@@ -26,6 +26,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     const [tempCustomId, setTempCustomId] = useState(unit.customId || '')
 
     // Sales Data States
+    const [isAssembled, setIsAssembled] = useState(!!unit.assembledAt)
     const [isPacked, setIsPacked] = useState(unit.isPacked)
     const [isSold, setIsSold] = useState(unit.isSold)
     const [marketplace, setMarketplace] = useState(unit.marketplace || '')
@@ -34,19 +35,33 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     // Calculate if all sections are checked
     const isAllSectionsChecked = sections.length > 0 && sections.every(section => completedIds.includes(section.id))
 
-    // Auto-uncheck Packed and Sold when production progress is incomplete
+    // Auto-uncheck Assembled, Packed and Sold when production progress is incomplete
     useEffect(() => {
         if (!isAllSectionsChecked) {
+            if (isAssembled) {
+                setIsAssembled(false)
+                handleSalesUpdate('isAssembled', false)
+            }
+        }
+    }, [isAllSectionsChecked])
+
+    useEffect(() => {
+        if (!isAssembled) {
             if (isPacked) {
                 setIsPacked(false)
                 handleSalesUpdate('isPacked', false)
             }
+        }
+    }, [isAssembled])
+
+    useEffect(() => {
+        if (!isPacked) {
             if (isSold) {
                 setIsSold(false)
                 handleSalesUpdate('isSold', false)
             }
         }
-    }, [isAllSectionsChecked])
+    }, [isPacked])
 
     const handleToggle = (itemId: string) => {
         const isCompleted = completedIds.includes(itemId)
@@ -68,7 +83,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     }
 
     const handleSoldClick = () => {
-        if (isAllSectionsChecked) {
+        if (isPacked) {
             if (!isSold) {
                 // Opening modal to input marketplace and customer
                 setIsSalesModalOpen(true)
@@ -281,16 +296,31 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                     <div className="text-xs font-semibold text-indigo-900 mb-2">Sales Status</div>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-indigo-700">Packed</span>
+                            <span className="text-xs text-indigo-700">Assembled</span>
                             <button
                                 onClick={() => {
                                     if (isAllSectionsChecked) {
+                                        setIsAssembled(!isAssembled)
+                                        handleSalesUpdate('isAssembled', !isAssembled)
+                                    }
+                                }}
+                                disabled={!isAllSectionsChecked || isPending}
+                                className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isAssembled ? 'bg-indigo-500 border-indigo-500' : !isAllSectionsChecked ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'bg-white border-indigo-200'} ${isPending ? 'opacity-50' : ''}`}
+                            >
+                                {isAssembled && <Hammer className="w-3 h-3 text-white" strokeWidth={2.5} />}
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-indigo-700">Packed</span>
+                            <button
+                                onClick={() => {
+                                    if (isAssembled) {
                                         setIsPacked(!isPacked)
                                         handleSalesUpdate('isPacked', !isPacked)
                                     }
                                 }}
-                                disabled={!isAllSectionsChecked || isPending}
-                                className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isPacked ? 'bg-indigo-500 border-indigo-500' : !isAllSectionsChecked ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'bg-white border-indigo-200'} ${isPending ? 'opacity-50' : ''}`}
+                                disabled={!isAssembled || isPending}
+                                className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isPacked ? 'bg-indigo-500 border-indigo-500' : !isAssembled ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'bg-white border-indigo-200'} ${isPending ? 'opacity-50' : ''}`}
                             >
                                 {isPacked && <Box className="w-3 h-3 text-white" strokeWidth={2.5} />}
                             </button>
@@ -299,8 +329,8 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                             <span className="text-xs text-indigo-700">Sold</span>
                             <button
                                 onClick={handleSoldClick}
-                                disabled={!isAllSectionsChecked || isPending}
-                                className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isSold ? 'bg-indigo-500 border-indigo-500' : !isAllSectionsChecked ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'bg-white border-indigo-200'} ${isPending ? 'opacity-50' : ''}`}
+                                disabled={!isPacked || isPending}
+                                className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${isSold ? 'bg-indigo-500 border-indigo-500' : !isPacked ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'bg-white border-indigo-200'} ${isPending ? 'opacity-50' : ''}`}
                             >
                                 {isSold && <ShoppingBag className="w-3 h-3 text-white" strokeWidth={2.5} />}
                             </button>

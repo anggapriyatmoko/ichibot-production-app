@@ -26,8 +26,8 @@ export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTa
         setIsEditing(false)
         if (quantity === initialQuantity) return
 
-        if (quantity < 1) {
-            alert('Quantity must be at least 1')
+        if (quantity <= 0) {
+            alert('Quantity must be positive')
             setQuantity(initialQuantity)
             return
         }
@@ -61,7 +61,7 @@ export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTa
                 ref={inputRef}
                 type="number"
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
                 className="w-20 text-center font-bold text-lg bg-background border border-primary rounded px-1 py-0.5 outline-none"

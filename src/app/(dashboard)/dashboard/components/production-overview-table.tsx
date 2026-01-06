@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment } from 'react'
 import YearSelector from './year-selector'
 
 interface ProductionOverviewTableProps {
@@ -78,10 +79,10 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                         {/* Plan/Done Sub-headers */}
                         <tr className="bg-slate-50/50 border-b border-slate-200 text-[10px]">
                             {MONTHS.map((month) => (
-                                <div key={month} style={{ display: 'contents' }}>
+                                <Fragment key={month}>
                                     <th className="px-1 py-1 font-medium text-slate-400 border-r border-slate-100">P</th>
                                     <th className="px-1 py-1 font-bold text-slate-700 border-r border-slate-200">D</th>
-                                </div>
+                                </Fragment>
                             ))}
                             <th className="px-2 py-1 font-medium text-slate-500 border-l-2 border-slate-200 bg-slate-100/30">Plan</th>
                             <th className="px-2 py-1 font-bold text-slate-700 border-r border-slate-200 bg-slate-100/30">Done</th>
@@ -104,7 +105,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                                         const monthData = row.monthlyData.find(d => d.month === monthIndex) || { plan: 0, done: 0 }
 
                                         return (
-                                            <div key={index} style={{ display: 'contents' }}>
+                                            <Fragment key={index}>
                                                 <td className={`px-1 py-1 border-r border-slate-100 font-mono text-[10px] text-center ${monthData.plan === 0 ? 'text-slate-200' : 'text-slate-500'}`}>
                                                     {monthData.plan > 0 ? monthData.plan : '-'}
                                                 </td>
@@ -116,7 +117,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                                                     }`}>
                                                     {monthData.done > 0 ? monthData.done : '-'}
                                                 </td>
-                                            </div>
+                                            </Fragment>
                                         )
                                     })}
                                     <td className="px-2 py-1 border-l-2 border-slate-200 font-mono text-xs text-center font-medium bg-slate-50/30">

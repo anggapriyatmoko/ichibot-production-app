@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection, reorderSections, getRecipeForExport } from '@/app/actions/recipe'
+import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection, reorderSections, getRecipeForExport, updateIngredient } from '@/app/actions/recipe'
 import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer, ArrowUp, ArrowDown, Download } from 'lucide-react'
 import Image from 'next/image'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import * as XLSX from 'xlsx'
+import { formatNumber } from '@/utils/format'
 import ImportRecipeModal from './import-recipe-modal'
 import { useAlert } from '@/hooks/use-alert'
 
@@ -88,6 +89,7 @@ export default function IngredientManager({
 
     const [isAddingIngredient, setIsAddingIngredient] = useState(false)
     const [isAddingSection, setIsAddingSection] = useState(false)
+    const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null)
     const { showConfirmation } = useConfirmation()
     const { showError } = useAlert()
 
@@ -175,6 +177,27 @@ export default function IngredientManager({
         setSelectedProduct(null)
         setSearchQuery('')
         setActiveSectionId(null)
+    }
+
+    async function handleUpdateIngredient(formData: FormData) {
+        if (!editingIngredient) return
+        setIsLoading(true)
+        formData.append('id', editingIngredient.id)
+        formData.append('recipeId', recipeId)
+
+        try {
+            await updateIngredient(formData)
+            setEditingIngredient(null)
+        } catch (error: any) {
+            console.error(error)
+            showError(error.message)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    function handleEditIngredient(ing: Ingredient) {
+        setEditingIngredient(ing)
     }
 
     async function handleCreateSection(formData: FormData) {
@@ -414,6 +437,7 @@ export default function IngredientManager({
                     <IngredientsTable
                         ingredients={ingredientsBySection[section.id] || []}
                         onRemove={handleRemoveIngredient}
+                        onEdit={handleEditIngredient}
                         isEditing={isEditing}
                     />
                 </div>
@@ -455,6 +479,7 @@ export default function IngredientManager({
                     <IngredientsTable
                         ingredients={ingredientsBySection['uncategorized'] || []}
                         onRemove={handleRemoveIngredient}
+                        onEdit={handleEditIngredient}
                         isEditing={isEditing}
                     />
                 </div>
@@ -483,7 +508,7 @@ export default function IngredientManager({
                                         <tr key={ing.id}>
                                             <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
                                             <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
-                                            <td className="px-3 py-2 border font-bold">{ing.quantity}</td>
+                                            <td className="px-3 py-2 border font-bold">{formatNumber(ing.quantity)}</td>
                                             <td className="px-3 py-2 border">
                                                 {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
@@ -513,7 +538,7 @@ export default function IngredientManager({
                                         <tr key={ing.id}>
                                             <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
                                             <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
-                                            <td className="px-3 py-2 border font-bold">{ing.quantity}</td>
+                                            <td className="px-3 py-2 border font-bold">{formatNumber(ing.quantity)}</td>
                                             <td className="px-3 py-2 border">
                                                 {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
@@ -541,7 +566,7 @@ export default function IngredientManager({
                                     <tr key={ing.product.id}>
                                         <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
                                         <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
-                                        <td className="px-3 py-2 border font-bold">{ing.quantity}</td>
+                                        <td className="px-3 py-2 border font-bold">{formatNumber(ing.quantity)}</td>
                                     </tr>
                                 ))}
                                 {initialIngredients.length === 0 && (
@@ -688,7 +713,7 @@ export default function IngredientManager({
 
                                     <div>
                                         <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
-                                        <input name="quantity" type="number" min="1" required autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. 5" />
+                                        <input name="quantity" type="number" min="0" step="any" required autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. 5.5" />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
@@ -708,12 +733,62 @@ export default function IngredientManager({
                 )
             }
 
+            {/* Edit Ingredient Modal */}
+            {editingIngredient && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold text-foreground mb-4">Edit Sparepart</h3>
+
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
+                            <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
+                                {editingIngredient.product.image ? <Image src={editingIngredient.product.image} fill className="object-cover" alt={editingIngredient.product.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-foreground">{editingIngredient.product.name}</p>
+                                <p className="text-xs text-muted-foreground">{editingIngredient.product.sku}</p>
+                            </div>
+                        </div>
+
+                        <form action={handleUpdateIngredient} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
+                                <input
+                                    name="quantity"
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    required
+                                    defaultValue={editingIngredient.quantity}
+                                    autoFocus
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                                <input
+                                    name="notes"
+                                    defaultValue={editingIngredient.notes || ''}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button type="button" onClick={() => setEditingIngredient(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                                <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
+                                    {isLoading ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
 
         </div >
     )
 }
 
-function IngredientsTable({ ingredients, onRemove, isEditing }: { ingredients: Ingredient[], onRemove: (id: string) => void, isEditing: boolean }) {
+function IngredientsTable({ ingredients, onRemove, onEdit, isEditing }: { ingredients: Ingredient[], onRemove: (id: string) => void, onEdit: (ing: Ingredient) => void, isEditing: boolean }) {
     if (ingredients.length === 0) {
         return <div className="p-8 text-center text-sm text-muted-foreground italic">No sparepart in this section.</div>
     }
@@ -750,9 +825,14 @@ function IngredientsTable({ ingredients, onRemove, isEditing }: { ingredients: I
                             </td>
                             {isEditing && (
                                 <td className="px-2 py-2 border-b border-border text-center bg-white">
-                                    <button onClick={() => onRemove(ing.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                    <div className="flex items-center justify-center gap-1">
+                                        <button onClick={() => onEdit(ing)} className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => onRemove(ing.id)} className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </td>
                             )}
                         </tr>

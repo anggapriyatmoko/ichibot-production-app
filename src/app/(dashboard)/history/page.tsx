@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
 import { History, ArrowUpRight, ArrowDownLeft, Plus, Minus, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react'
+import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -180,7 +181,7 @@ export default async function HistoryPage({
                                         tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
                                             tx.type === 'BOM_ADD' ? 'text-purple-600 dark:text-purple-400' :
                                                 'text-orange-600 dark:text-orange-400')}>
-                                    {['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}{tx.quantity} pcs
+                                    {['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}{formatNumber(tx.quantity)} pcs
                                 </span>
                             )}
                         </div>
@@ -283,7 +284,7 @@ export default async function HistoryPage({
                                                             'text-orange-600 dark:text-orange-400')}>
                                         {['Solved', 'Problem', 'Checked', 'Unchecked'].includes(tx.type)
                                             ? '-'
-                                            : `${['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}${tx.quantity}`
+                                            : `${['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}${formatNumber(tx.quantity)}`
                                         }
                                     </td>
                                 </tr>

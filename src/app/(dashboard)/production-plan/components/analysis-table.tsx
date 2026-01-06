@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle, Sparkles, Bot } from 'lucide-react'
+import { formatNumber } from '@/utils/format'
 
 interface AnalysisTableProps {
     data: {
@@ -58,11 +59,11 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                             {sortedData.map((item) => (
                                 <tr key={item.id} className="hover:bg-accent/30 transition-colors">
                                     <td className="px-6 py-3 font-medium text-foreground">{item.name}</td>
-                                    <td className="px-6 py-3 text-center text-muted-foreground">{item.stock}</td>
-                                    <td className="px-6 py-3 text-center">{item.neededThisMonth}</td>
-                                    <td className="px-6 py-3 text-center font-bold">{item.totalNeeded}</td>
+                                    <td className="px-6 py-3 text-center text-muted-foreground">{formatNumber(item.stock)}</td>
+                                    <td className="px-6 py-3 text-center">{formatNumber(item.neededThisMonth)}</td>
+                                    <td className="px-6 py-3 text-center font-bold">{formatNumber(item.totalNeeded)}</td>
                                     <td className={`px-6 py-3 text-center font-bold ${item.balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                        {item.balance > 0 ? '+' : ''}{item.balance}
+                                        {item.balance > 0 ? '+' : ''}{formatNumber(item.balance)}
                                     </td>
                                     <td className="px-6 py-3 text-right">
                                         {item.status === 'SAFE' ? (
@@ -111,20 +112,20 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                             <div className="grid grid-cols-2 gap-3 text-xs">
                                 <div>
                                     <div className="text-muted-foreground mb-1">Current Stock</div>
-                                    <div className="font-medium text-foreground">{item.stock}</div>
+                                    <div className="font-medium text-foreground">{formatNumber(item.stock)}</div>
                                 </div>
                                 <div>
                                     <div className="text-muted-foreground mb-1">Needed</div>
-                                    <div className="font-medium text-foreground">{item.neededThisMonth}</div>
+                                    <div className="font-medium text-foreground">{formatNumber(item.neededThisMonth)}</div>
                                 </div>
                                 <div>
                                     <div className="text-muted-foreground mb-1">Total Needed</div>
-                                    <div className="font-bold text-foreground">{item.totalNeeded}</div>
+                                    <div className="font-bold text-foreground">{formatNumber(item.totalNeeded)}</div>
                                 </div>
                                 <div>
                                     <div className="text-muted-foreground mb-1">Balance</div>
                                     <div className={`font-bold ${item.balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                        {item.balance > 0 ? '+' : ''}{item.balance}
+                                        {item.balance > 0 ? '+' : ''}{formatNumber(item.balance)}
                                     </div>
                                 </div>
                             </div>

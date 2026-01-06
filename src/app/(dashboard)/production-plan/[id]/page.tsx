@@ -67,6 +67,9 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                             ))}
                             {/* Sales & Packing Columns */}
                             <th className="px-2 py-2 w-20 text-center border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 border-l z-10 text-[10px]">
+                                Assembled
+                            </th>
+                            <th className="px-2 py-2 w-20 text-center border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 z-10 text-[10px]">
                                 Packing
                             </th>
                             <th className="px-2 py-2 w-20 text-center border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 z-10 text-[10px]">

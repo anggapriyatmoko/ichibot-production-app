@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,7 @@ const navigation = [
     { name: 'Production Plan', href: '/production-plan', icon: Calendar },
     { name: 'POS', href: '/pos', icon: ShoppingCart },
     { name: 'History', href: '/history', icon: LayoutDashboard },
+    { name: 'Profile', href: '/profile', icon: User },
 ]
 
 const adminNavigation = [

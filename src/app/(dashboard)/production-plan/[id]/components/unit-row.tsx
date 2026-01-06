@@ -1,7 +1,7 @@
 'use client'
 
 import { updateUnitIdentifier, updateUnitCustomId, toggleUnitIngredient, updateUnitSalesData, reportIssue, resolveIssue } from '@/app/actions/production-plan'
-import { Check, Box, ShoppingBag, AlertTriangle, AlertCircle } from 'lucide-react'
+import { Check, Box, ShoppingBag, AlertTriangle, AlertCircle, Hammer } from 'lucide-react'
 import { useState, useTransition, useEffect } from 'react'
 import IssueModal from './issue-modal'
 
@@ -17,6 +17,7 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
     const [customId, setCustomId] = useState(unit.customId || '')
 
     // Sales Data States
+    const [isAssembled, setIsAssembled] = useState(!!unit.assembledAt)
     const [isPacked, setIsPacked] = useState(unit.isPacked)
     const [isSold, setIsSold] = useState(unit.isSold)
     const [marketplace, setMarketplace] = useState(unit.marketplace || '')
@@ -25,19 +26,33 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
     // Calculate if all sections are checked
     const isAllSectionsChecked = items.length > 0 && items.every(item => completedIds.includes(item.id))
 
-    // Auto-uncheck Packed and Sold when production progress is incomplete
+    // Auto-uncheck Assembled, Packed and Sold when production progress is incomplete
     useEffect(() => {
         if (!isAllSectionsChecked) {
+            if (isAssembled) {
+                setIsAssembled(false)
+                handleSalesUpdate('isAssembled', false)
+            }
+        }
+    }, [isAllSectionsChecked])
+
+    useEffect(() => {
+        if (!isAssembled) {
             if (isPacked) {
                 setIsPacked(false)
                 handleSalesUpdate('isPacked', false)
             }
+        }
+    }, [isAssembled])
+
+    useEffect(() => {
+        if (!isPacked) {
             if (isSold) {
                 setIsSold(false)
                 handleSalesUpdate('isSold', false)
             }
         }
-    }, [isAllSectionsChecked])
+    }, [isPacked])
 
     // Auto-clear marketplace and customer when Sold is unchecked
     useEffect(() => {
@@ -166,16 +181,38 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
                     <button
                         onClick={() => {
                             if (isAllSectionsChecked) {
-                                setIsPacked(!isPacked)
-                                handleSalesUpdate('isPacked', !isPacked)
+                                setIsAssembled(!isAssembled)
+                                handleSalesUpdate('isAssembled', !isAssembled)
                             }
                         }}
                         disabled={!isAllSectionsChecked}
                         className={`
                         w-4 h-4 rounded border flex items-center justify-center transition-all duration-200 mx-auto
-                        ${isPacked
+                        ${isAssembled
                                 ? 'bg-indigo-500 border-indigo-500 text-white shadow-sm scale-100'
                                 : !isAllSectionsChecked
+                                    ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
+                                    : 'bg-white border-indigo-200 hover:border-indigo-400 text-transparent scale-90 hover:scale-100'
+                            }
+                    `}
+                    >
+                        <Hammer className="w-2.5 h-2.5" strokeWidth={2.5} />
+                    </button>
+                </td>
+                <td className="px-2 py-1 text-center border-r border-indigo-100 bg-indigo-50/30">
+                    <button
+                        onClick={() => {
+                            if (isAssembled) {
+                                setIsPacked(!isPacked)
+                                handleSalesUpdate('isPacked', !isPacked)
+                            }
+                        }}
+                        disabled={!isAssembled}
+                        className={`
+                        w-4 h-4 rounded border flex items-center justify-center transition-all duration-200 mx-auto
+                        ${isPacked
+                                ? 'bg-indigo-500 border-indigo-500 text-white shadow-sm scale-100'
+                                : !isAssembled
                                     ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
                                     : 'bg-white border-indigo-200 hover:border-indigo-400 text-transparent scale-90 hover:scale-100'
                             }
@@ -187,17 +224,17 @@ export default function UnitRow({ unit, items }: UnitRowProps) {
                 <td className="px-2 py-1 text-center border-r border-indigo-100 bg-indigo-50/30">
                     <button
                         onClick={() => {
-                            if (isAllSectionsChecked) {
+                            if (isPacked) {
                                 setIsSold(!isSold)
                                 handleSalesUpdate('isSold', !isSold)
                             }
                         }}
-                        disabled={!isAllSectionsChecked}
+                        disabled={!isPacked}
                         className={`
                         w-4 h-4 rounded border flex items-center justify-center transition-all duration-200 mx-auto
                         ${isSold
                                 ? 'bg-indigo-500 border-indigo-500 text-white shadow-sm scale-100'
-                                : !isAllSectionsChecked
+                                : !isPacked
                                     ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50'
                                     : 'bg-white border-indigo-200 hover:border-indigo-400 text-transparent scale-90 hover:scale-100'
                             }

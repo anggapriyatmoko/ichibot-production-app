@@ -9,7 +9,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 export async function createProductionPlan(formData: FormData) {
     await requireAdmin()
     const recipeId = formData.get('recipeId') as string
-    const quantity = parseInt(formData.get('quantity') as string)
+    const quantity = parseFloat(formData.get('quantity') as string)
     const month = parseInt(formData.get('month') as string)
     const year = parseInt(formData.get('year') as string)
 
@@ -68,6 +68,7 @@ export async function updateUnitCustomId(unitId: string, customId: string) {
 export async function updateUnitSalesData(unitId: string, data: {
     isPacked?: boolean,
     isSold?: boolean,
+    isAssembled?: boolean,
     marketplace?: string,
     customer?: string
 }) {
@@ -76,6 +77,11 @@ export async function updateUnitSalesData(unitId: string, data: {
     // Set packedAt timestamp
     if (data.isPacked !== undefined) {
         updateData.packedAt = data.isPacked ? new Date() : null
+    }
+
+    if (data.isAssembled !== undefined) {
+        updateData.assembledAt = data.isAssembled ? new Date() : null
+        delete updateData.isAssembled
     }
 
     await prisma.productionUnit.update({
@@ -115,15 +121,12 @@ export async function toggleUnitIngredient(unitId: string, ingredientId: string,
     }
 
     // Check if fully assembled
-    const totalSections = unit.productionPlan.recipe.sections.length
-    const isFullyChecked = totalSections > 0 && completedIds.length >= totalSections
-    const assembledAt = isFullyChecked ? new Date() : null
+
 
     await prisma.productionUnit.update({
         where: { id: unitId },
         data: {
-            completed: JSON.stringify(completedIds),
-            assembledAt: assembledAt
+            completed: JSON.stringify(completedIds)
         }
     })
 
@@ -231,7 +234,7 @@ export async function toggleUnitIngredient(unitId: string, ingredientId: string,
 
 export async function updateProductionPlanQuantity(id: string, newQuantity: number) {
     await requireAdmin()
-    if (newQuantity < 1) return
+    if (newQuantity <= 0) return
 
     const plan = await prisma.productionPlan.findUnique({
         where: { id },
@@ -462,7 +465,7 @@ export async function importProductionPlan(rows: any[], month: number, year: num
     for (const row of rows) {
         try {
             const recipeName = String(row.recipeName || '').trim()
-            const quantity = parseInt(row.quantity) || 0
+            const quantity = parseFloat(row.quantity) || 0
 
             if (!recipeName || quantity <= 0) continue
 

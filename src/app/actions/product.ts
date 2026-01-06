@@ -16,8 +16,8 @@ export async function createProduct(formData: FormData) {
     const name = formData.get('name') as string
     const rawSku = formData.get('sku') as string
     const sku = rawSku && rawSku.trim() !== '' ? rawSku.trim() : null
-    const stock = parseInt(formData.get('stock') as string)
-    const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
+    const stock = parseFloat(formData.get('stock') as string)
+    const lowStockThreshold = parseFloat(formData.get('lowStockThreshold') as string)
     const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
 
@@ -89,7 +89,7 @@ export async function updateProduct(formData: FormData) {
     const name = formData.get('name') as string
     const rawSku = formData.get('sku') as string
     const sku = rawSku && rawSku.trim() !== '' ? rawSku.trim() : null
-    const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string)
+    const lowStockThreshold = parseFloat(formData.get('lowStockThreshold') as string)
     const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
 
@@ -118,6 +118,10 @@ export async function updateProduct(formData: FormData) {
 
         await writeFile(path.join(uploadDir, filename), resizedBuffer)
         data.image = '/uploads/' + filename
+    }
+
+    if (formData.get('removeImage') === 'true') {
+        data.image = null
     }
 
     try {
@@ -195,8 +199,8 @@ export async function importProducts(products: any[]) {
             const itemSku = item.sku ? String(item.sku).trim() : null
             const sku = itemSku === '' ? null : itemSku
             const name = String(item.name).trim()
-            const stock = item.stock ? parseInt(item.stock) : 0
-            const lowStockThreshold = item.lowStockThreshold ? parseInt(item.lowStockThreshold) : 10
+            const stock = item.stock ? parseFloat(item.stock) : 0
+            const lowStockThreshold = item.lowStockThreshold ? parseFloat(item.lowStockThreshold) : 10
 
             // Check existing logic: Priority SKU -> Name
             let existing = null

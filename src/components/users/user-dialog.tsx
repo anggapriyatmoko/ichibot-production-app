@@ -118,7 +118,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                                 value={formData.username}
                                 onChange={handleChange}
                                 required
-                                placeholder="johndoe"
+                                placeholder="username"
                                 className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono text-sm"
                             />
                         </div>
@@ -144,7 +144,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                             value={formData.email}
                             onChange={handleChange}
                             required
-                            placeholder="john@example.com"
+                            placeholder="user@ichibot.id"
                             className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
                         />
                     </div>
@@ -171,7 +171,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                                 value={formData.password}
                                 onChange={handleChange}
                                 required={!user}
-                                placeholder={user ? "Leave blank to keep current" : "Enter password"}
+                                placeholder={user ? "Leave blank to keep current" : ""}
                                 minLength={6}
                                 className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono pr-10"
                             />

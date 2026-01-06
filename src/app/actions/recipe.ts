@@ -48,7 +48,7 @@ export async function deleteRecipe(id: string) {
 
 export async function addIngredient(recipeId: string, formData: FormData) {
     const productId = formData.get('productId') as string
-    const quantity = parseInt(formData.get('quantity') as string)
+    const quantity = parseFloat(formData.get('quantity') as string)
     const notes = formData.get('notes') as string
     const sectionId = formData.get('sectionId') as string | null
 
@@ -101,6 +101,45 @@ export async function removeIngredient(id: string, recipeId: string) {
     }
 
     await prisma.recipeIngredient.delete({ where: { id } })
+    revalidatePath(`/catalogue/${recipeId}`)
+}
+
+export async function updateIngredient(formData: FormData) {
+    const id = formData.get('id') as string
+    const recipeId = formData.get('recipeId') as string
+    const quantity = parseFloat(formData.get('quantity') as string)
+    const notes = formData.get('notes') as string
+
+    // Get old ingredient for diff
+    const oldIngredient = await prisma.recipeIngredient.findUnique({
+        where: { id }
+    })
+
+    if (!oldIngredient) throw new Error('Ingredient not found')
+
+    await prisma.recipeIngredient.update({
+        where: { id },
+        data: {
+            quantity,
+            notes
+        }
+    })
+
+    // Log transaction if quantity changed
+    const diff = quantity - oldIngredient.quantity
+    if (diff !== 0) {
+        await prisma.transaction.create({
+            data: {
+                type: diff > 0 ? 'BOM_ADD' : 'BOM_REMOVE',
+                quantity: Math.abs(diff),
+                productId: oldIngredient.productId,
+                // @ts-ignore
+                recipeId,
+                description: `Update BOM: ${diff > 0 ? '+' : ''}${diff}`
+            }
+        })
+    }
+
     revalidatePath(`/catalogue/${recipeId}`)
 }
 
@@ -301,7 +340,7 @@ export async function importRecipes(rows: any[]) {
 
                 const sku = item.sku ? String(item.sku).trim() : null
                 const productName = String(item.productName).trim()
-                const quantity = parseInt(item.quantity) || 0
+                const quantity = parseFloat(item.quantity) || 0
                 const sectionName = item.section ? String(item.section).trim() : 'Main'
                 const notes = item.notes || ''
 

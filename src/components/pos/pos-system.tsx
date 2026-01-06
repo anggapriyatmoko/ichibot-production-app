@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { processBatchCheckout } from '@/app/actions/pos'
 import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import { QuantityInput } from '@/components/ui/quantity-input'
 
 type Product = {
     id: string
@@ -266,7 +268,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                 <div className="flex justify-between items-center mt-1 w-full text-xs">
                                     <span className="text-muted-foreground">{product.sku}</span>
                                     <span className={cn("font-bold", product.stock <= 5 ? "text-red-500" : "text-emerald-500")}>
-                                        {product.stock} Left
+                                        {formatNumber(product.stock)} Left
                                     </span>
                                 </div>
                             </button>
@@ -308,9 +310,18 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                         onClick={() => item.quantity > 1 ? updateQuantity(item.id, -1) : removeFromCart(item.id)}
                                         className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground transition-colors"
                                     >
-                                        {item.quantity === 1 ? <Trash2 className="w-3.5 h-3.5 text-destructive" /> : <Minus className="w-3.5 h-3.5" />}
+                                        {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-destructive" /> : <Minus className="w-3.5 h-3.5" />}
                                     </button>
-                                    <span className="text-sm font-bold w-4 text-center text-foreground">{item.quantity}</span>
+                                    <QuantityInput
+                                        value={item.quantity}
+                                        onChange={(val: number) => {
+                                            if (val > 0) {
+                                                const diff = val - item.quantity
+                                                updateQuantity(item.id, diff)
+                                            }
+                                        }}
+                                        className="w-16 text-center text-sm font-bold bg-transparent border-none outline-none text-foreground appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
                                     <button
                                         onClick={() => updateQuantity(item.id, 1)}
                                         disabled={item.quantity >= item.stock}

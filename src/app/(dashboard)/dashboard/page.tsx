@@ -1,5 +1,7 @@
 import prisma from '@/lib/prisma'
-import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History } from 'lucide-react'
+import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History, Plus, Minus, CheckCircle } from 'lucide-react'
+import { formatNumber } from '@/utils/format'
+import { cn } from '@/lib/utils'
 import ProductionOverviewTable from './components/production-overview-table'
 import Link from 'next/link'
 
@@ -93,10 +95,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             if (!itemPlan) return { month, plan: 0, done: 0 }
 
             const totalSections = recipe.sections.length
-            const doneCount = itemPlan.units.filter(u => {
-                const completed = JSON.parse(u.completed || '[]').length
-                return totalSections > 0 && completed >= totalSections
-            }).length
+            const doneCount = itemPlan.units.filter(u => !!u.assembledAt).length
 
             return {
                 month,
@@ -119,16 +118,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         let assembled = 0
 
         plans.forEach(p => {
-            const totalSections = p.recipe?.sections?.length || 0
             p.units.forEach((u: any) => {
-                const completedCount = JSON.parse(u.completed || '[]').length
-                const isFullyChecked = totalSections > 0 && completedCount >= totalSections
 
                 if (u.isSold) {
                     sold++
                 } else if (u.isPacked) {
                     packed++
-                } else if (isFullyChecked) {
+                } else if (u.assembledAt) {
                     assembled++
                 }
             })
@@ -210,15 +206,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                                             const totalSections = sections.length
 
                                             plan.units.forEach((u: any) => {
-                                                const completedRaw = JSON.parse(u.completed || '[]')
-                                                const validCompletedCount = completedRaw.filter((id: string) => validSectionIds.includes(id)).length
-                                                const isFullyChecked = totalSections > 0 && validCompletedCount >= totalSections
-
                                                 if (u.isSold) {
                                                     soldCount++
                                                 } else if (u.isPacked) {
                                                     packedCount++
-                                                } else if (isFullyChecked) {
+                                                } else if (u.assembledAt) {
                                                     assembledCount++
                                                 }
                                             })
@@ -314,15 +306,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                                             const totalSections = sections.length
 
                                             plan.units.forEach((u: any) => {
-                                                const completedRaw = JSON.parse(u.completed || '[]')
-                                                const validCompletedCount = completedRaw.filter((id: string) => validSectionIds.includes(id)).length
-                                                const isFullyChecked = totalSections > 0 && validCompletedCount >= totalSections
-
                                                 if (u.isSold) {
                                                     soldCount++
                                                 } else if (u.isPacked) {
                                                     packedCount++
-                                                } else if (isFullyChecked) {
+                                                } else if (u.assembledAt) {
                                                     assembledCount++
                                                 }
                                             })
@@ -449,17 +437,87 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         {recentActivity.map((tx: any) => (
                             <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    <div className={`p-2 rounded-lg ${tx.type === 'IN' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}>
-                                        {tx.type === 'IN' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                                    {/* Icon Badge */}
+                                    <div className="w-[100px] flex-shrink-0">
+                                        {tx.type === 'IN' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 w-fit">
+                                                <ArrowDownLeft className="w-3 h-3" />
+                                                Stock In
+                                            </span>
+                                        ) : tx.type === 'OUT' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 w-fit">
+                                                <ArrowUpRight className="w-3 h-3" />
+                                                Checkout
+                                            </span>
+                                        ) : tx.type === 'BOM_ADD' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 w-fit">
+                                                <Plus className="w-3 h-3" />
+                                                BOM Add
+                                            </span>
+                                        ) : tx.type === 'Problem' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 w-fit">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                Problem
+                                            </span>
+                                        ) : tx.type === 'Solved' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 w-fit">
+                                                <CheckCircle className="w-3 h-3" />
+                                                Solved
+                                            </span>
+                                        ) : ['Checked', 'Unchecked'].includes(tx.type) ? (
+                                            tx.type === 'Checked' ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 w-fit">
+                                                    <Plus className="w-3 h-3" />
+                                                    Checked
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 w-fit">
+                                                    <Minus className="w-3 h-3" />
+                                                    Unchecked
+                                                </span>
+                                            )
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 w-fit">
+                                                <Minus className="w-3 h-3" />
+                                                BOM Rem
+                                            </span>
+                                        )}
                                     </div>
+
+                                    {/* Description */}
                                     <div>
-                                        <p className="text-foreground font-medium">{tx.product?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{new Date(tx.createdAt).toLocaleString()}</p>
+                                        <p className="text-foreground font-medium text-sm">
+                                            {tx.product?.name || (['Checked', 'Unchecked'].includes(tx.type)
+                                                ? tx.description?.split(' - ')[0]
+                                                : ['Problem', 'Solved'].includes(tx.type)
+                                                    ? tx.description?.split(' ||| ')[0]
+                                                    : 'Unknown Product')}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground line-clamp-1">
+                                            {['Checked', 'Unchecked'].includes(tx.type)
+                                                ? (tx.description?.split(' - ').slice(1).join(' - ') || '-')
+                                                : ['Problem', 'Solved'].includes(tx.type)
+                                                    ? (tx.description?.split(' ||| ')[1] || tx.description)
+                                                    : (new Date(tx.createdAt).toLocaleString())}
+                                        </p>
                                     </div>
                                 </div>
-                                <span className={`font-bold ${tx.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                                    {tx.type === 'IN' ? '+' : '-'}{tx.quantity}
-                                </span>
+
+                                {/* Quantity */}
+                                <div className="text-right">
+                                    {!['Solved', 'Problem', 'Checked', 'Unchecked'].includes(tx.type) && (
+                                        <span className={cn("font-bold text-sm block",
+                                            tx.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' :
+                                                tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
+                                                    tx.type === 'BOM_ADD' ? 'text-purple-600 dark:text-purple-400' :
+                                                        'text-orange-600 dark:text-orange-400')}>
+                                            {['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}{formatNumber(tx.quantity)}
+                                        </span>
+                                    )}
+                                    <span className="text-[10px] text-muted-foreground">
+                                        {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                         {recentActivity.length === 0 && (

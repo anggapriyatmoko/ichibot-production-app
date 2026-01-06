@@ -100,7 +100,7 @@ export default function ImportRecipeModal() {
                     const section = sectionIdx !== -1 ? (row[sectionIdx] || 'Main') : 'Main'
                     const sku = skuIdx !== -1 ? (row[skuIdx] || '') : ''
                     const productName = productIdx !== -1 ? (row[productIdx] || '') : ''
-                    const quantity = qtyIdx !== -1 ? (parseInt(row[qtyIdx]) || 0) : 0
+                    const quantity = qtyIdx !== -1 ? (parseFloat(row[qtyIdx]) || 0) : 0
                     const notes = notesIdx !== -1 ? (row[notesIdx] || '') : ''
 
                     const errors = []

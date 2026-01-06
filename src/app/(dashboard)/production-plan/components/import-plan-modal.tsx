@@ -78,7 +78,7 @@ export default function ImportPlanModal({ month, year }: { month: number, year: 
                 const rows = data.slice(1)
                 const parsed: ImportPreview[] = rows.map(row => {
                     const recipeName = row[recipeIdx] ? String(row[recipeIdx]).trim() : ''
-                    const quantity = parseInt(row[qtyIdx]) || 0
+                    const quantity = parseFloat(row[qtyIdx]) || 0
 
                     const errors = []
                     if (!recipeName) errors.push('Missing Recipe Name')

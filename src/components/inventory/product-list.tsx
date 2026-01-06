@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport } from '@/app/actions/product'
 import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
 import * as XLSX from 'xlsx'
 import { useRouter } from 'next/navigation'
@@ -40,7 +41,13 @@ export default function ProductList({
     const router = useRouter()
     const { showConfirmation } = useConfirmation()
     const { showError } = useAlert()
-    const [addForm, setAddForm] = useState({
+    const [addForm, setAddForm] = useState<{
+        name: string
+        sku: string
+        stock: string | number
+        lowStockThreshold: string | number
+        notes: string
+    }>({
         name: '',
         sku: '',
         stock: '',
@@ -62,6 +69,7 @@ export default function ProductList({
     const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
     const [addImageFile, setAddImageFile] = useState<File | null>(null)
     const [editImageFile, setEditImageFile] = useState<File | null>(null)
+    const [removeImage, setRemoveImage] = useState(false)
 
     const handleAddImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -84,6 +92,7 @@ export default function ProductList({
                 setEditImagePreview(reader.result as string)
             }
             reader.readAsDataURL(file)
+            setRemoveImage(false) // Reset remove flag if new image selected
         }
     }
 
@@ -135,6 +144,9 @@ export default function ProductList({
         if (editImageFile) {
             formData.set('image', editImageFile)
         }
+        if (removeImage) {
+            formData.set('removeImage', 'true')
+        }
         setIsLoading(true)
         try {
             const result = await updateProduct(formData)
@@ -145,6 +157,7 @@ export default function ProductList({
             setEditingProduct(null)
             setEditImagePreview(null)
             setEditImageFile(null)
+            setRemoveImage(false)
         } catch (error: any) {
             console.error(error)
             showError(`Unexpected error: ${error.message}`)
@@ -156,7 +169,7 @@ export default function ProductList({
     async function handleAddStock(formData: FormData) {
         if (!stockModalProduct) return
         setIsLoading(true)
-        const quantity = parseInt(formData.get('quantity') as string)
+        const quantity = parseFloat(formData.get('quantity') as string)
         await addStock(stockModalProduct.id, quantity)
         setIsLoading(false)
         setStockModalProduct(null)
@@ -330,6 +343,7 @@ export default function ProductList({
                                     required
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
                                     placeholder="0"
+                                    step="any"
                                 />
                             </div>
                             <div>
@@ -338,8 +352,9 @@ export default function ProductList({
                                     name="lowStockThreshold"
                                     type="number"
                                     value={addForm.lowStockThreshold}
-                                    onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: parseInt(e.target.value) || 0 })}
+                                    onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: e.target.value })}
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                    step="any"
                                 />
                             </div>
                             <div className="md:col-span-2">
@@ -388,14 +403,21 @@ export default function ProductList({
                                                 Remove
                                             </button>
                                         </div>
-                                    ) : editingProduct.image ? (
+                                    ) : editingProduct.image && !removeImage ? (
                                         <div className="relative border border-border rounded-lg p-4 bg-background/50">
                                             <img src={editingProduct.image} alt="Current" className="w-full h-48 object-contain rounded" />
-                                            <div className="mt-2">
-                                                <label className="cursor-pointer inline-block px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-medium">
+                                            <div className="flex justify-between mt-2 gap-2">
+                                                <label className="cursor-pointer flex-1 text-center py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-medium">
                                                     Change Image
                                                     <input type="file" name="image" accept="image/*" onChange={handleEditImageChange} className="hidden" />
                                                 </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRemoveImage(true)}
+                                                    className="px-3 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-xs font-medium"
+                                                >
+                                                    Remove
+                                                </button>
                                             </div>
                                         </div>
                                     ) : (
@@ -416,7 +438,7 @@ export default function ProductList({
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
-                                    <input name="lowStockThreshold" type="number" defaultValue={editingProduct.lowStockThreshold} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
+                                    <input name="lowStockThreshold" type="number" defaultValue={editingProduct.lowStockThreshold} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" step="any" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
@@ -447,11 +469,12 @@ export default function ProductList({
                                 <input
                                     name="quantity"
                                     type="number"
-                                    min="1"
+                                    min="0"
                                     autoFocus
                                     required
                                     className="w-full bg-background border border-border rounded-lg px-4 py-3 text-foreground text-lg focus:border-emerald-500 outline-none"
                                     placeholder="0"
+                                    step="any"
                                 />
                             </div>
                             <div className="flex gap-3">
@@ -593,7 +616,7 @@ export default function ProductList({
                                         )}
                                     >
                                         <td className="px-6 py-4">
-                                            <div className="relative group">
+                                            <div className="relative group/image">
                                                 <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
                                                     {product.image ? (
                                                         <Image src={product.image} alt={product.name} fill className="object-cover" />
@@ -607,7 +630,7 @@ export default function ProductList({
                                                 {product.image && (
                                                     <>
                                                         {/* Show on right side by default */}
-                                                        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none xl:block hidden">
+                                                        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover/image:opacity-100 group-hover/image:visible transition-all duration-200 pointer-events-none xl:block hidden">
                                                             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
                                                                 <div className="relative w-full h-full rounded-lg overflow-hidden">
                                                                     <Image src={product.image} alt={product.name} fill className="object-contain" />
@@ -615,7 +638,7 @@ export default function ProductList({
                                                             </div>
                                                         </div>
                                                         {/* Show on left side for smaller screens or right edge */}
-                                                        <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none xl:hidden block">
+                                                        <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover/image:opacity-100 group-hover/image:visible transition-all duration-200 pointer-events-none xl:hidden block">
                                                             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
                                                                 <div className="relative w-full h-full rounded-lg overflow-hidden">
                                                                     <Image src={product.image} alt={product.name} fill className="object-contain" />
@@ -629,7 +652,7 @@ export default function ProductList({
                                         <td className="px-6 py-4 font-medium text-foreground">{product.name}</td>
                                         <td className="px-6 py-4">{product.sku}</td>
                                         <td className={cn("px-6 py-4 font-bold text-base", isLowStock ? "text-red-500" : "text-emerald-500")}>
-                                            {product.stock}
+                                            {formatNumber(product.stock)}
                                         </td>
                                         <td className="px-6 py-4 max-w-[200px] truncate text-muted-foreground">
                                             {product.notes || '-'}
