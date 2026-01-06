@@ -474,7 +474,8 @@ export default function ProductList({
                                     required
                                     className="w-full bg-background border border-border rounded-lg px-4 py-3 text-foreground text-lg focus:border-emerald-500 outline-none"
                                     placeholder="0"
-                                    step="any"
+                                    step="0.001"
+                                    title="Allow decimals (e.g. 1.5)"
                                 />
                             </div>
                             <div className="flex gap-3">
