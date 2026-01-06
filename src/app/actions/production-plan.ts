@@ -142,7 +142,7 @@ export async function toggleUnitSection(unitId: string, ingredientId: string, is
         // Safe JSON parse
         let completedIds: string[] = []
         try {
-            completedIds = JSON.parse(unit.completed) || []
+            completedIds = JSON.parse(unit.completed || '[]') || []
         } catch (e) {
             console.error('Error parsing unit.completed:', e)
             completedIds = []
