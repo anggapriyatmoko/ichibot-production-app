@@ -116,144 +116,141 @@ export async function updateUnitSalesData(unitId: string, data: {
     revalidatePath('/production-plan/[id]')
 }
 
-export async function toggleUnitIngredient(unitId: string, ingredientId: string, isCompleted: boolean) {
-    const unit = await prisma.productionUnit.findUnique({
-        where: { id: unitId },
-        include: {
-            productionPlan: {
-                include: {
-                    recipe: {
-                        include: {
-                            sections: true,
-                            ingredients: { include: { product: true } }
+export async function toggleUnitSection(unitId: string, ingredientId: string, isCompleted: boolean) {
+    try {
+        const unit = await prisma.productionUnit.findUnique({
+            where: { id: unitId },
+            include: {
+                productionPlan: {
+                    include: {
+                        recipe: {
+                            include: {
+                                sections: true,
+                                ingredients: { include: { product: true } }
+                            }
                         }
                     }
                 }
             }
-        }
-    })
+        })
 
-    if (!unit) return
-
-    let completedIds: string[] = JSON.parse(unit.completed)
-
-    if (isCompleted) {
-        if (!completedIds.includes(ingredientId)) {
-            completedIds.push(ingredientId)
-        }
-    } else {
-        completedIds = completedIds.filter(id => id !== ingredientId)
-    }
-
-    // Check if fully assembled
-
-
-    await prisma.productionUnit.update({
-        where: { id: unitId },
-        data: {
-            completed: JSON.stringify(completedIds)
-        }
-    })
-
-    // Log Transaction
-    const session: any = await getServerSession(authOptions)
-
-    // The "ingredientId" passed here is actually a Section ID from the UI columns
-    // We need to find all ingredients that belong to this section
-    const sectionIngredients = unit.productionPlan.recipe.ingredients.filter(i => i.sectionId === ingredientId)
-
-    // Find Section Name
-    const section = unit.productionPlan.recipe.sections.find(s => s.id === ingredientId)
-    const sectionName = section ? section.name : 'Unknown Section'
-
-    // Note: If sectionIngredients is empty, it might mean the ID passed is actually a raw ingredient ID 
-    // (if that use case existed) or the section has no ingredients. 
-    // Given the UI implementation, it transmits Section IDs.
-
-    if (sectionIngredients.length > 0) {
-        // 1. Update Stock for all ingredients in the section
-        for (const ingredient of sectionIngredients) {
-            if (isCompleted) {
-                // Consumed (OUT) - Decrement Stock
-                await prisma.product.update({
-                    where: { id: ingredient.productId },
-                    data: { stock: { decrement: ingredient.quantity } }
-                })
-            } else {
-                // Returned (IN) - Restock - Increment Stock
-                await prisma.product.update({
-                    where: { id: ingredient.productId },
-                    data: { stock: { increment: ingredient.quantity } }
-                })
-            }
+        if (!unit) {
+            console.error(`Unit not found: ${unitId}`)
+            return
         }
 
-        // 2. Log Single Transaction for the Section Check
-        // Use "Checked" / "Unchecked" as type (Schema defines type as String so this is allowed)
+        // Safe JSON parse
+        let completedIds: string[] = []
+        try {
+            completedIds = JSON.parse(unit.completed) || []
+        } catch (e) {
+            console.error('Error parsing unit.completed:', e)
+            completedIds = []
+        }
+
         if (isCompleted) {
-            await prisma.transaction.create({
-                data: {
-                    type: 'Checked',
-                    quantity: 1,
-                    // productId is omitted (undefined)
-                    userId: session?.user?.id || null,
-                    // Description format: "[Recipe Name] - [Section Name]..."
-                    description: `${unit.productionPlan.recipe.name} - ${sectionName} (Unit ${unit.unitNumber}) - ${unit.productIdentifier || 'No Serial'}`
-                }
-            })
+            if (!completedIds.includes(ingredientId)) {
+                completedIds.push(ingredientId)
+            }
         } else {
-            await prisma.transaction.create({
-                data: {
-                    type: 'Unchecked',
-                    quantity: 1,
-                    // productId is omitted (undefined)
-                    userId: session?.user?.id || null,
-                    description: `${unit.productionPlan.recipe.name} - ${sectionName} (Unit ${unit.unitNumber})`
-                }
-            })
+            completedIds = completedIds.filter(id => id !== ingredientId)
         }
 
-    } else {
-        // Fallback: Try to find as single ingredient (if logic changes in future to allow single ingredient toggles)
-        const ingredient = unit.productionPlan.recipe.ingredients.find(i => i.id === ingredientId)
-        if (ingredient) {
-            if (isCompleted) {
-                // Consumed (OUT)
-                await prisma.transaction.create({
-                    data: {
-                        type: 'OUT',
-                        quantity: ingredient.quantity, // Quantity per unit
-                        productId: ingredient.productId,
-                        userId: session?.user?.id || null,
-                        description: `Used in ${unit.productionPlan.recipe.name} (Unit ${unit.unitNumber})`
-                    }
-                })
-                // Decrement Stock
-                await prisma.product.update({
-                    where: { id: ingredient.productId },
-                    data: { stock: { decrement: ingredient.quantity } }
-                })
-            } else {
-                // Returned (IN) - Restocking because unchecked
-                await prisma.transaction.create({
-                    data: {
-                        type: 'IN',
-                        quantity: ingredient.quantity,
-                        productId: ingredient.productId,
-                        userId: session?.user?.id || null,
-                        description: `Restock from ${unit.productionPlan.recipe.name} (Unit ${unit.unitNumber} - Unchecked)`
-                    }
-                })
-                // Increment Stock
-                await prisma.product.update({
-                    where: { id: ingredient.productId },
-                    data: { stock: { increment: ingredient.quantity } }
-                })
+        await prisma.productionUnit.update({
+            where: { id: unitId },
+            data: {
+                completed: JSON.stringify(completedIds)
+            }
+        })
+
+        // Log Transaction
+        const session: any = await getServerSession(authOptions)
+
+        // Find Section Name (Handle case where section might be deleted from recipe but exists in snapshot/history)
+        // We use the Live Recipe to check for section existence
+        const section = unit.productionPlan.recipe.sections.find(s => s.id === ingredientId)
+        const sectionName = section ? section.name : 'Unknown/Deleted Section' // Defensive fallback
+
+        // Find ingredients belonging to this section (Live Data)
+        const sectionIngredients = unit.productionPlan.recipe.ingredients.filter(i => i.sectionId === ingredientId)
+
+        if (sectionIngredients.length > 0) {
+            // 1. Update Stock for all ingredients in the section
+            for (const ingredient of sectionIngredients) {
+                // Ensure product exists before updating (defensive)
+                if (!ingredient.productId) continue
+
+                if (isCompleted) {
+                    // Consumed (OUT) - Decrement Stock
+                    await prisma.product.update({
+                        where: { id: ingredient.productId },
+                        data: { stock: { decrement: ingredient.quantity } }
+                    })
+                } else {
+                    // Returned (IN) - Restock - Increment Stock
+                    await prisma.product.update({
+                        where: { id: ingredient.productId },
+                        data: { stock: { increment: ingredient.quantity } }
+                    })
+                }
+            }
+
+            // 2. Log Single Transaction for the Section Check
+            const transactionData = {
+                type: isCompleted ? 'Checked' : 'Unchecked',
+                quantity: 1,
+                userId: session?.user?.id || null,
+                description: `${unit.productionPlan.recipe.name} - ${sectionName} (Unit ${unit.unitNumber}) - ${unit.productIdentifier || 'No Serial'}`
+            }
+
+            await prisma.transaction.create({ data: transactionData })
+
+        } else {
+            // Fallback: Try to find as single ingredient
+            const ingredient = unit.productionPlan.recipe.ingredients.find(i => i.id === ingredientId)
+            if (ingredient && ingredient.productId) {
+                if (isCompleted) {
+                    // Consumed (OUT)
+                    await prisma.transaction.create({
+                        data: {
+                            type: 'OUT',
+                            quantity: ingredient.quantity,
+                            productId: ingredient.productId,
+                            userId: session?.user?.id || null,
+                            description: `Used in ${unit.productionPlan.recipe.name} (Unit ${unit.unitNumber})`
+                        }
+                    })
+                    // Decrement Stock
+                    await prisma.product.update({
+                        where: { id: ingredient.productId },
+                        data: { stock: { decrement: ingredient.quantity } }
+                    })
+                } else {
+                    // Returned (IN)
+                    await prisma.transaction.create({
+                        data: {
+                            type: 'IN',
+                            quantity: ingredient.quantity,
+                            productId: ingredient.productId,
+                            userId: session?.user?.id || null,
+                            description: `Restock from ${unit.productionPlan.recipe.name} (Unit ${unit.unitNumber} - Unchecked)`
+                        }
+                    })
+                    // Increment Stock
+                    await prisma.product.update({
+                        where: { id: ingredient.productId },
+                        data: { stock: { increment: ingredient.quantity } }
+                    })
+                }
             }
         }
-    }
 
-    revalidatePath('/production-plan/[id]')
+        revalidatePath('/production-plan')
+        revalidatePath(`/production-plan/${unit.productionPlanId}`)
+    } catch (error) {
+        console.error('Error in toggleUnitSection:', error)
+        throw error // Re-throw to show error to user/logs
+    }
 }
 
 
