@@ -69,6 +69,13 @@ Sebelum deploy, setting ini harus diisi:
 *   **Tab Domains**:
     *   Tambahkan domain Anda: `production.ichibot.id`.
 
+*   **Tab Storage (PENTING AGAR GAMBAR TIDAK HILANG)**:
+    *   Klik **Add Mount**.
+    *   **Type**: Volume.
+    *   **Name**: `uploads`.
+    *   **Mount Path**: `/app/public/uploads`.
+    *   *Tanpa ini, setiap kali deploy ulang, semua gambar produk akan terhapus!*
+
 ### 4. Deploy Pertama
 Klik tombol **Deploy** (Warna Hijau). Tunggu sampai status **Running**.
 
