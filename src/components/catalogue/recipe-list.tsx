@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { createRecipe, deleteRecipe, updateRecipe, getAllRecipesForExport } from '@/app/actions/recipe'
-import { createCategory } from '@/app/actions/category'
-import { Plus, BookOpen, Trash2, ChevronRight, Tag, Edit2, Download, Hash, Barcode } from 'lucide-react'
+import { createCategory, updateCategory } from '@/app/actions/category'
+import { Plus, BookOpen, Trash2, ChevronRight, Tag, Edit2, Download, Hash, Barcode, X, Check } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import ImportRecipeModal from './import-recipe-modal'
 import Link from 'next/link'
@@ -54,6 +54,26 @@ export default function RecipeList({
     // Inline Category Creation
     const [isCreatingCategory, setIsCreatingCategory] = useState(false)
     const [newCategoryName, setNewCategoryName] = useState('')
+
+    // Category Editing
+    const [editingCategory, setEditingCategory] = useState<{ id: string, name: string } | null>(null)
+
+    async function handleUpdateCategory() {
+        if (!editingCategory || !editingCategory.name.trim()) return
+        setIsLoading(true)
+        try {
+            const result = await updateCategory(editingCategory.id, editingCategory.name)
+            if (result?.error) {
+                showError(result.error)
+            } else {
+                setEditingCategory(null)
+            }
+        } catch (error) {
+            showError('Failed to update category')
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
     async function handleAdd(e: React.FormEvent) {
         e.preventDefault()
@@ -278,12 +298,54 @@ export default function RecipeList({
                 const categoryRecipes = recipes.filter(r => r.categoryId === category.id)
                 if (categoryRecipes.length === 0) return null
 
+                const isEditing = editingCategory?.id === category.id
+
                 return (
                     <div key={category.id} className="mb-8">
-                        <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                            <Tag className="w-5 h-5" />
-                            {category.name}
-                        </h2>
+                        <div className="flex items-center gap-2 mb-4 group">
+                            <Tag className="w-5 h-5 text-muted-foreground" />
+                            {isEditing ? (
+                                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                                    <input
+                                        value={editingCategory.name}
+                                        onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                                        className="bg-background border border-border rounded-lg px-3 py-1 text-lg font-bold text-foreground focus:border-primary outline-none min-w-[200px]"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleUpdateCategory()
+                                            if (e.key === 'Escape') setEditingCategory(null)
+                                        }}
+                                    />
+                                    <button
+                                        onClick={handleUpdateCategory}
+                                        disabled={isLoading}
+                                        className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setEditingCategory(null)}
+                                        disabled={isLoading}
+                                        className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <h2 className="text-xl font-bold text-foreground flex items-center gap-3">
+                                    {category.name}
+                                    {userRole === 'ADMIN' && (
+                                        <button
+                                            onClick={() => setEditingCategory({ id: category.id, name: category.name })}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600"
+                                            title="Rename Category"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </h2>
+                            )}
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {categoryRecipes.map(recipe => (
                                 <RecipeCard

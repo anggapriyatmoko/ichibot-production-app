@@ -27,6 +27,30 @@ export async function createCategory(name: string) {
     }
 }
 
+export async function updateCategory(id: string, name: string) {
+    await requireAdmin()
+
+    if (!name || name.trim() === '') {
+        return { error: 'Name is required' }
+    }
+
+    try {
+        const category = await prisma.category.update({
+            where: { id },
+            data: { name: name.trim() }
+        })
+        revalidatePath('/catalogue')
+        revalidatePath('/inventory')
+        return { success: true, category }
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            return { error: 'Category with this name already exists' }
+        }
+        console.error('Failed to update category:', error)
+        return { error: 'Failed to update category' }
+    }
+}
+
 export async function getCategories() {
     return await prisma.category.findMany({
         orderBy: { name: 'asc' },

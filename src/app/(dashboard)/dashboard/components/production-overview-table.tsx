@@ -21,33 +21,46 @@ const MONTHS = [
     'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'
 ]
 
-const getCategoryColor = (category: string) => {
-    const normalized = category.toLowerCase()
-    if (normalized.includes('robot') || normalized.includes('full')) return 'bg-emerald-500/10 hover:bg-emerald-500/20'
-    if (normalized.includes('sparepart')) return 'bg-blue-500/10 hover:bg-blue-500/20'
-    if (normalized.includes('ichiduino') || normalized.includes('module')) return 'bg-purple-500/10 hover:bg-purple-500/20'
-    return 'bg-slate-50/50 hover:bg-slate-100/80'
+
+const CATEGORY_STYLES = [
+    { bg: 'bg-emerald-500/10 hover:bg-emerald-500/20', badge: 'bg-emerald-500', solid: 'bg-emerald-50' },
+    { bg: 'bg-blue-500/10 hover:bg-blue-500/20', badge: 'bg-blue-500', solid: 'bg-blue-50' },
+    { bg: 'bg-violet-500/10 hover:bg-violet-500/20', badge: 'bg-violet-500', solid: 'bg-violet-50' },
+    { bg: 'bg-amber-500/10 hover:bg-amber-500/20', badge: 'bg-amber-500', solid: 'bg-amber-50' },
+    { bg: 'bg-rose-500/10 hover:bg-rose-500/20', badge: 'bg-rose-500', solid: 'bg-rose-50' },
+    { bg: 'bg-cyan-500/10 hover:bg-cyan-500/20', badge: 'bg-cyan-500', solid: 'bg-cyan-50' },
+    { bg: 'bg-indigo-500/10 hover:bg-indigo-500/20', badge: 'bg-indigo-500', solid: 'bg-indigo-50' },
+    { bg: 'bg-fuchsia-500/10 hover:bg-fuchsia-500/20', badge: 'bg-fuchsia-500', solid: 'bg-fuchsia-50' },
+    { bg: 'bg-lime-500/10 hover:bg-lime-500/20', badge: 'bg-lime-500', solid: 'bg-lime-50' },
+    { bg: 'bg-pink-500/10 hover:bg-pink-500/20', badge: 'bg-pink-500', solid: 'bg-pink-50' },
+]
+
+const getCategoryStyle = (category: string) => {
+    let hash = 0
+    for (let i = 0; i < category.length; i++) {
+        hash = category.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const index = Math.abs(hash) % CATEGORY_STYLES.length
+    return CATEGORY_STYLES[index]
 }
 
-const getCategoryBadgeColor = (category: string) => {
-    const normalized = category.toLowerCase()
-    if (normalized.includes('robot') || normalized.includes('full')) return 'bg-emerald-500'
-    if (normalized.includes('sparepart')) return 'bg-blue-500'
-    if (normalized.includes('ichiduino') || normalized.includes('module')) return 'bg-purple-500'
-    return 'bg-slate-200'
-}
-
-const getCategorySolidColor = (category: string) => {
-    const normalized = category.toLowerCase()
-    if (normalized.includes('robot') || normalized.includes('full')) return 'bg-emerald-50'
-    if (normalized.includes('sparepart')) return 'bg-blue-50'
-    if (normalized.includes('ichiduino') || normalized.includes('module')) return 'bg-purple-50'
-    return 'bg-slate-50'
-}
+const getCategoryColor = (category: string) => getCategoryStyle(category).bg
+const getCategoryBadgeColor = (category: string) => getCategoryStyle(category).badge
+const getCategorySolidColor = (category: string) => getCategoryStyle(category).solid
 
 export default function ProductionOverviewTable({ data, year }: ProductionOverviewTableProps) {
-    // Unique categories for legend
-    const categories = Array.from(new Set(data.map(d => d.category))).sort()
+    // Sort data: Category ASC, then Product Name ASC
+    const sortedData = [...data].sort((a, b) => {
+        // First sort by Category
+        const catComparison = a.category.localeCompare(b.category)
+        if (catComparison !== 0) return catComparison
+
+        // Then sort by Product Name
+        return a.productName.localeCompare(b.productName)
+    })
+
+    // Unique categories for legend (from sorted data)
+    const categories = Array.from(new Set(sortedData.map(d => d.category)))
 
     return (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-8">
@@ -90,7 +103,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {data.map((row) => {
+                        {sortedData.map((row) => {
                             const totalPlan = row.monthlyData.reduce((acc, curr) => acc + curr.plan, 0)
                             const totalDone = row.monthlyData.reduce((acc, curr) => acc + curr.done, 0)
                             const efficiency = totalPlan > 0 ? Math.round((totalDone / totalPlan) * 100) : 0
