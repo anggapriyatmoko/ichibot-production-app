@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { processBatchCheckout } from '@/app/actions/pos'
-import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, Download } from 'lucide-react'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
@@ -15,13 +17,14 @@ type Product = {
     stock: number
     sku: string
     image: string | null
+    notes: string | null
 }
 
 type CartItem = Product & {
     quantity: number
 }
 
-export default function POSSystem({ products }: { products: Product[] }) {
+export default function POSSystem({ products, userName = 'Admin' }: { products: Product[], userName?: string }) {
     const [cart, setCart] = useState<CartItem[]>([])
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(false)
@@ -37,6 +40,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
     )
 
     const addToCart = (product: Product) => {
+        if (product.stock <= 0) return
         const existing = cart.find(item => item.id === product.id)
         if (existing) {
             if (existing.quantity >= product.stock) {
@@ -91,6 +95,49 @@ export default function POSSystem({ products }: { products: Product[] }) {
         })
     }
 
+    const handleDownloadPDF = async () => {
+        const receiptElement = document.getElementById('receipt')
+        if (!receiptElement) return
+
+        try {
+            const canvas = await html2canvas(receiptElement, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            })
+
+            const imgData = canvas.toDataURL('image/png')
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [70, 297] // A4 height but narrow width, let's stick to auto-height logic if possible, or just fixed large height
+            })
+
+            // Calculate height based on aspect ratio
+            const imgProps = pdf.getImageProperties(imgData)
+            const pdfWidth = 70 // 70mm width
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+
+            // Re-create PDF with exact dimensions
+            const finalPdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: [pdfWidth, pdfHeight]
+            })
+
+            finalPdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+
+            const dateStr = new Date().toISOString().split('T')[0]
+            const timeStr = new Date().toTimeString().split(' ')[0].replace(/:/g, '-')
+            const filename = `${userName}_${dateStr}_${timeStr}.pdf`
+
+            finalPdf.save(filename)
+        } catch (error) {
+            console.error('Error generating PDF:', error)
+            setMessage({ type: 'error', text: 'Failed to generate PDF' })
+        }
+    }
+
     const handlePrintReceipt = () => {
         const printWindow = window.open('', '_blank', 'width=280,height=600')
         if (!printWindow) return
@@ -116,7 +163,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         margin: 0;
                         padding: 5mm;
                         font-family: 'Courier New', monospace;
-                        font-size: 12px;
+                        font-size: 10px;
                         line-height: 1.4;
                         color: #000;
                         background: #fff;
@@ -128,12 +175,12 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         border-bottom: 2px dashed #000;
                     }
                     .header h1 {
-                        font-size: 18px;
+                        font-size: 14px;
                         font-weight: bold;
                         margin-bottom: 5px;
                     }
                     .header p {
-                        font-size: 10px;
+                        font-size: 8px;
                         margin: 2px 0;
                     }
                     .item {
@@ -141,13 +188,19 @@ export default function POSSystem({ products }: { products: Product[] }) {
                     }
                     .item-name {
                         font-weight: bold;
-                        font-size: 12px;
+                        font-size: 10px;
                     }
                     .item-details {
                         display: flex;
                         justify-content: space-between;
-                        font-size: 10px;
+                        font-size: 9px;
                         color: #333;
+                    }
+                    .item-note {
+                        font-size: 8px;
+                        font-style: italic;
+                        margin-top: 2px;
+                        color: #555;
                     }
                     .total {
                         margin-top: 10px;
@@ -156,14 +209,14 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         display: flex;
                         justify-content: space-between;
                         font-weight: bold;
-                        font-size: 14px;
+                        font-size: 12px;
                     }
                     .footer {
                         text-align: center;
                         margin-top: 10px;
                         padding-top: 10px;
                         border-top: 1px solid #000;
-                        font-size: 10px;
+                        font-size: 8px;
                     }
                     @media print {
                         body {
@@ -187,6 +240,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                 <span>${item.sku}</span>
                                 <span>${item.quantity} pcs</span>
                             </div>
+                            ${item.notes ? `<div class="item-note">Note: ${item.notes}</div>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -243,11 +297,11 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         {filteredProducts.map(product => (
                             <button
                                 key={product.id}
-                                disabled={product.stock === 0}
+                                disabled={product.stock <= 0}
                                 onClick={() => addToCart(product)}
                                 className={cn(
                                     "flex flex-col text-left bg-card border border-border rounded-xl p-3 hover:bg-accent hover:border-primary/50 transition-all group relative overflow-hidden shadow-sm",
-                                    product.stock === 0 && "opacity-50 cursor-not-allowed bg-muted"
+                                    product.stock <= 0 && "opacity-50 cursor-not-allowed bg-muted"
                                 )}
                             >
                                 <div className="aspect-square w-full rounded-lg bg-muted mb-3 overflow-hidden relative">
@@ -258,7 +312,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                             <div className="text-4xl font-bold opacity-20">{product.name.charAt(0)}</div>
                                         </div>
                                     )}
-                                    {product.stock === 0 && (
+                                    {product.stock <= 0 && (
                                         <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-sm">
                                             <span className="text-white font-bold text-sm bg-destructive/90 px-2 py-1 rounded">Out of Stock</span>
                                         </div>
@@ -271,6 +325,11 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                         {formatNumber(product.stock)} Left
                                     </span>
                                 </div>
+                                {product.notes && (
+                                    <div className="mt-1 w-full text-[10px] text-muted-foreground/80 italic whitespace-pre-wrap break-words">
+                                        Note: {product.notes}
+                                    </div>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -303,7 +362,7 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h4 className="text-sm font-medium text-foreground truncate">{item.name}</h4>
-                                    <p className="text-xs text-muted-foreground">Stock: {item.stock}</p>
+                                    <p className="text-xs text-muted-foreground">Stock: {formatNumber(item.stock)}</p>
                                 </div>
                                 <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
                                     <button
@@ -405,11 +464,11 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         </div>
 
                         {/* Thermal Receipt - 70mm width */}
-                        <div id="receipt" className="receipt-print" style={{ width: '70mm', margin: '0 auto' }}>
+                        <div id="receipt" className="receipt-print" style={{ width: '70mm', margin: '0 auto', backgroundColor: '#ffffff' }}>
 
-                            <div className="p-4 text-black" style={{ fontFamily: 'monospace' }}>
+                            <div className="p-4" style={{ fontFamily: 'monospace', color: '#000000' }}>
                                 {/* Store Header */}
-                                <div className="text-center mb-4 border-b-2 border-dashed border-gray-400 pb-3">
+                                <div className="text-center mb-4 border-b-2 border-dashed pb-3" style={{ borderColor: '#9ca3af' }}>
                                     <h2 className="text-xl font-bold">Ichibot Production</h2>
                                     <p className="text-xs mt-1">Bill of Materials (BOM) Request</p>
                                     <p className="text-xs mt-1">{new Date().toLocaleString()}</p>
@@ -419,27 +478,43 @@ export default function POSSystem({ products }: { products: Product[] }) {
                                 <div className="mb-4">
                                     {receiptData.map((item, idx) => (
                                         <div key={idx} className="mb-2">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-medium">{item.name}</span>
+                                            <div className="flex justify-between text-[12px]">
+                                                <span className="font-bold">{item.name}</span>
                                             </div>
-                                            <div className="flex justify-between text-xs text-gray-600">
+                                            <div className="flex justify-between text-[11px]" style={{ color: '#4b5563' }}>
                                                 <span>{item.sku}</span>
                                                 <span>{item.quantity} pcs</span>
                                             </div>
+                                            {item.notes && (
+                                                <div className="text-[10px] italic mt-0.5" style={{ color: '#6b7280' }}>
+                                                    Note: {item.notes}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
 
                                 {/* Total */}
-                                <div className="border-t-2 border-dashed border-gray-400 pt-3 mt-3">
-                                    <div className="flex justify-between font-bold text-base">
+                                <div className="border-t-2 border-dashed pt-3 mt-3" style={{ borderColor: '#9ca3af' }}>
+                                    <div className="flex justify-between font-bold text-[13px]">
                                         <span>TOTAL ITEMS:</span>
                                         <span>{receiptData.reduce((acc, item) => acc + item.quantity, 0)} pcs</span>
                                     </div>
                                 </div>
 
+                                {/* Extra Info */}
+                                <div className="mt-4 pt-3 border-t border-dashed text-[11px] space-y-3" style={{ borderColor: '#9ca3af' }}>
+                                    <div className="flex justify-between">
+                                        <span style={{ color: '#4b5563' }}>Printed by:</span>
+                                        <span className="font-bold">{userName}</span>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span style={{ color: '#4b5563' }}>Picked by:</span>
+                                    </div>
+                                </div>
+
                                 {/* Footer */}
-                                <div className="text-center mt-4 pt-3 border-t border-gray-300 text-xs">
+                                <div className="text-center mt-4 pt-3 border-t text-[9px]" style={{ borderColor: '#d1d5db' }}>
                                     <p>Thank you!</p>
                                     <p className="mt-1">Powered by Ichibot</p>
                                 </div>
@@ -449,10 +524,11 @@ export default function POSSystem({ products }: { products: Product[] }) {
                         {/* Action Buttons - No Print */}
                         <div className="p-4 border-t border-gray-200 flex gap-3 no-print">
                             <button
-                                onClick={() => setShowReceipt(false)}
-                                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                                onClick={handleDownloadPDF}
+                                className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                             >
-                                Close
+                                <Download className="w-4 h-4" />
+                                PDF
                             </button>
                             <button
                                 onClick={handlePrintReceipt}
@@ -460,6 +536,12 @@ export default function POSSystem({ products }: { products: Product[] }) {
                             >
                                 <Printer className="w-4 h-4" />
                                 Print
+                            </button>
+                            <button
+                                onClick={() => setShowReceipt(false)}
+                                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                            >
+                                Close
                             </button>
                         </div>
                     </div>

@@ -14,9 +14,14 @@ export default async function UserProfile() {
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{session.user?.name}</p>
-                <div className="flex items-center gap-1">
-                    <Shield className="w-3 h-3 text-emerald-500" />
-                    <p className="text-xs text-muted-foreground truncate capitalize">{(session.user as any).role || 'User'}</p>
+                <div className="flex flex-col gap-0.5">
+                    {session.user?.department && (
+                        <p className="text-xs text-muted-foreground truncate">{session.user.department}</p>
+                    )}
+                    <div className="flex items-center gap-1">
+                        <Shield className="w-3 h-3 text-emerald-500" />
+                        <p className="text-xs text-muted-foreground truncate capitalize">{session.user?.role || 'User'}</p>
+                    </div>
                 </div>
             </div>
         </div>

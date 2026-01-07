@@ -43,6 +43,7 @@ export const authOptions: AuthOptions = {
                     email: user.email,
                     name: user.name,
                     role: user.role,
+                    department: user.department || undefined,
                 }
             }
         })
@@ -52,6 +53,7 @@ export const authOptions: AuthOptions = {
             if (user) {
                 token.id = user.id
                 token.role = user.role
+                token.department = user.department
             }
             if (trigger === "update" && session?.name) {
                 token.name = session.name
@@ -62,6 +64,7 @@ export const authOptions: AuthOptions = {
             if (session?.user) {
                 session.user.id = token.id as string
                 session.user.role = token.role as string
+                session.user.department = token.department as string
             }
             return session
         }

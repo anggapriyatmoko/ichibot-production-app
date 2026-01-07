@@ -520,7 +520,7 @@ export default function ProductList({
                                         <h3 className="font-bold text-foreground text-sm mb-1 truncate">{product.name}</h3>
                                         <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
                                         {product.notes && (
-                                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{product.notes}</p>
+                                            <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap break-words">{product.notes}</p>
                                         )}
                                     </div>
                                 </div>
@@ -530,7 +530,7 @@ export default function ProductList({
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Stock</p>
                                         <p className={cn("text-xl font-bold", isLowStock ? "text-red-500" : "text-emerald-500")}>
-                                            {product.stock}
+                                            {formatNumber(product.stock)}
                                         </p>
                                     </div>
                                     <div className="text-right">
@@ -655,7 +655,7 @@ export default function ProductList({
                                         <td className={cn("px-6 py-4 font-bold text-base", isLowStock ? "text-red-500" : "text-emerald-500")}>
                                             {formatNumber(product.stock)}
                                         </td>
-                                        <td className="px-6 py-4 max-w-[200px] truncate text-muted-foreground">
+                                        <td className="px-6 py-4 max-w-[300px] whitespace-pre-wrap break-words text-muted-foreground">
                                             {product.notes || '-'}
                                         </td>
                                         <td className="px-6 py-4 text-center">

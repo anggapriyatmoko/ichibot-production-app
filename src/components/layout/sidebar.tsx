@@ -10,12 +10,10 @@ import { cn } from '@/lib/utils'
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Product', href: '/catalogue', icon: BookOpen },
     { name: 'Sparepart', href: '/inventory', icon: Package },
-    { name: 'Production Plan', href: '/production-plan', icon: Calendar },
     { name: 'POS', href: '/pos', icon: ShoppingCart },
+    { name: 'Production Plan', href: '/production-plan', icon: Calendar },
     { name: 'History', href: '/history', icon: LayoutDashboard },
-    { name: 'Profile', href: '/profile', icon: User },
 ]
 
 const adminNavigation = [
@@ -136,6 +134,14 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                         {navigation.map((item) => (
                             <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
                         ))}
+                    </nav>
+
+                    <div className={cn("my-2", !isOpen && "hidden md:block")}>
+                        <div className="border-t border-border mx-3" />
+                    </div>
+
+                    <nav className="space-y-1">
+                        <NavItem item={{ name: 'Profile', href: '/profile', icon: User }} isCollapsed={!isOpen} />
                     </nav>
 
                     {userRole === 'ADMIN' && (
