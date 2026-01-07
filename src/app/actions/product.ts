@@ -28,14 +28,15 @@ export async function createProduct(formData: FormData) {
 
         // Resize with Sharp
         const resizedBuffer = await sharp(buffer)
-            .resize(700, 700, {
+            .resize(800, 800, {
                 fit: 'inside',
                 withoutEnlargement: true
             })
             .toBuffer()
 
+        // Restore original filename handling (no webp forcing)
         const filename = Date.now() + '-' + imageFile.name.replace(/\s/g, '-')
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+        const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads')
 
         // Ensure directory exists
         try {
@@ -106,14 +107,15 @@ export async function updateProduct(formData: FormData) {
 
         // Resize with Sharp
         const resizedBuffer = await sharp(buffer)
-            .resize(700, 700, {
+            .resize(800, 800, {
                 fit: 'inside',
                 withoutEnlargement: true
             })
             .toBuffer()
 
+        // Restore original filename handling (no webp forcing)
         const filename = Date.now() + '-' + imageFile.name.replace(/\s/g, '-')
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+        const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads')
 
         try { await mkdir(uploadDir, { recursive: true }) } catch (e) { }
 
