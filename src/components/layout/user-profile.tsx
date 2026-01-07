@@ -25,5 +25,6 @@ export default async function UserProfile() {
                 </div>
             </div>
         </div>
+
     )
 }

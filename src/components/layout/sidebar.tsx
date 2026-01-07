@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
+import TimeDisplay from './time-display'
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -165,6 +166,7 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 </div>
 
                 <div className={cn("p-4 border-t border-border space-y-4", !isOpen && "md:items-center md:flex md:flex-col")}>
+                    {isOpen && <TimeDisplay />}
                     {isOpen ? userProfile : (
                         <div className="hidden md:flex justify-center" title="User Profile">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">

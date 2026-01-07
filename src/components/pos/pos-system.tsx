@@ -110,12 +110,12 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [70, 297] // A4 height but narrow width, let's stick to auto-height logic if possible, or just fixed large height
+                format: [80, 297] // A4 height but narrow width, let's stick to auto-height logic if possible, or just fixed large height
             })
 
             // Calculate height based on aspect ratio
             const imgProps = pdf.getImageProperties(imgData)
-            const pdfWidth = 70 // 70mm width
+            const pdfWidth = 80 // 80mm width
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
 
             // Re-create PDF with exact dimensions
@@ -127,8 +127,9 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
 
             finalPdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
 
-            const dateStr = new Date().toISOString().split('T')[0]
-            const timeStr = new Date().toTimeString().split(' ')[0].replace(/:/g, '-')
+            const now = new Date()
+            const dateStr = now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }).split('/').reverse().join('-')
+            const timeStr = now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false }).replace(/:/g, '-')
             const filename = `${userName}_${dateStr}_${timeStr}.pdf`
 
             finalPdf.save(filename)
@@ -150,7 +151,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                 <title>Receipt</title>
                 <style>
                     @page {
-                        size: 70mm auto;
+                        size: 80mm auto;
                         margin: 0;
                     }
                     * {
@@ -159,7 +160,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                         box-sizing: border-box;
                     }
                     body {
-                        width: 70mm;
+                        width: 80mm;
                         margin: 0;
                         padding: 5mm;
                         font-family: 'Courier New', monospace;
@@ -220,7 +221,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                     }
                     @media print {
                         body {
-                            width: 70mm;
+                            width: 80mm;
                         }
                     }
                 </style>
@@ -229,18 +230,24 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                 <div class="header">
                     <h1>Ichibot Production</h1>
                     <p>Bill of Materials (BOM) Request</p>
-                    <p>${new Date().toLocaleString()}</p>
+                    <p>${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false })}</p>
                 </div>
                 
                 <div class="items">
                     ${receiptData.map(item => `
-                        <div class="item">
-                            <div class="item-name">${item.name}</div>
-                            <div class="item-details">
-                                <span>${item.sku}</span>
-                                <span>${item.quantity} pcs</span>
+                        <div class="item" style="display: flex; gap: 8px;">
+                            ${item.image
+                ? `<img src="${window.location.origin}${item.image}" style="width: 40px; height: 40px; object-fit: cover; border: 1px solid #ddd;">`
+                : `<div style="width: 40px; height: 40px; background-color: #f3f4f6; color: #9ca3af; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 1px solid #ddd; font-family: sans-serif;">${item.name.charAt(0).toUpperCase()}</div>`
+            }
+                            <div style="flex: 1;">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-details">
+                                    <span>${item.sku}</span>
+                                    <span>${item.quantity} pcs</span>
+                                </div>
+                                ${item.notes ? `<div class="item-note">Note: ${item.notes}</div>` : ''}
                             </div>
-                            ${item.notes ? `<div class="item-note">Note: ${item.notes}</div>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -463,33 +470,45 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                             </button>
                         </div>
 
-                        {/* Thermal Receipt - 70mm width */}
-                        <div id="receipt" className="receipt-print" style={{ width: '70mm', margin: '0 auto', backgroundColor: '#ffffff' }}>
+                        {/* Thermal Receipt - 80mm width */}
+                        <div id="receipt" className="receipt-print" style={{ width: '80mm', margin: '0 auto', backgroundColor: '#ffffff' }}>
 
                             <div className="p-4" style={{ fontFamily: 'monospace', color: '#000000' }}>
                                 {/* Store Header */}
                                 <div className="text-center mb-4 border-b-2 border-dashed pb-3" style={{ borderColor: '#9ca3af' }}>
                                     <h2 className="text-xl font-bold">Ichibot Production</h2>
                                     <p className="text-xs mt-1">Bill of Materials (BOM) Request</p>
-                                    <p className="text-xs mt-1">{new Date().toLocaleString()}</p>
+                                    <p className="text-xs mt-1">{new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false })}</p>
                                 </div>
 
                                 {/* Items */}
                                 <div className="mb-4">
                                     {receiptData.map((item, idx) => (
-                                        <div key={idx} className="mb-2">
-                                            <div className="flex justify-between text-[12px]">
-                                                <span className="font-bold">{item.name}</span>
-                                            </div>
-                                            <div className="flex justify-between text-[11px]" style={{ color: '#4b5563' }}>
-                                                <span>{item.sku}</span>
-                                                <span>{item.quantity} pcs</span>
-                                            </div>
-                                            {item.notes && (
-                                                <div className="text-[10px] italic mt-0.5" style={{ color: '#6b7280' }}>
-                                                    Note: {item.notes}
+                                        <div key={idx} className="mb-2 flex gap-2">
+                                            {item.image ? (
+                                                <div className="w-[40px] h-[40px] border border-gray-200 shrink-0 overflow-hidden relative">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={item.image} alt="" className="w-full h-full object-cover" style={{ objectFit: 'cover' }} />
+                                                </div>
+                                            ) : (
+                                                <div className="w-[40px] h-[40px] border border-gray-200 shrink-0 overflow-hidden relative bg-gray-100 flex items-center justify-center text-gray-400 font-bold font-sans">
+                                                    {item.name.charAt(0).toUpperCase()}
                                                 </div>
                                             )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between text-[12px]">
+                                                    <span className="font-bold">{item.name}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[11px]" style={{ color: '#4b5563' }}>
+                                                    <span>{item.sku}</span>
+                                                    <span>{item.quantity} pcs</span>
+                                                </div>
+                                                {item.notes && (
+                                                    <div className="text-[10px] italic mt-0.5" style={{ color: '#6b7280' }}>
+                                                        Note: {item.notes}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

@@ -145,13 +145,18 @@ export default async function HistoryPage({
                                 )}
                             </div>
                             <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                                {new Date(tx.createdAt).toLocaleDateString()} {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(tx.createdAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} {new Date(tx.createdAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false })}
                             </span>
                         </div>
 
                         <div>
                             <h4 className="text-sm font-semibold text-foreground">
-                                {tx.product?.name || (['Checked', 'Unchecked'].includes(tx.type)
+                                {tx.product ? (
+                                    <span>
+                                        {tx.product.name}
+                                        {tx.product.sku && <span className="text-muted-foreground font-normal ml-1">({tx.product.sku})</span>}
+                                    </span>
+                                ) : (['Checked', 'Unchecked'].includes(tx.type)
                                     ? tx.description?.split(' - ')[0]
                                     : ['Problem', 'Solved'].includes(tx.type)
                                         ? tx.description?.split(' ||| ')[0]
@@ -212,7 +217,7 @@ export default async function HistoryPage({
                             {transactions.map((tx) => (
                                 <tr key={tx.id} className="hover:bg-accent/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        {new Date(tx.createdAt).toLocaleString()}
+                                        {new Date(tx.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
                                     </td>
                                     <td className="px-6 py-4">
                                         {tx.type === 'IN' ? (
@@ -266,7 +271,12 @@ export default async function HistoryPage({
                                         }
                                     </td>
                                     <td className="px-6 py-4 text-foreground font-medium">
-                                        {tx.product?.name || (['Checked', 'Unchecked'].includes(tx.type)
+                                        {tx.product ? (
+                                            <span>
+                                                {tx.product.name}
+                                                {tx.product.sku && <span className="text-muted-foreground font-normal ml-1">({tx.product.sku})</span>}
+                                            </span>
+                                        ) : (['Checked', 'Unchecked'].includes(tx.type)
                                             ? tx.description?.split(' - ')[0]
                                             : ['Problem', 'Solved'].includes(tx.type)
                                                 ? tx.description?.split(' ||| ')[0]
