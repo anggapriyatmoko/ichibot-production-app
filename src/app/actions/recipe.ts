@@ -149,10 +149,12 @@ export async function updateIngredient(formData: FormData) {
 
 export async function createSection(recipeId: string, formData: FormData) {
     const name = formData.get('name') as string
+    const category = formData.get('category') as string | null
 
     await prisma.recipeSection.create({
         data: {
             name,
+            category: category && category.trim() !== '' ? category.trim() : null,
             recipeId
         }
     })
@@ -186,9 +188,16 @@ export async function deleteSection(id: string, recipeId: string) {
 
 export async function updateSection(id: string, recipeId: string, formData: FormData) {
     const name = formData.get('name') as string
+    const category = formData.get('category') as string | null
+
+    const data: any = { name }
+    if (category !== null) {
+        data.category = category && category.trim() !== '' ? category.trim() : null
+    }
+
     await prisma.recipeSection.update({
         where: { id },
-        data: { name }
+        data
     })
     revalidatePath(`/catalogue/${recipeId}`)
 }

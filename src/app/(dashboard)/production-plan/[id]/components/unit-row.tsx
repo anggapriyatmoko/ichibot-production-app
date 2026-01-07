@@ -172,7 +172,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
             />
 
             <tr className={`border-b text-xs hover:bg-slate-50 transition-colors ${hasIssue ? 'bg-red-50 hover:bg-red-50' : ''}`}>
-                <td className="p-1 border-r border-indigo-100 bg-indigo-50/50 text-center font-medium text-slate-500">
+                <td className="p-1 border-r border-border bg-white text-center font-medium text-slate-500 sticky left-0 z-20 shadow-[1px_0_0_0_#E5E7EB]">
                     {activeIssue ? (
                         <button onClick={() => setIsIssueModalOpen(true)}>
                             <AlertTriangle className="w-3.5 h-3.5 text-red-500 animate-pulse mx-auto" />
@@ -190,11 +190,11 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         </div>
                     )}
                 </td>
-                <td className="p-1 border-r border-indigo-100 bg-indigo-50/30 font-mono text-slate-600 text-center select-all">
+                <td className="p-1 border-r border-border bg-white font-mono text-slate-600 text-center select-all sticky left-[45px] z-20 shadow-[1px_0_0_0_#E5E7EB]">
                     {/* Display Computed Serial */}
                     {computedSerial}
                 </td>
-                <td className="p-1 border-r border-indigo-100 bg-indigo-50/30">
+                <td className="p-1 border-r border-border bg-white sticky left-[145px] z-20 shadow-[1px_0_0_0_#E5E7EB]">
                     <input
                         type="text"
                         value={customId}
@@ -207,7 +207,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                 {items.map(item => {
                     const isChecked = completedIds.includes(item.id)
                     return (
-                        <td key={item.id} className="p-[3px] text-center border-r border-border">
+                        <td key={item.id} className={`p-[3px] text-center border-r border-border ${item.colorClass ? item.colorClass + '/30' : ''}`}>
                             <button
                                 onClick={() => handleToggle(item.id)}
                                 className={`
@@ -295,8 +295,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         onChange={(e) => setMarketplace(e.target.value)}
                         onBlur={() => handleSalesUpdate('marketplace', marketplace)}
                         placeholder="Marketplace"
-                        disabled={!isSold}
-                        className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50"
                     />
                 </td>
                 <td className="px-2 py-1 bg-indigo-50/30">
@@ -306,8 +305,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         onChange={(e) => setCustomer(e.target.value)}
                         onBlur={() => handleSalesUpdate('customer', customer)}
                         placeholder="Customer"
-                        disabled={!isSold}
-                        className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50"
                     />
                 </td>
             </tr>

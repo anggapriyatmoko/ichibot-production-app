@@ -13,16 +13,25 @@ export default async function InventoryPage({
     const params = await searchParams
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
+    const search = typeof params.search === 'string' ? params.search : ''
     const limit = 50
     const skip = (page - 1) * limit
 
+    const where: any = search ? {
+        OR: [
+            { name: { contains: search } },
+            { sku: { contains: search } }
+        ]
+    } : {}
+
     const [products, totalCount] = await prisma.$transaction([
         prisma.product.findMany({
+            where,
             orderBy: { createdAt: 'desc' },
             take: limit,
             skip: skip
         }),
-        prisma.product.count()
+        prisma.product.count({ where })
     ])
 
     const totalPages = Math.ceil(totalCount / limit)

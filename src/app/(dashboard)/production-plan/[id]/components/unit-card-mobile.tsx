@@ -48,34 +48,6 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     // Calculate if all sections are checked
     const isAllSectionsChecked = sections.length > 0 && sections.every(section => completedIds.includes(section.id))
 
-    // Auto-uncheck Assembled, Packed and Sold when production progress is incomplete
-    useEffect(() => {
-        if (!isAllSectionsChecked) {
-            if (isAssembled) {
-                setIsAssembled(false)
-                handleSalesUpdate('isAssembled', false)
-            }
-        }
-    }, [isAllSectionsChecked])
-
-    useEffect(() => {
-        if (!isAssembled) {
-            if (isPacked) {
-                setIsPacked(false)
-                handleSalesUpdate('isPacked', false)
-            }
-        }
-    }, [isAssembled])
-
-    useEffect(() => {
-        if (!isPacked) {
-            if (isSold) {
-                setIsSold(false)
-                handleSalesUpdate('isSold', false)
-            }
-        }
-    }, [isPacked])
-
     const handleToggle = (itemId: string) => {
         const isCompleted = completedIds.includes(itemId)
         const newCompletedIds = isCompleted
@@ -335,12 +307,15 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                                     key={section.id}
                                     onClick={() => handleToggle(section.id)}
                                     disabled={isPending}
-                                    className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isChecked ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-border'} ${isPending ? 'opacity-50' : ''}`}
+                                    className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${section.colorClass ? section.colorClass : 'bg-muted/30'} ${isChecked ? 'border-primary shadow-sm ring-1 ring-primary/20' : 'border-transparent'} ${isPending ? 'opacity-50' : ''}`}
                                 >
-                                    <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-all ${isChecked ? 'bg-primary border-primary' : 'border-gray-400/50 bg-white/50'}`}>
                                         {isChecked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                                     </div>
-                                    <span className="text-xs font-medium truncate text-left">{section.name}</span>
+                                    <div className="flex flex-col items-start min-w-0">
+                                        <span className="text-xs font-medium truncate text-left w-full">{section.name}</span>
+                                        {section.category && <span className="text-[10px] text-muted-foreground/70 truncate w-full text-left leading-none mt-0.5">{section.category}</span>}
+                                    </div>
                                 </button>
                             )
                         })}

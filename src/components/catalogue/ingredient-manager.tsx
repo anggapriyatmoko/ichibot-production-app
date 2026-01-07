@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { addIngredient, removeIngredient, createSection, deleteSection, updateSection, renameUncategorizedSection, reorderSections, getRecipeForExport, updateIngredient } from '@/app/actions/recipe'
-import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer, ArrowUp, ArrowDown, Download } from 'lucide-react'
+import { Plus, Trash2, Search, Package, FolderPlus, Folder, Edit2, Check, X, Printer, ArrowUp, ArrowDown, Download, Tag } from 'lucide-react'
 import Image from 'next/image'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import * as XLSX from 'xlsx'
@@ -29,6 +29,7 @@ type Section = {
     id: string
     name: string
     order: number
+    category?: string | null
 }
 
 type Product = {
@@ -46,7 +47,9 @@ export default function IngredientManager({
     initialIngredients,
     initialSections,
     allProducts,
-    userRole
+    userRole,
+    existingSectionNames,
+    existingCategoryNames
 }: {
     recipeId: string,
     recipeName: string,
@@ -54,7 +57,12 @@ export default function IngredientManager({
     initialSections: Section[],
     allProducts: Product[]
     userRole?: string
+    existingSectionNames?: string[]
+    existingCategoryNames?: string[]
 }) {
+    // Default to empty array if not provided
+    const suggestions = existingSectionNames || []
+
     // Grouping Logic
     const sections = initialSections
     const ingredientsBySection = initialIngredients.reduce((acc, ing) => {
@@ -87,6 +95,7 @@ export default function IngredientManager({
         notes: ing.notes.join(', ') || null
     })) as Ingredient[]
 
+    // UI State
     const [isAddingIngredient, setIsAddingIngredient] = useState(false)
     const [isAddingSection, setIsAddingSection] = useState(false)
     const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null)
@@ -132,6 +141,11 @@ export default function IngredientManager({
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [isEditing, setIsEditing] = useState(false) // Edit Mode State
+    const [showNewCategoryInput, setShowNewCategoryInput] = useState(false) // Toggle for new category input
+    const [localCategoryUsage, setLocalCategoryUsage] = useState<string[]>([]) // Store locally added categories for immediate use
+
+    // Calculate suggestions AFTER state is declared
+    const categorySuggestions = [...new Set([...(existingCategoryNames || []), ...localCategoryUsage])]
 
     const filteredProducts = allProducts.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -202,9 +216,15 @@ export default function IngredientManager({
 
     async function handleCreateSection(formData: FormData) {
         setIsLoading(true)
+        const selectedCategory = formData.get('category_select') as string
+
+        // Use selected category
+        formData.append('category', selectedCategory)
+
         await createSection(recipeId, formData)
         setIsLoading(false)
         setIsAddingSection(false)
+        setShowNewCategoryInput(false)
     }
 
     async function handleUpdateSection(formData: FormData) {
@@ -343,96 +363,84 @@ export default function IngredientManager({
 
             {/* Render Sections */}
             {/* Render Sections */}
+            {/* Render Sections Grouped by Category */}
             {
-                [...sections].sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, index, arr) => (
-                    <div key={section.id} className="mb-6 no-print print-section">
-                        <div className="px-1 py-2 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                {/* Reorder Buttons */}
-                                {isEditing && (
-                                    <div className="flex flex-col gap-0.5">
-                                        <button
-                                            onClick={async () => {
-                                                if (index === 0) return
-                                                const newSections = [...arr]
-                                                const temp = newSections[index]
-                                                newSections[index] = newSections[index - 1]
-                                                newSections[index - 1] = temp
+                (() => {
+                    const sortedSections = [...sections].sort((a, b) => (a.order || 0) - (b.order || 0))
 
-                                                // Update UI visually via optimistic update (if this was a proper state, here we trust the re-render)
-                                                // Actually we need to call server action with new order
-                                                await reorderSections(recipeId, newSections.map(s => s.id))
-                                            }}
-                                            disabled={index === 0}
-                                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
-                                        >
-                                            <ArrowUp className="w-3 h-3" />
-                                        </button>
-                                        <button
-                                            onClick={async () => {
-                                                if (index === arr.length - 1) return
-                                                const newSections = [...arr]
-                                                const temp = newSections[index]
-                                                newSections[index] = newSections[index + 1]
-                                                newSections[index + 1] = temp
+                    // Group sections
+                    const grouped: Record<string, typeof sections> = {}
+                    // Initialize groups for known categories to ensure order if we wanted, 
+                    // but dynamic is fine. 
+                    // Let's add 'Uncategorized' for sections without category
 
-                                                await reorderSections(recipeId, newSections.map(s => s.id))
-                                            }}
-                                            disabled={index === arr.length - 1}
-                                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5"
-                                        >
-                                            <ArrowDown className="w-3 h-3" />
-                                        </button>
+                    sortedSections.forEach(section => {
+                        const cat = section.category || 'Uncategorized'
+                        if (!grouped[cat]) grouped[cat] = []
+                        grouped[cat].push(section)
+                    })
+
+                    const categories = Object.keys(grouped).sort((a, b) => {
+                        if (a === 'Uncategorized') return 1
+                        if (b === 'Uncategorized') return -1
+                        return a.localeCompare(b)
+                    })
+
+                    return categories.map(category => (
+                        <div key={category} className="contents">
+                            {grouped[category].map((section, index) => (
+                                <div key={section.id} className="mb-6 no-print print-section">
+                                    <div className="px-1 py-2 flex items-center justify-between">
+                                        <div className="flex items-start gap-3">
+                                            {/* Reorder Buttons */}
+
+                                            <Folder className="w-4 h-4 text-blue-500 mt-1" />
+                                            <div>
+                                                <div className="flex items-center gap-2 group">
+                                                    <h3 className="font-bold text-foreground">
+                                                        {section.name}
+                                                    </h3>
+                                                    {isEditing && (
+                                                        <button onClick={() => setEditingSectionId(section.id)} className="p-1 text-muted-foreground hover:text-primary transition-opacity" title="Edit Section">
+                                                            <Edit2 className="w-3 h-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {section.category && (
+                                                    <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground/70">
+                                                        <Tag className="w-3 h-3" />
+                                                        <span className="uppercase tracking-wider text-[10px] font-medium">{section.category}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {isEditing && (
+                                                <>
+                                                    {userRole === 'ADMIN' && (
+                                                        <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
+                                                            <Plus className="w-3 h-3" /> Add Item
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
 
-                                <Folder className="w-4 h-4 text-blue-500" />
-                                {editingSectionId === section.id ? (
-                                    <form action={handleUpdateSection} className="flex items-center gap-2">
-                                        <input
-                                            name="name"
-                                            defaultValue={section.name}
-                                            className="h-7 px-2 bg-background border border-border rounded text-sm focus:border-primary outline-none"
-                                            autoFocus
-                                        />
-                                        <button type="submit" className="p-1 hover:bg-green-100 text-green-600 rounded"><Check className="w-4 h-4" /></button>
-                                        <button type="button" onClick={() => setEditingSectionId(null)} className="p-1 hover:bg-red-100 text-red-600 rounded"><X className="w-4 h-4" /></button>
-                                    </form>
-                                ) : (
-                                    <div className="flex items-center gap-2 group">
-                                        <h3 className="font-bold text-foreground">{section.name}</h3>
-                                        {isEditing && (
-                                            <button onClick={() => setEditingSectionId(section.id)} className="p-1 text-muted-foreground hover:text-primary transition-opacity">
-                                                <Edit2 className="w-3 h-3" />
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {isEditing && (
-                                    <>
-                                        {userRole === 'ADMIN' && (
-                                            <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
-                                                <Plus className="w-3 h-3" /> Add Item
-                                            </button>
-                                        )}
-                                        <button onClick={() => handleDeleteSection(section.id)} className="text-muted-foreground hover:text-destructive p-1 transition-colors">
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
+                                    <IngredientsTable
+                                        ingredients={ingredientsBySection[section.id] || []}
+                                        onRemove={handleRemoveIngredient}
+                                        onEdit={handleEditIngredient}
+                                        isEditing={isEditing}
+                                    />
+                                </div>
+                            ))}
                         </div>
-
-                        <IngredientsTable
-                            ingredients={ingredientsBySection[section.id] || []}
-                            onRemove={handleRemoveIngredient}
-                            onEdit={handleEditIngredient}
-                            isEditing={isEditing}
-                        />
-                    </div >
-                ))
+                    ))
+                })()
             }
 
             {/* Uncategorized / General Section */}
@@ -628,6 +636,47 @@ export default function IngredientManager({
             }
 
 
+            {/* Edit Section Modal */}
+            {
+                editingSectionId && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                            <h3 className="text-lg font-bold text-foreground mb-4">Edit Section</h3>
+                            <form action={handleUpdateSection} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
+                                    <input
+                                        name="name"
+                                        autoFocus
+                                        required
+                                        defaultValue={sections.find(s => s.id === editingSectionId)?.name}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
+                                    <select
+                                        name="category"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none"
+                                        defaultValue={sections.find(s => s.id === editingSectionId)?.category || ""}
+                                    >
+                                        <option value="">No Category</option>
+                                        {categorySuggestions.map((cat: string) => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button type="button" onClick={() => setEditingSectionId(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+
+
             {/* Create Section Modal */}
             {
                 isAddingSection && (
@@ -637,7 +686,73 @@ export default function IngredientManager({
                             <form action={handleCreateSection} className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
-                                    <input name="name" autoFocus required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. Dry Sparepart" />
+                                    <input
+                                        name="name"
+                                        autoFocus
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                        placeholder="e.g. Dry Sparepart"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                        Type a name for the new folder/section.
+                                    </p>
+                                </div>
+                                <div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
+                                        <div className="flex gap-2 mb-2">
+                                            <select
+                                                name="category_select"
+                                                required
+                                                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none h-10"
+                                                defaultValue=""
+                                                key={localCategoryUsage.length} // Force re-render when local categories change
+                                            >
+                                                <option value="" disabled>Select a category...</option>
+                                                {categorySuggestions.map((cat: string) => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
+                                                className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg border border-border"
+                                                title="Add New Category"
+                                            >
+                                                <Plus className="w-5 h-5" />
+                                            </button>
+                                        </div>
+
+                                        {showNewCategoryInput && (
+                                            <div className="flex gap-2 animate-in slide-in-from-top-2 duration-200">
+                                                <input
+                                                    id="new-cat-input"
+                                                    className="flex-1 bg-background border border-primary rounded-lg px-3 py-2 text-foreground focus:outline-none h-10 input-focus-ring"
+                                                    placeholder="New Category Name"
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const input = document.getElementById('new-cat-input') as HTMLInputElement
+                                                        const val = input.value.trim()
+                                                        if (val) {
+                                                            setLocalCategoryUsage(prev => [...prev, val])
+                                                            setShowNewCategoryInput(false)
+                                                            // Auto select the new category
+                                                            setTimeout(() => {
+                                                                const select = document.querySelector('select[name="category_select"]') as HTMLSelectElement
+                                                                if (select) select.value = val
+                                                            }, 50)
+                                                        }
+                                                    }}
+                                                    className="px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg h-10 transition-colors"
+                                                >
+                                                    Add
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex justify-end gap-3 pt-2">
                                     <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>

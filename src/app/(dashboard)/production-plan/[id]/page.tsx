@@ -29,16 +29,78 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
 
     if (!plan) return notFound()
 
-    // Use sections snapshot if available, otherwise fallback to live sections (backward compatibility)
-    // Use sections snapshot if available, otherwise fallback to live sections (backward compatibility)
-    let sections = (plan as any).recipe.sections
-    try {
-        if (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]") {
-            sections = JSON.parse(plan.sectionsSnapshot)
+    // Check if this plan is for the current month
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1 // JavaScript months are 0-indexed
+    const currentYear = now.getFullYear()
+    const isCurrentMonth = plan.month === currentMonth && plan.year === currentYear
+
+    // Use live sections for current month, snapshot for previous months
+    let sections = isCurrentMonth
+        ? (plan as any).recipe.sections  // Dynamic for current month
+        : (plan as any).recipe.sections  // Default
+
+    const liveSections = (plan as any).recipe.sections // Keep reference to live sections
+
+    // For previous months, try to use snapshot if available
+    if (!isCurrentMonth) {
+        try {
+            if (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]") {
+                sections = JSON.parse(plan.sectionsSnapshot)
+            }
+        } catch (e) {
+            console.error("Failed to parse sectionsSnapshot", e)
+            // Fallback to live sections if snapshot parsing fails
         }
-    } catch (e) {
-        console.error("Failed to parse sectionsSnapshot", e)
     }
+
+    // Helper to generate stable pastel colors
+    const getCategoryColor = (category?: string | null) => {
+        if (!category) return 'bg-slate-50'
+        const colors = [
+            'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50', 'bg-lime-50',
+            'bg-green-50', 'bg-emerald-50', 'bg-teal-50', 'bg-cyan-50', 'bg-sky-50',
+            'bg-blue-50', 'bg-indigo-50', 'bg-violet-50', 'bg-purple-50', 'bg-fuchsia-50',
+            'bg-pink-50', 'bg-rose-50'
+        ]
+        let hash = 0
+        for (let i = 0; i < category.length; i++) {
+            hash = category.charCodeAt(i) + ((hash << 5) - hash)
+        }
+        return colors[Math.abs(hash) % colors.length]
+    }
+
+    // Create a map of ID/Name to Category from live sections
+    const categoryMap = new Map<string, string>()
+    liveSections.forEach((s: any) => {
+        if (s.category) {
+            categoryMap.set(s.id, s.category)
+            categoryMap.set(s.name, s.category) // Fallback by name if ID mismatch in snapshot
+        }
+    })
+
+    // Enhance sections with color, trying to find category if missing
+    const sectionsWithColors = sections.map((s: any) => {
+        const category = s.category || categoryMap.get(s.id) || categoryMap.get(s.name)
+        return {
+            ...s,
+            category, // Ensure category is attached for display
+            colorClass: getCategoryColor(category)
+        }
+    })
+
+    // Sort: Group by Category first, then by Order
+    sectionsWithColors.sort((a: any, b: any) => {
+        // Treat null/undefined category as 'zzzz' to put them at the end
+        const catA = a.category || 'zzzz'
+        const catB = b.category || 'zzzz'
+
+        if (catA !== catB) {
+            return catA.localeCompare(catB)
+        }
+        // Maintain original order within category
+        return (a.order || 0) - (b.order || 0)
+    })
 
     return (
         <div className="max-w-[1600px] mx-auto">
@@ -71,9 +133,10 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                             <th className="p-[3px] w-[100px] min-w-[100px] shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-[145px] bg-muted z-30 text-[10px]">
                                 ID
                             </th>
-                            {sections.map((section: any) => (
-                                <th key={section.id} className="p-[3px] border-b border-border w-[80px] min-w-[80px] max-w-[80px] text-center text-[10px] whitespace-normal leading-[1.1] align-middle">
+                            {sectionsWithColors.map((section: any) => (
+                                <th key={section.id} className={`p-[3px] border-b border-border w-[80px] min-w-[80px] max-w-[80px] text-center text-[10px] whitespace-normal leading-[1.1] align-middle ${section.colorClass}`}>
                                     <span className="font-bold block w-full">{section.name}</span>
+                                    {section.category && <span className="block text-[9px] font-normal opacity-70 mt-0.5">{section.category}</span>}
                                 </th>
                             ))}
                             {/* Sales & Packing Columns */}
@@ -99,7 +162,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                             <UnitRow
                                 key={unit.id}
                                 unit={unit}
-                                items={sections}
+                                items={sectionsWithColors}
                                 recipeProductionId={(plan as any).recipe.productionId}
                                 year={(plan as any).year}
                                 month={(plan as any).month}
@@ -115,7 +178,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                     <UnitCardMobile
                         key={unit.id}
                         unit={unit}
-                        sections={sections}
+                        sections={sectionsWithColors}
                     />
                 ))}
             </div>

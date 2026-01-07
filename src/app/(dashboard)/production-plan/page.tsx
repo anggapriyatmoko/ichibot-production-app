@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import ImportPlanModal from './components/import-plan-modal'
 import { ExportButton } from './components/export-button'
+import DeletePlanButton from './components/delete-plan-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -217,10 +218,18 @@ export default async function ProductionPlanPage({
                                             {/* Unit Progress List */}
                                             <div className="hidden md:grid pl-11 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
                                                 {(plan as any).units.map((unit: any) => {
-                                                    // Use snapshot if available, otherwise fallback to live sections
-                                                    const sections = plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
-                                                        ? JSON.parse(plan.sectionsSnapshot)
-                                                        : plan.recipe.sections
+                                                    // Check if this plan is for the current month
+                                                    const now = new Date()
+                                                    const currentMonthNow = now.getMonth() + 1
+                                                    const currentYearNow = now.getFullYear()
+                                                    const isCurrentMonth = plan.month === currentMonthNow && plan.year === currentYearNow
+
+                                                    // Use live sections for current month, snapshot for previous months
+                                                    const sections = isCurrentMonth
+                                                        ? plan.recipe.sections
+                                                        : (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
+                                                            ? JSON.parse(plan.sectionsSnapshot)
+                                                            : plan.recipe.sections)
 
                                                     const validSectionIds = new Set(sections.map((s: any) => s.id))
                                                     const completedIds = JSON.parse(unit.completed || '[]')
@@ -277,14 +286,7 @@ export default async function ProductionPlanPage({
                                                     <Eye className="w-4 h-4" />
                                                 </Link>
                                                 {session?.user?.role === 'ADMIN' && (
-                                                    <form action={async () => {
-                                                        'use server'
-                                                        await deleteProductionPlan(plan.id)
-                                                    }}>
-                                                        <button type="submit" className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </form>
+                                                    <DeletePlanButton id={plan.id} name={plan.recipe.name} />
                                                 )}
                                             </div>
                                         </td>

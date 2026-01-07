@@ -7,10 +7,11 @@ import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
 import * as XLSX from 'xlsx'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import ImportProductModal from './import-product-modal'
+import { useEffect } from 'react'
 
 type Product = {
     id: string
@@ -39,6 +40,10 @@ export default function ProductList({
     userRole?: string
 }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
+    const { replace } = router
+
     const { showConfirmation } = useConfirmation()
     const { showError } = useAlert()
     const [addForm, setAddForm] = useState<{
@@ -58,7 +63,28 @@ export default function ProductList({
     const [isAdding, setIsAdding] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const [searchTerm, setSearchTerm] = useState('')
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search')?.toString() || '')
+
+    // Sync URL with Search Term (Debounced)
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            const params = new URLSearchParams(searchParams)
+            const currentSearch = params.get('search') || ''
+
+            // Only update if search term has changed from what's in URL
+            if (searchTerm !== currentSearch) {
+                if (searchTerm) {
+                    params.set('search', searchTerm)
+                    params.set('page', '1') // Reset to page 1 on search
+                } else {
+                    params.delete('search')
+                }
+                replace(`${pathname}?${params.toString()}`)
+            }
+        }, 300)
+
+        return () => clearTimeout(timeoutId)
+    }, [searchTerm, replace, pathname, searchParams])
 
     // Sorting State
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' })
@@ -212,10 +238,6 @@ export default function ProductList({
     }
 
     const filteredProducts = initialProducts
-        .filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
         .sort((a, b) => {
             const { key, direction } = sortConfig
             const aValue: any = a[key]

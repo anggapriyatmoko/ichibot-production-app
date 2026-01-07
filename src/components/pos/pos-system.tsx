@@ -280,38 +280,38 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
     const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0)
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-180px)] lg:h-[calc(100vh-120px)] gap-6 relative">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] gap-0 lg:gap-6 relative">
             {/* Left: Product Grid - Hidden on mobile if activeTab is 'cart' */}
             <div className={cn(
-                "flex-1 flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm h-full",
+                "flex-1 flex-col bg-card border-t border-x border-border rounded-t-2xl lg:rounded-2xl lg:border overflow-hidden shadow-sm h-full",
                 activeTab === 'products' ? 'flex' : 'hidden lg:flex'
             )}>
-                <div className="p-4 border-b border-border flex gap-4 bg-muted/30">
+                <div className="p-3 border-b border-border flex gap-4 bg-muted/30">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                             type="text"
                             placeholder="Search materials..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary transition-all font-medium shadow-sm"
+                            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary transition-all font-medium shadow-sm text-sm"
                         />
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 bg-background/50">
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
+                <div className="flex-1 overflow-y-auto p-4 pb-0 lg:p-4 bg-background/50">
+                    <div className="grid grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 pb-0 lg:pb-0">
                         {filteredProducts.map(product => (
                             <button
                                 key={product.id}
                                 disabled={product.stock <= 0}
                                 onClick={() => addToCart(product)}
                                 className={cn(
-                                    "flex flex-col text-left bg-card border border-border rounded-xl p-3 hover:bg-accent hover:border-primary/50 transition-all group relative overflow-hidden shadow-sm",
+                                    "flex flex-col text-left bg-card border border-border rounded-t-lg lg:rounded-xl p-2 lg:p-3 hover:bg-accent hover:border-primary/50 transition-all group relative overflow-hidden shadow-sm",
                                     product.stock <= 0 && "opacity-50 cursor-not-allowed bg-muted"
                                 )}
                             >
-                                <div className="aspect-square w-full rounded-lg bg-muted mb-3 overflow-hidden relative">
+                                <div className="aspect-square w-full rounded-lg bg-muted mb-2 lg:mb-3 overflow-hidden relative">
                                     {product.image ? (
                                         <Image src={product.image} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
                                     ) : (
@@ -325,9 +325,9 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                                         </div>
                                     )}
                                 </div>
-                                <h3 className="font-semibold text-foreground text-sm truncate w-full">{product.name}</h3>
+                                <h3 className="font-semibold text-foreground text-xs lg:text-sm break-words w-full">{product.name}</h3>
                                 <div className="flex justify-between items-center mt-1 w-full text-xs">
-                                    <span className="text-muted-foreground">{product.sku}</span>
+                                    <span className="text-muted-foreground text-[10px]">{product.sku}</span>
                                     <span className={cn("font-bold", product.stock <= 5 ? "text-red-500" : "text-emerald-500")}>
                                         {formatNumber(product.stock)} Left
                                     </span>
@@ -345,17 +345,17 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
 
             {/* Right: Cart - Hidden on mobile if activeTab is 'products' */}
             <div className={cn(
-                "w-full lg:w-96 flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-lg h-full",
+                "w-full lg:w-96 flex-col bg-card border-t border-x border-border rounded-t-2xl lg:rounded-2xl lg:border overflow-hidden shadow-lg h-full",
                 activeTab === 'cart' ? 'flex' : 'hidden lg:flex'
             )}>
-                <div className="p-4 border-b border-border bg-muted/30">
-                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5 text-primary" />
+                <div className="p-3 border-b border-border bg-muted/30">
+                    <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4 text-primary" />
                         Current Order
                     </h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-background/50 pb-20 lg:pb-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-background/50 pb-2 lg:pb-4">
                     {cart.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
                             <ShoppingCart className="w-12 h-12 mb-3" />
@@ -401,14 +401,14 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                     )}
                 </div>
 
-                <div className="p-4 border-t border-border bg-muted/30 space-y-4 mb-16 lg:mb-0">
+                <div className="p-3 border-t border-border bg-muted/30 space-y-2 mb-7 lg:mb-0">
                     {message && (
                         <div className={cn("text-xs p-2 rounded text-center font-medium", message.type === 'success' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400')}>
                             {message.text}
                         </div>
                     )}
 
-                    <div className="flex justify-between items-center text-muted-foreground text-sm">
+                    <div className="flex justify-between items-center text-muted-foreground text-xs">
                         <span>Total Items</span>
                         <span className="text-foreground font-bold">{totalItems}</span>
                     </div>
@@ -416,7 +416,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                     <button
                         onClick={handleCheckout}
                         disabled={loading || cart.length === 0}
-                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed text-sm"
                     >
                         {loading ? 'Processing...' : 'Complete Checkout'}
                     </button>
@@ -428,23 +428,23 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                 <button
                     onClick={() => setActiveTab('products')}
                     className={cn(
-                        "flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors",
+                        "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors",
                         activeTab === 'products' ? "text-blue-600 bg-blue-50/50" : "text-gray-500 hover:bg-gray-50"
                     )}
                 >
-                    <Package className="w-6 h-6" />
+                    <Package className="w-5 h-5" />
                     <span className="text-xs font-semibold">PRODUCTS</span>
                 </button>
                 <div className="w-[1px] bg-gray-200 h-full"></div>
                 <button
                     onClick={() => setActiveTab('cart')}
                     className={cn(
-                        "flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors relative",
+                        "flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors relative",
                         activeTab === 'cart' ? "text-blue-600 bg-blue-50/50" : "text-gray-500 hover:bg-gray-50"
                     )}
                 >
                     <div className="relative">
-                        <ShoppingCart className="w-6 h-6" />
+                        <ShoppingCart className="w-5 h-5" />
                         {totalItems > 0 && (
                             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center">
                                 {totalItems}
