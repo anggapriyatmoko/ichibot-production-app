@@ -95,7 +95,8 @@ export async function updateUnitSalesData(unitId: string, data: {
     isSold?: boolean,
     isAssembled?: boolean,
     marketplace?: string,
-    customer?: string
+    customer?: string,
+    link?: string
 }) {
     const updateData: any = { ...data }
 
@@ -174,8 +175,8 @@ export async function toggleUnitSection(unitId: string, ingredientId: string, is
         // Find ingredients belonging to this section (Live Data)
         const sectionIngredients = unit.productionPlan.recipe.ingredients.filter(i => i.sectionId === ingredientId)
 
+        // 1. Update Stock for all ingredients in the section (if any)
         if (sectionIngredients.length > 0) {
-            // 1. Update Stock for all ingredients in the section
             for (const ingredient of sectionIngredients) {
                 // Ensure product exists before updating (defensive)
                 if (!ingredient.productId) continue
@@ -194,49 +195,16 @@ export async function toggleUnitSection(unitId: string, ingredientId: string, is
                     })
                 }
             }
-
-            // 2. Log Single Transaction for the Section Check
-            const transactionData = {
-                type: isCompleted ? 'Checked' : 'Unchecked',
-                quantity: 1,
-                userId: session?.user?.id || null,
-                description: `${unit.productionPlan.recipe.name} - ${sectionName} (Unit ${unit.unitNumber}) - ${unit.productIdentifier || 'No Serial'}`
-            }
-
-            await prisma.transaction.create({ data: transactionData })
-
         } else {
-            // Fallback: Try to find as single ingredient
+            // Check if this is a single ingredient (not a section)
             const ingredient = unit.productionPlan.recipe.ingredients.find(i => i.id === ingredientId)
             if (ingredient && ingredient.productId) {
                 if (isCompleted) {
-                    // Consumed (OUT)
-                    await prisma.transaction.create({
-                        data: {
-                            type: 'OUT',
-                            quantity: ingredient.quantity,
-                            productId: ingredient.productId,
-                            userId: session?.user?.id || null,
-                            description: `Used in ${unit.productionPlan.recipe.name} (Unit ${unit.unitNumber})`
-                        }
-                    })
-                    // Decrement Stock
                     await prisma.product.update({
                         where: { id: ingredient.productId },
                         data: { stock: { decrement: ingredient.quantity } }
                     })
                 } else {
-                    // Returned (IN)
-                    await prisma.transaction.create({
-                        data: {
-                            type: 'IN',
-                            quantity: ingredient.quantity,
-                            productId: ingredient.productId,
-                            userId: session?.user?.id || null,
-                            description: `Restock from ${unit.productionPlan.recipe.name} (Unit ${unit.unitNumber} - Unchecked)`
-                        }
-                    })
-                    // Increment Stock
                     await prisma.product.update({
                         where: { id: ingredient.productId },
                         data: { stock: { increment: ingredient.quantity } }
@@ -244,6 +212,16 @@ export async function toggleUnitSection(unitId: string, ingredientId: string, is
                 }
             }
         }
+
+        // 2. ALWAYS Log Transaction for the Checkbox Action (regardless of ingredients)
+        const transactionData = {
+            type: isCompleted ? 'Checked' : 'Unchecked',
+            quantity: 1,
+            userId: session?.user?.id || null,
+            description: `${unit.productionPlan.recipe.name} - ${sectionName} (Unit ${unit.unitNumber}) - ${unit.productIdentifier || 'No Serial'}`
+        }
+
+        await prisma.transaction.create({ data: transactionData })
 
         revalidatePath('/production-plan')
         revalidatePath(`/production-plan/${unit.productionPlanId}`)

@@ -1,7 +1,8 @@
 'use client'
 
 import { toggleUnitSection, updateUnitSalesData } from '@/app/actions/production-plan'
-import { Box, ShoppingBag, AlertTriangle, Hammer, Check } from 'lucide-react'
+import { Box, ShoppingBag, AlertTriangle, Hammer, Check, Download } from 'lucide-react'
+import QRCode from 'qrcode'
 import { useState, useTransition, useEffect } from 'react'
 import ConfirmModal from './confirm-modal'
 import IssueModal from './issue-modal'
@@ -44,6 +45,25 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     const [isSold, setIsSold] = useState(unit.isSold)
     const [marketplace, setMarketplace] = useState(unit.marketplace || '')
     const [customer, setCustomer] = useState(unit.customer || '')
+    const [link, setLink] = useState(unit.link || '')
+
+    // Sync state with props when server data updates (Fix for data disappearing on revalidate)
+    useEffect(() => {
+        setIsAssembled(!!unit.assembledAt)
+        setIsPacked(unit.isPacked)
+        setIsSold(unit.isSold)
+        setMarketplace(unit.marketplace || '')
+        setCustomer(unit.customer || '')
+
+        try {
+            setCompletedIds(JSON.parse(unit.completed || '[]'))
+        } catch {
+            setCompletedIds([])
+        }
+
+        setTempSerial(unit.productIdentifier || '')
+        setTempCustomId(unit.customId || '')
+    }, [unit])
 
     // Calculate if all sections are checked
     const isAllSectionsChecked = sections.length > 0 && sections.every(section => completedIds.includes(section.id))
@@ -100,12 +120,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
 
     const handleSoldClick = () => {
         if (isPacked) {
-            if (!isSold) {
-                // Opening modal to input marketplace and customer
-                setIsSalesModalOpen(true)
-            } else {
-                handleStatusToggle('Sold', true) // Will trigger confirm modal for uncheck
-            }
+            handleStatusToggle('Sold', isSold) // Direct toggle without modal
         }
     }
 
@@ -115,10 +130,31 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
             await updateUnitSalesData(unit.id, {
                 isSold: true,
                 marketplace,
-                customer
+                customer,
+                link
             })
         })
         setIsSalesModalOpen(false)
+    }
+
+    const handleDownloadQR = async () => {
+        if (!link) return
+        try {
+            const qrDataUrl = await QRCode.toDataURL(link, {
+                width: 512,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            })
+            const a = document.createElement('a')
+            a.href = qrDataUrl
+            a.download = `${unit.productIdentifier || `Unit-${unit.unitNumber}`}.png`
+            a.click()
+        } catch (err) {
+            console.error('QR generation failed:', err)
+        }
     }
 
     const handleUnitInfoSubmit = async () => {
@@ -157,61 +193,6 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                 existingIssue={activeIssue}
             />
 
-            {/* Sales Info Modal */}
-            {isSalesModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-                        <h3 className="text-lg font-bold text-slate-900 mb-4">Sales Information</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Marketplace <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={marketplace}
-                                    onChange={(e) => setMarketplace(e.target.value)}
-                                    placeholder="e.g., Tokopedia, Shopee"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Customer Name <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={customer}
-                                    onChange={(e) => setCustomer(e.target.value)}
-                                    placeholder="Customer name"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => {
-                                    setMarketplace(unit.marketplace || '')
-                                    setCustomer(unit.customer || '')
-                                    setIsSalesModalOpen(false)
-                                }}
-                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSalesModalSubmit}
-                                disabled={isPending || !marketplace.trim() || !customer.trim()}
-                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                            >
-                                {isPending ? 'Saving...' : 'OK'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Unit Info Edit Modal */}
             {isUnitInfoModalOpen && (
@@ -322,6 +303,35 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                     </div>
                 </div>
 
+                {/* Link QC Section */}
+                <div className="p-3 border-b border-border bg-blue-50/30">
+                    <div className="text-xs font-semibold text-blue-900 mb-2">Link QC</div>
+                    <div className="flex gap-2">
+                        <input
+                            type="url"
+                            value={link}
+                            onChange={(e) => setLink(e.target.value)}
+                            onBlur={() => {
+                                startTransition(async () => {
+                                    await updateUnitSalesData(unit.id, { link })
+                                })
+                            }}
+                            placeholder="https://..."
+                            className="flex-1 px-3 py-2 text-sm border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        />
+                        {link && (
+                            <button
+                                onClick={handleDownloadQR}
+                                className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors flex items-center gap-1 flex-shrink-0"
+                                title="Download QR Code"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="text-xs font-medium">QR</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 {/* Sales Status */}
                 <div className="p-3 bg-indigo-50/30">
                     <div className="text-xs font-semibold text-indigo-900 mb-2">Sales Status</div>
@@ -364,20 +374,34 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                                 {isSold && <ShoppingBag className="w-3 h-3 text-white" strokeWidth={2.5} />}
                             </button>
                         </div>
-                        {isSold && (marketplace || customer) && (
-                            <div className="pt-2 border-t border-indigo-100 space-y-1">
-                                {marketplace && (
-                                    <div className="text-xs">
-                                        <span className="text-indigo-600">Marketplace:</span> <span className="text-indigo-900 font-medium">{marketplace}</span>
-                                    </div>
-                                )}
-                                {customer && (
-                                    <div className="text-xs">
-                                        <span className="text-indigo-600">Customer:</span> <span className="text-indigo-900 font-medium">{customer}</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+
+                        {/* Marketplace & Customer Inputs - 2 columns */}
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-indigo-100">
+                            <input
+                                type="text"
+                                value={marketplace}
+                                onChange={(e) => setMarketplace(e.target.value)}
+                                onBlur={() => {
+                                    startTransition(async () => {
+                                        await updateUnitSalesData(unit.id, { marketplace })
+                                    })
+                                }}
+                                placeholder="Marketplace"
+                                className="px-2 py-1.5 text-xs border border-indigo-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-white"
+                            />
+                            <input
+                                type="text"
+                                value={customer}
+                                onChange={(e) => setCustomer(e.target.value)}
+                                onBlur={() => {
+                                    startTransition(async () => {
+                                        await updateUnitSalesData(unit.id, { customer })
+                                    })
+                                }}
+                                placeholder="Customer"
+                                className="px-2 py-1.5 text-xs border border-indigo-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400 bg-white"
+                            />
+                        </div>
                     </div>
                 </div>
 

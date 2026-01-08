@@ -103,6 +103,7 @@ model ProductionUnit {
   isSold           Boolean  @default(false)
   marketplace      String?
   customer         String?
+  link             String?  // URL for QR code generation
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

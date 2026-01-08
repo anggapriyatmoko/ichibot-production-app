@@ -9,6 +9,31 @@ import { requireAdmin, requireAuth } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
+// Image upload validation helper
+function validateImageFile(file: File): { valid: boolean; error?: string } {
+    const MAX_SIZE = 1 * 1024 * 1024 // 1MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+
+    // Check file size
+    if (file.size > MAX_SIZE) {
+        return { valid: false, error: 'Ukuran file terlalu besar. Maksimal 1MB.' }
+    }
+
+    // Check MIME type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+        return { valid: false, error: 'Tipe file tidak valid. Hanya JPG, PNG, WEBP, atau GIF yang diperbolehkan.' }
+    }
+
+    // Check file extension
+    const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0]
+    if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+        return { valid: false, error: 'Ekstensi file tidak valid.' }
+    }
+
+    return { valid: true }
+}
+
 export async function createProduct(formData: FormData) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
@@ -24,6 +49,12 @@ export async function createProduct(formData: FormData) {
     let imagePath = null
 
     if (imageFile && imageFile.size > 0) {
+        // Validate image file
+        const validation = validateImageFile(imageFile)
+        if (!validation.valid) {
+            return { error: validation.error }
+        }
+
         const buffer = Buffer.from(await imageFile.arrayBuffer())
 
         // Resize with Sharp
@@ -116,6 +147,12 @@ export async function updateProduct(formData: FormData) {
     }
 
     if (imageFile && imageFile.size > 0) {
+        // Validate image file
+        const validation = validateImageFile(imageFile)
+        if (!validation.valid) {
+            return { error: validation.error }
+        }
+
         const buffer = Buffer.from(await imageFile.arrayBuffer())
 
         // Resize with Sharp

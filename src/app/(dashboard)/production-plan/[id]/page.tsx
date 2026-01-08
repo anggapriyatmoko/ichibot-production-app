@@ -144,9 +144,12 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                                 Assembled
                             </th>
                             <th className="px-2 py-2 w-20 text-center border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 z-10 text-[10px]">
-                                Packing
+                                Link QC
                             </th>
                             <th className="px-2 py-2 w-20 text-center border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 z-10 text-[10px]">
+                                Packed
+                            </th>
+                            <th className="px-2 py-2 w-32 border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 z-10 text-[10px]">
                                 Sold
                             </th>
                             <th className="px-2 py-2 w-32 border-b border-r border-indigo-200 bg-indigo-50/80 text-indigo-900 z-10 text-[10px]">

@@ -34,10 +34,14 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
     const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products')
     const { showConfirmation } = useConfirmation()
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    // Multi-word search: all words must match (in name OR sku)
+    const filteredProducts = products.filter(p => {
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+        if (searchWords.length === 0) return true
+
+        const productText = `${p.name} ${p.sku}`.toLowerCase()
+        return searchWords.every(word => productText.includes(word))
+    })
 
     const addToCart = (product: Product) => {
         if (product.stock <= 0) return

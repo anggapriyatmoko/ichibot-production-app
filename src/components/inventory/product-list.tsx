@@ -13,6 +13,19 @@ import { useAlert } from '@/hooks/use-alert'
 import ImportProductModal from './import-product-modal'
 import { useEffect } from 'react'
 
+// Helper to simplify error messages for users
+function simplifyErrorMessage(error: any): string {
+    const message = error?.message || String(error)
+
+    // Check for Next.js body size limit error
+    if (message.includes('Body exceeded') || message.includes('MB limit')) {
+        return 'Maximum file size is 1MB'
+    }
+
+    // Return original message if no match
+    return message
+}
+
 type Product = {
     id: string
     name: string
@@ -160,7 +173,7 @@ export default function ProductList({
             setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5, notes: '' })
         } catch (error: any) {
             console.error(error)
-            showError(`Unexpected error: ${error.message}`)
+            showError(simplifyErrorMessage(error))
         } finally {
             setIsLoading(false)
         }
@@ -186,7 +199,7 @@ export default function ProductList({
             setRemoveImage(false)
         } catch (error: any) {
             console.error(error)
-            showError(`Unexpected error: ${error.message}`)
+            showError(simplifyErrorMessage(error))
         } finally {
             setIsLoading(false)
         }

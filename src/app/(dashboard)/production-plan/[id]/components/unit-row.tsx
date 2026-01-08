@@ -1,7 +1,8 @@
 'use client'
 
 import { updateUnitIdentifier, updateUnitCustomId, toggleUnitSection, updateUnitSalesData, reportIssue, resolveIssue } from '@/app/actions/production-plan'
-import { Check, Box, ShoppingBag, AlertTriangle, AlertCircle, Hammer } from 'lucide-react'
+import { Check, Box, ShoppingBag, AlertTriangle, AlertCircle, Hammer, Download } from 'lucide-react'
+import QRCode from 'qrcode'
 import { useState, useTransition, useEffect } from 'react'
 import IssueModal from './issue-modal'
 import ConfirmModal from './confirm-modal'
@@ -36,6 +37,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
     const [isSold, setIsSold] = useState(unit.isSold)
     const [marketplace, setMarketplace] = useState(unit.marketplace || '')
     const [customer, setCustomer] = useState(unit.customer || '')
+    const [link, setLink] = useState(unit.link || '')
 
     // Issue Tracking
     const [isIssueModalOpen, setIsIssueModalOpen] = useState(false)
@@ -70,23 +72,11 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
         }
     }, [isAssembled])
 
-    useEffect(() => {
-        if (!isPacked && isSold) {
-            setIsSold(false)
-            handleSalesUpdate('isSold', false)
-            handleSalesUpdate('marketplace', '')
-            handleSalesUpdate('customer', '')
-            setMarketplace('')
-            setCustomer('')
-        }
-    }, [isPacked])
+    // Removed auto-clear logic - Marketplace and Customer can be edited anytime
+    // isSold checkbox no longer affects these text fields
 
-    // Auto-clear marketplace and customer when Sold is unchecked
-    useEffect(() => {
-        if (!isSold) {
-            // Optional: clear if needed, but usually we just keep it or clear on uncheck action
-        }
-    }, [isSold])
+    // Marketplace and Customer can now be edited anytime - no auto-clear
+    // Users can manually clear these fields if needed
 
     const handleToggle = (itemId: string) => {
         const isCompleted = completedIds.includes(itemId)
@@ -149,6 +139,26 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
 
     const handleIssueClick = () => {
         setIsIssueModalOpen(true)
+    }
+
+    const handleDownloadQR = async () => {
+        if (!link) return
+        try {
+            const qrDataUrl = await QRCode.toDataURL(link, {
+                width: 512,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            })
+            const a = document.createElement('a')
+            a.href = qrDataUrl
+            a.download = `${computedSerial}.png`
+            a.click()
+        } catch (err) {
+            console.error('QR generation failed:', err)
+        }
     }
 
     return (
@@ -246,6 +256,27 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         <Hammer className="w-2.5 h-2.5" strokeWidth={2.5} />
                     </button>
                 </td>
+                <td className="px-2 py-1 border-r border-indigo-100 bg-indigo-50/30">
+                    <div className="flex items-center gap-1">
+                        <input
+                            type="url"
+                            value={link}
+                            onChange={(e) => setLink(e.target.value)}
+                            onBlur={() => handleSalesUpdate('link', link)}
+                            placeholder="https://..."
+                            className="flex-1 text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50"
+                        />
+                        {link && (
+                            <button
+                                onClick={handleDownloadQR}
+                                className="p-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded transition-colors"
+                                title="Download QR Code"
+                            >
+                                <Download className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                </td>
                 <td className="px-2 py-1 text-center border-r border-indigo-100 bg-indigo-50/30">
                     <button
                         onClick={() => {
@@ -298,7 +329,7 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                         className="w-full text-xs px-2 py-1 rounded border border-indigo-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none text-center bg-white/50"
                     />
                 </td>
-                <td className="px-2 py-1 bg-indigo-50/30">
+                <td className="px-2 py-1 border-r border-indigo-100 bg-indigo-50/30">
                     <input
                         type="text"
                         value={customer}
@@ -312,4 +343,3 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
         </>
     )
 }
-
