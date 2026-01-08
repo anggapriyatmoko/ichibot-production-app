@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, Bot, BrainCircuit, Sparkles, CheckCircle, Edit2 } from 'lucide-react'
+import { AlertTriangle, Bot, BrainCircuit, Sparkles, CheckCircle, Edit2, Plus } from 'lucide-react'
 import IssueModal from './issue-modal'
 
 interface Issue {
@@ -37,6 +37,12 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
         setSelectedUnit(unit)
         setSelectedIssue(issue)
         setResolveMode(isResolve)
+    }
+
+    const handleAddNewIssue = (unit: Unit) => {
+        setSelectedUnit(unit)
+        setSelectedIssue(null) // null means creating new issue
+        setResolveMode(false)
     }
 
     if (unitsWithIssues.length === 0) {
@@ -156,8 +162,8 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                         <td className="px-6 py-4 align-top w-48">
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-8 h-8 rounded-lg border flex items-center justify-center font-bold text-xs shadow-sm ${isResolved
-                                                        ? 'bg-green-50 text-green-600 border-green-100'
-                                                        : 'bg-red-50 text-red-600 border-red-100'
+                                                    ? 'bg-green-50 text-green-600 border-green-100'
+                                                    : 'bg-red-50 text-red-600 border-red-100'
                                                     }`}>
                                                     #{unit.unitNumber}
                                                 </div>
@@ -202,19 +208,50 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 align-top">
-                                            <div className="flex items-start gap-3">
-                                                {isResolved ? (
-                                                    <CheckCircle className="w-4 h-4 text-green-500 mt-1 shrink-0" />
-                                                ) : (
-                                                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-1 shrink-0" />
-                                                )}
-                                                <p className={`leading-relaxed text-sm whitespace-pre-wrap break-words max-w-2xl ${isResolved ? 'text-green-700' : 'text-slate-600'}`}>
-                                                    {latestIssue.description}
-                                                </p>
+                                            <div className="space-y-3">
+                                                {/* Show active issues first */}
+                                                {sortedIssues.filter(i => !i.isResolved).map((issue) => (
+                                                    <div key={issue.id} className="flex items-start gap-3 p-2 bg-red-50/50 rounded-lg border border-red-100">
+                                                        <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="leading-relaxed text-sm whitespace-pre-wrap break-words text-slate-700">
+                                                                {issue.description}
+                                                            </p>
+                                                            <div className="text-[10px] text-slate-400 mt-1">
+                                                                {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(issue.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {/* Show resolved issues below */}
+                                                {sortedIssues.filter(i => i.isResolved).map((issue) => (
+                                                    <div key={issue.id} className="flex items-start gap-3 p-2 bg-green-50/50 rounded-lg border border-green-100 opacity-70">
+                                                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="leading-relaxed text-sm whitespace-pre-wrap break-words text-green-700 line-through decoration-green-400">
+                                                                {issue.description}
+                                                            </p>
+                                                            <div className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+                                                                <CheckCircle className="w-3 h-3" />
+                                                                Solved • {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right align-top w-48">
-                                            {!isResolved && (
+                                            {isResolved ? (
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleAddNewIssue(unit)}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-700 shadow-sm hover:bg-amber-100 hover:border-amber-300 transition-all active:scale-95"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" />
+                                                        Add New Issue
+                                                    </button>
+                                                </div>
+                                            ) : (
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         onClick={() => handleManageIssue(unit, latestIssue, true)}
@@ -255,8 +292,8 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                 <div className="flex items-start justify-between gap-3 mb-3">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-lg border flex items-center justify-center font-bold text-sm shadow-sm ${isResolved
-                                                ? 'bg-green-50 text-green-600 border-green-100'
-                                                : 'bg-red-50 text-red-600 border-red-100'
+                                            ? 'bg-green-50 text-green-600 border-green-100'
+                                            : 'bg-red-50 text-red-600 border-red-100'
                                             }`}>
                                             #{unit.unitNumber}
                                         </div>
@@ -284,32 +321,52 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                     </div>
                                 </div>
 
-                                <div className="mb-2 text-xs text-slate-400">
-                                    {new Date(latestIssue.createdAt).toLocaleDateString('id-ID', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric'
-                                    })} - {new Date(latestIssue.createdAt).toLocaleTimeString('id-ID', {
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    })}
-                                </div>
-
                                 <div className="mb-3">
-                                    <div className="text-xs text-slate-500 mb-1">Detected Anomaly</div>
-                                    <div className="flex items-start gap-2">
-                                        {isResolved ? (
-                                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                                        ) : (
-                                            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                                        )}
-                                        <p className={`text-sm leading-relaxed break-words ${isResolved ? 'text-green-700' : 'text-slate-600'}`}>
-                                            {latestIssue.description}
-                                        </p>
+                                    <div className="text-xs text-slate-500 mb-2">Detected Anomalies</div>
+                                    <div className="space-y-2">
+                                        {/* Show active issues first */}
+                                        {sortedIssues.filter(i => !i.isResolved).map((issue) => (
+                                            <div key={issue.id} className="flex items-start gap-2 p-2 bg-red-50/50 rounded-lg border border-red-100">
+                                                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm leading-relaxed break-words text-slate-700">
+                                                        {issue.description}
+                                                    </p>
+                                                    <div className="text-[10px] text-slate-400 mt-1">
+                                                        {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(issue.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {/* Show resolved issues below */}
+                                        {sortedIssues.filter(i => i.isResolved).map((issue) => (
+                                            <div key={issue.id} className="flex items-start gap-2 p-2 bg-green-50/50 rounded-lg border border-green-100 opacity-70">
+                                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm leading-relaxed break-words text-green-700 line-through decoration-green-400">
+                                                        {issue.description}
+                                                    </p>
+                                                    <div className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+                                                        <CheckCircle className="w-3 h-3" />
+                                                        Solved • {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {!isResolved && (
+                                {isResolved ? (
+                                    <div className="flex gap-2 pt-2">
+                                        <button
+                                            onClick={() => handleAddNewIssue(unit)}
+                                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-700 shadow-sm hover:bg-amber-100 hover:border-amber-300 transition-all active:scale-95"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Add New Issue
+                                        </button>
+                                    </div>
+                                ) : (
                                     <div className="flex gap-2 pt-2">
                                         <button
                                             onClick={() => handleManageIssue(unit, latestIssue, true)}
