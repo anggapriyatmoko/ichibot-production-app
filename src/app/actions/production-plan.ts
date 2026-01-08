@@ -344,8 +344,8 @@ export async function reportIssue(unitId: string, description: string) {
                 type: 'Problem',
                 quantity: 1,
                 userId: session?.user?.id || null,
-                // Using ||| delimiter: [Product Info] ||| [Issue Description]
-                description: `${unit.productionPlan.recipe.name} - Unit ${unit.unitNumber} ||| ${description}`
+                // Using ||| delimiter: [Unit Identity] ||| [Description Label]
+                description: `${unit.productIdentifier || unit.customId || `Unit #${unit.unitNumber}`} ||| Detected Anomaly: ${description}`
             }
         })
     ])
@@ -393,10 +393,33 @@ export async function resolveIssue(issueId: string) {
 }
 
 export async function updateIssue(issueId: string, description: string) {
-    await prisma.productionIssue.update({
+    const session: any = await getServerSession(authOptions)
+
+    const issue = await prisma.productionIssue.findUnique({
         where: { id: issueId },
-        data: { description }
+        include: {
+            productionUnit: true
+        }
     })
+
+    if (!issue) throw new Error('Issue not found')
+
+    await prisma.$transaction([
+        prisma.productionIssue.update({
+            where: { id: issueId },
+            data: { description }
+        }),
+        prisma.transaction.create({
+            data: {
+                type: 'Problem Edited',
+                quantity: 1,
+                userId: session?.user?.id || null,
+                // Using ||| delimiter: [Unit Identity] ||| [Description Label]
+                description: `${issue.productionUnit.productIdentifier || issue.productionUnit.customId || `Unit #${issue.productionUnit.unitNumber}`} ||| Detected Anomaly: ${description}`
+            }
+        })
+    ])
+
     revalidatePath('/production-plan/[id]')
 }
 // ... existing code ...

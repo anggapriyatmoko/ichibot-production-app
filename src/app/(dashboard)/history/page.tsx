@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { History, ArrowUpRight, ArrowDownLeft, Plus, Minus, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle } from 'lucide-react'
+import { History, ArrowUpRight, ArrowDownLeft, Plus, Minus, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Edit2 } from 'lucide-react'
 import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -127,10 +127,15 @@ export default async function HistoryPage({
                                         <Plus className="w-3 h-3" />
                                         BOM Add
                                     </span>
-                                ) : tx.type === 'Problem' ? (
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                                        <AlertTriangle className="w-3 h-3" />
-                                        Problem
+                                ) : tx.type === 'Problem' || tx.type === 'Problem Edited' ? (
+                                    <span className={cn(
+                                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+                                        tx.type === 'Problem Edited'
+                                            ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20'
+                                            : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                                    )}>
+                                        {tx.type === 'Problem Edited' ? <Edit2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                                        {tx.type === 'Problem Edited' ? 'Problem Edited' : 'Problem'}
                                     </span>
                                 ) : tx.type === 'Solved' ? (
                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
@@ -158,14 +163,14 @@ export default async function HistoryPage({
                                     </span>
                                 ) : (['Checked', 'Unchecked'].includes(tx.type)
                                     ? tx.description?.split(' - ')[0]
-                                    : ['Problem', 'Solved'].includes(tx.type)
+                                    : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
                                         ? tx.description?.split(' ||| ')[0]
                                         : 'Unknown Product')}
                             </h4>
-                            <p className="text-sm text-foreground/80 mt-1 line-clamp-2">
+                            <p className="text-sm text-foreground/80 mt-1 whitespace-pre-line">
                                 {['Checked', 'Unchecked'].includes(tx.type)
                                     ? (tx.description?.split(' - ').slice(1).join(' - ') || '-')
-                                    : ['Problem', 'Solved'].includes(tx.type)
+                                    : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
                                         ? (tx.description?.split(' ||| ')[1] || tx.description)
                                         : (tx.description || '-')
                                 }
@@ -180,7 +185,7 @@ export default async function HistoryPage({
                                 {tx.user?.name || tx.user?.username || 'System'}
                             </div>
 
-                            {!['Solved', 'Problem', 'Checked', 'Unchecked'].includes(tx.type) && (
+                            {!['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked'].includes(tx.type) && (
                                 <span className={cn("font-bold text-sm",
                                     tx.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' :
                                         tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
@@ -245,10 +250,15 @@ export default async function HistoryPage({
                                                 <Plus className="w-3 h-3" />
                                                 BOM Add
                                             </span>
-                                        ) : tx.type === 'Problem' ? (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                                                <AlertTriangle className="w-3 h-3" />
-                                                Problem
+                                        ) : tx.type === 'Problem' || tx.type === 'Problem Edited' ? (
+                                            <span className={cn(
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+                                                tx.type === 'Problem Edited'
+                                                    ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20'
+                                                    : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                                            )}>
+                                                {tx.type === 'Problem Edited' ? <Edit2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                                                {tx.type === 'Problem Edited' ? 'Problem Edited' : 'Problem'}
                                             </span>
                                         ) : tx.type === 'Solved' ? (
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
@@ -262,10 +272,10 @@ export default async function HistoryPage({
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-foreground text-sm">
+                                    <td className="px-6 py-4 text-foreground text-sm whitespace-pre-line">
                                         {['Checked', 'Unchecked'].includes(tx.type)
                                             ? (tx.description?.split(' - ').slice(1).join(' - ') || '-')
-                                            : ['Problem', 'Solved'].includes(tx.type)
+                                            : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
                                                 ? (tx.description?.split(' ||| ')[1] || tx.description)
                                                 : (tx.description || '-')
                                         }
@@ -278,7 +288,7 @@ export default async function HistoryPage({
                                             </span>
                                         ) : (['Checked', 'Unchecked'].includes(tx.type)
                                             ? tx.description?.split(' - ')[0]
-                                            : ['Problem', 'Solved'].includes(tx.type)
+                                            : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
                                                 ? tx.description?.split(' ||| ')[0]
                                                 : 'Unknown Product')}
                                     </td>
@@ -290,9 +300,9 @@ export default async function HistoryPage({
                                             tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
                                                 tx.type === 'BOM_ADD' ? 'text-purple-600 dark:text-purple-400' :
                                                     tx.type === 'Solved' ? 'text-green-600 dark:text-green-400' :
-                                                        tx.type === 'Problem' ? 'text-red-600 dark:text-red-400' :
+                                                        tx.type === 'Problem' || tx.type === 'Problem Edited' ? 'text-red-600 dark:text-red-400' :
                                                             'text-orange-600 dark:text-orange-400')}>
-                                        {['Solved', 'Problem', 'Checked', 'Unchecked'].includes(tx.type)
+                                        {['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked'].includes(tx.type)
                                             ? '-'
                                             : `${['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}${formatNumber(tx.quantity)}`
                                         }
