@@ -36,7 +36,18 @@ export async function createProduct(formData: FormData) {
 
         // Restore original filename handling (no webp forcing)
         const filename = Date.now() + '-' + imageFile.name.replace(/\s/g, '-')
-        const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads')
+
+        // Determine upload directory: Favor process.env.UPLOAD_DIR or /app/uploads in Docker
+        let uploadDir = process.env.UPLOAD_DIR
+        if (!uploadDir) {
+            // Default for VPS/Docker if no env var
+            if (process.env.NODE_ENV === 'production') {
+                uploadDir = path.join(process.cwd(), 'uploads')
+            } else {
+                // Local dev fallback
+                uploadDir = path.join(process.cwd(), 'public', 'uploads')
+            }
+        }
 
         // Ensure directory exists
         try {
@@ -44,7 +55,9 @@ export async function createProduct(formData: FormData) {
         } catch (e) { }
 
         await writeFile(path.join(uploadDir, filename), resizedBuffer)
-        imagePath = '/uploads/' + filename
+
+        // Use API route for serving
+        imagePath = '/api/uploads/' + filename
     }
 
     try {
@@ -115,12 +128,23 @@ export async function updateProduct(formData: FormData) {
 
         // Restore original filename handling (no webp forcing)
         const filename = Date.now() + '-' + imageFile.name.replace(/\s/g, '-')
-        const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads')
+
+        // Determine upload directory: Favor process.env.UPLOAD_DIR or /app/uploads in Docker
+        let uploadDir = process.env.UPLOAD_DIR
+        if (!uploadDir) {
+            // Default for VPS/Docker if no env var
+            if (process.env.NODE_ENV === 'production') {
+                uploadDir = path.join(process.cwd(), 'uploads')
+            } else {
+                // Local dev fallback
+                uploadDir = path.join(process.cwd(), 'public', 'uploads')
+            }
+        }
 
         try { await mkdir(uploadDir, { recursive: true }) } catch (e) { }
 
         await writeFile(path.join(uploadDir, filename), resizedBuffer)
-        data.image = '/uploads/' + filename
+        data.image = '/api/uploads/' + filename
     }
 
     if (formData.get('removeImage') === 'true') {

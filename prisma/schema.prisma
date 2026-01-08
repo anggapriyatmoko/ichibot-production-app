@@ -146,3 +146,10 @@ model RecipeIngredient {
   quantity  Float
   notes     String?
 }
+
+model SectionCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
