@@ -9,25 +9,39 @@ export const dynamic = 'force-dynamic'
 export default async function HistoryPage({
     searchParams
 }: {
-    searchParams: Promise<{ page?: string; startDate?: string; endDate?: string }>
+    searchParams: Promise<{ page?: string; startDate?: string; endDate?: string; search?: string }>
 }) {
     const params = await searchParams
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const limit = 50
     const skip = (page - 1) * limit
+    const search = typeof params.search === 'string' ? params.search : ''
 
-    // Build date filter
-    const dateFilter: any = {}
-    if (params.startDate) {
-        dateFilter.gte = new Date(params.startDate)
-    }
-    if (params.endDate) {
-        const endDate = new Date(params.endDate)
-        endDate.setHours(23, 59, 59, 999) // End of day
-        dateFilter.lte = endDate
+    // Build filters
+    const whereClause: any = {}
+
+    // Date Filter
+    if (params.startDate || params.endDate) {
+        whereClause.createdAt = {}
+        if (params.startDate) {
+            whereClause.createdAt.gte = new Date(params.startDate)
+        }
+        if (params.endDate) {
+            const endDate = new Date(params.endDate)
+            endDate.setHours(23, 59, 59, 999)
+            whereClause.createdAt.lte = endDate
+        }
     }
 
-    const whereClause = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}
+    // Search Filter
+    if (search) {
+        whereClause.OR = [
+            { description: { contains: search } },
+            { product: { name: { contains: search } } },
+            { user: { name: { contains: search } } },
+            { user: { username: { contains: search } } }
+        ]
+    }
 
     const [transactions, totalCount] = await Promise.all([
         prisma.transaction.findMany({
@@ -55,10 +69,20 @@ export default async function HistoryPage({
                 <p className="text-muted-foreground">Log of all inventory movements and BOM changes.</p>
             </div>
 
-            {/* Date Filter */}
+            {/* Filters */}
             <div className="mb-6 bg-card border border-border rounded-xl p-4 shadow-sm">
-                <form className="flex flex-col md:flex-row gap-4 items-end">
-                    <div className="grid grid-cols-2 gap-4 w-full md:flex-1 md:w-auto">
+                <form className="flex flex-col lg:flex-row gap-4 lg:items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full flex-1">
+                        <div className="md:col-span-1">
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">Search</label>
+                            <input
+                                type="text"
+                                name="search"
+                                defaultValue={search}
+                                placeholder="Search description, product..."
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none text-sm"
+                            />
+                        </div>
                         <div>
                             <label className="block text-xs font-medium text-muted-foreground mb-1">Start Date</label>
                             <input
@@ -78,16 +102,16 @@ export default async function HistoryPage({
                             />
                         </div>
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
+                    <div className="flex gap-2 w-full lg:w-auto">
                         <button
                             type="submit"
-                            className="flex-1 md:flex-none px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+                            className="flex-1 lg:flex-none px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
                         >
                             Filter
                         </button>
                         <Link
                             href="/history"
-                            className="flex-1 md:flex-none px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors whitespace-nowrap text-center"
+                            className="flex-1 lg:flex-none px-6 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors whitespace-nowrap text-center"
                         >
                             Reset
                         </Link>
@@ -329,7 +353,7 @@ export default async function HistoryPage({
                         <div className="flex items-center gap-2">
                             {page > 1 ? (
                                 <Link
-                                    href={`/history?page=${page - 1}${params.startDate ? `&startDate=${params.startDate}` : ''}${params.endDate ? `&endDate=${params.endDate}` : ''}`}
+                                    href={`/history?page=${page - 1}${params.startDate ? `&startDate=${params.startDate}` : ''}${params.endDate ? `&endDate=${params.endDate}` : ''}${search ? `&search=${search}` : ''}`}
                                     className="flex items-center gap-1 px-3 py-2 bg-background hover:bg-accent border border-border rounded-lg text-sm font-medium transition-colors"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
@@ -361,7 +385,7 @@ export default async function HistoryPage({
                                     return (
                                         <Link
                                             key={pageNum}
-                                            href={`/history?page=${pageNum}${params.startDate ? `&startDate=${params.startDate}` : ''}${params.endDate ? `&endDate=${params.endDate}` : ''}`}
+                                            href={`/history?page=${pageNum}${params.startDate ? `&startDate=${params.startDate}` : ''}${params.endDate ? `&endDate=${params.endDate}` : ''}${search ? `&search=${search}` : ''}`}
                                             className={cn(
                                                 "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                                                 page === pageNum
@@ -377,7 +401,7 @@ export default async function HistoryPage({
 
                             {page < totalPages ? (
                                 <Link
-                                    href={`/history?page=${page + 1}${params.startDate ? `&startDate=${params.startDate}` : ''}${params.endDate ? `&endDate=${params.endDate}` : ''}`}
+                                    href={`/history?page=${page + 1}${params.startDate ? `&startDate=${params.startDate}` : ''}${params.endDate ? `&endDate=${params.endDate}` : ''}${search ? `&search=${search}` : ''}`}
                                     className="flex items-center gap-1 px-3 py-2 bg-background hover:bg-accent border border-border rounded-lg text-sm font-medium transition-colors"
                                 >
                                     Next
