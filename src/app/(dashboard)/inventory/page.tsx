@@ -18,10 +18,12 @@ export default async function InventoryPage({
     const skip = (page - 1) * limit
 
     const where: any = search ? {
-        OR: [
-            { name: { contains: search } },
-            { sku: { contains: search } }
-        ]
+        AND: search.split(/\s+/).filter(Boolean).map(word => ({
+            OR: [
+                { name: { contains: word } },
+                { sku: { contains: word } }
+            ]
+        }))
     } : {}
 
     const [products, totalCount] = await prisma.$transaction([

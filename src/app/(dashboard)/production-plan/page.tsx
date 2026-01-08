@@ -42,7 +42,7 @@ export default async function ProductionPlanPage({
             recipe: {
                 include: {
                     sections: {
-                        select: { id: true }
+                        select: { id: true, createdAt: true }
                     }
                 }
             },
@@ -225,11 +225,12 @@ export default async function ProductionPlanPage({
                                                     const isCurrentMonth = plan.month === currentMonthNow && plan.year === currentYearNow
 
                                                     // Use live sections for current month, snapshot for previous months
+                                                    // If snapshot is missing (legacy plans), filter live sections by plan creation date
                                                     const sections = isCurrentMonth
                                                         ? plan.recipe.sections
                                                         : (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
                                                             ? JSON.parse(plan.sectionsSnapshot)
-                                                            : plan.recipe.sections)
+                                                            : plan.recipe.sections.filter((s: any) => new Date(s.createdAt) <= new Date(plan.createdAt)))
 
                                                     const validSectionIds = new Set(sections.map((s: any) => s.id))
                                                     const completedIds = JSON.parse(unit.completed || '[]')

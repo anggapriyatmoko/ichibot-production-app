@@ -137,7 +137,7 @@ EasyPanel tidak otomatis update (kecuali disetting Webhook). Cara manual paling 
 4.  Selesai! Perubahan sudah live.
 5.  *(Opsional)* Jika mengubah database, jalankan `npx prisma@5.22.0 db push --skip-generate` di Console.
 
----
+--- 
 
 **Tips Tambahan:**
 *   **Web Error?** Selalu cek tab **Logs** di EasyPanel untuk melihat penyebabnya.
