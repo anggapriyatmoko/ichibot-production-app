@@ -353,7 +353,7 @@ export async function reportIssue(unitId: string, description: string) {
     revalidatePath('/production-plan/[id]')
 }
 
-export async function resolveIssue(issueId: string) {
+export async function resolveIssue(issueId: string, resolution: string) {
     const session: any = await getServerSession(authOptions)
 
     const issue = await prisma.productionIssue.findUnique({
@@ -376,7 +376,10 @@ export async function resolveIssue(issueId: string) {
     await prisma.$transaction([
         prisma.productionIssue.update({
             where: { id: issueId },
-            data: { isResolved: true }
+            data: {
+                isResolved: true,
+                resolution: resolution
+            }
         }),
         prisma.transaction.create({
             data: {
@@ -384,7 +387,7 @@ export async function resolveIssue(issueId: string) {
                 quantity: 1,
                 userId: session?.user?.id || null,
                 // Using ||| delimiter: [Product Info] ||| [Solved Description]
-                description: `${issue.productionUnit.productionPlan.recipe.name} - Unit ${issue.productionUnit.unitNumber} ||| Solved: ${issue.description}`
+                description: `${issue.productionUnit.productionPlan.recipe.name} - Unit ${issue.productionUnit.unitNumber} ||| Solved: ${issue.description}\nResolution: ${resolution}`
             }
         })
     ])

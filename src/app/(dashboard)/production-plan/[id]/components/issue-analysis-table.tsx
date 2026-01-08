@@ -7,6 +7,7 @@ import IssueModal from './issue-modal'
 interface Issue {
     id: string
     description: string
+    resolution?: string | null
     isResolved: boolean
     createdAt: Date
 }
@@ -228,12 +229,20 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                                     <div key={issue.id} className="flex items-start gap-3 p-2 bg-green-50/50 rounded-lg border border-green-100 opacity-70">
                                                         <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="leading-relaxed text-sm whitespace-pre-wrap break-words text-green-700 line-through decoration-green-400">
+                                                            <p className="leading-relaxed text-sm whitespace-pre-wrap break-words text-green-700">
                                                                 {issue.description}
                                                             </p>
+                                                            {issue.resolution && (
+                                                                <div className="mt-1 p-1.5 bg-green-100/50 rounded-md border border-green-100">
+                                                                    <p className="text-xs font-medium text-green-800 flex gap-1.5">
+                                                                        <span className="shrink-0 pt-0.5">✅</span>
+                                                                        <span className="whitespace-pre-wrap">{issue.resolution}</span>
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                             <div className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
                                                                 <CheckCircle className="w-3 h-3" />
-                                                                Solved • {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                Solved • {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(issue.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -329,7 +338,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                             <div key={issue.id} className="flex items-start gap-2 p-2 bg-red-50/50 rounded-lg border border-red-100">
                                                 <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm leading-relaxed break-words text-slate-700">
+                                                    <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-slate-700">
                                                         {issue.description}
                                                     </p>
                                                     <div className="text-[10px] text-slate-400 mt-1">
@@ -343,12 +352,20 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                             <div key={issue.id} className="flex items-start gap-2 p-2 bg-green-50/50 rounded-lg border border-green-100 opacity-70">
                                                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm leading-relaxed break-words text-green-700 line-through decoration-green-400">
+                                                    <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-green-700">
                                                         {issue.description}
                                                     </p>
+                                                    {issue.resolution && (
+                                                        <div className="mt-1 p-1.5 bg-green-100/50 rounded-md border border-green-100">
+                                                            <p className="text-xs font-medium text-green-800 flex gap-1.5">
+                                                                <span className="shrink-0 pt-0.5">✅</span>
+                                                                <span className="whitespace-pre-wrap">{issue.resolution}</span>
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                     <div className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
                                                         <CheckCircle className="w-3 h-3" />
-                                                        Solved • {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        Solved • {new Date(issue.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} - {new Date(issue.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
                                             </div>

@@ -120,6 +120,7 @@ model ProductionIssue {
   productionUnitId String
   productionUnit   ProductionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade)
   description      String
+  resolution       String?  // How the issue was resolved
   isResolved       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

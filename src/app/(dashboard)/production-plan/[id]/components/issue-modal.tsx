@@ -18,6 +18,7 @@ interface IssueModalProps {
 export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existingIssue, initialResolveMode = false }: IssueModalProps) {
     const [mounted, setMounted] = useState(false)
     const [description, setDescription] = useState('')
+    const [resolution, setResolution] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [isConfirmingResolve, setIsConfirmingResolve] = useState(false)
@@ -30,6 +31,7 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
     useEffect(() => {
         if (isOpen) {
             setDescription(existingIssue ? existingIssue.description : '')
+            setResolution('') // Reset resolution
             setIsEditing(!existingIssue)
             setIsConfirmingResolve(initialResolveMode) // Initialize based on prop
             setIsSubmitting(false)
@@ -85,9 +87,11 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
 
     const confirmResolve = async () => {
         if (!existingIssue) return
+        if (!resolution.trim()) return // Validate resolution
+
         setIsSubmitting(true)
         try {
-            await resolveIssue(existingIssue.id)
+            await resolveIssue(existingIssue.id, resolution)
             onClose()
         } catch (error) {
             console.error('Failed to resolve issue:', error)
@@ -107,16 +111,31 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                     className="bg-background w-full max-w-md rounded-2xl shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-border overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="p-6 text-center space-y-4">
-                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <CheckCircle className="w-6 h-6" />
+                    <div className="p-6 space-y-4">
+                        <div className="text-center">
+                            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <CheckCircle className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-lg font-bold text-foreground">Mark as Solved?</h3>
+                            <p className="text-sm text-muted-foreground whitespace-normal break-words max-w-full px-4 mb-4">
+                                Please describe how this issue was resolved before closing it.
+                            </p>
                         </div>
-                        <h3 className="text-lg font-bold text-foreground">Mark as Solved?</h3>
-                        <p className="text-sm text-muted-foreground whitespace-normal break-words max-w-full px-4">
-                            This will mark the issue for Unit #{unitNumber} as resolved and remove the warning status.
-                        </p>
 
-                        <div className="flex gap-3 pt-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase text-muted-foreground">
+                                Resolution Details
+                            </label>
+                            <textarea
+                                value={resolution}
+                                onChange={(e) => setResolution(e.target.value)}
+                                placeholder="e.g., Replaced the broken sensor, Updated firmware..."
+                                className="w-full h-24 p-3 bg-background border border-border rounded-xl focus:ring-1 focus:ring-green-500 focus:border-green-500 text-sm outline-none resize-none transition-all placeholder:text-muted-foreground/50"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
                             <button
                                 onClick={() => {
                                     if (initialResolveMode) {
@@ -132,8 +151,8 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                             </button>
                             <button
                                 onClick={confirmResolve}
-                                disabled={isSubmitting}
-                                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow-sm transition-all"
+                                disabled={isSubmitting || !resolution.trim()}
+                                className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Yes, Solved'}
                             </button>
