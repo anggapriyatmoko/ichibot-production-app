@@ -70,39 +70,13 @@ export async function addIngredient(recipeId: string, formData: FormData) {
         }
     })
 
-    // Create transaction record for BOM_ADD
-    await prisma.transaction.create({
-        data: {
-            type: 'BOM_ADD',
-            quantity,
-            productId,
-            // @ts-ignore
-            recipeId
-        }
-    })
+
 
     revalidatePath(`/catalogue/${recipeId}`)
 }
 
 export async function removeIngredient(id: string, recipeId: string) {
-    // Fetch ingredient before deleting to get product info
-    const ingredient = await prisma.recipeIngredient.findUnique({
-        where: { id },
-        include: { product: true }
-    })
 
-    if (ingredient) {
-        // Create transaction record for BOM_REMOVE
-        await prisma.transaction.create({
-            data: {
-                type: 'BOM_REMOVE',
-                quantity: ingredient.quantity,
-                productId: ingredient.productId,
-                // @ts-ignore
-                recipeId
-            }
-        })
-    }
 
     await prisma.recipeIngredient.delete({ where: { id } })
     revalidatePath(`/catalogue/${recipeId}`)
@@ -129,20 +103,7 @@ export async function updateIngredient(formData: FormData) {
         }
     })
 
-    // Log transaction if quantity changed
-    const diff = quantity - oldIngredient.quantity
-    if (diff !== 0) {
-        await prisma.transaction.create({
-            data: {
-                type: diff > 0 ? 'BOM_ADD' : 'BOM_REMOVE',
-                quantity: Math.abs(diff),
-                productId: oldIngredient.productId,
-                // @ts-ignore
-                recipeId,
-                description: `Update BOM: ${diff > 0 ? '+' : ''}${diff}`
-            }
-        })
-    }
+
 
     revalidatePath(`/catalogue/${recipeId}`)
 }
@@ -162,23 +123,7 @@ export async function createSection(recipeId: string, formData: FormData) {
 }
 
 export async function deleteSection(id: string, recipeId: string) {
-    // Fetch all ingredients in this section before deleting
-    const ingredients = await prisma.recipeIngredient.findMany({
-        where: { sectionId: id }
-    })
 
-    // Create transaction records for all removed ingredients
-    for (const ingredient of ingredients) {
-        await prisma.transaction.create({
-            data: {
-                type: 'BOM_REMOVE',
-                quantity: ingredient.quantity,
-                productId: ingredient.productId,
-                // @ts-ignore
-                recipeId
-            }
-        })
-    }
 
     // Cascade delete ingredients in this section
     await prisma.recipeIngredient.deleteMany({ where: { sectionId: id } })

@@ -270,9 +270,23 @@ export default function IngredientManager({
     }
 
     return (
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 print:p-0 print:space-y-0">
             <style jsx global>{`
                 @media print {
+                    @page {
+                        margin: 10mm;
+                        size: A4;
+                    }
+                    /* Reset layout constraints to prevent 1-page cutoff */
+                    html, body, main, div {
+                        overflow: visible !important;
+                        height: auto !important;
+                    }
+                    /* Reset dashboard layout wrapper padding */
+                    main > div {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
                     body * {
                         visibility: hidden;
                     }
@@ -280,40 +294,59 @@ export default function IngredientManager({
                         visibility: visible;
                     }
                     .print-area {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                        padding: 20px;
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        max-width: none !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        border: none !important;
+                        z-index: 9999 !important;
+                        background-color: white !important; /* Ensure opaque background */
+                    }
+                    .print-area > div {
+                        padding-top: 0 !important;
+                        margin-top: 0 !important;
+                        border-top: none !important;
                     }
                     .no-print {
                         display: none !important;
                     }
                     .print-section {
-                        page-break-inside: avoid;
-                        margin-bottom: 30px;
+                        break-inside: auto; /* Allow breaking inside sections */
+                        margin-bottom: 20px;
                     }
                     .print-section table {
                         width: 100%;
                         border-collapse: collapse;
+                        font-size: 11px; /* Smaller font */
                     }
                     .print-section th,
                     .print-section td {
-                        border: 1px solid #ddd;
-                        padding: 8px;
+                        border: 1px solid #aaa;
+                        padding: 4px 6px; /* Denser padding */
                         text-align: left;
                     }
                     .print-section h3 {
-                        font-size: 18px;
+                        font-size: 16px;
                         font-weight: bold;
-                        margin-bottom: 10px;
+                        margin-bottom: 8px;
                         color: #000;
                     }
                     .print-section h4 {
-                        font-size: 14px;
+                        font-size: 13px;
                         font-weight: bold;
-                        margin: 20px 0 10px 0;
-                        color: #333;
+                        margin: 15px 0 5px 0;
+                        color: #000;
+                        break-after: avoid;
+                    }
+                    /* Ensure headers repeat on new pages if browser supports it */
+                    thead {
+                        display: table-header-group;
+                    }
+                    tr {
+                        break-inside: avoid;
                     }
                 }
             `}</style>
@@ -494,27 +527,37 @@ export default function IngredientManager({
                 {/* Print: Section Tables */}
                 <div className="hidden print:block print-section">
                     {sections.map(section => (
-                        <div key={section.id} className="mb-8">
-                            <h4 className="font-bold text-lg mb-3">{section.name}</h4>
+                        <div key={section.id} className="mb-4">
+                            <h4 className="font-bold text-lg mb-2">{section.name}</h4>
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="px-3 py-2 border w-[15%]">SKU</th>
-                                        <th className="px-3 py-2 border w-[45%]">Item</th>
-                                        <th className="px-3 py-2 border w-[15%]">Quantity</th>
-                                        <th className="px-3 py-2 border w-[25%]">Notes</th>
+                                        <th className="px-2 py-1 border w-[10%]">Image</th>
+                                        <th className="px-2 py-1 border w-[15%]">SKU</th>
+                                        <th className="px-2 py-1 border w-[35%]">Item</th>
+                                        <th className="px-2 py-1 border w-[15%]">Qty</th>
+                                        <th className="px-2 py-1 border w-[25%]">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(ingredientsBySection[section.id] || []).map(ing => (
                                         <tr key={ing.id}>
-                                            <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
-                                            <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
-                                            <td className="px-3 py-2 border font-bold">{formatNumber(ing.quantity)}</td>
-                                            <td className="px-3 py-2 border">
+                                            <td className="px-2 py-1 border text-center">
+                                                {ing.product.image ? (
+                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                    <img
+                                                        src={ing.product.image}
+                                                        alt={ing.product.name}
+                                                        className="w-8 h-8 object-cover mx-auto rounded-sm"
+                                                    />
+                                                ) : <div className="w-8 h-8 bg-gray-100 mx-auto rounded-sm"></div>}
+                                            </td>
+                                            <td className="px-2 py-1 border font-mono text-xs">{ing.product.sku}</td>
+                                            <td className="px-2 py-1 border font-medium">{ing.product.name}</td>
+                                            <td className="px-2 py-1 border font-bold">{formatNumber(ing.quantity)}</td>
+                                            <td className="px-2 py-1 border text-xs">
                                                 {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
-                                                {!ing.notes && !ing.product.notes && '-'}
                                             </td>
                                         </tr>
                                     ))}
@@ -524,27 +567,37 @@ export default function IngredientManager({
                     ))}
 
                     {ingredientsBySection['uncategorized']?.length > 0 && (
-                        <div className="mb-8">
-                            <h4 className="font-bold text-lg mb-3">Other Sparepart</h4>
+                        <div className="mb-4">
+                            <h4 className="font-bold text-lg mb-2">Other Sparepart</h4>
                             <table className="w-full text-left text-sm border-collapse">
                                 <thead className="bg-gray-100">
                                     <tr>
-                                        <th className="px-3 py-2 border w-[15%]">SKU</th>
-                                        <th className="px-3 py-2 border w-[45%]">Item</th>
-                                        <th className="px-3 py-2 border w-[15%]">Quantity</th>
-                                        <th className="px-3 py-2 border w-[25%]">Notes</th>
+                                        <th className="px-2 py-1 border w-[10%]">Image</th>
+                                        <th className="px-2 py-1 border w-[15%]">SKU</th>
+                                        <th className="px-2 py-1 border w-[35%]">Item</th>
+                                        <th className="px-2 py-1 border w-[15%]">Qty</th>
+                                        <th className="px-2 py-1 border w-[25%]">Notes</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(ingredientsBySection['uncategorized'] || []).map(ing => (
                                         <tr key={ing.id}>
-                                            <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
-                                            <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
-                                            <td className="px-3 py-2 border font-bold">{formatNumber(ing.quantity)}</td>
-                                            <td className="px-3 py-2 border">
+                                            <td className="px-2 py-1 border text-center">
+                                                {ing.product.image ? (
+                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                    <img
+                                                        src={ing.product.image}
+                                                        alt={ing.product.name}
+                                                        className="w-8 h-8 object-cover mx-auto rounded-sm"
+                                                    />
+                                                ) : <div className="w-8 h-8 bg-gray-100 mx-auto rounded-sm"></div>}
+                                            </td>
+                                            <td className="px-2 py-1 border font-mono text-xs">{ing.product.sku}</td>
+                                            <td className="px-2 py-1 border font-medium">{ing.product.name}</td>
+                                            <td className="px-2 py-1 border font-bold">{formatNumber(ing.quantity)}</td>
+                                            <td className="px-2 py-1 border text-xs">
                                                 {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
-                                                {!ing.notes && !ing.product.notes && '-'}
                                             </td>
                                         </tr>
                                     ))}
@@ -558,21 +611,32 @@ export default function IngredientManager({
                         <table className="w-full text-left text-sm border-collapse">
                             <thead>
                                 <tr>
-                                    <th className="px-3 py-2 border w-[20%]">SKU</th>
-                                    <th className="px-3 py-2 border w-[60%]">Item</th>
-                                    <th className="px-3 py-2 border w-[20%]">Quantity</th>
+                                    <th className="px-2 py-1 border w-[10%]">Image</th>
+                                    <th className="px-2 py-1 border w-[20%]">SKU</th>
+                                    <th className="px-2 py-1 border w-[50%]">Item</th>
+                                    <th className="px-2 py-1 border w-[20%]">Quantity</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {aggregatedIngredients.map(ing => (
                                     <tr key={ing.product.id}>
-                                        <td className="px-3 py-2 border font-mono text-xs">{ing.product.sku}</td>
-                                        <td className="px-3 py-2 border font-medium">{ing.product.name}</td>
-                                        <td className="px-3 py-2 border font-bold">{formatNumber(ing.quantity)}</td>
+                                        <td className="px-2 py-1 border text-center">
+                                            {ing.product.image ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    src={ing.product.image}
+                                                    alt={ing.product.name}
+                                                    className="w-8 h-8 object-cover mx-auto rounded-sm"
+                                                />
+                                            ) : <div className="w-8 h-8 bg-gray-100 mx-auto rounded-sm"></div>}
+                                        </td>
+                                        <td className="px-2 py-1 border font-mono text-xs">{ing.product.sku}</td>
+                                        <td className="px-2 py-1 border font-medium">{ing.product.name}</td>
+                                        <td className="px-2 py-1 border font-bold">{formatNumber(ing.quantity)}</td>
                                     </tr>
                                 ))}
                                 {initialIngredients.length === 0 && (
-                                    <tr><td colSpan={3} className="px-3 py-2 border text-center">No sparepart found.</td></tr>
+                                    <tr><td colSpan={4} className="px-3 py-2 border text-center">No sparepart found.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -580,7 +644,7 @@ export default function IngredientManager({
                 </div>
 
                 {/* Screen: Summary Table */}
-                <div className="border border-border rounded-xl overflow-hidden shadow-sm">
+                <div className="border border-border rounded-xl overflow-hidden shadow-sm no-print">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-muted/50 text-muted-foreground uppercase font-medium text-xs">
                             <tr>
