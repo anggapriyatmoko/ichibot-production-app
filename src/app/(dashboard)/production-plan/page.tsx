@@ -82,7 +82,8 @@ export default async function ProductionPlanPage({
     interface SparepartDemand {
         [productId: string]: {
             product: any
-            neededThisMonth: number
+            totalRequired: number
+            consumedCount: number
         }
     }
 
@@ -90,33 +91,52 @@ export default async function ProductionPlanPage({
     let analysisData: any[] = []
 
     if (showAnalysis) {
-        // Calculate This Month Demand
+        // Calculate This Month Demand WITH progress consideration
         productionPlans.forEach(plan => {
             const recipe = currentRecipeMap.get(plan.recipeId)
             if (recipe) {
-                recipe.ingredients.forEach(ing => {
-                    const totalNeeded = ing.quantity * plan.quantity
+                recipe.ingredients.forEach((ing: any) => {
+                    // Total needed for this plan (all units)
+                    const totalForPlan = ing.quantity * plan.units.length
+
+                    // Calculate consumed based on unit progress
+                    let consumedForPlan = 0
+                    plan.units.forEach((unit: any) => {
+                        if (ing.sectionId) {
+                            try {
+                                const completedSections = JSON.parse(unit.completed || '[]') as string[]
+                                if (completedSections.includes(ing.sectionId)) {
+                                    consumedForPlan += ing.quantity
+                                }
+                            } catch (e) {
+                                // ignore parse error
+                            }
+                        }
+                    })
+
                     if (!demandMap[ing.productId]) {
                         demandMap[ing.productId] = {
                             product: ing.product,
-                            neededThisMonth: 0
+                            totalRequired: 0,
+                            consumedCount: 0
                         }
                     }
-                    demandMap[ing.productId].neededThisMonth += totalNeeded
+                    demandMap[ing.productId].totalRequired += totalForPlan
+                    demandMap[ing.productId].consumedCount += consumedForPlan
                 })
             }
         })
 
         // Transform to Array
         analysisData = Object.values(demandMap).map(item => {
-            const totalNeeded = item.neededThisMonth
-            const balance = item.product.stock - totalNeeded
+            const remainingNeeded = item.totalRequired - item.consumedCount
+            const balance = item.product.stock - remainingNeeded
             return {
                 id: item.product.id,
                 name: item.product.name,
                 stock: item.product.stock,
-                neededThisMonth: item.neededThisMonth,
-                totalNeeded,
+                neededThisMonth: remainingNeeded, // Now shows remaining, not total
+                totalNeeded: remainingNeeded,
                 balance,
                 status: (balance >= 0 ? 'SAFE' : 'SHORT') as 'SAFE' | 'SHORT'
             }

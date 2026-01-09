@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth"
-import { GET } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { User, Shield } from "lucide-react"
 
 export default async function UserProfile() {
-    const session: any = await getServerSession(GET)
+    const session: any = await getServerSession(authOptions)
 
     if (!session?.user) return null
 
@@ -15,13 +15,13 @@ export default async function UserProfile() {
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{session.user?.name}</p>
                 <div className="flex flex-col gap-0.5">
-                    {session.user?.department && (
-                        <p className="text-xs text-muted-foreground truncate">{session.user.department}</p>
-                    )}
                     <div className="flex items-center gap-1">
                         <Shield className="w-3 h-3 text-emerald-500" />
                         <p className="text-xs text-muted-foreground truncate capitalize">{session.user?.role || 'User'}</p>
                     </div>
+                    {session.user?.department && (
+                        <p className="text-xs text-muted-foreground truncate">{session.user.department}</p>
+                    )}
                 </div>
             </div>
         </div>

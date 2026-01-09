@@ -28,8 +28,6 @@ interface AISparepartAnalysisProps {
 }
 
 export default function AISparepartAnalysis({ ingredients, units, totalPlanQuantity }: AISparepartAnalysisProps) {
-    const [viewMode, setViewMode] = useState<'all' | 'critical'>('all')
-
     // 1. Calculate Metrics
     const analysis = ingredients.map(ing => {
         // Total needed for the entire plan
@@ -83,9 +81,7 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
         return b.remainingNeeded - a.remainingNeeded
     })
 
-    const filteredAnalysis = viewMode === 'critical'
-        ? sortedAnalysis.filter(i => i.isShortage || i.remainingNeeded > 0)
-        : sortedAnalysis
+    const filteredAnalysis = sortedAnalysis
 
     const totalShortages = analysis.filter(i => i.isShortage).length
     const progress = analysis.reduce((acc, curr) => acc + curr.percentConsumed, 0) / (analysis.length || 1)
@@ -102,7 +98,6 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                         <div>
                             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                                 AI Sparepart Analysis
-                                <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-extrabold tracking-wide uppercase">Beta</span>
                             </h2>
                             <p className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-2">
                                 <Microchip className="w-3.5 h-3.5" />
@@ -118,20 +113,6 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                                 <span className="text-xs font-bold">{totalShortages} Potential Shortages</span>
                             </div>
                         )}
-                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                            <button
-                                onClick={() => setViewMode('all')}
-                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                All Parts
-                            </button>
-                            <button
-                                onClick={() => setViewMode('critical')}
-                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'critical' ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Critical
-                            </button>
-                        </div>
                     </div>
                 </div>
 
