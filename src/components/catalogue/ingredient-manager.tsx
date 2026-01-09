@@ -147,11 +147,13 @@ export default function IngredientManager({
     // Calculate suggestions AFTER state is declared
     const categorySuggestions = [...new Set([...(existingCategoryNames || []), ...localCategoryUsage])]
 
-    const filteredProducts = allProducts.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (p.notes && p.notes.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+    const filteredProducts = allProducts.filter(p => {
+        const searchWords = searchQuery.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+        if (searchWords.length === 0) return true
+
+        const productText = `${p.name} ${p.sku || ''} ${p.notes || ''}`.toLowerCase()
+        return searchWords.every(word => productText.includes(word))
+    })
 
     // Handle product selection with duplicate check
     const handleProductSelect = (product: Product) => {
