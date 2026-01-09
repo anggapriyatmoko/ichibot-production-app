@@ -22,6 +22,20 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   transactions Transaction[]
+  logs         LogActivity[]
+}
+
+model LogActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime // Stores the date part (time usually 00:00:00)
+  activity  String   @db.Text
+  problem   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
 }
 
 model Category {
