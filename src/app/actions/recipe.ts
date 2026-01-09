@@ -403,7 +403,39 @@ export async function getRecipeForExport(recipeId: string) {
     const flattened: any[] = []
     if (!recipe) return flattened
 
-    if (recipe.ingredients.length === 0) {
+    const coveredSectionIds = new Set<string>()
+
+    // 1. Process Ingredients
+    for (const ing of recipe.ingredients) {
+        if (ing.sectionId) coveredSectionIds.add(ing.sectionId)
+        flattened.push({
+            recipeName: recipe.name,
+            description: recipe.description,
+            section: ing.section?.name || 'Main',
+            sku: ing.product.sku || '',
+            productName: ing.product.name,
+            quantity: ing.quantity,
+            notes: ing.notes || ''
+        })
+    }
+
+    // 2. Process Empty Sections (that had no ingredients)
+    for (const sec of recipe.sections) {
+        if (!coveredSectionIds.has(sec.id)) {
+            flattened.push({
+                recipeName: recipe.name,
+                description: recipe.description,
+                section: sec.name,
+                sku: '',
+                productName: '',
+                quantity: 0,
+                notes: ''
+            })
+        }
+    }
+
+    // 3. Process Completely Empty Recipe (No ingredients, No sections)
+    if (recipe.ingredients.length === 0 && recipe.sections.length === 0) {
         flattened.push({
             recipeName: recipe.name,
             description: recipe.description,
@@ -413,18 +445,7 @@ export async function getRecipeForExport(recipeId: string) {
             quantity: 0,
             notes: ''
         })
-    } else {
-        for (const ing of recipe.ingredients) {
-            flattened.push({
-                recipeName: recipe.name,
-                description: recipe.description,
-                section: ing.section?.name || 'Main',
-                sku: ing.product.sku || '',
-                productName: ing.product.name,
-                quantity: ing.quantity,
-                notes: ing.notes || ''
-            })
-        }
     }
+
     return flattened
 }
