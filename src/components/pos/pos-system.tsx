@@ -324,7 +324,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                                         </div>
                                     )}
                                     {product.stock <= 0 && (
-                                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-sm">
+                                        <div className="absolute inset-0 flex items-center justify-center">
                                             <span className="text-white font-bold text-sm bg-destructive/90 px-2 py-1 rounded">Out of Stock</span>
                                         </div>
                                     )}
