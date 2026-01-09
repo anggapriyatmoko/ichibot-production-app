@@ -191,7 +191,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                             }`}
                     >
                         <CalendarIcon className="w-4 h-4" />
-                        Riwayat Saya
+                        Riwayat User
                     </button>
                     <button
                         onClick={() => setViewMode('recap')}
@@ -201,7 +201,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                             }`}
                     >
                         <FileText className="w-4 h-4" />
-                        Rekap Harian (Admin)
+                        Rekap Harian
                     </button>
                 </div>
             )}
