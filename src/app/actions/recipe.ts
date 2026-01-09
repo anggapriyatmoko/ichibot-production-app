@@ -211,6 +211,7 @@ export async function getAllRecipesForExport() {
                 recipeName: r.name,
                 description: r.description,
                 section: ing.section?.name || 'Main',
+                sectionCategory: ing.section?.category || '',
                 sku: ing.product.sku || '',
                 productName: ing.product.name,
                 quantity: ing.quantity,
@@ -225,6 +226,7 @@ export async function getAllRecipesForExport() {
                     recipeName: r.name,
                     description: r.description,
                     section: sec.name,
+                    sectionCategory: sec.category || '',
                     sku: '',
                     productName: '',
                     quantity: 0,
@@ -239,6 +241,7 @@ export async function getAllRecipesForExport() {
                 recipeName: r.name,
                 description: r.description,
                 section: '',
+                sectionCategory: '',
                 sku: '',
                 productName: '',
                 quantity: 0,
@@ -315,12 +318,17 @@ export async function importRecipes(rows: any[]) {
 
             for (const item of items) {
                 const sectionName = item.section ? String(item.section).trim() : 'Main'
+                const sectionCategory = item.sectionCategory ? String(item.sectionCategory).trim() : null
 
                 // Handle Section Creation FIRST (even if no ingredient)
                 let sectionId = sectionCache[sectionName]
                 if (!sectionId && sectionName) { // Allow blank section to mean 'uncategorized' if we want, but 'Main' is default above
                     const section = await prisma.recipeSection.create({
-                        data: { name: sectionName, recipeId: recipe.id }
+                        data: {
+                            name: sectionName,
+                            recipeId: recipe.id,
+                            category: sectionCategory
+                        }
                     })
                     sectionId = section.id
                     sectionCache[sectionName] = sectionId
@@ -412,6 +420,7 @@ export async function getRecipeForExport(recipeId: string) {
             recipeName: recipe.name,
             description: recipe.description,
             section: ing.section?.name || 'Main',
+            sectionCategory: ing.section?.category || '',
             sku: ing.product.sku || '',
             productName: ing.product.name,
             quantity: ing.quantity,
@@ -426,6 +435,7 @@ export async function getRecipeForExport(recipeId: string) {
                 recipeName: recipe.name,
                 description: recipe.description,
                 section: sec.name,
+                sectionCategory: sec.category || '',
                 sku: '',
                 productName: '',
                 quantity: 0,
@@ -440,6 +450,7 @@ export async function getRecipeForExport(recipeId: string) {
             recipeName: recipe.name,
             description: recipe.description,
             section: '',
+            sectionCategory: '',
             sku: '',
             productName: '',
             quantity: 0,

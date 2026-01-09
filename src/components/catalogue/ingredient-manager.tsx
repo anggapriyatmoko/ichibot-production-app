@@ -106,12 +106,13 @@ export default function IngredientManager({
         setIsLoading(true)
         try {
             const data = await getRecipeForExport(recipeId)
-            const headers = ['Recipe Name', 'Description', 'Section', 'Ingredient SKU', 'Ingredient Name', 'Quantity', 'Notes']
+            const headers = ['Recipe Name', 'Description', 'Section', 'Section Category', 'Ingredient SKU', 'Ingredient Name', 'Quantity', 'Notes']
             // @ts-ignore
             const rows = data.map((item: any) => [
                 item.recipeName,
                 item.description,
                 item.section,
+                item.sectionCategory,
                 item.sku,
                 item.productName,
                 item.quantity,
