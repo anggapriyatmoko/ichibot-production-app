@@ -19,7 +19,7 @@ type ImportPreview = {
     errors: string[]
 }
 
-export default function ImportRecipeModal() {
+export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeName?: string }) {
     const { showError } = useAlert()
     const [isOpen, setIsOpen] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
@@ -30,9 +30,9 @@ export default function ImportRecipeModal() {
     const downloadTemplate = (format: 'xlsx' | 'csv') => {
         const headers = ['Recipe Name', 'Description', 'Section', 'Ingredient SKU', 'Ingredient Name', 'Quantity', 'Notes']
         const sampleData = [
-            ['Nasi Goreng Spesial', 'Menu Andalan', 'Main Ingredients', 'RICE-01', 'Rice', 200, 'Grams'],
-            ['Nasi Goreng Spesial', '', 'Main Ingredients', 'EGG-01', 'Egg', 1, 'Pcs'],
-            ['Nasi Goreng Spesial', '', 'Spices', 'SALT-01', 'Salt', 5, ''],
+            [targetRecipeName || 'Nasi Goreng Spesial', 'Menu Andalan', 'Main Ingredients', 'RICE-01', 'Rice', 200, 'Grams'],
+            [targetRecipeName || 'Nasi Goreng Spesial', '', 'Main Ingredients', 'EGG-01', 'Egg', 1, 'Pcs'],
+            [targetRecipeName || 'Nasi Goreng Spesial', '', 'Spices', 'SALT-01', 'Salt', 5, ''],
         ]
 
         if (format === 'csv') {
@@ -82,7 +82,7 @@ export default function ImportRecipeModal() {
                 const qtyIdx = headers.findIndex(h => h.includes('quantity') || h.includes('qty'))
                 const notesIdx = headers.findIndex(h => h.includes('notes'))
 
-                if (recipeIdx === -1) {
+                if (recipeIdx === -1 && !targetRecipeName) {
                     showError('Required column "Recipe Name" not found.')
                     setIsLoading(false)
                     return
@@ -95,7 +95,9 @@ export default function ImportRecipeModal() {
 
                 const rows = data.slice(1)
                 const parsed: ImportPreview[] = rows.map((row, i) => {
-                    const recipeName = row[recipeIdx] ? String(row[recipeIdx]).trim() : ''
+                    // Use targetRecipeName if provided, otherwise use file content
+                    const recipeName = targetRecipeName || (recipeIdx !== -1 && row[recipeIdx] ? String(row[recipeIdx]).trim() : '')
+
                     const description = descIdx !== -1 ? (row[descIdx] || '') : ''
                     const section = sectionIdx !== -1 ? (row[sectionIdx] || 'Main') : 'Main'
                     const sku = skuIdx !== -1 ? (row[skuIdx] || '') : ''

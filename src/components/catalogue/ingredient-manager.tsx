@@ -361,14 +361,25 @@ export default function IngredientManager({
                 </div>
                 <div className="flex gap-3">
                     {userRole === 'ADMIN' && (
+                        <>
+                            <ImportRecipeModal targetRecipeName={recipeName} />
+                            <button
+                                onClick={handleExport}
+                                disabled={isLoading}
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm"
+                                title="Export to Excel"
+                            >
+                                <Download className="w-4 h-4" />
+                            </button>
 
-                        <button
-                            onClick={() => setIsEditing(!isEditing)}
-                            className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
-                            title={isEditing ? 'Done' : 'Edit'}
-                        >
-                            {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                        </button>
+                            <button
+                                onClick={() => setIsEditing(!isEditing)}
+                                className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+                                title={isEditing ? 'Done' : 'Edit'}
+                            >
+                                {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                            </button>
+                        </>
                     )}
 
                     <button
