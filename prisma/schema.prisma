@@ -23,6 +23,7 @@ model User {
   updatedAt DateTime @updatedAt
   transactions Transaction[]
   logs         LogActivity[]
+  orders       Order[]
 }
 
 model LogActivity {
@@ -179,4 +180,25 @@ model Rack {
   description   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique  // Format: ORD-YYYYMMDD-XXX
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String   // Snapshot nama produk
+  productSku  String?  // Snapshot SKU
+  productNote String?  // Snapshot notes
+  quantity    Float
+  createdAt   DateTime @default(now())
 }
