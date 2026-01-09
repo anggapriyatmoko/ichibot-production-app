@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import UnitRow from './components/unit-row'
 import UnitCardMobile from './components/unit-card-mobile'
 import IssueAnalysisTable from './components/issue-analysis-table'
+import AI_SparepartAnalysis from './components/ai-sparepart-analysis'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,11 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                 include: {
                     sections: {
                         orderBy: { createdAt: 'asc' }
+                    },
+                    ingredients: {
+                        include: {
+                            product: true
+                        }
                     }
                 }
             },
@@ -187,6 +193,12 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <IssueAnalysisTable units={(plan as any).units} />
+
+            <AI_SparepartAnalysis
+                ingredients={(plan as any).recipe.ingredients}
+                units={(plan as any).units}
+                totalPlanQuantity={plan.quantity}
+            />
         </div>
     )
 }
