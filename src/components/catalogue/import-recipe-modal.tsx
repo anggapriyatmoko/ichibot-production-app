@@ -76,7 +76,8 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
 
                 const recipeIdx = headers.findIndex(h => h.includes('recipe') && h.includes('name'))
                 const descIdx = headers.findIndex(h => h.includes('description') || h.includes('desc'))
-                const sectionIdx = headers.findIndex(h => h.includes('section'))
+                const sectionIdx = headers.findIndex(h => h === 'section' || (h.includes('section') && !h.includes('category')))
+                const sectionCategoryIdx = headers.findIndex(h => h.includes('section') && h.includes('category'))
                 const skuIdx = headers.findIndex(h => h.includes('sku'))
                 const productIdx = headers.findIndex(h => h.includes('product') || (h.includes('ingredient') && !h.includes('sku')))
                 const qtyIdx = headers.findIndex(h => h.includes('quantity') || h.includes('qty'))
@@ -100,6 +101,7 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
 
                     const description = descIdx !== -1 ? (row[descIdx] || '') : ''
                     const section = sectionIdx !== -1 ? (row[sectionIdx] || 'Main') : 'Main'
+                    const sectionCategory = sectionCategoryIdx !== -1 ? (row[sectionCategoryIdx] || '') : ''
                     const sku = skuIdx !== -1 ? (row[skuIdx] || '') : ''
                     const productName = productIdx !== -1 ? (row[productIdx] || '') : ''
                     const quantity = qtyIdx !== -1 ? (parseFloat(row[qtyIdx]) || 0) : 0
@@ -118,6 +120,7 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
                         recipeName,
                         description,
                         section,
+                        sectionCategory,
                         sku,
                         productName,
                         quantity,
@@ -158,6 +161,8 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
                 // @ts-ignore
                 description: d.description,
                 section: d.section,
+                // @ts-ignore
+                sectionCategory: d.sectionCategory,
                 sku: d.sku,
                 productName: d.productName,
                 quantity: d.quantity,
@@ -292,6 +297,7 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
                                                         <th className="p-3 border-b border-border bg-muted">Status</th>
                                                         <th className="p-3 border-b border-border bg-muted">Recipe</th>
                                                         <th className="p-3 border-b border-border bg-muted">Section</th>
+                                                        <th className="p-3 border-b border-border bg-muted">Category</th>
                                                         <th className="p-3 border-b border-border bg-muted">Ingredient</th>
                                                         <th className="p-3 border-b border-border text-right bg-muted">Qty</th>
                                                         <th className="p-3 border-b border-border bg-muted">Notes</th>
@@ -314,6 +320,8 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
                                                             </td>
                                                             <td className="p-3 font-medium">{row.recipeName}</td>
                                                             <td className="p-3 text-muted-foreground text-xs">{row.section}</td>
+                                                            {/* @ts-ignore */}
+                                                            <td className="p-3 text-muted-foreground text-xs">{row.sectionCategory || '-'}</td>
                                                             <td className="p-3">{row.ingredient}</td>
                                                             <td className="p-3 text-right tabular-nums">{row.quantity}</td>
                                                             <td className="p-3 text-muted-foreground text-xs">{row.notes}</td>
