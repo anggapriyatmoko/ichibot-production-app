@@ -34,7 +34,6 @@ type Product = {
     lowStockThreshold: number
     image: string | null
     notes: string | null
-    drawerLocation: string | null
 }
 
 type SortConfig = {
@@ -66,14 +65,12 @@ export default function ProductList({
         stock: string | number
         lowStockThreshold: string | number
         notes: string
-        drawerLocation: string
     }>({
         name: '',
         sku: '',
         stock: '',
         lowStockThreshold: 5,
-        notes: '',
-        drawerLocation: ''
+        notes: ''
     })
 
     const [isAdding, setIsAdding] = useState(false)
@@ -159,7 +156,6 @@ export default function ProductList({
         formData.append('stock', String(addForm.stock))
         formData.append('lowStockThreshold', String(addForm.lowStockThreshold))
         formData.append('notes', addForm.notes)
-        formData.append('drawerLocation', addForm.drawerLocation)
 
         if (addImageFile) {
             formData.set('image', addImageFile)
@@ -174,7 +170,7 @@ export default function ProductList({
             setIsAdding(false)
             setAddImagePreview(null)
             setAddImageFile(null)
-            setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5, notes: '', drawerLocation: '' })
+            setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5, notes: '' })
         } catch (error: any) {
             console.error(error)
             showError(simplifyErrorMessage(error))
@@ -359,7 +355,7 @@ export default function ProductList({
                                     onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                                     required
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. Tepung Terigu"
+                                    placeholder="e.g. Resistor SMD"
                                 />
                             </div>
                             <div>
@@ -369,7 +365,7 @@ export default function ProductList({
                                     value={addForm.sku}
                                     onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })}
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. RM-001"
+                                    placeholder="e.g. RK01-04"
                                 />
                             </div>
                             <div>
@@ -394,16 +390,6 @@ export default function ProductList({
                                     onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: e.target.value })}
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
                                     step="any"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Lokasi Laci</label>
-                                <input
-                                    name="drawerLocation"
-                                    value={addForm.drawerLocation}
-                                    onChange={(e) => setAddForm({ ...addForm, drawerLocation: e.target.value })}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. RK01-05"
                                 />
                             </div>
                             <div className="md:col-span-2">
@@ -488,10 +474,6 @@ export default function ProductList({
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
                                     <input name="lowStockThreshold" type="number" defaultValue={editingProduct.lowStockThreshold} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" step="any" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Lokasi Laci</label>
-                                    <input name="drawerLocation" defaultValue={editingProduct.drawerLocation || ''} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" placeholder="e.g. RK01-05" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
