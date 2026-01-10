@@ -1,6 +1,6 @@
+import React from 'react'
 import prisma from '@/lib/prisma'
-import { Calendar, Plus, Trash2, Eye } from 'lucide-react'
-import { createProductionPlan, deleteProductionPlan } from '@/app/actions/production-plan'
+import { Eye } from 'lucide-react'
 import Link from 'next/link'
 import ProductionPlanModal from './components/add-plan-modal'
 import AnalysisTable from './components/analysis-table'
@@ -41,6 +41,7 @@ export default async function ProductionPlanPage({
         include: {
             recipe: {
                 include: {
+                    category: true,
                     sections: {
                         select: { id: true, createdAt: true }
                     }
@@ -214,7 +215,7 @@ export default async function ProductionPlanPage({
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-muted text-foreground uppercase font-medium">
+                        <thead className="bg-white text-foreground uppercase font-medium">
                             <tr>
                                 <th className="px-6 py-4">Product Name & Progress</th>
                                 <th className="px-6 py-4 text-center">Target</th>
@@ -222,98 +223,126 @@ export default async function ProductionPlanPage({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {productionPlans.map((plan: any) => {
+                            {(() => {
+                                // Group plans by category name
+                                const groupedPlans: Record<string, typeof productionPlans> = {}
+                                productionPlans.forEach((plan: any) => {
+                                    const categoryName = plan.recipe.category?.name || 'Uncategorized'
+                                    if (!groupedPlans[categoryName]) {
+                                        groupedPlans[categoryName] = []
+                                    }
+                                    groupedPlans[categoryName].push(plan)
+                                })
 
+                                // Sort category names alphabetically
+                                const sortedCategories = Object.keys(groupedPlans).sort()
 
-                                return (
-                                    <tr key={plan.id} className="hover:bg-accent/50 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                                                    <Calendar className="w-4 h-4" />
-                                                </div>
-                                                <span className="font-medium text-foreground">{plan.recipe.name}</span>
-                                            </div>
+                                return sortedCategories.map((categoryName) => {
+                                    return (
+                                        <React.Fragment key={categoryName}>
+                                            {/* Category Header */}
+                                            <tr key={`cat-${categoryName}`} className="bg-blue-100 border-l-4 border-blue-500 border-t border-b">
+                                                <td colSpan={3} className="px-6 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                                        </svg>
+                                                        <span className="font-semibold text-blue-700 text-sm">{categoryName}</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* Plans in this category */}
+                                            {groupedPlans[categoryName].map((plan: any) => {
+                                                return (
+                                                    <tr key={plan.id} className="hover:bg-accent/50 transition-colors group">
+                                                        <td className="px-6 py-4">
+                                                            <div className="mb-2">
+                                                                <span className="font-medium text-foreground">{plan.recipe.name}</span>
+                                                            </div>
 
-                                            {/* Unit Progress List */}
-                                            <div className="hidden md:grid pl-11 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                                                {(plan as any).units.map((unit: any) => {
-                                                    // Check if this plan is for the current month
-                                                    const now = new Date()
-                                                    const currentMonthNow = now.getMonth() + 1
-                                                    const currentYearNow = now.getFullYear()
-                                                    const isCurrentMonth = plan.month === currentMonthNow && plan.year === currentYearNow
+                                                            {/* Unit Progress List */}
+                                                            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                                                                {(plan as any).units.map((unit: any) => {
+                                                                    // Check if this plan is for the current month
+                                                                    const now = new Date()
+                                                                    const currentMonthNow = now.getMonth() + 1
+                                                                    const currentYearNow = now.getFullYear()
+                                                                    const isCurrentMonth = plan.month === currentMonthNow && plan.year === currentYearNow
 
-                                                    // Use live sections for current month, snapshot for previous months
-                                                    // If snapshot is missing (legacy plans), filter live sections by plan creation date
-                                                    const sections = isCurrentMonth
-                                                        ? plan.recipe.sections
-                                                        : (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
-                                                            ? JSON.parse(plan.sectionsSnapshot)
-                                                            : plan.recipe.sections.filter((s: any) => new Date(s.createdAt) <= new Date(plan.createdAt)))
+                                                                    // Use live sections for current month, snapshot for previous months
+                                                                    // If snapshot is missing (legacy plans), filter live sections by plan creation date
+                                                                    const sections = isCurrentMonth
+                                                                        ? plan.recipe.sections
+                                                                        : (plan.sectionsSnapshot && plan.sectionsSnapshot !== "[]"
+                                                                            ? JSON.parse(plan.sectionsSnapshot)
+                                                                            : plan.recipe.sections.filter((s: any) => new Date(s.createdAt) <= new Date(plan.createdAt)))
 
-                                                    const validSectionIds = new Set(sections.map((s: any) => s.id))
-                                                    const completedIds = JSON.parse(unit.completed || '[]')
+                                                                    const validSectionIds = new Set(sections.map((s: any) => s.id))
+                                                                    const completedIds = JSON.parse(unit.completed || '[]')
 
-                                                    // Only count IDs that are valid sections for this recipe
-                                                    const validCompletedCount = completedIds.filter((id: string) => validSectionIds.has(id)).length
+                                                                    // Only count IDs that are valid sections for this recipe
+                                                                    const validCompletedCount = completedIds.filter((id: string) => validSectionIds.has(id)).length
 
-                                                    const totalSections = sections.length
+                                                                    const totalSections = sections.length
 
-                                                    const rawProgress = totalSections > 0
-                                                        ? Math.round((validCompletedCount / totalSections) * 100)
-                                                        : 0
-                                                    const progress = Math.min(rawProgress, 100)
+                                                                    const rawProgress = totalSections > 0
+                                                                        ? Math.round((validCompletedCount / totalSections) * 100)
+                                                                        : 0
+                                                                    const progress = Math.min(rawProgress, 100)
 
-                                                    // Determine color based on progress (Red -> Orange -> Green)
-                                                    let colorClass = "bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/20"
-                                                    if (progress === 100) {
-                                                        colorClass = "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/20"
-                                                    } else if (progress > 30) {
-                                                        colorClass = "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200/20"
-                                                    }
+                                                                    // Determine color based on progress (Red -> Orange -> Green)
+                                                                    let colorClass = "bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/20"
+                                                                    if (progress === 100) {
+                                                                        colorClass = "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/20"
+                                                                    } else if (progress > 30) {
+                                                                        colorClass = "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200/20"
+                                                                    }
 
-                                                    // Status Text Logic
-                                                    let statusElement = null
-                                                    if (unit.isSold) {
-                                                        statusElement = <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded ml-2">Sold - {unit.customer || 'Unknown'}</span>
-                                                    } else if (unit.isPacked) {
-                                                        statusElement = <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded ml-2">Packed</span>
-                                                    }
+                                                                    // Status Text Logic
+                                                                    let statusElement = null
+                                                                    if (unit.isSold) {
+                                                                        statusElement = <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded ml-2">Sold - {unit.customer || 'Unknown'}</span>
+                                                                    } else if (unit.isPacked) {
+                                                                        statusElement = <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded ml-2">Packed</span>
+                                                                    }
 
-                                                    // Compute Serial using same logic as UnitRow
-                                                    const computedSerial = `${plan.recipe.productionId}${plan.year}${plan.month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
+                                                                    // Compute Serial using same logic as UnitRow
+                                                                    const computedSerial = `${plan.recipe.productionId}${plan.year}${plan.month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
 
-                                                    return (
-                                                        <div key={unit.id} className={`flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded border ${colorClass}`}>
-                                                            <span className="flex items-center flex-wrap gap-1">
-                                                                {unit.unitNumber}. {unit.productIdentifier || computedSerial}
-                                                                {statusElement}
-                                                            </span>
-                                                            <span className="font-bold">
-                                                                {progress}%
-                                                            </span>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center font-bold text-lg align-top pt-6">
-                                            <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} userRole={session?.user?.role} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right align-top pt-6">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link href={`/production-plan/${plan.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
-                                                    <Eye className="w-4 h-4" />
-                                                </Link>
-                                                {session?.user?.role === 'ADMIN' && (
-                                                    <DeletePlanButton id={plan.id} name={plan.recipe.name} />
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
+                                                                    return (
+                                                                        <div key={unit.id} className={`flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded border ${colorClass}`}>
+                                                                            <span className="flex items-center flex-wrap gap-1">
+                                                                                {unit.unitNumber}. {unit.productIdentifier || computedSerial}
+                                                                                {statusElement}
+                                                                            </span>
+                                                                            <span className="font-bold">
+                                                                                {progress}%
+                                                                            </span>
+                                                                        </div>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center font-bold text-lg align-top pt-6">
+                                                            <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} userRole={session?.user?.role} />
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right align-top pt-6">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Link href={`/production-plan/${plan.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
+                                                                    <Eye className="w-4 h-4" />
+                                                                </Link>
+                                                                {session?.user?.role === 'ADMIN' && (
+                                                                    <DeletePlanButton id={plan.id} name={plan.recipe.name} />
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </React.Fragment>
+                                    )
+                                })
+                            })()}
                             {productionPlans.length === 0 && (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
