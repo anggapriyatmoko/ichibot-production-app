@@ -72,19 +72,15 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
 
     return (
         <>
-            {/* Mobile Header */}
-            <div className="md:hidden flex-shrink-0 sticky top-0 z-30 flex items-center justify-between p-4 bg-card border-b border-border">
-                <div className="flex items-center gap-2">
-                    <button onClick={() => setIsMobileOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-accent text-muted-foreground">
-                        <PanelLeftOpen className="h-6 w-6" />
-                    </button>
-                    <Link href="/dashboard">
-                        <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                            Ichibot Production
-                        </span>
-                    </Link>
-                </div>
-            </div>
+            {/* Mobile Menu Button - Only show when sidebar is closed */}
+            {!isMobileOpen && (
+                <button
+                    onClick={() => setIsMobileOpen(true)}
+                    className="md:hidden fixed top-4 left-4 z-30 p-2.5 rounded-xl bg-card border border-border shadow-lg hover:bg-accent text-muted-foreground transition-colors"
+                >
+                    <PanelLeftOpen className="h-5 w-5" />
+                </button>
+            )}
 
             {/* Mobile Overlay */}
             {isMobileOpen && (

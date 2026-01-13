@@ -33,6 +33,7 @@ model LogActivity {
   date      DateTime // Stores the date part (time usually 00:00:00)
   activity  String   @db.Text
   problem   String?  @db.Text
+  image     String?  // Optional image path for activity documentation
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

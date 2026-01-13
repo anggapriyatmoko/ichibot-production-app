@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Calendar as CalendarIcon, User, Search, Loader2, Trash, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
+import { Plus, Pencil, Calendar as CalendarIcon, User, Search, Loader2, Trash, ChevronLeft, ChevronRight, FileText, Image, X } from 'lucide-react'
 import { format, isSameDay } from 'date-fns'
 import { id } from 'date-fns/locale' // Indonesian locale
 import { upsertLogActivity, getLogActivities, deleteLogActivity, getDailyActivityRecap } from '@/app/actions/log-activity'
@@ -13,6 +13,7 @@ interface LogActivity {
     date: Date | string
     activity: string
     problem: string | null
+    image: string | null
     createdAt: Date | string
     updatedAt: Date | string
     userId: string
@@ -72,8 +73,45 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         activity: '',
-        problem: ''
+        problem: '',
+        image: null as string | null,
+        imageFile: null as File | null,
+        removeImage: false
     })
+
+    // Handle image file selection
+    function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        // Client-side validation (2MB limit)
+        const MAX_SIZE = 2 * 1024 * 1024
+        if (file.size > MAX_SIZE) {
+            showError('Ukuran file terlalu besar. Maksimal 2MB.')
+            return
+        }
+
+        // Preview
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setFormData(prev => ({
+                ...prev,
+                image: reader.result as string,
+                imageFile: file,
+                removeImage: false
+            }))
+        }
+        reader.readAsDataURL(file)
+    }
+
+    function handleRemoveImage() {
+        setFormData(prev => ({
+            ...prev,
+            image: null,
+            imageFile: null,
+            removeImage: true
+        }))
+    }
 
     const { showAlert, showError } = useAlert()
     const { showConfirmation } = useConfirmation()
@@ -121,11 +159,24 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
         setIsLoading(true)
         try {
-            await upsertLogActivity({
-                date: new Date(formData.date),
-                activity: formData.activity,
-                problem: formData.problem
-            })
+            const submitData = new FormData()
+            submitData.append('date', formData.date)
+            submitData.append('activity', formData.activity)
+            submitData.append('problem', formData.problem || '')
+
+            if (formData.imageFile) {
+                submitData.append('image', formData.imageFile)
+            }
+            if (formData.removeImage) {
+                submitData.append('removeImage', 'true')
+            }
+
+            const result = await upsertLogActivity(submitData)
+
+            if (result.error) {
+                showError(result.error)
+                return
+            }
 
             showAlert('Log aktivitas berhasil disimpan')
             setIsModalOpen(false)
@@ -138,7 +189,10 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
             setFormData({
                 date: new Date().toISOString().split('T')[0],
                 activity: '',
-                problem: ''
+                problem: '',
+                image: null,
+                imageFile: null,
+                removeImage: false
             })
         } catch (error) {
             showError('Gagal menyimpan log aktivitas')
@@ -159,7 +213,10 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
         setFormData({
             date: format(today, 'yyyy-MM-dd'),
             activity: '',
-            problem: ''
+            problem: '',
+            image: null,
+            imageFile: null,
+            removeImage: false
         })
         setIsModalOpen(true)
     }
@@ -170,7 +227,10 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
         setFormData({
             date: dateStr,
             activity: log.activity,
-            problem: log.problem || ''
+            problem: log.problem || '',
+            image: log.image || null,
+            imageFile: null,
+            removeImage: false
         })
         setIsModalOpen(true)
     }
@@ -303,6 +363,23 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 <p className="text-sm text-red-600/90 whitespace-pre-wrap leading-relaxed bg-red-50/50 p-2 rounded-lg border border-red-100 dark:bg-red-900/10 dark:border-red-900/20">{log.problem}</p>
                                             </div>
                                         )}
+                                        {log.image && (
+                                            <div>
+                                                <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Dokumentasi</h4>
+                                                <a
+                                                    href={log.image}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-block"
+                                                >
+                                                    <img
+                                                        src={log.image}
+                                                        alt="Dokumentasi aktivitas"
+                                                        className="w-20 h-20 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity cursor-pointer"
+                                                    />
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))
@@ -337,7 +414,8 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                     <tr>
                                         <th className="px-6 py-4 w-[150px]">Tanggal</th>
                                         <th className="px-6 py-4">Kegiatan</th>
-                                        <th className="px-6 py-4 w-[30%]">Masalah</th>
+                                        <th className="px-6 py-4 w-[25%]">Masalah</th>
+                                        <th className="px-6 py-4 w-[80px] text-center">Foto</th>
                                         {(selectedUserId === currentUser.id || isAdmin) && (
                                             <th className="px-6 py-4 w-[100px] text-center text-muted-foreground">Aksi</th>
                                         )}
@@ -346,14 +424,14 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                 <tbody className="divide-y divide-border">
                                     {isLoading ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                                                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                                                 Loading data...
                                             </td>
                                         </tr>
                                     ) : logs.length === 0 ? (
                                         <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                                                 Belum ada log aktivitas yang tercatat.
                                             </td>
                                         </tr>
@@ -374,6 +452,24 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 </td>
                                                 <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed text-red-600/90 dark:text-red-400">
                                                     {log.problem || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 align-top text-center">
+                                                    {log.image ? (
+                                                        <a
+                                                            href={log.image}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Klik untuk lihat gambar lengkap"
+                                                        >
+                                                            <img
+                                                                src={log.image}
+                                                                alt="Dokumentasi"
+                                                                className="w-12 h-12 object-cover rounded-lg border border-border hover:opacity-80 hover:scale-105 transition-all cursor-pointer mx-auto"
+                                                            />
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 align-top text-center">
                                                     <div className="flex items-center justify-center gap-2">
@@ -445,28 +541,80 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                         </div>
                     </div>
 
-                    {/* Recap Table */}
-                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                    {/* Recap Mobile View */}
+                    <div className="md:hidden space-y-4">
+                        {isLoading ? (
+                            <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
+                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                                Memuat data rekap...
+                            </div>
+                        ) : recapData.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
+                                Tidak ada data user.
+                            </div>
+                        ) : (
+                            recapData.map((item: any) => (
+                                <div key={item.user.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-semibold text-foreground">{item.user.name}</div>
+                                            <div className="text-xs text-muted-foreground">{item.user.username}</div>
+                                            <div className="text-xs text-muted-foreground">{item.user.department || '-'}</div>
+                                        </div>
+                                        {item.log?.image && (
+                                            <a
+                                                href={item.log.image}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <img
+                                                    src={item.log.image}
+                                                    alt="Dokumentasi"
+                                                    className="w-16 h-16 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+                                                />
+                                            </a>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2 pt-2 border-t border-border">
+                                        <div>
+                                            <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Kegiatan</h4>
+                                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.log?.activity || '-'}</p>
+                                        </div>
+                                        {item.log?.problem && (
+                                            <div>
+                                                <h4 className="text-xs font-medium text-red-600/80 uppercase mb-1">Masalah</h4>
+                                                <p className="text-sm text-red-600/90 whitespace-pre-wrap leading-relaxed bg-red-50/50 p-2 rounded-lg border border-red-100 dark:bg-red-900/10 dark:border-red-900/20">{item.log.problem}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Recap Desktop Table View */}
+                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-muted text-muted-foreground uppercase font-medium">
                                     <tr>
-                                        <th className="px-6 py-4 w-[250px]">User</th>
-                                        <th className="px-6 py-4 w-[40%]">Kegiatan</th>
+                                        <th className="px-6 py-4 w-[200px]">User</th>
+                                        <th className="px-6 py-4 w-[35%]">Kegiatan</th>
                                         <th className="px-6 py-4">Masalah</th>
+                                        <th className="px-6 py-4 w-[80px] text-center">Foto</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {isLoading ? (
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
                                                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                                                 Memuat data rekap...
                                             </td>
                                         </tr>
                                     ) : recapData.length === 0 ? (
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
                                                 Tidak ada data user.
                                             </td>
                                         </tr>
@@ -484,6 +632,24 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed text-red-600/90 dark:text-red-400">
                                                     {item.log?.problem || '-'}
                                                 </td>
+                                                <td className="px-6 py-4 align-top text-center">
+                                                    {item.log?.image ? (
+                                                        <a
+                                                            href={item.log.image}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Klik untuk lihat gambar lengkap"
+                                                        >
+                                                            <img
+                                                                src={item.log.image}
+                                                                alt="Dokumentasi"
+                                                                className="w-12 h-12 object-cover rounded-lg border border-border hover:opacity-80 hover:scale-105 transition-all cursor-pointer mx-auto"
+                                                            />
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))
                                     )}
@@ -498,13 +664,13 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <form onSubmit={handleSubmit}>
-                            <div className="p-6 border-b border-border">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                    <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[90vh] flex flex-col">
+                        <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+                            <div className="p-6 border-b border-border shrink-0">
                                 <h3 className="text-lg font-semibold">Input Log Activity</h3>
                             </div>
-                            <div className="p-6 space-y-4">
+                            <div className="p-6 space-y-4 overflow-y-auto flex-1">
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Tanggal</label>
                                     <div className="px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm font-medium">
@@ -532,8 +698,46 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
                                     />
                                 </div>
+                                {/* Image Upload */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Gambar (Opsional, Maks. 2MB)</label>
+                                    <div className="flex items-start gap-4">
+                                        {formData.image ? (
+                                            <div className="relative">
+                                                <img
+                                                    src={formData.image}
+                                                    alt="Preview"
+                                                    className="w-32 h-32 object-cover rounded-lg border border-border"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleRemoveImage}
+                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <label className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors">
+                                                <Image className="w-8 h-8 text-muted-foreground mb-2" />
+                                                <span className="text-sm text-muted-foreground text-center">
+                                                    Klik untuk pilih gambar
+                                                </span>
+                                                <span className="text-xs text-muted-foreground mt-1">
+                                                    JPG, PNG, WEBP, GIF (Maks. 2MB)
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                                    onChange={handleImageChange}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3">
+                            <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
