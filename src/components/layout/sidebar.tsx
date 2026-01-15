@@ -145,9 +145,8 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 href={item.href}
                 onClick={() => {
                     setIsMobileOpen(false)
-                    if (!isSubItem) {
-                        setOpenMenus([])
-                    }
+                    // Do not clear openMenus here. 
+                    // Let useEffect handle menu state based on path to prevent flicker of default 'Spareparts' menu.
                 }}
                 title={isCollapsed ? item.name : undefined}
                 className={cn(
