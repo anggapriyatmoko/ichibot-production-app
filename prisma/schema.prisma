@@ -203,3 +203,19 @@ model OrderItem {
   quantity    Float
   createdAt   DateTime @default(now())
 }
+
+model MachineAsset {
+  id            String   @id @default(cuid())
+  name          String          // Nama mesin/alat (wajib)
+  code          String?         // Kode (opsional)
+  specification String?  @db.Text  // Spesifikasi (opsional)
+  location      String          // Lokasi (wajib)
+  price         Float?          // Harga (opsional)
+  notes         String?  @db.Text  // Keterangan (opsional)
+  image         String?         // Gambar (opsional)
+  year          Int?            // Tahun pembelian (opsional)
+  usefulLife    Int?            // Umur ekonomis dalam tahun (opsional)
+  residualValue Float?          // Nilai residu (opsional)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

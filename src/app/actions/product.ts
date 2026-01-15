@@ -2,12 +2,39 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
 import { requireAdmin, requireAuth } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+
+// Helper function to delete old image file from storage
+async function deleteOldImage(imagePath: string | null) {
+    if (!imagePath) return
+
+    try {
+        // Extract filename from path (e.g., '/api/uploads/123-image.jpg' -> '123-image.jpg')
+        const filename = imagePath.replace('/api/uploads/', '')
+
+        // Determine upload directory
+        let uploadDir = process.env.UPLOAD_DIR
+        if (!uploadDir) {
+            if (process.env.NODE_ENV === 'production') {
+                uploadDir = path.join(process.cwd(), 'uploads')
+            } else {
+                uploadDir = path.join(process.cwd(), 'public', 'uploads')
+            }
+        }
+
+        const filePath = path.join(uploadDir, filename)
+        await unlink(filePath)
+        console.log('Deleted old product image:', filePath)
+    } catch (error) {
+        // File might not exist, ignore error
+        console.log('Could not delete old product image (may not exist):', imagePath)
+    }
+}
 
 // Image upload validation helper
 function validateImageFile(file: File): { valid: boolean; error?: string } {
@@ -140,6 +167,13 @@ export async function updateProduct(formData: FormData) {
     const notes = formData.get('notes') as string | null
     const drawerLocation = formData.get('drawerLocation') as string | null
     const imageFile = formData.get('image') as File | null
+    const removeImage = formData.get('removeImage') === 'true'
+
+    // Fetch existing product to get current image path
+    const existingProduct = await prisma.product.findUnique({
+        where: { id },
+        select: { image: true }
+    })
 
     const data: any = {
         name,
@@ -185,10 +219,20 @@ export async function updateProduct(formData: FormData) {
 
         await writeFile(path.join(uploadDir, filename), resizedBuffer)
         data.image = '/api/uploads/' + filename
+
+        // Delete old image since we're replacing it
+        if (existingProduct?.image) {
+            await deleteOldImage(existingProduct.image)
+        }
     }
 
-    if (formData.get('removeImage') === 'true') {
+    // Handle image removal
+    if (removeImage) {
         data.image = null
+        // Delete old image from storage
+        if (existingProduct?.image) {
+            await deleteOldImage(existingProduct.image)
+        }
     }
 
     try {
@@ -240,9 +284,22 @@ export async function addStock(productId: string, quantity: number) {
 
 export async function deleteProduct(id: string) {
     await requireAdmin()
+
+    // Fetch product to get image path before deleting
+    const product = await prisma.product.findUnique({
+        where: { id },
+        select: { image: true }
+    })
+
     await prisma.product.delete({
         where: { id }
     })
+
+    // Delete image from storage after successful DB deletion
+    if (product?.image) {
+        await deleteOldImage(product.image)
+    }
+
     revalidatePath('/inventory')
 }
 

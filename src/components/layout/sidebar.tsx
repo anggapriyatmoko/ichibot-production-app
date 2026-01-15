@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
@@ -18,6 +18,7 @@ const navigation = [
     { name: 'History', href: '/history', icon: LayoutDashboard },
     { name: 'Rack Management', href: '/rack-management', icon: Warehouse },
     { name: 'Log Activity', href: '/log-activity', icon: ClipboardList },
+    { name: 'Aset Mesin/Alat', href: '/assets', icon: Wrench },
 ]
 
 const adminNavigation = [
