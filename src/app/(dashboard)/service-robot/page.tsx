@@ -66,6 +66,11 @@ export default async function ServiceRobotPage({
             by: ['serviceStatus'],
             _count: {
                 serviceStatus: true
+            },
+            orderBy: {
+                _count: {
+                    serviceStatus: 'desc'
+                }
             }
         }),
         prisma.serviceRobot.groupBy({
@@ -82,8 +87,8 @@ export default async function ServiceRobotPage({
         })
     ])
 
-    const robotTypes = (await recipePromise).map(r => r.name)
-    const customers = (await customerPromise).map(c => ({
+    const robotTypes = (await recipePromise).map((r: any) => r.name)
+    const customers = (await customerPromise).map((c: any) => ({
         name: c.customerName,
         address: c.customerAddress,
         phone: c.customerPhone
