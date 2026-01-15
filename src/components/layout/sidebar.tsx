@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
@@ -19,6 +19,11 @@ const navigation = [
     { name: 'Rack Management', href: '/rack-management', icon: Warehouse },
     { name: 'Log Activity', href: '/log-activity', icon: ClipboardList },
     { name: 'Aset Mesin/Alat', href: '/assets', icon: Wrench },
+]
+
+// Menu visible to ADMIN and TEKNISI only
+const teknisiNavigation = [
+    { name: 'Service Robot', href: '/service-robot', icon: Bot },
 ]
 
 const adminNavigation = [
@@ -69,6 +74,13 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 </span>
             </Link>
         )
+    }
+
+    // Get current page title from navigation
+    const getCurrentPageTitle = () => {
+        const allNav = [...navigation, ...teknisiNavigation, ...adminNavigation]
+        const current = allNav.find(item => pathname === item.href)
+        return current?.name || 'Dashboard'
     }
 
     return (
@@ -144,6 +156,26 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                     <nav className="space-y-1">
                         <NavItem item={{ name: 'Profile', href: '/profile', icon: User }} isCollapsed={!isOpen} />
                     </nav>
+
+                    {/* Service Robot menu - visible to ADMIN and TEKNISI */}
+                    {['ADMIN', 'TEKNISI'].includes(userRole || '') && (
+                        <>
+                            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                                <div className="border-t border-border" />
+                                <p className={cn(
+                                    "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                                    isOpen ? "px-3" : "text-center"
+                                )}>
+                                    {isOpen ? "Service" : "..."}
+                                </p>
+                            </div>
+                            <nav className="space-y-1">
+                                {teknisiNavigation.map((item) => (
+                                    <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+                                ))}
+                            </nav>
+                        </>
+                    )}
 
                     {userRole === 'ADMIN' && (
                         <>

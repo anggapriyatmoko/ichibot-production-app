@@ -157,7 +157,7 @@ export default async function ProductionPlanPage({
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
+            <div className="mb-8 text-right md:text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Production Plan</h1>
                 <p className="text-muted-foreground">Manage production schedule and track progress.</p>
             </div>

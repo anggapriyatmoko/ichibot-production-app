@@ -33,3 +33,8 @@ export async function getUserRole() {
     const session: any = await getServerSession(authOptions)
     return session?.user?.role || null
 }
+
+// Helper to check if a role has admin privileges (for frontend use)
+export function isAdminRole(role: string | undefined | null): boolean {
+    return role === 'ADMIN'
+}

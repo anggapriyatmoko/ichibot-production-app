@@ -54,7 +54,7 @@ export default async function AssetsPage({
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
+            <div className="mb-8 text-right md:text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Aset Mesin/Alat</h1>
                 <p className="text-muted-foreground">Kelola aset mesin dan alat produksi.</p>
             </div>

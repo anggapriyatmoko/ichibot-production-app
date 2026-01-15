@@ -18,7 +18,7 @@ model User {
   name      String?
   password  String
   department String?
-  role      String   @default("USER") // USER, ADMIN
+  role      String   @default("USER") // USER, ADMIN, TEKNISI
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   transactions Transaction[]
@@ -218,4 +218,20 @@ model MachineAsset {
   residualValue Float?          // Nilai residu (opsional)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model ServiceRobot {
+  id              String   @id @default(cuid())
+  entryDate       DateTime @default(now())  // Tanggal masuk
+  customerName    String                     // Nama pelanggan
+  customerAddress String   @db.Text          // Alamat
+  customerPhone   String                     // No HP
+  robotType       String                     // Jenis robot
+  accessories     String?  @db.Text          // Kelengkapan
+  warrantyStatus  String   @default("TIDAK") // Status garansi: YA / TIDAK
+  complaint       String   @db.Text          // Keluhan
+  serviceStatus   String   @default("PENDING") // Status service: PENDING, IN_PROGRESS, DONE, DELIVERED
+  serviceNotes    String?  @db.Text          // Keterangan yang di service apa saja
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

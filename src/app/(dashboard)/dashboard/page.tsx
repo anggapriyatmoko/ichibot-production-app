@@ -146,7 +146,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
     return (
         <div className="w-[98%] max-w-[98%] mx-auto space-y-8">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col text-right md:text-left md:flex-row items-start justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>
                     <p className="text-muted-foreground">Overview of your inventory and production status.</p>

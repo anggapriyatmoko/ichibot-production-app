@@ -64,7 +64,7 @@ export default async function HistoryPage({
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
+            <div className="mb-8 text-right md:text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Transaction History</h1>
                 <p className="text-muted-foreground">Log of all inventory movements and BOM changes.</p>
             </div>
