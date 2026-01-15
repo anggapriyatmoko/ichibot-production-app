@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { History, ArrowUpRight, ArrowDownLeft, Plus, Minus, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Edit2 } from 'lucide-react'
+import { History, ArrowUpRight, ArrowDownLeft, Plus, Minus, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Edit2, Bot } from 'lucide-react'
 import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -13,7 +13,7 @@ export default async function HistoryPage({
 }) {
     const params = await searchParams
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
-    const limit = 50
+    const limit = 10
     const skip = (page - 1) * limit
     const search = typeof params.search === 'string' ? params.search : ''
 
@@ -166,6 +166,11 @@ export default async function HistoryPage({
                                         <CheckCircle className="w-3 h-3" />
                                         Solved
                                     </span>
+                                ) : tx.type === 'Service Robot' ? (
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                        <Bot className="w-3 h-3" />
+                                        Service Robot
+                                    </span>
                                 ) : (
                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
                                         <Minus className="w-3 h-3" />
@@ -184,6 +189,10 @@ export default async function HistoryPage({
                                     <span>
                                         {tx.product.name}
                                         {tx.product.sku && <span className="text-muted-foreground font-normal ml-1">({tx.product.sku})</span>}
+                                    </span>
+                                ) : tx.recipe ? (
+                                    <span>
+                                        {tx.recipe.name}
                                     </span>
                                 ) : (['Checked', 'Unchecked'].includes(tx.type)
                                     ? tx.description?.split(' - ')[0]
@@ -209,7 +218,7 @@ export default async function HistoryPage({
                                 {tx.user?.name || tx.user?.username || 'System'}
                             </div>
 
-                            {!['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked'].includes(tx.type) && (
+                            {!['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked', 'Service Robot'].includes(tx.type) && (
                                 <span className={cn("font-bold text-sm",
                                     tx.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' :
                                         tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
@@ -289,6 +298,11 @@ export default async function HistoryPage({
                                                 <CheckCircle className="w-3 h-3" />
                                                 Solved
                                             </span>
+                                        ) : tx.type === 'Service Robot' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                                <Bot className="w-3 h-3" />
+                                                Service Robot
+                                            </span>
                                         ) : (
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
                                                 <Minus className="w-3 h-3" />
@@ -310,6 +324,10 @@ export default async function HistoryPage({
                                                 {tx.product.name}
                                                 {tx.product.sku && <span className="text-muted-foreground font-normal ml-1">({tx.product.sku})</span>}
                                             </span>
+                                        ) : tx.recipe ? (
+                                            <span>
+                                                {tx.recipe.name}
+                                            </span>
                                         ) : (['Checked', 'Unchecked'].includes(tx.type)
                                             ? tx.description?.split(' - ')[0]
                                             : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
@@ -324,9 +342,10 @@ export default async function HistoryPage({
                                             tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :
                                                 tx.type === 'BOM_ADD' ? 'text-purple-600 dark:text-purple-400' :
                                                     tx.type === 'Solved' ? 'text-green-600 dark:text-green-400' :
-                                                        tx.type === 'Problem' || tx.type === 'Problem Edited' ? 'text-red-600 dark:text-red-400' :
-                                                            'text-orange-600 dark:text-orange-400')}>
-                                        {['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked'].includes(tx.type)
+                                                        tx.type === 'Service Robot' ? 'text-cyan-600 dark:text-cyan-400' :
+                                                            tx.type === 'Problem' || tx.type === 'Problem Edited' ? 'text-red-600 dark:text-red-400' :
+                                                                'text-orange-600 dark:text-orange-400')}>
+                                        {['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked', 'Service Robot'].includes(tx.type)
                                             ? '-'
                                             : `${['IN', 'BOM_ADD'].includes(tx.type) ? '+' : '-'}${formatNumber(tx.quantity)}`
                                         }

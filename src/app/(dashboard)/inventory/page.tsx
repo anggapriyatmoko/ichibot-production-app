@@ -14,7 +14,7 @@ export default async function InventoryPage({
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const search = typeof params.search === 'string' ? params.search : ''
-    const limit = 50
+    const limit = 10
     const skip = (page - 1) * limit
 
     const where: any = search ? {

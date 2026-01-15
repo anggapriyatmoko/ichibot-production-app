@@ -12,8 +12,13 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function ServiceRobotPage() {
+export default async function ServiceRobotPage({
+    searchParams
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     await requireAuth()
+    const params = await searchParams
     const session: any = await getServerSession(authOptions)
 
     // Only allow ADMIN and TEKNISI
@@ -21,19 +26,112 @@ export default async function ServiceRobotPage() {
         redirect('/dashboard')
     }
 
-    // Fetch all services
-    const services = await prisma.serviceRobot.findMany({
-        orderBy: { entryDate: 'desc' }
-    })
+    const page = typeof params.page === 'string' ? parseInt(params.page) : 1
+    const search = typeof params.search === 'string' ? params.search : ''
+    const limit = 20
+    const skip = (page - 1) * limit
+
+    const where: any = search ? {
+        OR: [
+            { customerName: { contains: search } },
+            { customerPhone: { contains: search } },
+            { robotType: { contains: search } }
+        ]
+    } : {}
+
+    const [services, totalCount, recipePromise, customerPromise, statusStats, typeStats] = await prisma.$transaction([
+        prisma.serviceRobot.findMany({
+            where,
+            orderBy: { entryDate: 'desc' },
+            take: limit,
+            skip: skip
+        }),
+        prisma.serviceRobot.count({ where }),
+        prisma.recipe.findMany({
+            select: { name: true },
+            orderBy: { name: 'asc' }
+        }),
+        prisma.serviceRobot.findMany({
+            select: {
+                customerName: true,
+                customerAddress: true,
+                customerPhone: true,
+                createdAt: true
+            },
+            orderBy: { createdAt: 'desc' },
+            distinct: ['customerName']
+        }),
+        // Aggregation for Analysis
+        prisma.serviceRobot.groupBy({
+            by: ['serviceStatus'],
+            _count: {
+                serviceStatus: true
+            }
+        }),
+        prisma.serviceRobot.groupBy({
+            by: ['robotType'],
+            _count: {
+                robotType: true
+            },
+            orderBy: {
+                _count: {
+                    robotType: 'desc'
+                }
+            },
+            take: 5
+        })
+    ])
+
+    const robotTypes = (await recipePromise).map(r => r.name)
+    const customers = (await customerPromise).map(c => ({
+        name: c.customerName,
+        address: c.customerAddress,
+        phone: c.customerPhone
+    }))
+
+    const totalPages = Math.ceil(totalCount / limit)
+
+    // Prepare Analysis Data
+    const analysisData = {
+        totalServices: 0,
+        statusCounts: {
+            PENDING: 0,
+            IN_PROGRESS: 0,
+            DONE: 0,
+            DELIVERED: 0,
+            CANCELLED: 0
+        },
+        topRobotTypes: (typeStats as any[]).map(t => ({
+            name: t.robotType,
+            count: t._count.robotType
+        }))
+    }
+
+        // Populate status counts
+        ; (statusStats as any[]).forEach(stat => {
+            if (analysisData.statusCounts.hasOwnProperty(stat.serviceStatus)) {
+                (analysisData.statusCounts as any)[stat.serviceStatus] = stat._count.serviceStatus
+            }
+        })
+
+    // Calculate total from global status stats
+    analysisData.totalServices = (statusStats as any[]).reduce((acc, curr) => acc + curr._count.serviceStatus, 0)
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="max-width-7xl mx-auto px-4 sm:px-0">
             <div className="mb-8 text-right md:text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Service Robot</h1>
                 <p className="text-muted-foreground">Kelola service dan maintenance robot.</p>
             </div>
 
-            <ServiceRobotManager initialServices={services} />
+            <ServiceRobotManager
+                initialServices={services}
+                totalPages={totalPages}
+                currentPage={page}
+                products={robotTypes}
+                customers={customers}
+                analysisData={analysisData}
+            />
         </div>
     )
 }

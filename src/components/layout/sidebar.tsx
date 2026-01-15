@@ -1,23 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Sparepart', href: '/inventory', icon: Package },
-    { name: 'POS', href: '/pos', icon: ShoppingCart },
+    {
+        name: 'Spareparts',
+        icon: Package,
+        children: [
+            { name: 'Sparepart Production', href: '/inventory', icon: Package },
+            { name: 'POS Production', href: '/pos', icon: ShoppingCart },
+            { name: 'Sparepart Project', href: '/sparepart-project', icon: Package },
+            { name: 'Rack Management', href: '/rack-management', icon: Warehouse }
+        ]
+    },
     { name: 'Product Catalogue', href: '/catalogue', icon: BookOpen },
     { name: 'Production Plan', href: '/production-plan', icon: Calendar },
-    { name: 'History', href: '/history', icon: LayoutDashboard },
-    { name: 'Rack Management', href: '/rack-management', icon: Warehouse },
-    { name: 'Log Activity', href: '/log-activity', icon: ClipboardList },
+    {
+        name: 'Activity',
+        icon: ClipboardList,
+        children: [
+            { name: 'History', href: '/history', icon: LayoutDashboard },
+            { name: 'Log Activity', href: '/log-activity', icon: ClipboardList }
+        ]
+    },
     { name: 'Aset Mesin/Alat', href: '/assets', icon: Wrench },
 ]
 
@@ -39,23 +52,111 @@ interface SidebarProps {
 export default function Sidebar({ userProfile, userRole }: SidebarProps) {
     const [isOpen, setIsOpen] = useState(true)
     const [isMobileOpen, setIsMobileOpen] = useState(false)
+    const [openMenus, setOpenMenus] = useState<string[]>(['Spareparts'])
     const pathname = usePathname()
 
+    // Auto open parent menu if child is active, otherwise default to Spareparts
+    useEffect(() => {
+        const allNav = [...navigation, ...teknisiNavigation, ...adminNavigation]
+        let foundActiveDropdown = false
+
+        allNav.forEach(item => {
+            if ('children' in item && item.children) {
+                const isChildActive = item.children.some(child => pathname === child.href)
+                if (isChildActive) {
+                    foundActiveDropdown = true
+                    if (!openMenus.includes(item.name)) {
+                        setOpenMenus([item.name])
+                    }
+                }
+            }
+        })
+
+        // If no dropdown is active (top level menu), ensure Spareparts is open
+        if (!foundActiveDropdown && !openMenus.includes('Spareparts')) {
+            setOpenMenus(['Spareparts'])
+        }
+    }, [pathname])
+
+    const toggleMenu = (name: string) => {
+        setOpenMenus(prev =>
+            prev.includes(name)
+                ? []
+                : [name]
+        )
+    }
+
     // Helper for nav items to avoid duplication
-    const NavItem = ({ item, isCollapsed }: { item: any, isCollapsed: boolean }) => {
+    const NavItem = ({ item, isCollapsed, isSubItem = false }: { item: any, isCollapsed: boolean, isSubItem?: boolean }) => {
+        const hasChildren = 'children' in item && item.children && item.children.length > 0
+        const isMenuOpen = openMenus.includes(item.name)
         const isActive = pathname === item.href
+        const isChildActive = hasChildren && item.children.some((child: any) => pathname === child.href)
+
+        if (hasChildren) {
+            return (
+                <div className="space-y-1">
+                    <button
+                        onClick={() => toggleMenu(item.name)}
+                        className={cn(
+                            'w-full group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                            isChildActive
+                                ? 'bg-primary/5 text-primary'
+                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                            isCollapsed && "md:justify-center md:px-2"
+                        )}
+                        title={isCollapsed ? item.name : undefined}
+                    >
+                        <item.icon
+                            className={cn(
+                                'flex-shrink-0 transition-colors duration-200',
+                                'mr-3 h-5 w-5',
+                                isChildActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+                                isCollapsed && "md:mr-0 md:h-6 md:w-6"
+                            )}
+                        />
+                        {!isCollapsed && (
+                            <>
+                                <span className="flex-1 text-left whitespace-nowrap overflow-hidden text-ellipsis">
+                                    {item.name}
+                                </span>
+                                {isMenuOpen ? (
+                                    <ChevronDown className="h-4 w-4 ml-2" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4 ml-2" />
+                                )}
+                            </>
+                        )}
+                    </button>
+                    {isMenuOpen && !isCollapsed && (
+                        <div className="ml-4 space-y-1 border-l border-border pl-2">
+                            {item.children.map((child: any) => (
+                                <NavItem key={child.name} item={child} isCollapsed={isCollapsed} isSubItem={true} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )
+        }
+
         return (
             <Link
                 key={item.name}
                 href={item.href}
-                onClick={() => setIsMobileOpen(false)}
+                onClick={() => {
+                    setIsMobileOpen(false)
+                    if (!isSubItem) {
+                        setOpenMenus([])
+                    }
+                }}
                 title={isCollapsed ? item.name : undefined}
                 className={cn(
                     'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                     isActive
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                    isCollapsed && "md:justify-center md:px-2"
+                    isCollapsed && "md:justify-center md:px-2",
+                    isSubItem && "py-2"
                 )}
             >
                 <item.icon
@@ -63,7 +164,8 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                         'flex-shrink-0 transition-colors duration-200',
                         'mr-3 h-5 w-5', // Base icon size and margin for expanded/mobile
                         isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
-                        isCollapsed && "md:mr-0 md:h-6 md:w-6" // Override for desktop collapsed
+                        isCollapsed && "md:mr-0 md:h-6 md:w-6", // Override for desktop collapsed
+                        isSubItem && "h-4 w-4"
                     )}
                 />
                 <span className={cn(
@@ -78,7 +180,16 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
 
     // Get current page title from navigation
     const getCurrentPageTitle = () => {
-        const allNav = [...navigation, ...teknisiNavigation, ...adminNavigation]
+        const flattenNav = (nav: any[]): any[] => {
+            return nav.reduce((acc, item) => {
+                acc.push(item)
+                if (item.children) {
+                    acc.push(...flattenNav(item.children))
+                }
+                return acc
+            }, [])
+        }
+        const allNav = flattenNav([...navigation, ...teknisiNavigation, ...adminNavigation])
         const current = allNav.find(item => pathname === item.href)
         return current?.name || 'Dashboard'
     }
@@ -149,13 +260,7 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                         ))}
                     </nav>
 
-                    <div className={cn("my-2", !isOpen && "hidden md:block")}>
-                        <div className="border-t border-border mx-3" />
-                    </div>
 
-                    <nav className="space-y-1">
-                        <NavItem item={{ name: 'Profile', href: '/profile', icon: User }} isCollapsed={!isOpen} />
-                    </nav>
 
                     {/* Service Robot menu - visible to ADMIN and TEKNISI */}
                     {['ADMIN', 'TEKNISI'].includes(userRole || '') && (
@@ -199,13 +304,16 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
 
                 <div className={cn("p-4 border-t border-border space-y-4", !isOpen && "md:items-center md:flex md:flex-col")}>
                     {isOpen && <TimeDisplay />}
-                    {isOpen ? userProfile : (
-                        <div className="hidden md:flex justify-center" title="User Profile">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                                U
+
+                    <Link href="/profile" className="block hover:opacity-80 transition-opacity">
+                        {isOpen ? userProfile : (
+                            <div className="hidden md:flex justify-center" title="User Profile">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                    U
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </Link>
 
                     <button
                         onClick={() => signOut({ callbackUrl: '/login' })}
