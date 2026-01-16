@@ -178,9 +178,10 @@ export default async function HistoryPage({
                                     </span>
                                 )}
                             </div>
-                            <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-                                {new Date(tx.createdAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} {new Date(tx.createdAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false })}
-                            </span>
+                            <div className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                                <div>{new Date(tx.createdAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                <div>{new Date(tx.createdAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' })} - {new Date(tx.createdAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+                            </div>
                         </div>
 
                         <div>
@@ -255,7 +256,8 @@ export default async function HistoryPage({
                             {transactions.map((tx) => (
                                 <tr key={tx.id} className="hover:bg-accent/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        {new Date(tx.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
+                                        <div className="font-medium text-foreground">{new Date(tx.createdAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                        <div className="text-xs text-muted-foreground">{new Date(tx.createdAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long' })} - {new Date(tx.createdAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         {tx.type === 'IN' ? (

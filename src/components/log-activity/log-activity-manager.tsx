@@ -329,7 +329,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 {format(new Date(log.date), 'dd MMMM yyyy', { locale: id })}
                                             </div>
                                             <div className="text-xs text-muted-foreground mt-1">
-                                                {format(new Date(log.date), 'EEEE', { locale: id })} • {format(new Date(log.updatedAt), 'HH:mm', { locale: id })} WIB
+                                                {format(new Date(log.date), 'EEEE', { locale: id })} - {format(new Date(log.updatedAt), 'HH:mm', { locale: id })}
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
@@ -439,12 +439,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                         paginatedLogs.map(log => (
                                             <tr key={log.id} className="hover:bg-accent/50 transition-colors">
                                                 <td className="px-6 py-4 align-top whitespace-nowrap">
-                                                    {format(new Date(log.date), 'dd MMMM yyyy', { locale: id })}
+                                                    <div className="font-medium">{format(new Date(log.date), 'dd MMM yyyy', { locale: id })}</div>
                                                     <div className="text-xs text-muted-foreground mt-1">
-                                                        {format(new Date(log.date), 'EEEE', { locale: id })}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground mt-1 font-mono">
-                                                        {format(new Date(log.updatedAt), 'HH:mm', { locale: id })} WIB
+                                                        {format(new Date(log.date), 'EEEE', { locale: id })} - {format(new Date(log.updatedAt), 'HH:mm', { locale: id })}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed">

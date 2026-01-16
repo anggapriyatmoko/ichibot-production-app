@@ -708,8 +708,8 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                             {filteredServices.map((service) => (
                                 <tr key={service.id} className="hover:bg-accent/50 transition-colors">
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                        <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                                        <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                        <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex items-start gap-2">
@@ -832,7 +832,8 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                         <div className="grid grid-cols-2 gap-2 text-sm">
                             <div>
                                 <span className="text-muted-foreground">Tanggal:</span>
-                                <span className="ml-1 font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID')}</span>
+                                <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                                <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                             </div>
                             <div>
                                 <span className="text-muted-foreground">Robot:</span>
