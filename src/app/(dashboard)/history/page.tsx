@@ -184,11 +184,11 @@ export default async function HistoryPage({
                         </div>
 
                         <div>
-                            <h4 className="text-sm font-semibold text-foreground">
+                            <h4 className="text-sm font-medium text-foreground">
                                 {tx.product ? (
                                     <span>
                                         {tx.product.name}
-                                        {tx.product.sku && <span className="text-muted-foreground font-normal ml-1">({tx.product.sku})</span>}
+                                        {tx.product.sku && <span className="text-muted-foreground font-medium ml-1">({tx.product.sku})</span>}
                                     </span>
                                 ) : tx.recipe ? (
                                     <span>
@@ -241,7 +241,7 @@ export default async function HistoryPage({
             <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-muted-foreground">
-                        <thead className="bg-muted text-foreground uppercase font-medium">
+                        <thead className="bg-muted text-foreground uppercase font-normal">
                             <tr>
                                 <th className="px-6 py-4">Date</th>
                                 <th className="px-6 py-4">Type</th>
@@ -322,7 +322,7 @@ export default async function HistoryPage({
                                         {tx.product ? (
                                             <span>
                                                 {tx.product.name}
-                                                {tx.product.sku && <span className="text-muted-foreground font-normal ml-1">({tx.product.sku})</span>}
+                                                {tx.product.sku && <span className="text-muted-foreground font-medium ml-1">({tx.product.sku})</span>}
                                             </span>
                                         ) : tx.recipe ? (
                                             <span>

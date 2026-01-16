@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, ChevronLeft, ChevronRight, MessageCircle, BarChart3, Download } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, ChevronLeft, ChevronRight, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { createServiceRobot, updateServiceRobot, deleteServiceRobot, getServiceRobots } from '@/app/actions/service-robot'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import ImportServiceRobotModal from './import-service-robot-modal'
 
 interface ServiceRobot {
     id: string
@@ -28,6 +29,7 @@ interface ServiceRobotManagerProps {
     currentPage: number
     products: string[]
     customers: { name: string; address: string; phone: string }[]
+    isAdmin?: boolean
     analysisData?: {
         totalServices: number
         statusCounts: {
@@ -59,7 +61,7 @@ const STATUS_COLORS = {
     'CANCELLED': 'bg-gray-500'
 }
 
-export default function ServiceRobotManager({ initialServices, totalPages, currentPage, products, customers, analysisData }: ServiceRobotManagerProps) {
+export default function ServiceRobotManager({ initialServices, totalPages, currentPage, products, customers, analysisData, isAdmin = false }: ServiceRobotManagerProps) {
     const router = useRouter()
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
 
@@ -85,6 +87,13 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
 
     const { showConfirmation } = useConfirmation()
     const { showAlert } = useAlert()
+
+    // Sorting State (null = use server order, which is createdAt desc)
+    type SortConfig = {
+        key: keyof ServiceRobot
+        direction: 'asc' | 'desc'
+    }
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
 
     // Form state
     const [formData, setFormData] = useState({
@@ -259,8 +268,45 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
         }
     }
 
-    // Filter services
-    const filteredServices = initialServices
+    // Sorting handler
+    const handleSort = (key: keyof ServiceRobot) => {
+        setSortConfig((current) => {
+            if (current?.key === key) {
+                return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+            }
+            return { key, direction: 'asc' }
+        })
+    }
+
+    // Sort icon helper
+    const SortIcon = ({ column }: { column: keyof ServiceRobot }) => {
+        if (!sortConfig || sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 ml-1 text-muted-foreground/30" />
+        return sortConfig.direction === 'asc'
+            ? <ArrowUp className="w-3 h-3 ml-1 text-primary" />
+            : <ArrowDown className="w-3 h-3 ml-1 text-primary" />
+    }
+
+    // Filter and sort services
+    const filteredServices = sortConfig
+        ? [...initialServices].sort((a, b) => {
+            const { key, direction } = sortConfig
+            let aValue: any = a[key]
+            let bValue: any = b[key]
+
+            // Handle Date comparison
+            if (key === 'entryDate') {
+                aValue = new Date(aValue).getTime()
+                bValue = new Date(bValue).getTime()
+            }
+
+            if (aValue === null || aValue === undefined) return 1
+            if (bValue === null || bValue === undefined) return -1
+
+            if (aValue < bValue) return direction === 'asc' ? -1 : 1
+            if (aValue > bValue) return direction === 'asc' ? 1 : -1
+            return 0
+        })
+        : initialServices
 
     // Sync search with URL
     useEffect(() => {
@@ -330,52 +376,47 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
             const XLSX = await import('xlsx')
             const serviceData = await getServiceRobots()
 
+            // Headers matching import template
             const headers = [
-                'No. Service',
                 'Tanggal Masuk',
                 'Nama Pelanggan',
                 'Alamat',
-                'No. Telepon',
+                'No Telepon',
                 'Jenis Robot',
                 'Kelengkapan',
                 'Status Garansi',
                 'Keluhan',
                 'Status Service',
-                'Solusi/Keterangan',
-                'Tanggal Update Terakhir'
+                'Solusi'
             ]
 
             const rows = serviceData.map((s: any) => [
-                s.id.slice(0, 8).toUpperCase(),
-                new Date(s.entryDate).toLocaleDateString('id-ID') + ' ' + new Date(s.entryDate).toLocaleTimeString('id-ID'),
+                new Date(s.entryDate).toISOString().split('T')[0], // YYYY-MM-DD format for easy re-import
                 s.customerName,
-                s.customerAddress,
-                s.customerPhone,
+                s.customerAddress || '',
+                s.customerPhone || '',
                 s.robotType,
-                s.accessories || '-',
-                s.warrantyStatus === 'YA' ? 'Garansi' : 'Tidak Garansi',
-                s.complaint,
+                s.accessories || '',
+                s.warrantyStatus === 'YA' ? 'Ya' : 'Tidak',
+                s.complaint || '',
                 statusOptions.find(opt => opt.value === s.serviceStatus)?.label || s.serviceStatus,
-                s.serviceNotes || '-',
-                new Date(s.updatedAt).toLocaleDateString('id-ID') + ' ' + new Date(s.updatedAt).toLocaleTimeString('id-ID')
+                s.serviceNotes || ''
             ])
 
             const wb = XLSX.utils.book_new()
             const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
 
             const wscols = [
-                { wch: 15 },
-                { wch: 20 },
-                { wch: 25 },
-                { wch: 40 },
-                { wch: 15 },
-                { wch: 20 },
-                { wch: 30 },
-                { wch: 15 },
-                { wch: 40 },
-                { wch: 15 },
-                { wch: 40 },
-                { wch: 20 },
+                { wch: 15 },  // Tanggal Masuk
+                { wch: 25 },  // Nama Pelanggan
+                { wch: 40 },  // Alamat
+                { wch: 15 },  // No Telepon
+                { wch: 20 },  // Jenis Robot
+                { wch: 30 },  // Kelengkapan
+                { wch: 15 },  // Status Garansi
+                { wch: 40 },  // Keluhan
+                { wch: 15 },  // Status Service
+                { wch: 40 },  // Solusi
             ]
             ws['!cols'] = wscols
 
@@ -407,6 +448,7 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                     />
                 </div>
                 <div className="flex gap-2">
+                    <ImportServiceRobotModal isAdmin={isAdmin} validRobotTypes={products} />
                     <button
                         onClick={handleExport}
                         disabled={isLoadingExport}
@@ -643,14 +685,22 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
             <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-muted text-foreground uppercase font-medium text-xs">
+                        <thead className="bg-muted text-foreground uppercase font-normal text-xs">
                             <tr>
-                                <th className="px-4 py-3">Tgl Masuk</th>
-                                <th className="px-4 py-3">Pelanggan</th>
-                                <th className="px-4 py-3">Jenis Robot</th>
+                                <th onClick={() => handleSort('entryDate')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center">Tgl Masuk <SortIcon column="entryDate" /></div>
+                                </th>
+                                <th onClick={() => handleSort('customerName')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center">Pelanggan <SortIcon column="customerName" /></div>
+                                </th>
+                                <th onClick={() => handleSort('robotType')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center">Jenis Robot <SortIcon column="robotType" /></div>
+                                </th>
                                 <th className="px-4 py-3">Kelengkapan</th>
                                 <th className="px-4 py-3">Keluhan</th>
-                                <th className="px-4 py-3">Status</th>
+                                <th onClick={() => handleSort('serviceStatus')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center">Status <SortIcon column="serviceStatus" /></div>
+                                </th>
                                 <th className="px-4 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>

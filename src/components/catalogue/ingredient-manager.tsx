@@ -660,7 +660,7 @@ export default function IngredientManager({
                 {/* Screen: Summary Table */}
                 <div className="border border-border rounded-xl overflow-hidden shadow-sm no-print">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-muted/50 text-muted-foreground uppercase font-medium text-xs">
+                        <thead className="bg-muted/50 text-muted-foreground uppercase font-normal text-xs">
                             <tr>
                                 <th className="px-3 py-2">Image</th>
                                 <th className="px-3 py-2">SKU</th>
@@ -985,7 +985,7 @@ function IngredientsTable({ ingredients, onRemove, onEdit, isEditing }: { ingred
     return (
         <div className="overflow-x-auto rounded-xl border border-border shadow-sm bg-card">
             <table className="w-full text-left text-sm border-collapse">
-                <thead className="bg-[#F9FAFB] text-foreground uppercase font-medium text-xs">
+                <thead className="bg-[#F9FAFB] text-foreground uppercase font-normal text-xs">
                     <tr>
                         <th className="px-2 py-2 border-b border-r border-border w-[15%]">SKU</th>
                         <th className="px-2 py-2 border-b border-r border-border w-[40%]">Item</th>

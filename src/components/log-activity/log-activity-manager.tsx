@@ -292,7 +292,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                     {/* Action Bar */}
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                            <h2 className="text-lg font-medium flex items-center gap-2">
                                 <CalendarIcon className="w-5 h-5 text-primary" />
                                 Riwayat Aktivitas
                             </h2>
@@ -325,7 +325,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                 <div key={log.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <div className="font-semibold text-foreground">
+                                            <div className="font-medium text-foreground">
                                                 {format(new Date(log.date), 'dd MMMM yyyy', { locale: id })}
                                             </div>
                                             <div className="text-xs text-muted-foreground mt-1">
@@ -410,7 +410,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-muted text-muted-foreground uppercase font-medium">
+                                <thead className="bg-muted text-muted-foreground uppercase font-normal">
                                     <tr>
                                         <th className="px-6 py-4 w-[150px]">Tanggal</th>
                                         <th className="px-6 py-4">Kegiatan</th>
@@ -557,7 +557,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                 <div key={item.user.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-3">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <div className="font-semibold text-foreground">{item.user.name}</div>
+                                            <div className="font-medium text-foreground">{item.user.name}</div>
                                             <div className="text-xs text-muted-foreground">{item.user.username}</div>
                                             <div className="text-xs text-muted-foreground">{item.user.department || '-'}</div>
                                         </div>
@@ -596,7 +596,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-muted text-muted-foreground uppercase font-medium">
+                                <thead className="bg-muted text-muted-foreground uppercase font-normal">
                                     <tr>
                                         <th className="px-6 py-4 w-[200px]">User</th>
                                         <th className="px-6 py-4 w-[35%]">Kegiatan</th>
@@ -668,7 +668,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                     <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[90vh] flex flex-col">
                         <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
                             <div className="p-6 border-b border-border shrink-0">
-                                <h3 className="text-lg font-semibold">Input Log Activity</h3>
+                                <h3 className="text-lg font-medium">Input Log Activity</h3>
                             </div>
                             <div className="p-6 space-y-4 overflow-y-auto flex-1">
                                 <div>

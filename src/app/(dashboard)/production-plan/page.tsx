@@ -215,7 +215,7 @@ export default async function ProductionPlanPage({
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-white text-foreground uppercase font-medium">
+                        <thead className="bg-white text-foreground uppercase font-normal">
                             <tr>
                                 <th className="px-6 py-4">Product Name & Progress</th>
                                 <th className="px-6 py-4 text-center">Target</th>

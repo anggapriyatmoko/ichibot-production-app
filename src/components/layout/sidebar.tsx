@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight, FolderKanban } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
@@ -17,11 +18,11 @@ const navigation = [
         children: [
             { name: 'Sparepart Production', href: '/inventory', icon: Package },
             { name: 'POS Production', href: '/pos', icon: ShoppingCart },
-            { name: 'Sparepart Project', href: '/sparepart-project', icon: Package },
+            { name: 'Sparepart Project', href: '/sparepart-project', icon: FolderKanban },
             { name: 'Rack Management', href: '/rack-management', icon: Warehouse }
         ]
     },
-    { name: 'Product Catalogue', href: '/catalogue', icon: BookOpen },
+    { name: 'Product Ichibot', href: '/catalogue', icon: BookOpen },
     { name: 'Production Plan', href: '/production-plan', icon: Calendar },
     {
         name: 'Activity',
@@ -55,34 +56,26 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
     const [openMenus, setOpenMenus] = useState<string[]>(['Spareparts'])
     const pathname = usePathname()
 
-    // Auto open parent menu if child is active, otherwise default to Spareparts
+    // On initial mount, auto-open parent menu if child is active
     useEffect(() => {
         const allNav = [...navigation, ...teknisiNavigation, ...adminNavigation]
-        let foundActiveDropdown = false
 
         allNav.forEach(item => {
             if ('children' in item && item.children) {
                 const isChildActive = item.children.some(child => pathname === child.href)
-                if (isChildActive) {
-                    foundActiveDropdown = true
-                    if (!openMenus.includes(item.name)) {
-                        setOpenMenus([item.name])
-                    }
+                if (isChildActive && !openMenus.includes(item.name)) {
+                    setOpenMenus(prev => [...prev, item.name])
                 }
             }
         })
-
-        // If no dropdown is active (top level menu), ensure Spareparts is open
-        if (!foundActiveDropdown && !openMenus.includes('Spareparts')) {
-            setOpenMenus(['Spareparts'])
-        }
-    }, [pathname])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Only run on mount
 
     const toggleMenu = (name: string) => {
         setOpenMenus(prev =>
             prev.includes(name)
-                ? []
-                : [name]
+                ? prev.filter(n => n !== name)  // Close only this dropdown
+                : [...prev, name]                // Open this dropdown, keep others
         )
     }
 
@@ -150,7 +143,8 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 }}
                 title={isCollapsed ? item.name : undefined}
                 className={cn(
-                    'group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                    'group flex items-center px-3 py-2.5 text-sm rounded-lg transition-all duration-200',
+                    isSubItem ? 'font-normal' : 'font-medium',
                     isActive
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -229,10 +223,13 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 )}>
                     {isOpen && (
                         <div className="flex flex-col overflow-hidden whitespace-nowrap">
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent leading-none">
-                                Ichibot Production
-                            </h1>
-                            <span className="text-[10px] font-medium text-muted-foreground mt-1">PPC System</span>
+                            <Image
+                                src="/uploads/ichibot.png"
+                                alt="Ichibot Production"
+                                width={180}
+                                height={40}
+                                className="object-contain"
+                            />
                         </div>
                     )}
                     <button
@@ -302,7 +299,6 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 </div>
 
                 <div className={cn("p-4 border-t border-border space-y-4", !isOpen && "md:items-center md:flex md:flex-col")}>
-                    {isOpen && <TimeDisplay />}
 
                     <Link href="/profile" className="block hover:opacity-80 transition-opacity">
                         {isOpen ? userProfile : (

@@ -101,9 +101,14 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-rubik), 'Rubik', Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Override browser default bold for th */
+th {
+  font-weight: inherit;
 }
 
 /* Custom Scrollbar - Adapted for Theme */

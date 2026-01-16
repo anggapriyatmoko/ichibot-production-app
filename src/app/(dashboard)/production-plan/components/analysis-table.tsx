@@ -45,7 +45,7 @@ export default function AnalysisTable({ data }: AnalysisTableProps) {
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-muted/30 text-foreground uppercase font-medium text-xs">
+                        <thead className="bg-muted/30 text-foreground uppercase font-normal text-xs">
                             <tr>
                                 <th className="px-6 py-3">Sparepart Name</th>
                                 <th className="px-6 py-3 text-center">Current Stock</th>

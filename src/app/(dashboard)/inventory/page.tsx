@@ -41,7 +41,7 @@ export default async function InventoryPage({
     return (
         <div className="max-w-7xl mx-auto">
             <div className="mb-8 text-right md:text-left">
-                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Inventory Management</h1>
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Sparepart Produksi</h1>
                 <p className="text-muted-foreground">Monitor stock levels and manage your raw materials.</p>
             </div>
 

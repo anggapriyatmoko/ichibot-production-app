@@ -235,3 +235,14 @@ model ServiceRobot {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model SparepartProject {
+  id        String   @id @default(cuid())
+  name      String
+  sku       String?
+  stock     Float    @default(0)
+  notes     String?  @db.Text
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

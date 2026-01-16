@@ -68,7 +68,22 @@ export async function getUnusedDrawers(rackName: string, drawerCount: number) {
         }
     })
 
-    const usedDrawers = new Set(usedProducts.map(p => p.sku))
+    // Find sparepart projects that use drawers from this rack (checking SKU)
+    const usedSparepartProjects = await prisma.sparepartProject.findMany({
+        where: {
+            sku: {
+                startsWith: `${rackName}-`
+            }
+        },
+        select: {
+            sku: true
+        }
+    })
+
+    const usedDrawers = new Set([
+        ...usedProducts.map(p => p.sku),
+        ...usedSparepartProjects.map(sp => sp.sku)
+    ])
 
     // Return drawers that are not used
     return allDrawers.filter(drawer => !usedDrawers.has(drawer))
@@ -92,7 +107,20 @@ export async function getRacksWithUnusedDrawers() {
         }
     })
 
-    const usedDrawers = new Set(productsWithDrawers.map(p => p.sku))
+    // Get all sparepart projects - check SKU for drawer codes
+    const sparepartProjectsWithDrawers = await prisma.sparepartProject.findMany({
+        where: {
+            sku: { not: null }
+        },
+        select: {
+            sku: true
+        }
+    })
+
+    const usedDrawers = new Set([
+        ...productsWithDrawers.map(p => p.sku),
+        ...sparepartProjectsWithDrawers.map(sp => sp.sku)
+    ])
 
     // Calculate unused drawers for each rack
     return racks.map(rack => {

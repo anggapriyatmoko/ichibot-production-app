@@ -128,7 +128,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
             {/* Desktop Table View */}
             <div className="hidden md:block bg-card border border-border rounded-xl shadow-sm overflow-x-auto">
                 <table className="w-full text-left text-sm whitespace-nowrap">
-                    <thead className="bg-muted/50 text-foreground uppercase font-medium text-xs">
+                    <thead className="bg-muted/50 text-foreground uppercase font-normal text-xs">
                         <tr>
                             <th className="p-[3px] w-[45px] min-w-[45px] text-center shadow-[inset_-1px_-1px_0_0_#E5E7EB] sticky left-0 bg-muted z-30 text-[10px]">
                                 No

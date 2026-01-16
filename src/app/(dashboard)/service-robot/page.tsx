@@ -136,6 +136,7 @@ export default async function ServiceRobotPage({
                 products={robotTypes}
                 customers={customers}
                 analysisData={analysisData}
+                isAdmin={session?.user?.role === 'ADMIN'}
             />
         </div>
     )

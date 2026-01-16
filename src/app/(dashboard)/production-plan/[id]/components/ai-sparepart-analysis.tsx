@@ -99,7 +99,7 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                             <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                                 AI Sparepart Analysis
                             </h2>
-                            <p className="text-xs text-slate-500 font-medium mt-1 flex items-center gap-2">
+                            <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
                                 <Microchip className="w-3.5 h-3.5" />
                                 Real-time inventory consumption tracking
                             </p>
@@ -119,14 +119,14 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                 {/* Content */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                        <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-normal tracking-wider">
                             <tr>
-                                <th className="px-6 py-4 font-medium pl-6">Part Details</th>
-                                <th className="px-6 py-4 font-medium text-center">Required</th>
-                                <th className="px-6 py-4 font-medium text-center">Consumed</th>
-                                <th className="px-6 py-4 font-medium text-center">Remaining</th>
-                                <th className="px-6 py-4 font-medium text-center">Stock Now</th>
-                                <th className="px-6 py-4 font-medium">Stock Status</th>
+                                <th className="px-6 py-4 pl-6">Part Details</th>
+                                <th className="px-6 py-4 text-center">Required</th>
+                                <th className="px-6 py-4 text-center">Consumed</th>
+                                <th className="px-6 py-4 text-center">Remaining</th>
+                                <th className="px-6 py-4 text-center">Stock Now</th>
+                                <th className="px-6 py-4">Stock Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -178,7 +178,7 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                                         </td>
                                         <td className="px-6 py-4">
                                             {item.remainingNeeded === 0 ? (
-                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-100">
+                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs border border-green-100">
                                                     <CheckCircle className="w-3.5 h-3.5" />
                                                     Detailed Completed
                                                 </div>
@@ -194,7 +194,7 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col gap-1">
-                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium border border-emerald-100">
+                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs border border-emerald-100">
                                                         <TrendingUp className="w-3.5 h-3.5" />
                                                         Sufficient
                                                     </div>
@@ -212,7 +212,7 @@ export default function AISparepartAnalysis({ ingredients, units, totalPlanQuant
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium flex items-center justify-between">
+                <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Bot className="w-3 h-3" />
                         <span>Consumption calculated based on completed sections in real-time.</span>

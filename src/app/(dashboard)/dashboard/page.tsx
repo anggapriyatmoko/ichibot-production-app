@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History, Plus, Minus, CheckCircle } from 'lucide-react'
+import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History, Plus, Minus, CheckCircle, Edit2, Bot, Wrench } from 'lucide-react'
 import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import ProductionOverviewTable from './components/production-overview-table'
@@ -142,6 +142,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: { product: true }
+    })
+
+    // Service Robot Stats
+    const serviceRobotStats = await prisma.serviceRobot.groupBy({
+        by: ['serviceStatus'],
+        _count: {
+            serviceStatus: true
+        }
+    })
+
+    const serviceStats = {
+        pending: 0,
+        inProgress: 0,
+        done: 0,
+        delivered: 0,
+        total: 0
+    }
+    serviceRobotStats.forEach((stat: any) => {
+        serviceStats.total += stat._count.serviceStatus
+        if (stat.serviceStatus === 'PENDING') serviceStats.pending = stat._count.serviceStatus
+        else if (stat.serviceStatus === 'IN_PROGRESS') serviceStats.inProgress = stat._count.serviceStatus
+        else if (stat.serviceStatus === 'DONE') serviceStats.done = stat._count.serviceStatus
+        else if (stat.serviceStatus === 'DELIVERED') serviceStats.delivered = stat._count.serviceStatus
     })
 
     return (
@@ -365,67 +388,37 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <Link href="/catalogue" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400">
-                            <Package className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Total Produk</p>
-                            <p className="text-2xl font-bold text-foreground">{totalRecipes}</p>
-                        </div>
+            {/* Service Robot Stats */}
+            <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                        <Wrench className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                        Service Robot
+                    </h3>
+                    <Link href="/service-robot" className="text-sm text-primary hover:text-blue-500">View All</Link>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="bg-muted/30 p-4 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-foreground">{serviceStats.total}</p>
+                        <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Total</p>
                     </div>
-                </Link>
-
-                <Link href="/inventory" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400">
-                            <Package className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Total Sparepart</p>
-                            <p className="text-2xl font-bold text-foreground">{totalProducts}</p>
-                        </div>
+                    <div className="bg-red-500/10 p-4 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">{serviceStats.pending}</p>
+                        <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Masuk</p>
                     </div>
-                </Link>
-
-                <Link href="/inventory" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-red-500/10 rounded-xl text-red-600 dark:text-red-400">
-                            <AlertTriangle className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Low Stock Sparepart</p>
-                            <p className="text-2xl font-bold text-foreground">{lowStockCount}</p>
-                        </div>
+                    <div className="bg-blue-500/10 p-4 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{serviceStats.inProgress}</p>
+                        <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Dikerjakan</p>
                     </div>
-                </Link>
-
-                <Link href="/history" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400">
-                            <ArrowDownLeft className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Restocked Today</p>
-                            <p className="text-2xl font-bold text-foreground">+{itemsIn}</p>
-                        </div>
+                    <div className="bg-green-500/10 p-4 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{serviceStats.done}</p>
+                        <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Selesai</p>
                     </div>
-                </Link>
-
-                <Link href="/history" className="bg-card border border-border p-6 rounded-2xl shadow-sm hover:border-primary/50 transition-colors block">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400">
-                            <ArrowUpRight className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">Items Out Today</p>
-                            <p className="text-2xl font-bold text-foreground">-{itemsOut}</p>
-                        </div>
+                    <div className="bg-emerald-600/10 p-4 rounded-xl text-center">
+                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-500">{serviceStats.delivered}</p>
+                        <p className="text-xs text-muted-foreground uppercase font-medium tracking-wider">Dikirim</p>
                     </div>
-                </Link>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -459,15 +452,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                                                 <Plus className="w-3 h-3" />
                                                 BOM Add
                                             </span>
-                                        ) : tx.type === 'Problem' ? (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 w-fit">
-                                                <AlertTriangle className="w-3 h-3" />
-                                                Problem
+                                        ) : tx.type === 'Problem' || tx.type === 'Problem Edited' ? (
+                                            <span className={cn(
+                                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border w-fit",
+                                                tx.type === 'Problem Edited'
+                                                    ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20'
+                                                    : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                                            )}>
+                                                {tx.type === 'Problem Edited' ? <Edit2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                                                {tx.type === 'Problem Edited' ? 'Edited' : 'Problem'}
                                             </span>
                                         ) : tx.type === 'Solved' ? (
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 w-fit">
                                                 <CheckCircle className="w-3 h-3" />
                                                 Solved
+                                            </span>
+                                        ) : tx.type === 'Service Robot' ? (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 w-fit">
+                                                <Bot className="w-3 h-3" />
+                                                Service
                                             </span>
                                         ) : ['Checked', 'Unchecked'].includes(tx.type) ? (
                                             tx.type === 'Checked' ? (
@@ -494,14 +497,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                                         <p className="text-foreground font-medium text-sm">
                                             {tx.product?.name || (['Checked', 'Unchecked'].includes(tx.type)
                                                 ? tx.description?.split(' - ')[0]
-                                                : ['Problem', 'Solved'].includes(tx.type)
+                                                : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
                                                     ? tx.description?.split(' ||| ')[0]
                                                     : 'Unknown Product')}
                                         </p>
                                         <p className="text-xs text-muted-foreground line-clamp-1">
                                             {['Checked', 'Unchecked'].includes(tx.type)
                                                 ? (tx.description?.split(' - ').slice(1).join(' - ') || '-')
-                                                : ['Problem', 'Solved'].includes(tx.type)
+                                                : ['Problem', 'Solved', 'Problem Edited'].includes(tx.type)
                                                     ? (tx.description?.split(' ||| ')[1] || tx.description)
                                                     : (new Date(tx.createdAt).toLocaleString())}
                                         </p>
@@ -510,7 +513,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
                                 {/* Quantity */}
                                 <div className="text-right">
-                                    {!['Solved', 'Problem', 'Checked', 'Unchecked'].includes(tx.type) && (
+                                    {!['Solved', 'Problem', 'Problem Edited', 'Checked', 'Unchecked', 'Service Robot'].includes(tx.type) && (
                                         <span className={cn("font-bold text-sm block",
                                             tx.type === 'IN' ? 'text-emerald-600 dark:text-emerald-400' :
                                                 tx.type === 'OUT' ? 'text-blue-600 dark:text-blue-400' :

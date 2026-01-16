@@ -287,7 +287,7 @@ export default function AssetManager({
             {/* Add/Edit Form */}
             {(isAdding || editingAsset) && (
                 <div className="bg-card border border-border rounded-xl p-6 animate-in slide-in-from-top-4 fade-in duration-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">
+                    <h3 className="text-lg font-medium text-foreground mb-4">
                         {isAdding ? 'Tambah Aset Baru' : 'Edit Aset'}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -314,7 +314,7 @@ export default function AssetManager({
                                     <div className="flex justify-between mt-2 gap-2">
                                         <label className="cursor-pointer flex-1 text-center py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-medium">
                                             Ganti Gambar
-                                            <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                                            <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
                                         </label>
                                         <button
                                             type="button"
@@ -327,9 +327,10 @@ export default function AssetManager({
                                 </div>
                             ) : (
                                 <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                    <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                     <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-sm text-muted-foreground">Klik atau seret untuk upload gambar (maks 1MB)</p>
+                                    <p className="text-sm text-muted-foreground">Klik atau seret untuk upload gambar</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
                                 </div>
                             )}
                         </div>
@@ -544,7 +545,7 @@ export default function AssetManager({
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-sm text-muted-foreground">
-                        <thead className="bg-muted text-foreground uppercase font-medium">
+                        <thead className="bg-muted text-foreground uppercase font-normal">
                             <tr>
                                 <th className="px-6 py-4">Gambar</th>
                                 <th className="px-6 py-4">Nama</th>
@@ -663,7 +664,7 @@ export default function AssetManager({
             {/* Analytics / Summary Section - Admin Only */}
             {isAdmin && allAssets.length > 0 && (
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Ringkasan Aset</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-4">Ringkasan Aset</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Total Assets */}
                         <div className="bg-background rounded-lg p-4 border border-border">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport } from '@/app/actions/product'
+import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
 import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
@@ -99,8 +100,8 @@ export default function ProductList({
         return () => clearTimeout(timeoutId)
     }, [searchTerm, replace, pathname, searchParams])
 
-    // Sorting State
-    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' })
+    // Sorting State (null = use server order, which is createdAt desc)
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
 
     // Add Stock Modal State
     const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null)
@@ -108,6 +109,27 @@ export default function ProductList({
     const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
     const [addImageFile, setAddImageFile] = useState<File | null>(null)
     const [editImageFile, setEditImageFile] = useState<File | null>(null)
+
+    // SKU Suggestion State
+    const [allUnusedDrawers, setAllUnusedDrawers] = useState<string[]>([])
+    const [skuSuggestions, setSkuSuggestions] = useState<string[]>([])
+    const [showSkuSuggestions, setShowSkuSuggestions] = useState(false)
+    const [editSkuValue, setEditSkuValue] = useState('')
+    const [showEditSkuSuggestions, setShowEditSkuSuggestions] = useState(false)
+
+    // Fetch unused drawers for SKU suggestions
+    useEffect(() => {
+        async function fetchUnusedDrawers() {
+            try {
+                const racks = await getRacksWithUnusedDrawers()
+                const allDrawers = racks.flatMap(r => r.unusedDrawersList || [])
+                setAllUnusedDrawers(allDrawers)
+            } catch (error) {
+                console.log('Could not fetch unused drawers', error)
+            }
+        }
+        fetchUnusedDrawers()
+    }, [])
     const [removeImage, setRemoveImage] = useState(false)
 
     const handleAddImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,15 +265,15 @@ export default function ProductList({
 
     const handleSort = (key: keyof Product) => {
         setSortConfig((current) => {
-            if (current.key === key) {
+            if (current?.key === key) {
                 return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
             }
             return { key, direction: 'asc' }
         })
     }
 
-    const filteredProducts = initialProducts
-        .sort((a, b) => {
+    const filteredProducts = sortConfig
+        ? [...initialProducts].sort((a, b) => {
             const { key, direction } = sortConfig
             const aValue: any = a[key]
             const bValue: any = b[key]
@@ -263,6 +285,7 @@ export default function ProductList({
             if (aValue > bValue) return direction === 'asc' ? 1 : -1
             return 0
         })
+        : initialProducts
 
     const handlePageChange = (newPage: number) => {
         router.push(`/inventory?page=${newPage}`)
@@ -270,7 +293,7 @@ export default function ProductList({
 
     // Helper to render sort icon
     const SortIcon = ({ column }: { column: keyof Product }) => {
-        if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 ml-1 text-muted-foreground/30" />
+        if (!sortConfig || sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 ml-1 text-muted-foreground/30" />
         return sortConfig.direction === 'asc'
             ? <ArrowUp className="w-3 h-3 ml-1 text-primary" />
             : <ArrowDown className="w-3 h-3 ml-1 text-primary" />
@@ -320,7 +343,7 @@ export default function ProductList({
             {/* Add Product Form */}
             {isAdding && (
                 <div className="bg-card border border-border rounded-xl p-6 mb-6 animate-in slide-in-from-top-4 fade-in duration-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">New Product</h3>
+                    <h3 className="text-lg font-medium text-foreground mb-4">New Product</h3>
                     <form onSubmit={handleAddProduct} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
@@ -341,9 +364,10 @@ export default function ProductList({
                                     </div>
                                 ) : (
                                     <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                        <input type="file" name="image" accept="image/*" onChange={handleAddImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleAddImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                         <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
                                         <p className="text-sm text-muted-foreground">Click or Drag to upload thumbnail</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
                                     </div>
                                 )}
                             </div>
@@ -358,15 +382,54 @@ export default function ProductList({
                                     placeholder="e.g. Resistor SMD"
                                 />
                             </div>
-                            <div>
+                            <div className="relative">
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
                                 <input
                                     name="sku"
                                     value={addForm.sku}
-                                    onChange={(e) => setAddForm({ ...addForm, sku: e.target.value })}
+                                    onChange={(e) => {
+                                        const val = e.target.value.toUpperCase()
+                                        setAddForm({ ...addForm, sku: val })
+                                        // Filter suggestions based on input
+                                        if (val.length > 0) {
+                                            const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                            setSkuSuggestions(filtered.slice(0, 10))
+                                            setShowSkuSuggestions(true)
+                                        } else {
+                                            setSkuSuggestions([])
+                                            setShowSkuSuggestions(false)
+                                        }
+                                    }}
+                                    onFocus={() => {
+                                        if (addForm.sku.length > 0) {
+                                            const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
+                                            setSkuSuggestions(filtered.slice(0, 10))
+                                            setShowSkuSuggestions(true)
+                                        }
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
+                                    autoComplete="off"
                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
                                     placeholder="e.g. RK01-04"
                                 />
+                                {showSkuSuggestions && skuSuggestions.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        {skuSuggestions.map(sku => (
+                                            <button
+                                                key={sku}
+                                                type="button"
+                                                onClick={() => {
+                                                    setAddForm({ ...addForm, sku })
+                                                    setShowSkuSuggestions(false)
+                                                }}
+                                                className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                            >
+                                                <span className="font-mono text-emerald-600">{sku}</span>
+                                                <span className="text-xs text-muted-foreground">Available</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Initial Stock</label>
@@ -418,7 +481,7 @@ export default function ProductList({
             {editingProduct && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="bg-card border border-border rounded-xl p-6 w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 mt-10 mb-10">
-                        <h3 className="text-lg font-semibold text-foreground mb-4">Edit Product: {editingProduct.name}</h3>
+                        <h3 className="text-lg font-medium text-foreground mb-4">Edit Product: {editingProduct.name}</h3>
                         <form action={handleUpdateProduct} className="space-y-4">
                             <input type="hidden" name="id" value={editingProduct.id} />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,7 +507,7 @@ export default function ProductList({
                                             <div className="flex justify-between mt-2 gap-2">
                                                 <label className="cursor-pointer flex-1 text-center py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-medium">
                                                     Change Image
-                                                    <input type="file" name="image" accept="image/*" onChange={handleEditImageChange} className="hidden" />
+                                                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
                                                 </label>
                                                 <button
                                                     type="button"
@@ -457,9 +520,10 @@ export default function ProductList({
                                         </div>
                                     ) : (
                                         <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                            <input type="file" name="image" accept="image/*" onChange={handleEditImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                                             <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
                                             <p className="text-sm text-muted-foreground">Click or Drag to upload new thumbnail</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
                                         </div>
                                     )}
                                 </div>
@@ -467,9 +531,54 @@ export default function ProductList({
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
                                     <input name="name" defaultValue={editingProduct.name} required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
                                 </div>
-                                <div>
+                                <div className="relative">
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
-                                    <input name="sku" defaultValue={editingProduct.sku || ''} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
+                                    <input
+                                        name="sku"
+                                        value={editSkuValue || editingProduct.sku || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase()
+                                            setEditSkuValue(val)
+                                            // Filter suggestions based on input
+                                            if (val.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowEditSkuSuggestions(true)
+                                            } else {
+                                                setSkuSuggestions([])
+                                                setShowEditSkuSuggestions(false)
+                                            }
+                                        }}
+                                        onFocus={() => {
+                                            const currentVal = editSkuValue || editingProduct.sku || ''
+                                            if (currentVal.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(currentVal.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowEditSkuSuggestions(true)
+                                            }
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowEditSkuSuggestions(false), 200)}
+                                        autoComplete="off"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                    />
+                                    {showEditSkuSuggestions && skuSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {skuSuggestions.map(sku => (
+                                                <button
+                                                    key={sku}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditSkuValue(sku)
+                                                        setShowEditSkuSuggestions(false)
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="font-mono text-emerald-600">{sku}</span>
+                                                    <span className="text-xs text-muted-foreground">Available</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
@@ -587,7 +696,10 @@ export default function ProductList({
                                 <div className="flex gap-2 pt-3 border-t border-border">
                                     {(userRole === 'ADMIN' || userRole === 'USER') && (
                                         <button
-                                            onClick={() => setEditingProduct(product)}
+                                            onClick={() => {
+                                                setEditSkuValue('')
+                                                setEditingProduct(product)
+                                            }}
                                             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20 text-sm font-medium"
                                         >
                                             <Edit className="w-4 h-4" />
@@ -623,7 +735,7 @@ export default function ProductList({
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-sm text-muted-foreground">
-                        <thead className="bg-muted text-foreground uppercase font-medium">
+                        <thead className="bg-muted text-foreground uppercase font-normal">
                             <tr>
                                 <th className="px-6 py-4">Image</th>
                                 <th onClick={() => handleSort('name')} className="px-6 py-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
@@ -712,7 +824,10 @@ export default function ProductList({
                                             <div className="flex items-center justify-end gap-2">
                                                 {(userRole === 'ADMIN' || userRole === 'USER') && (
                                                     <button
-                                                        onClick={() => setEditingProduct(product)}
+                                                        onClick={() => {
+                                                            setEditSkuValue('')
+                                                            setEditingProduct(product)
+                                                        }}
                                                         className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
                                                         title="Edit Product"
                                                     >

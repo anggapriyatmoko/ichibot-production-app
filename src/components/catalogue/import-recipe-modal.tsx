@@ -291,7 +291,7 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
                                     <div className="border border-border rounded-lg overflow-hidden flex-1 relative flex flex-col min-h-0 bg-background/50">
                                         <div className="overflow-auto flex-1 hover:pr-1 w-full">
                                             <table className="w-full text-left text-sm whitespace-nowrap">
-                                                <thead className="bg-muted text-muted-foreground font-medium sticky top-0 z-10 shadow-sm">
+                                                <thead className="bg-muted text-muted-foreground font-normal sticky top-0 z-10 shadow-sm">
                                                     <tr>
                                                         <th className="p-3 border-b border-border w-10 bg-muted">#</th>
                                                         <th className="p-3 border-b border-border bg-muted">Status</th>

@@ -59,7 +59,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                                     Neural Detection
                                 </h2>
-                                <p className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                                <p className="text-xs text-slate-500 flex items-center gap-1.5">
                                     <Sparkles className="w-3 h-3 text-amber-500" />
                                     No anomalies recorded
                                 </p>
@@ -69,12 +69,12 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                            <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-normal tracking-wider">
                                 <tr>
-                                    <th className="px-6 py-4 font-medium">Unit Identity</th>
-                                    <th className="px-6 py-4 font-medium">Date</th>
-                                    <th className="px-6 py-4 font-medium">Detected Anomaly</th>
-                                    <th className="px-6 py-4 text-right font-medium">Actions</th>
+                                    <th className="px-6 py-4">Unit Identity</th>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">Detected Anomaly</th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -103,7 +103,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                             <p className="text-xs text-slate-400">All units are running within normal parameters.</p>
                         </div>
                     </div>
-                    <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium flex items-center gap-2">
+                    <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 flex items-center gap-2">
                         <Bot className="w-3 h-3" />
                         <span>Automated anomaly tracking active. Efficiency impact calculated based on resolution time.</span>
                     </div>
@@ -125,7 +125,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                                 Neural Detection
                             </h2>
-                            <p className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                            <p className="text-xs text-slate-500 flex items-center gap-1.5">
                                 <Sparkles className="w-3 h-3 text-amber-500" />
                                 {activeAnomalies > 0
                                     ? `${activeAnomalies} active anomalies detected`
@@ -138,13 +138,13 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                        <thead className="bg-slate-50/50 text-xs uppercase text-slate-500 font-normal tracking-wider">
                             <tr>
-                                <th className="px-6 py-4 font-medium">Unit Identity</th>
-                                <th className="px-6 py-4 font-medium">Status</th>
-                                <th className="px-6 py-4 font-medium">Date</th>
-                                <th className="px-6 py-4 font-medium">Detected Anomaly</th>
-                                <th className="px-6 py-4 text-right font-medium">Actions</th>
+                                <th className="px-6 py-4">Unit Identity</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Detected Anomaly</th>
+                                <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -234,7 +234,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                                             </p>
                                                             {issue.resolution && (
                                                                 <div className="mt-1 p-1.5 bg-green-100/50 rounded-md border border-green-100">
-                                                                    <p className="text-xs font-medium text-green-800 flex gap-1.5">
+                                                                    <p className="text-xs text-green-800 flex gap-1.5">
                                                                         <span className="shrink-0 pt-0.5">✅</span>
                                                                         <span className="whitespace-pre-wrap">{issue.resolution}</span>
                                                                     </p>
@@ -357,7 +357,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                                                     </p>
                                                     {issue.resolution && (
                                                         <div className="mt-1 p-1.5 bg-green-100/50 rounded-md border border-green-100">
-                                                            <p className="text-xs font-medium text-green-800 flex gap-1.5">
+                                                            <p className="text-xs text-green-800 flex gap-1.5">
                                                                 <span className="shrink-0 pt-0.5">✅</span>
                                                                 <span className="whitespace-pre-wrap">{issue.resolution}</span>
                                                             </p>
@@ -407,7 +407,7 @@ export default function IssueAnalysisTable({ units }: IssueAnalysisTableProps) {
                 </div>
 
                 {/* Footer Insight */}
-                <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium flex items-center gap-2">
+                <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 flex items-center gap-2">
                     <Bot className="w-3 h-3" />
                     <span>Automated anomaly tracking active. Efficiency impact calculated based on resolution time.</span>
                 </div>
