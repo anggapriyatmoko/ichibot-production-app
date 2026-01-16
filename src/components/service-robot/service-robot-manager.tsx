@@ -95,6 +95,18 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
     }
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
 
+    // Status Filter State (all selected by default)
+    const [statusFilters, setStatusFilters] = useState<Record<string, boolean>>({
+        PENDING: true,
+        IN_PROGRESS: true,
+        DONE: true,
+        DELIVERED: true,
+    })
+
+    const toggleStatusFilter = (status: string) => {
+        setStatusFilters(prev => ({ ...prev, [status]: !prev[status] }))
+    }
+
     // Form state
     const [formData, setFormData] = useState({
         entryDate: new Date().toISOString().split('T')[0],
@@ -287,26 +299,33 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
     }
 
     // Filter and sort services
-    const filteredServices = sortConfig
-        ? [...initialServices].sort((a, b) => {
-            const { key, direction } = sortConfig
-            let aValue: any = a[key]
-            let bValue: any = b[key]
+    const filteredServices = (() => {
+        // First filter by status
+        let filtered = initialServices.filter(s => statusFilters[s.serviceStatus])
 
-            // Handle Date comparison
-            if (key === 'entryDate') {
-                aValue = new Date(aValue).getTime()
-                bValue = new Date(bValue).getTime()
-            }
+        // Then sort if sortConfig exists
+        if (sortConfig) {
+            filtered = [...filtered].sort((a, b) => {
+                const { key, direction } = sortConfig
+                let aValue: any = a[key]
+                let bValue: any = b[key]
 
-            if (aValue === null || aValue === undefined) return 1
-            if (bValue === null || bValue === undefined) return -1
+                // Handle Date comparison
+                if (key === 'entryDate') {
+                    aValue = new Date(aValue).getTime()
+                    bValue = new Date(bValue).getTime()
+                }
 
-            if (aValue < bValue) return direction === 'asc' ? -1 : 1
-            if (aValue > bValue) return direction === 'asc' ? 1 : -1
-            return 0
-        })
-        : initialServices
+                if (aValue === null || aValue === undefined) return 1
+                if (bValue === null || bValue === undefined) return -1
+
+                if (aValue < bValue) return direction === 'asc' ? -1 : 1
+                if (aValue > bValue) return direction === 'asc' ? 1 : -1
+                return 0
+            })
+        }
+        return filtered
+    })()
 
     // Sync search with URL
     useEffect(() => {
@@ -434,41 +453,97 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
     return (
         <div className="space-y-6">
             {/* Header Actions */}
-            {/* Header Actions */}
-            {/* Header Actions */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Cari nama, no HP, jenis robot..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                <div className="flex gap-2 flex-1">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Cari nama, no HP, jenis robot..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                        <ImportServiceRobotModal isAdmin={isAdmin} validRobotTypes={products} />
+                        <button
+                            onClick={handleExport}
+                            disabled={isLoadingExport}
+                            className="p-2 border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                            title="Export to Excel"
+                        >
+                            {isLoadingExport ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Download className="w-5 h-5" />
+                            )}
+                        </button>
+                        <button
+                            onClick={openAddForm}
+                            className="p-2 md:px-4 md:py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm md:font-medium md:flex md:items-center md:gap-2"
+                            title="Tambah Service"
+                        >
+                            <Plus className="w-5 h-5 md:w-4 md:h-4" />
+                            <span className="hidden md:inline">Tambah Service</span>
+                        </button>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <ImportServiceRobotModal isAdmin={isAdmin} validRobotTypes={products} />
-                    <button
-                        onClick={handleExport}
-                        disabled={isLoadingExport}
-                        className="p-2 border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                        title="Export to Excel"
-                    >
-                        {isLoadingExport ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <Download className="w-5 h-5" />
-                        )}
-                    </button>
-                    <button
-                        onClick={openAddForm}
-                        className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium flex items-center justify-center gap-2 shadow-sm"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Tambah Service
-                    </button>
-                </div>
+            </div>
+
+            {/* Status Filter Buttons */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="text-sm font-medium">Filter :</span>
+                <button
+                    onClick={() => toggleStatusFilter('PENDING')}
+                    className={cn(
+                        "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
+                        statusFilters.PENDING
+                            ? "bg-red-500/10 text-red-600 border-red-500/20"
+                            : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
+                    )}
+                >
+                    <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.PENDING ? "bg-red-500" : "bg-muted-foreground/30")} />
+                    Service Masuk
+                </button>
+                <button
+                    onClick={() => toggleStatusFilter('IN_PROGRESS')}
+                    className={cn(
+                        "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
+                        statusFilters.IN_PROGRESS
+                            ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                            : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
+                    )}
+                >
+                    <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.IN_PROGRESS ? "bg-blue-500" : "bg-muted-foreground/30")} />
+                    Dikerjakan
+                </button>
+                <button
+                    onClick={() => toggleStatusFilter('DONE')}
+                    className={cn(
+                        "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
+                        statusFilters.DONE
+                            ? "bg-green-500/10 text-green-600 border-green-500/20"
+                            : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
+                    )}
+                >
+                    <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.DONE ? "bg-green-500" : "bg-muted-foreground/30")} />
+                    Selesai
+                </button>
+                <button
+                    onClick={() => toggleStatusFilter('DELIVERED')}
+                    className={cn(
+                        "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
+                        statusFilters.DELIVERED
+                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                            : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
+                    )}
+                >
+                    <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.DELIVERED ? "bg-emerald-600" : "bg-muted-foreground/30")} />
+                    Dikirim
+                </button>
+
             </div>
 
             {/* Modal Form */}
@@ -711,7 +786,7 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                         <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                         <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-4 py-3 min-w-0">
                                         <div className="flex items-start gap-2">
                                             <div className={cn(
                                                 "w-2 h-2 rounded-full mt-1.5 shrink-0",
@@ -719,14 +794,14 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                                 service.serviceStatus === 'IN_PROGRESS' && "bg-blue-500",
                                                 (service.serviceStatus === 'DONE' || service.serviceStatus === 'DELIVERED') && "bg-green-500"
                                             )} />
-                                            <div>
-                                                <div className="font-medium text-foreground">{service.customerName}</div>
+                                            <div className="min-w-0">
+                                                <div className="font-medium text-foreground truncate">{service.customerName}</div>
                                                 <div className="text-xs font-mono text-muted-foreground my-0.5">{service.customerPhone}</div>
-                                                <div className="text-xs text-muted-foreground whitespace-pre-wrap">{service.customerAddress}</div>
+                                                <div className="text-xs text-muted-foreground line-clamp-2">{service.customerAddress}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         <div className="font-medium text-foreground">{service.robotType}</div>
                                         <div className="mt-1">
                                             <span className={cn(
@@ -768,7 +843,7 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         {getStatusBadge(service.serviceStatus, () => handleStatusClick(service))}
                                     </td>
                                     <td className="px-4 py-3 text-right">
