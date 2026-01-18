@@ -9,6 +9,8 @@ export const metadata = {
     description: 'Catat aktivitas harian dan masalah yang ditemukan.',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function LogActivityPage() {
     await requireAuth()
     const session: any = await getServerSession(authOptions)

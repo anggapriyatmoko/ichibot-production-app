@@ -95,16 +95,45 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
     }
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
 
-    // Status Filter State (all selected by default)
-    const [statusFilters, setStatusFilters] = useState<Record<string, boolean>>({
-        PENDING: true,
-        IN_PROGRESS: true,
-        DONE: true,
-        DELIVERED: true,
-    })
+    // Status Filter State - initialize from URL params
+    const initStatusFilters = () => {
+        const statusParam = searchParams.get('status')
+        if (statusParam) {
+            const activeStatuses = statusParam.split(',')
+            return {
+                PENDING: activeStatuses.includes('PENDING'),
+                IN_PROGRESS: activeStatuses.includes('IN_PROGRESS'),
+                DONE: activeStatuses.includes('DONE'),
+                DELIVERED: activeStatuses.includes('DELIVERED'),
+            }
+        }
+        // All selected by default
+        return {
+            PENDING: true,
+            IN_PROGRESS: true,
+            DONE: true,
+            DELIVERED: true,
+        }
+    }
+    const [statusFilters, setStatusFilters] = useState<Record<string, boolean>>(initStatusFilters)
 
     const toggleStatusFilter = (status: string) => {
-        setStatusFilters(prev => ({ ...prev, [status]: !prev[status] }))
+        const newFilters = { ...statusFilters, [status]: !statusFilters[status] }
+        setStatusFilters(newFilters)
+
+        // Build status param from active filters
+        const activeStatuses = Object.entries(newFilters)
+            .filter(([_, active]) => active)
+            .map(([s]) => s)
+
+        const params = new URLSearchParams(window.location.search)
+        params.set('page', '1')
+        if (activeStatuses.length < 4) {
+            params.set('status', activeStatuses.join(','))
+        } else {
+            params.delete('status') // All selected = no filter
+        }
+        router.push(`/service-robot?${params.toString()}`)
     }
 
     // Form state
@@ -298,12 +327,11 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
             : <ArrowDown className="w-3 h-3 ml-1 text-primary" />
     }
 
-    // Filter and sort services
+    // Sort services (filtering is now done server-side)
     const filteredServices = (() => {
-        // First filter by status
-        let filtered = initialServices.filter(s => statusFilters[s.serviceStatus])
+        let filtered = initialServices
 
-        // Then sort if sortConfig exists
+        // Sort if sortConfig exists
         if (sortConfig) {
             filtered = [...filtered].sort((a, b) => {
                 const { key, direction } = sortConfig

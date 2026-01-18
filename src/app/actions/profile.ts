@@ -33,8 +33,8 @@ export async function updateProfile(formData: FormData) {
 
     const updateData: any = {}
 
-    // Handle Name Update (Only for ADMIN)
-    if (session.user.role === 'ADMIN' && name) {
+    // Handle Name Update (Only for ADMIN or HRD)
+    if (['ADMIN', 'HRD'].includes(session.user.role) && name) {
         updateData.name = name
     } else if (name && name !== user.name) {
         // Silently ignore or throw error? User request "untuk mengganti nama user tidak bisa" implies restriction.

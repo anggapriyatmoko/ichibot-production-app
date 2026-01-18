@@ -18,12 +18,40 @@ model User {
   name      String?
   password  String
   department String?
-  role      String   @default("USER") // USER, ADMIN, TEKNISI
+  role      String   @default("USER") // USER, ADMIN, HRD, TEKNISI
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   transactions Transaction[]
   logs         LogActivity[]
   orders       Order[]
+  attendances  Attendance[]
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime
+  clockInEnc   String?  @db.Text // Encrypted: ISO datetime string
+  clockOutEnc  String?  @db.Text // Encrypted: ISO datetime string
+  isHoliday    Boolean  @default(false)
+  statusEnc    String?  @db.Text // Encrypted: 'PRESENT', 'SICK', 'PERMIT', 'LEAVE'
+  notesEnc     String?  @db.Text // Encrypted: notes
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+model WorkSchedule {
+  id        String   @id @default(cuid())
+  dayOfWeek Int      @unique // 0=Sunday, 1=Monday, ..., 6=Saturday
+  dayName   String   // Display name: Senin, Selasa, etc.
+  startTime String?  // Format: "HH:MM"
+  endTime   String?  // Format: "HH:MM"
+  isWorkDay Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LogActivity {

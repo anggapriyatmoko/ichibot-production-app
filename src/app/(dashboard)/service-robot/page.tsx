@@ -28,16 +28,25 @@ export default async function ServiceRobotPage({
 
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const search = typeof params.search === 'string' ? params.search : ''
+    const statusFilter = typeof params.status === 'string' ? params.status : ''
     const limit = 20
     const skip = (page - 1) * limit
 
-    const where: any = search ? {
-        OR: [
+    // Parse status filter (comma-separated list of statuses)
+    const activeStatuses = statusFilter ? statusFilter.split(',') : ['PENDING', 'IN_PROGRESS', 'DONE', 'DELIVERED']
+
+    const where: any = {
+        serviceStatus: { in: activeStatuses }
+    }
+
+    // Add search filter if present
+    if (search) {
+        where.OR = [
             { customerName: { contains: search } },
             { customerPhone: { contains: search } },
             { robotType: { contains: search } }
         ]
-    } : {}
+    }
 
     const [services, totalCount, recipePromise, customerPromise, statusStats, typeStats] = await prisma.$transaction([
         prisma.serviceRobot.findMany({
@@ -136,7 +145,7 @@ export default async function ServiceRobotPage({
                 products={robotTypes}
                 customers={customers}
                 analysisData={analysisData}
-                isAdmin={session?.user?.role === 'ADMIN'}
+                isAdmin={['ADMIN', 'HRD'].includes(session?.user?.role)}
             />
         </div>
     )

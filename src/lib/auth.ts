@@ -1,6 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
+// Roles that have admin-level access
+const ADMIN_ROLES = ['ADMIN', 'HRD']
+
 export async function getSession() {
     return await getServerSession(authOptions)
 }
@@ -12,7 +15,7 @@ export async function requireAdmin() {
         throw new Error('Unauthorized: Please login')
     }
 
-    if (session.user.role !== 'ADMIN') {
+    if (!ADMIN_ROLES.includes(session.user.role)) {
         throw new Error('Forbidden: Admin access required')
     }
 
@@ -36,5 +39,5 @@ export async function getUserRole() {
 
 // Helper to check if a role has admin privileges (for frontend use)
 export function isAdminRole(role: string | undefined | null): boolean {
-    return role === 'ADMIN'
+    return ADMIN_ROLES.includes(role || '')
 }

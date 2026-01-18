@@ -73,15 +73,15 @@ export default function UserTable({ users }: UserTableProps) {
                     <div key={user.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
                         <div className="flex justify-between items-start gap-3">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${user.role === 'ADMIN' ? 'text-purple-600' : user.role === 'TEKNISI' ? 'text-orange-600' : 'text-teal-600'}`}>
-                                    {user.role === 'ADMIN' ? <Shield className="w-5 h-5" /> : <UserIcon className="w-5 h-5" />}
+                                <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${['ADMIN', 'HRD'].includes(user.role) ? 'text-purple-600' : user.role === 'TEKNISI' ? 'text-orange-600' : 'text-teal-600'}`}>
+                                    {['ADMIN', 'HRD'].includes(user.role) ? <Shield className="w-5 h-5" /> : <UserIcon className="w-5 h-5" />}
                                 </div>
                                 <div>
                                     <p className="font-bold text-foreground text-base">{user.name}</p>
                                     <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
                                 </div>
                             </div>
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${user.role === 'ADMIN'
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${['ADMIN', 'HRD'].includes(user.role)
                                 ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
                                 : user.role === 'TEKNISI'
                                     ? 'bg-orange-500/10 text-orange-600 border-orange-500/20'
@@ -143,8 +143,8 @@ export default function UserTable({ users }: UserTableProps) {
                                 <tr key={user.id} className="hover:bg-accent/30 transition-colors group">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${user.role === 'ADMIN' ? 'text-purple-600' : user.role === 'TEKNISI' ? 'text-orange-600' : 'text-teal-600'}`}>
-                                                {user.role === 'ADMIN' ? <Shield className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />}
+                                            <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${['ADMIN', 'HRD'].includes(user.role) ? 'text-purple-600' : user.role === 'TEKNISI' ? 'text-orange-600' : 'text-teal-600'}`}>
+                                                {['ADMIN', 'HRD'].includes(user.role) ? <Shield className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />}
                                             </div>
                                             <div>
                                                 <p className="font-bold text-foreground">{user.name}</p>
@@ -154,7 +154,7 @@ export default function UserTable({ users }: UserTableProps) {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${user.role === 'ADMIN'
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${['ADMIN', 'HRD'].includes(user.role)
                                             ? 'bg-purple-500/10 text-purple-500 border-purple-500/20'
                                             : user.role === 'TEKNISI'
                                                 ? 'bg-orange-500/10 text-orange-500 border-orange-500/20'

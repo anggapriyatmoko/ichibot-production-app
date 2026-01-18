@@ -38,7 +38,7 @@ interface Props {
 }
 
 export default function LogActivityManager({ initialLogs, users, currentUser }: Props) {
-    const isAdmin = currentUser.role === 'ADMIN'
+    const isAdmin = ['ADMIN', 'HRD'].includes(currentUser.role)
     const [logs, setLogs] = useState<LogActivity[]>(initialLogs)
     const [selectedUserId, setSelectedUserId] = useState<string>(currentUser.id)
     const [isLoading, setIsLoading] = useState(false)
@@ -663,7 +663,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
                     <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[90vh] flex flex-col">
-                        <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+                        <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]" autoComplete="off">
                             <div className="p-6 border-b border-border shrink-0">
                                 <h3 className="text-lg font-medium">Input Log Activity</h3>
                             </div>
@@ -683,6 +683,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                         onChange={e => setFormData({ ...formData, activity: e.target.value })}
                                         placeholder="Jelaskan kegiatan hari ini..."
                                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
+                                        autoComplete="off"
                                     />
                                 </div>
                                 <div>
@@ -693,6 +694,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                         onChange={e => setFormData({ ...formData, problem: e.target.value })}
                                         placeholder="Ada kendala apa hari ini?"
                                         className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
+                                        autoComplete="off"
                                     />
                                 </div>
                                 {/* Image Upload */}

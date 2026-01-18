@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight, FolderKanban } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight, FolderKanban, UserCog, Clock } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
@@ -38,6 +38,18 @@ const navigation = [
 // Menu visible to ADMIN and TEKNISI only
 const teknisiNavigation = [
     { name: 'Service Robot', href: '/service-robot', icon: Bot },
+]
+
+// Menu visible to ADMIN and HRD only
+const hrdNavigation = [
+    {
+        name: 'Human Resource',
+        icon: UserCog,
+        children: [
+            { name: 'Absensi', href: '/attendance', icon: Clock },
+            { name: 'Setting', href: '/hr-settings', icon: Settings },
+        ]
+    },
 ]
 
 const adminNavigation = [
@@ -187,6 +199,14 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
         return current?.name || 'Dashboard'
     }
 
+    const handleLogout = async () => {
+        // Clear all local/session storage to prevent data leakage
+        localStorage.clear()
+        sessionStorage.clear()
+        // Sign out
+        await signOut({ callbackUrl: '/login' })
+    }
+
     return (
         <>
             {/* Mobile Menu Button - Only show when sidebar is closed */}
@@ -278,6 +298,40 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                         </>
                     )}
 
+                    {/* Human Resource menu - visible to all logged-in users */}
+                    {userRole && (
+                        <>
+                            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                                <div className="border-t border-border" />
+                                <p className={cn(
+                                    "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                                    isOpen ? "px-3" : "text-center"
+                                )}>
+                                    {isOpen ? "Human Resource" : "..."}
+                                </p>
+                            </div>
+                            <nav className="space-y-1">
+                                {hrdNavigation.map((item) => {
+                                    // Filter children based on user role
+                                    // Hide 'Setting' from USER and TEKNISI (allow only for ADMIN and HRD)
+                                    const filteredChildren = item.children?.filter(child => {
+                                        if (child.name === 'Setting') {
+                                            return ['ADMIN', 'HRD'].includes(userRole || '')
+                                        }
+                                        return true
+                                    })
+
+                                    const filteredItem = {
+                                        ...item,
+                                        children: filteredChildren
+                                    }
+
+                                    return <NavItem key={item.name} item={filteredItem} isCollapsed={!isOpen} />
+                                })}
+                            </nav>
+                        </>
+                    )}
+
                     {userRole === 'ADMIN' && (
                         <>
                             <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
@@ -311,7 +365,7 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                     </Link>
 
                     <button
-                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        onClick={handleLogout}
                         className={cn(
                             "flex items-center justify-center text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors",
                             isOpen ? "w-full px-3 py-2" : "md:w-10 md:h-10 md:p-0"

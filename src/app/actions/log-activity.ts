@@ -177,7 +177,7 @@ export async function getLogActivities(targetUserId?: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
     const currentUserId = session?.user?.id
-    const isAdmin = session?.user?.role === 'ADMIN'
+    const isAdmin = ['ADMIN', 'HRD'].includes(session?.user?.role)
 
     // If targetUserId is provided, check if admin.
     // If not admin, ignore targetUserId and use current.
@@ -212,7 +212,7 @@ export async function getUsersForLog() {
     // Or maybe just fetch all users if admin?
     // Let's check admin inside
     const session: any = await getServerSession(authOptions)
-    const isAdmin = session?.user?.role === 'ADMIN'
+    const isAdmin = ['ADMIN', 'HRD'].includes(session?.user?.role)
 
     if (!isAdmin) return []
 
@@ -233,7 +233,7 @@ export async function deleteLogActivity(id: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
     const currentUserId = session?.user?.id
-    const isAdmin = session?.user?.role === 'ADMIN'
+    const isAdmin = ['ADMIN', 'HRD'].includes(session?.user?.role)
 
     const log = await prisma.logActivity.findUnique({ where: { id } })
     if (!log) throw new Error('Log not found')
@@ -249,7 +249,7 @@ export async function deleteLogActivity(id: string) {
 export async function getDailyActivityRecap(dateStr: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
-    if (session?.user?.role !== 'ADMIN') return []
+    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) return []
 
     const dateObj = new Date(dateStr)
     dateObj.setHours(0, 0, 0, 0)

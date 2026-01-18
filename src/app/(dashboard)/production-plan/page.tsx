@@ -198,7 +198,7 @@ export default async function ProductionPlanPage({
                 </form>
 
                 {/* Action Buttons Row */}
-                {session?.user?.role === 'ADMIN' && (
+                {['ADMIN', 'HRD'].includes(session?.user?.role) && (
                     <div className="flex gap-3">
                         <ImportPlanModal month={currentMonth} year={currentYear} />
                         <ExportButton month={currentMonth} year={currentYear} />
@@ -331,7 +331,7 @@ export default async function ProductionPlanPage({
                                                                 <Link href={`/production-plan/${plan.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
                                                                     <Eye className="w-4 h-4" />
                                                                 </Link>
-                                                                {session?.user?.role === 'ADMIN' && (
+                                                                {['ADMIN', 'HRD'].includes(session?.user?.role) && (
                                                                     <DeletePlanButton id={plan.id} name={plan.recipe.name} />
                                                                 )}
                                                             </div>
