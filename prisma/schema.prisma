@@ -12,19 +12,26 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String   @unique
-  name      String?
-  password  String
-  department String?
-  role      String   @default("USER") // USER, ADMIN, HRD, TEKNISI
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  transactions Transaction[]
-  logs         LogActivity[]
-  orders       Order[]
-  attendances  Attendance[]
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  username           String    @unique
+  name               String?
+  password           String
+  department         String?
+  role               String    @default("USER") // USER, ADMIN, HRD, TEKNISI
+  // Personal data fields (encrypted)
+  photoEnc           String?   @db.Text // Encrypted: URL to photo
+  phoneEnc           String?   @db.Text // Encrypted: Phone number  
+  addressEnc         String?   @db.Text // Encrypted: Full address
+  ktpNumberEnc       String?   @db.Text // Encrypted: KTP number
+  contractEndDateEnc String?   @db.Text // Encrypted: Contract end date
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  transactions       Transaction[]
+  logs               LogActivity[]
+  orders             Order[]
+  attendances        Attendance[]
+  payrolls           Payroll[]
 }
 
 model Attendance {
@@ -50,6 +57,17 @@ model WorkSchedule {
   startTime String?  // Format: "HH:MM"
   endTime   String?  // Format: "HH:MM"
   isWorkDay Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CustomWorkSchedule {
+  id        String   @id @default(cuid())
+  startDate DateTime // Start date of the custom period
+  endDate   DateTime // End date of the custom period
+  startTime String   // Format: "HH:MM" (jam masuk)
+  endTime   String   // Format: "HH:MM" (jam pulang)
+  reason    String   // Keterangan (e.g., "Jam Ramadan", "Event Khusus")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -273,4 +291,54 @@ model SparepartProject {
   image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SalaryComponent {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // "DEDUCTION" or "ADDITION"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  payrollItems PayrollItem[]
+
+  @@unique([name, type])
+}
+
+model Payroll {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month     Int      // Kept for unique constraint/indexing
+  year      Int      // Kept for unique constraint/indexing
+  monthEnc  String   @db.Text // Encrypted month for secure storage
+  yearEnc   String   @db.Text // Encrypted year for secure storage
+  basicSalaryEnc String @db.Text // Encrypted Float
+  netSalaryEnc   String @db.Text // Encrypted Float
+  salarySlipEnc  String? @db.Text // Encrypted: Path to PDF file
+
+  items     PayrollItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, month, year])
+}
+
+model PayrollItem {
+  id        String   @id @default(cuid())
+  payrollId String
+  payroll   Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  componentId String
+  component SalaryComponent @relation(fields: [componentId], references: [id])
+  amountEnc String @db.Text // Encrypted Float
+}
+
+model HRDocument {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

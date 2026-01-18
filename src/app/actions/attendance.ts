@@ -232,3 +232,324 @@ export async function getMonthlyAttendance(userId: string, month: number, year: 
     // Decrypt all records
     return records.map(decryptAttendance)
 }
+
+// Get attendance summary for payroll period (from salaryCalcDay of previous month to salaryCalcDay-1 of current month)
+export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, month: number, year: number) {
+    await requireAuth()
+    const session: any = await getServerSession(authOptions)
+
+    // Only ADMIN and HRD can access
+    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+        throw new Error('Unauthorized')
+    }
+
+    // Calculate period: from salaryCalcDay of previous month to salaryCalcDay-1 of current month
+    // Example: salaryCalcDay=25, month=1, year=2026
+    // Period: 25 Dec 2025 to 24 Jan 2026
+    let startDate: Date
+    let endDate: Date
+
+    if (month === 1) {
+        startDate = new Date(year - 1, 11, salaryCalcDay) // December of previous year
+    } else {
+        startDate = new Date(year, month - 2, salaryCalcDay) // Previous month
+    }
+    endDate = new Date(year, month - 1, salaryCalcDay - 1) // Current month, day before salaryCalcDay
+
+    startDate.setHours(0, 0, 0, 0)
+    endDate.setHours(23, 59, 59, 999)
+
+    // Cap endDate at today if it's in the future
+    const now = new Date()
+    now.setHours(23, 59, 59, 999)
+
+    if (endDate > now) {
+        endDate = now
+    }
+
+    // Get all users
+    const users = await prisma.user.findMany({
+        where: {
+            role: { in: ['USER', 'HRD', 'TEKNISI', 'ADMIN'] }
+        },
+        orderBy: { name: 'asc' },
+        select: {
+            id: true,
+            name: true,
+            department: true,
+            role: true
+        }
+    })
+
+    // Get work schedules
+    const workSchedules = await prisma.workSchedule.findMany()
+    const workDays = workSchedules.filter(ws => ws.isWorkDay).map(ws => ws.dayOfWeek)
+    const scheduleByDay = new Map(workSchedules.map(ws => [ws.dayOfWeek, ws]))
+
+    // Get all attendances in period
+    const allAttendances = await prisma.attendance.findMany({
+        where: {
+            date: {
+                gte: startDate,
+                lte: endDate
+            }
+        }
+    })
+
+    // Process each user
+    const result = users.map(user => {
+        const userAttendances = allAttendances.filter(a => a.userId === user.id)
+
+        let totalWorkDays = 0
+        let lateCount = 0
+        let lateMinutes = 0
+        let absentCount = 0
+        let permitCount = 0
+        let noClockOutCount = 0
+
+        // Iterate through each day in the period
+        const currentDate = new Date(startDate)
+        while (currentDate <= endDate) {
+            const dayOfWeek = currentDate.getDay()
+            const schedule = scheduleByDay.get(dayOfWeek)
+            const isSunday = dayOfWeek === 0
+
+            // Count all days as total work days
+            totalWorkDays++
+
+            const attendance = userAttendances.find(a => {
+                const attDate = new Date(a.date)
+                return attDate.toDateString() === currentDate.toDateString()
+            })
+
+            // Sunday = counted as present (skip further checks)
+            if (isSunday) {
+                currentDate.setDate(currentDate.getDate() + 1)
+                continue
+            }
+
+            // National holiday = counted as present
+            if (attendance?.isHoliday) {
+                currentDate.setDate(currentDate.getDate() + 1)
+                continue
+            }
+
+            // Check if it's a work day based on schedule
+            const isWorkDay = workDays.includes(dayOfWeek)
+
+            if (isWorkDay) {
+                if (attendance) {
+                    const decrypted = decryptAttendance(attendance)
+                    const status = decrypted?.status
+
+                    if (status === 'PERMIT' || status === 'LEAVE' || status === 'SICK') {
+                        permitCount++
+                    } else if (status === 'PRESENT' || !status) {
+                        // Check if late
+                        if (decrypted?.clockIn && schedule?.startTime) {
+                            const clockInTime = new Date(decrypted.clockIn)
+                            const [schedHours, schedMins] = schedule.startTime.split(':').map(Number)
+                            const scheduleStart = new Date(currentDate)
+                            scheduleStart.setHours(schedHours, schedMins, 0, 0)
+
+                            if (clockInTime > scheduleStart) {
+                                lateCount++
+                                // Calculate minutes late
+                                const diffMs = clockInTime.getTime() - scheduleStart.getTime()
+                                lateMinutes += Math.floor(diffMs / 60000)
+                            }
+                        }
+
+                        // Check if no clock out
+                        if (decrypted?.clockIn && !decrypted?.clockOut) {
+                            noClockOutCount++
+                        }
+                    }
+                } else {
+                    // No attendance record on a work day = absent
+                    absentCount++
+                }
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1)
+        }
+
+        return {
+            id: user.id,
+            name: user.name,
+            department: user.department,
+            role: user.role,
+            totalWorkDays,
+            lateCount,
+            lateMinutes,
+            absentCount,
+            permitCount,
+            noClockOutCount
+        }
+    })
+
+    return {
+        success: true,
+        data: result,
+        period: {
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        }
+    }
+}
+
+// Get attendance summary for payroll period for CURRENT USER
+export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number, month: number, year: number) {
+    await requireAuth()
+    const session: any = await getServerSession(authOptions)
+    const userId = session?.user?.id
+
+    if (!userId) {
+        throw new Error('Unauthorized')
+    }
+
+    // Calculate period: from salaryCalcDay of previous month to salaryCalcDay-1 of current month
+    let startDate: Date
+    let endDate: Date
+
+    if (month === 1) {
+        startDate = new Date(year - 1, 11, salaryCalcDay) // December of previous year
+    } else {
+        startDate = new Date(year, month - 2, salaryCalcDay) // Previous month
+    }
+    endDate = new Date(year, month - 1, salaryCalcDay - 1) // Current month, day before salaryCalcDay
+
+    startDate.setHours(0, 0, 0, 0)
+    endDate.setHours(23, 59, 59, 999)
+
+    // Cap endDate at today if it's in the future
+    const now = new Date()
+    now.setHours(23, 59, 59, 999)
+
+    if (endDate > now) {
+        endDate = now
+    }
+
+    // Get user details
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+            id: true,
+            name: true,
+            department: true,
+            role: true
+        }
+    })
+
+    if (!user) throw new Error('User not found')
+
+    // Get work schedules
+    const workSchedules = await prisma.workSchedule.findMany()
+    const workDays = workSchedules.filter(ws => ws.isWorkDay).map(ws => ws.dayOfWeek)
+    const scheduleByDay = new Map(workSchedules.map(ws => [ws.dayOfWeek, ws]))
+
+    // Get user attendances in period
+    const userAttendances = await prisma.attendance.findMany({
+        where: {
+            userId: userId,
+            date: {
+                gte: startDate,
+                lte: endDate
+            }
+        }
+    })
+
+    let totalWorkDays = 0
+    let lateCount = 0
+    let lateMinutes = 0
+    let absentCount = 0
+    let permitCount = 0
+    let noClockOutCount = 0
+
+    // Iterate through each day in the period
+    const currentDate = new Date(startDate)
+    while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay()
+        const schedule = scheduleByDay.get(dayOfWeek)
+        const isSunday = dayOfWeek === 0
+
+        // Count all days as total work days
+        totalWorkDays++
+
+        const attendance = userAttendances.find(a => {
+            const attDate = new Date(a.date)
+            return attDate.toDateString() === currentDate.toDateString()
+        })
+
+        // Sunday = counted as present (skip further checks)
+        if (isSunday) {
+            currentDate.setDate(currentDate.getDate() + 1)
+            continue
+        }
+
+        // National holiday = counted as present
+        if (attendance?.isHoliday) {
+            currentDate.setDate(currentDate.getDate() + 1)
+            continue
+        }
+
+        // Check if it's a work day based on schedule
+        const isWorkDay = workDays.includes(dayOfWeek)
+
+        if (isWorkDay) {
+            if (attendance) {
+                const decrypted = decryptAttendance(attendance)
+                const status = decrypted?.status
+
+                if (status === 'PERMIT' || status === 'LEAVE' || status === 'SICK') {
+                    permitCount++
+                } else if (status === 'PRESENT' || !status) {
+                    // Check if late
+                    if (decrypted?.clockIn && schedule?.startTime) {
+                        const clockInTime = new Date(decrypted.clockIn)
+                        const [schedHours, schedMins] = schedule.startTime.split(':').map(Number)
+                        const scheduleStart = new Date(currentDate)
+                        scheduleStart.setHours(schedHours, schedMins, 0, 0)
+
+                        if (clockInTime > scheduleStart) {
+                            lateCount++
+                            // Calculate minutes late
+                            const diffMs = clockInTime.getTime() - scheduleStart.getTime()
+                            lateMinutes += Math.floor(diffMs / 60000)
+                        }
+                    }
+
+                    // Check if no clock out
+                    if (decrypted?.clockIn && !decrypted?.clockOut) {
+                        noClockOutCount++
+                    }
+                }
+            } else {
+                // No attendance record on a work day = absent
+                absentCount++
+            }
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1)
+    }
+
+    return {
+        success: true,
+        data: {
+            id: user.id,
+            name: user.name,
+            department: user.department,
+            role: user.role,
+            totalWorkDays,
+            lateCount,
+            lateMinutes,
+            absentCount,
+            permitCount,
+            noClockOutCount
+        },
+        period: {
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        }
+    }
+}

@@ -40,16 +40,12 @@ const teknisiNavigation = [
     { name: 'Service Robot', href: '/service-robot', icon: Bot },
 ]
 
-// Menu visible to ADMIN and HRD only
 const hrdNavigation = [
-    {
-        name: 'Human Resource',
-        icon: UserCog,
-        children: [
-            { name: 'Absensi', href: '/attendance', icon: Clock },
-            { name: 'Setting', href: '/hr-settings', icon: Settings },
-        ]
-    },
+    { name: 'HRD Dashboard', href: '/hrd-dashboard', icon: LayoutDashboard, adminOnly: true },
+    { name: 'Absensi', href: '/attendance', icon: Clock },
+    { name: 'Izin/Lembur', href: '/overtime-leave', icon: ClipboardList },
+    { name: 'Data Lainnya', href: '/hr-other-data', icon: FolderKanban },
+    { name: 'Setting', href: '/hr-settings', icon: Settings, adminOnly: true },
 ]
 
 const adminNavigation = [
@@ -65,7 +61,7 @@ interface SidebarProps {
 export default function Sidebar({ userProfile, userRole }: SidebarProps) {
     const [isOpen, setIsOpen] = useState(true)
     const [isMobileOpen, setIsMobileOpen] = useState(false)
-    const [openMenus, setOpenMenus] = useState<string[]>(['Spareparts'])
+    const [openMenus, setOpenMenus] = useState<string[]>([])
     const pathname = usePathname()
 
     // On initial mount, auto-open parent menu if child is active
@@ -312,21 +308,13 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                             </div>
                             <nav className="space-y-1">
                                 {hrdNavigation.map((item) => {
-                                    // Filter children based on user role
-                                    // Hide 'Setting' from USER and TEKNISI (allow only for ADMIN and HRD)
-                                    const filteredChildren = item.children?.filter(child => {
-                                        if (child.name === 'Setting') {
-                                            return ['ADMIN', 'HRD'].includes(userRole || '')
+                                    // Filter based on adminOnly/Setting rule
+                                    if ((item as any).adminOnly || item.name === 'Setting') {
+                                        if (!['ADMIN', 'HRD'].includes(userRole || '')) {
+                                            return null
                                         }
-                                        return true
-                                    })
-
-                                    const filteredItem = {
-                                        ...item,
-                                        children: filteredChildren
                                     }
-
-                                    return <NavItem key={item.name} item={filteredItem} isCollapsed={!isOpen} />
+                                    return <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
                                 })}
                             </nav>
                         </>

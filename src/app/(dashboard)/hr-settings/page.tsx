@@ -1,8 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
-import { getWorkSchedules } from '@/app/actions/work-schedule'
+import { getWorkSchedules, getCustomWorkSchedules } from '@/app/actions/work-schedule'
 import WorkScheduleManager from '@/components/hr/work-schedule-manager'
+import CustomWorkScheduleManager from '@/components/hr/custom-work-schedule-manager'
+import SalaryCalculationDateCard from '@/components/hr/salary-calculation-date-card'
 
 export const metadata = {
     title: 'Setting HR | Ichibot Production',
@@ -23,7 +25,10 @@ export default async function HRSettingsPage() {
         redirect('/dashboard')
     }
 
-    const schedules = await getWorkSchedules()
+    const [schedules, customSchedules] = await Promise.all([
+        getWorkSchedules(),
+        getCustomWorkSchedules()
+    ])
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -32,7 +37,11 @@ export default async function HRSettingsPage() {
                 <p className="text-muted-foreground">Pengaturan jam kerja dan jadwal karyawan.</p>
             </div>
 
-            <WorkScheduleManager schedules={schedules} />
+            <div className="space-y-6">
+                <SalaryCalculationDateCard />
+                <WorkScheduleManager schedules={schedules} />
+                <CustomWorkScheduleManager schedules={customSchedules} />
+            </div>
         </div>
     )
 }

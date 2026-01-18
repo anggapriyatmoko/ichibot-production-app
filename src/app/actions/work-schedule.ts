@@ -66,3 +66,94 @@ export async function updateWorkSchedule(formData: FormData) {
     revalidatePath('/hr-settings')
     return { success: true }
 }
+
+// ============== Custom Work Schedules ==============
+
+// Get all custom work schedules
+export async function getCustomWorkSchedules() {
+    await requireAuth()
+
+    return prisma.customWorkSchedule.findMany({
+        orderBy: { startDate: 'asc' }
+    })
+}
+
+// Create a new custom work schedule
+export async function createCustomWorkSchedule(formData: FormData) {
+    await requireAuth()
+    const session: any = await getServerSession(authOptions)
+
+    // Only ADMIN and HRD can create
+    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+        throw new Error('Unauthorized')
+    }
+
+    const startDate = new Date(formData.get('startDate') as string)
+    const endDate = new Date(formData.get('endDate') as string)
+    const startTime = formData.get('startTime') as string
+    const endTime = formData.get('endTime') as string
+    const reason = formData.get('reason') as string
+
+    await prisma.customWorkSchedule.create({
+        data: {
+            startDate,
+            endDate,
+            startTime,
+            endTime,
+            reason
+        }
+    })
+
+    revalidatePath('/hr-settings')
+    return { success: true }
+}
+
+// Update custom work schedule
+export async function updateCustomWorkSchedule(formData: FormData) {
+    await requireAuth()
+    const session: any = await getServerSession(authOptions)
+
+    // Only ADMIN and HRD can update
+    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+        throw new Error('Unauthorized')
+    }
+
+    const id = formData.get('id') as string
+    const startDate = new Date(formData.get('startDate') as string)
+    const endDate = new Date(formData.get('endDate') as string)
+    const startTime = formData.get('startTime') as string
+    const endTime = formData.get('endTime') as string
+    const reason = formData.get('reason') as string
+
+    await prisma.customWorkSchedule.update({
+        where: { id },
+        data: {
+            startDate,
+            endDate,
+            startTime,
+            endTime,
+            reason
+        }
+    })
+
+    revalidatePath('/hr-settings')
+    return { success: true }
+}
+
+// Delete custom work schedule
+export async function deleteCustomWorkSchedule(id: string) {
+    await requireAuth()
+    const session: any = await getServerSession(authOptions)
+
+    // Only ADMIN and HRD can delete
+    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+        throw new Error('Unauthorized')
+    }
+
+    await prisma.customWorkSchedule.delete({
+        where: { id }
+    })
+
+    revalidatePath('/hr-settings')
+    return { success: true }
+}

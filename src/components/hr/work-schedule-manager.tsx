@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Clock, Loader2, Save } from 'lucide-react'
 import { updateWorkSchedule } from '@/app/actions/work-schedule'
 import { cn } from '@/lib/utils'
+import { useAlert } from '@/hooks/use-alert'
 
 interface WorkSchedule {
     id: string
@@ -21,6 +22,7 @@ interface Props {
 
 export default function WorkScheduleManager({ schedules }: Props) {
     const router = useRouter()
+    const { showAlert, showError } = useAlert()
     const [saving, setSaving] = useState(false)
     const [localSchedules, setLocalSchedules] = useState(schedules)
 
@@ -55,9 +57,11 @@ export default function WorkScheduleManager({ schedules }: Props) {
 
                 await updateWorkSchedule(formData)
             }
+            showAlert('Jadwal kerja berhasil disimpan')
             router.refresh()
         } catch (error) {
             console.error('Failed to save schedules:', error)
+            showError('Gagal menyimpan jadwal kerja')
         } finally {
             setSaving(false)
         }
@@ -82,20 +86,20 @@ export default function WorkScheduleManager({ schedules }: Props) {
                         <div
                             key={schedule.dayOfWeek}
                             className={cn(
-                                "flex items-center justify-between p-4 gap-4",
+                                "flex items-center justify-between p-3 sm:p-4 gap-2 sm:gap-4",
                                 !schedule.isWorkDay && "bg-muted/20"
                             )}
                         >
-                            <div className="flex items-center gap-4 min-w-[140px]">
+                            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-shrink-0">
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={schedule.isWorkDay}
                                         onChange={(e) => handleToggleWorkDay(schedule.dayOfWeek, e.target.checked)}
-                                        className="w-4 h-4 accent-primary"
+                                        className="w-4 h-4 accent-primary flex-shrink-0"
                                     />
                                     <span className={cn(
-                                        "font-medium",
+                                        "font-medium text-sm sm:text-base",
                                         schedule.dayOfWeek === 0 && "text-red-500",
                                         !schedule.isWorkDay && "text-muted-foreground"
                                     )}>
@@ -105,23 +109,23 @@ export default function WorkScheduleManager({ schedules }: Props) {
                             </div>
 
                             {schedule.isWorkDay ? (
-                                <div className="flex items-center gap-2 flex-1 justify-end">
+                                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                                     <input
                                         type="time"
                                         value={schedule.startTime || ''}
                                         onChange={(e) => handleTimeChange(schedule.dayOfWeek, 'startTime', e.target.value)}
-                                        className="px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-28"
+                                        className="px-1 sm:px-3 py-1 sm:py-1.5 bg-background border border-border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-[5.25rem] sm:w-28"
                                     />
-                                    <span className="text-muted-foreground">-</span>
+                                    <span className="text-muted-foreground text-xs sm:text-sm">-</span>
                                     <input
                                         type="time"
                                         value={schedule.endTime || ''}
                                         onChange={(e) => handleTimeChange(schedule.dayOfWeek, 'endTime', e.target.value)}
-                                        className="px-3 py-1.5 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-28"
+                                        className="px-1 sm:px-3 py-1 sm:py-1.5 bg-background border border-border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-[5.25rem] sm:w-28"
                                     />
                                 </div>
                             ) : (
-                                <div className="flex-1 text-right">
+                                <div className="text-right flex-shrink-0">
                                     <span className="text-sm text-muted-foreground italic">Libur</span>
                                 </div>
                             )}

@@ -3,6 +3,9 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import AttendanceManager from '@/components/attendance/attendance-manager'
+import UserAttendanceSummary from '@/components/attendance/user-attendance-summary'
+import AttendanceHeader from '@/components/attendance/attendance-header'
+
 import { decrypt, decryptDate } from '@/lib/crypto'
 
 export const metadata = {
@@ -168,20 +171,38 @@ export default async function AttendancePage({
 
     return (
         <div className="max-w-full mx-auto">
-            <div className="mb-8 text-right md:text-left">
-                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Absensi</h1>
-                <p className="text-muted-foreground">
-                    {isAdmin ? 'Kelola data absensi karyawan.' : 'Lihat data absensi Anda.'}
-                </p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Absensi</h1>
+                    <p className="text-muted-foreground">
+                        {isAdmin ? 'Kelola data absensi karyawan.' : 'Lihat data absensi Anda.'}
+                    </p>
+                </div>
+                <div className="w-fit">
+                    <AttendanceHeader
+                        currentMonth={currentMonth}
+                        currentYear={currentYear}
+                        isAdmin={isAdmin}
+                    />
+                </div>
             </div>
 
-            <AttendanceManager
-                monthlyData={monthlyData}
-                currentMonth={currentMonth}
-                currentYear={currentYear}
-                daysInMonth={daysInMonth}
-                isAdmin={isAdmin}
-            />
+            <div className={isAdmin ? "w-full" : "grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"}>
+                <div className="min-w-0">
+                    <AttendanceManager
+                        monthlyData={monthlyData}
+                        currentMonth={currentMonth}
+                        currentYear={currentYear}
+                        daysInMonth={daysInMonth}
+                        isAdmin={isAdmin}
+                    />
+                </div>
+                {!isAdmin && (
+                    <div className="space-y-6">
+                        <UserAttendanceSummary month={currentMonth} year={currentYear} />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

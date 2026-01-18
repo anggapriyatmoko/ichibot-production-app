@@ -2,12 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, Check, X, ChevronLeft, ChevronRight, Loader2, ChevronDown, ChevronUp, Download, Upload } from 'lucide-react'
+import { X, Loader2 } from 'lucide-react'
 import { upsertAttendance } from '@/app/actions/attendance'
-import { exportAttendance } from '@/app/actions/attendance-io'
-import ImportAttendanceModal from './import-attendance-modal'
 import { cn } from '@/lib/utils'
-import { useAlert } from '@/hooks/use-alert'
 
 interface User {
     id: string
@@ -75,52 +72,6 @@ export default function AttendanceManager({
     const [saving, setSaving] = useState(false)
     const [editModal, setEditModal] = useState<EditModal | null>(null)
     const [expandedUser, setExpandedUser] = useState<string | null>(monthlyData.length === 1 ? monthlyData[0]?.user.id : null)
-    const { showAlert, showError } = useAlert()
-    const [ioLoading, setIoLoading] = useState(false)
-
-    const handleExport = async () => {
-        setIoLoading(true)
-        try {
-            const base64 = await exportAttendance(currentMonth, currentYear)
-
-            // Convert to blob
-            const binaryString = window.atob(base64)
-            const len = binaryString.length
-            const bytes = new Uint8Array(len)
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i)
-            }
-            const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-
-            // Download
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `Absensi_${currentMonth}-${currentYear}.xlsx`
-            a.click()
-            window.URL.revokeObjectURL(url)
-            showAlert('Export berhasil')
-        } catch (error) {
-            showError('Gagal export data')
-        } finally {
-            setIoLoading(false)
-        }
-    }
-
-    const handleMonthChange = (direction: 'prev' | 'next') => {
-        let newMonth = currentMonth
-        let newYear = currentYear
-
-        if (direction === 'prev') {
-            newMonth = currentMonth === 1 ? 12 : currentMonth - 1
-            newYear = currentMonth === 1 ? currentYear - 1 : currentYear
-        } else {
-            newMonth = currentMonth === 12 ? 1 : currentMonth + 1
-            newYear = currentMonth === 12 ? currentYear + 1 : currentYear
-        }
-
-        router.push(`/attendance?month=${newMonth}&year=${newYear}`)
-    }
 
     const formatTimeForInput = (date: Date | null) => {
         if (!date) return ''
@@ -192,15 +143,6 @@ export default function AttendanceManager({
     const isCurrentMonth = today.getMonth() + 1 === currentMonth && today.getFullYear() === currentYear
     const todayDate = today.getDate()
 
-    // Count present today if it's current month
-    let presentToday = 0
-    if (isCurrentMonth) {
-        presentToday = monthlyData.filter(d => {
-            const att = d.attendances[todayDate]
-            return att?.clockIn || att?.status === 'LEAVE'
-        }).length
-    }
-
     // Generate calendar weeks
     const getCalendarWeeks = () => {
         const firstDayOfMonth = new Date(currentYear, currentMonth - 1, 1)
@@ -254,51 +196,15 @@ export default function AttendanceManager({
 
     return (
         <div className="space-y-6">
-            {/* Header with Month/Year Picker */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-                <div className="flex items-center gap-2">
-                    {isAdmin && (
-                        <div className="flex gap-2 mr-2">
-                            <button
-                                onClick={handleExport}
-                                disabled={ioLoading}
-                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                                title="Export Excel"
-                            >
-                                {ioLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                            </button>
-                            <ImportAttendanceModal
-                                currentMonth={currentMonth}
-                                currentYear={currentYear}
-                                onSuccess={() => router.refresh()}
-                            />
-                        </div>
-                    )}
-                    <button
-                        onClick={() => handleMonthChange('prev')}
-                        className="p-2 hover:bg-muted rounded-full transition-colors"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">
-                            {monthNames[currentMonth - 1]} {currentYear}
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => handleMonthChange('next')}
-                        className="p-2 hover:bg-accent rounded-lg transition-colors"
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
-                </div>
 
-
-            </div>
 
             {/* User Calendar Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <div className={cn(
+                "grid gap-4 items-start",
+                monthlyData.length === 1
+                    ? "grid-cols-1"
+                    : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+            )}>
                 {monthlyData.map(({ user, attendances, stats }) => {
                     const { present, complete } = countAttendance(attendances)
                     const isExpanded = isAdmin ? true : expandedUser === user.id
@@ -316,28 +222,7 @@ export default function AttendanceManager({
                                             {user.department || '-'}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-[10px]">
-                                        <span className="px-1.5 py-0.5 bg-green-500/10 text-green-600 rounded-full">
-                                            {complete} lengkap
-                                        </span>
-                                        <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-600 rounded-full">
-                                            {present} hadir
-                                        </span>
-                                    </div>
                                 </div>
-                                {stats && (
-                                    <div className="flex flex-wrap gap-2 text-[10px]">
-                                        <span className="px-1.5 py-0.5 bg-red-500/10 text-red-600 rounded-full font-medium" title="Total Terlambat Bulan Ini">
-                                            Telat: {stats.lateMinutes}m
-                                        </span>
-                                        <span className="px-1.5 py-0.5 bg-orange-500/10 text-orange-600 rounded-full font-medium" title="Total Pulang Cepat Bulan Ini">
-                                            Cepat: {stats.earlyMinutes}m
-                                        </span>
-                                        <span className="px-1.5 py-0.5 bg-gray-500/10 text-gray-600 rounded-full font-medium" title="Total Tidak Masuk Bulan Ini (Hari Kerja)">
-                                            Tidak Masuk: {stats.absentDays || 0} hari
-                                        </span>
-                                    </div>
-                                )}
                             </div>
 
                             {/* Calendar Grid */}
