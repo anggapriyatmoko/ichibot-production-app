@@ -42,7 +42,7 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
 
     // Check file size
     if (file.size > MAX_SIZE) {
-        return { valid: false, error: 'Ukuran file terlalu besar. Maksimal 1MB.' }
+        return { valid: false, error: 'File gambar melebihi 1MB' }
     }
 
     // Check MIME type

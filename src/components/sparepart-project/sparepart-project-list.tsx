@@ -95,6 +95,13 @@ export default function SparepartProjectList({
     const handleAddImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            // Client-side validation (1MB limit)
+            const MAX_SIZE = 1 * 1024 * 1024
+            if (file.size > MAX_SIZE) {
+                showError('File gambar melebihi 1MB')
+                e.target.value = ''
+                return
+            }
             setAddImageFile(file)
             const reader = new FileReader()
             reader.onloadend = () => {
@@ -107,6 +114,13 @@ export default function SparepartProjectList({
     const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            // Client-side validation (1MB limit)
+            const MAX_SIZE = 1 * 1024 * 1024
+            if (file.size > MAX_SIZE) {
+                showError('File gambar melebihi 1MB')
+                e.target.value = ''
+                return
+            }
             setEditImageFile(file)
             const reader = new FileReader()
             reader.onloadend = () => {

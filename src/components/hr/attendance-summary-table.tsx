@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
-import { ClipboardList, Clock, XCircle, FileWarning, AlertCircle, Loader2, CalendarDays } from 'lucide-react'
+import { useState, useEffect, useTransition, useRef } from 'react'
+import { ClipboardList, Clock, XCircle, FileWarning, AlertCircle, Loader2, CalendarDays, Download } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { getPayrollPeriodAttendanceSummary } from '@/app/actions/attendance'
 
@@ -25,11 +25,183 @@ interface Props {
 
 export default function AttendanceSummaryTable({ currentMonth, currentYear }: Props) {
     const router = useRouter()
+    const tableRef = useRef<HTMLDivElement>(null)
     const [isPending, startTransition] = useTransition()
     const [data, setData] = useState<AttendanceSummaryItem[]>([])
     const [period, setPeriod] = useState<{ startDate: string, endDate: string } | null>(null)
     const [loading, setLoading] = useState(true)
     const [salaryCalcDay, setSalaryCalcDay] = useState(25)
+    const [downloading, setDownloading] = useState(false)
+
+    const handleDownloadPDF = async () => {
+        if (downloading || data.length === 0) return
+
+        setDownloading(true)
+        try {
+            const { jsPDF } = await import('jspdf')
+            const doc = new jsPDF('landscape', 'mm', 'a4')
+
+            const pageWidth = doc.internal.pageSize.getWidth()
+            const margin = 15
+            const usableWidth = pageWidth - (margin * 2)
+
+            // Title
+            doc.setFontSize(16)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Rekap Absensi Periode Gaji', margin, 20)
+
+            // Period info
+            if (period) {
+                doc.setFontSize(10)
+                doc.setFont('helvetica', 'normal')
+                const periodText = `Periode: ${formatDate(period.startDate)} - ${formatDate(period.endDate)}`
+                doc.text(periodText, margin, 28)
+            }
+
+            // Table settings
+            const startY = 35
+            const rowHeight = 10
+            const headerHeight = 12
+
+            // Column widths (proportional)
+            const colWidths = [
+                usableWidth * 0.25, // Karyawan
+                usableWidth * 0.12, // Total Hari
+                usableWidth * 0.15, // Terlambat
+                usableWidth * 0.14, // Tidak Masuk
+                usableWidth * 0.14, // Izin/Sakit
+                usableWidth * 0.20, // Tanpa Absen Pulang
+            ]
+
+            // Draw header background
+            doc.setFillColor(248, 250, 252) // bg-muted/50
+            doc.rect(margin, startY, usableWidth, headerHeight, 'F')
+
+            // Draw header border
+            doc.setDrawColor(226, 232, 240)
+            doc.rect(margin, startY, usableWidth, headerHeight, 'S')
+
+            // Header texts
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(100, 116, 139) // text-muted-foreground
+
+            let xPos = margin + 3
+            const headerY = startY + 8
+
+            doc.text('Karyawan', xPos, headerY)
+            xPos += colWidths[0]
+
+            doc.text('Total Hari', xPos + colWidths[1] / 2, headerY, { align: 'center' })
+            xPos += colWidths[1]
+
+            doc.setTextColor(234, 88, 12) // text-orange-600
+            doc.text('Terlambat', xPos + colWidths[2] / 2, headerY, { align: 'center' })
+            xPos += colWidths[2]
+
+            doc.setTextColor(220, 38, 38) // text-red-600
+            doc.text('Tidak Masuk', xPos + colWidths[3] / 2, headerY, { align: 'center' })
+            xPos += colWidths[3]
+
+            doc.setTextColor(37, 99, 235) // text-blue-600
+            doc.text('Izin/Sakit', xPos + colWidths[4] / 2, headerY, { align: 'center' })
+            xPos += colWidths[4]
+
+            doc.setTextColor(202, 138, 4) // text-yellow-600
+            doc.text('Tanpa Absen Pulang', xPos + colWidths[5] / 2, headerY, { align: 'center' })
+
+            // Draw data rows
+            let currentY = startY + headerHeight
+            doc.setFont('helvetica', 'normal')
+
+            data.forEach((item, index) => {
+                // Alternating row background
+                if (index % 2 === 0) {
+                    doc.setFillColor(255, 255, 255)
+                } else {
+                    doc.setFillColor(249, 250, 251)
+                }
+                doc.rect(margin, currentY, usableWidth, rowHeight, 'F')
+
+                // Row border
+                doc.setDrawColor(226, 232, 240)
+                doc.rect(margin, currentY, usableWidth, rowHeight, 'S')
+
+                const textY = currentY + 7
+                xPos = margin + 3
+
+                // Karyawan column
+                doc.setTextColor(15, 23, 42) // text-foreground
+                doc.setFontSize(9)
+                doc.setFont('helvetica', 'bold')
+                doc.text(item.name || '-', xPos, textY - 1)
+                doc.setFontSize(7)
+                doc.setFont('helvetica', 'normal')
+                doc.setTextColor(100, 116, 139)
+                doc.text(item.department || '-', xPos, textY + 2.5)
+                xPos += colWidths[0]
+
+                // Total Hari
+                doc.setFontSize(9)
+                doc.setTextColor(15, 23, 42)
+                doc.setFont('helvetica', 'bold')
+                doc.text(`${item.totalWorkDays} hari`, xPos + colWidths[1] / 2, textY, { align: 'center' })
+                xPos += colWidths[1]
+
+                // Terlambat
+                if (item.lateCount > 0) {
+                    doc.setTextColor(234, 88, 12)
+                    doc.text(`${item.lateCount}`, xPos + colWidths[2] / 2, textY - 1, { align: 'center' })
+                    doc.setFontSize(7)
+                    doc.text(formatMinutes(item.lateMinutes), xPos + colWidths[2] / 2, textY + 2.5, { align: 'center' })
+                } else {
+                    doc.setTextColor(100, 116, 139)
+                    doc.text('-', xPos + colWidths[2] / 2, textY, { align: 'center' })
+                }
+                xPos += colWidths[2]
+
+                // Tidak Masuk
+                doc.setFontSize(9)
+                if (item.absentCount > 0) {
+                    doc.setTextColor(220, 38, 38)
+                    doc.text(`${item.absentCount}`, xPos + colWidths[3] / 2, textY, { align: 'center' })
+                } else {
+                    doc.setTextColor(100, 116, 139)
+                    doc.text('-', xPos + colWidths[3] / 2, textY, { align: 'center' })
+                }
+                xPos += colWidths[3]
+
+                // Izin/Sakit
+                if (item.permitCount > 0) {
+                    doc.setTextColor(37, 99, 235)
+                    doc.text(`${item.permitCount}`, xPos + colWidths[4] / 2, textY, { align: 'center' })
+                } else {
+                    doc.setTextColor(100, 116, 139)
+                    doc.text('-', xPos + colWidths[4] / 2, textY, { align: 'center' })
+                }
+                xPos += colWidths[4]
+
+                // Tanpa Absen Pulang
+                if (item.noClockOutCount > 0) {
+                    doc.setTextColor(202, 138, 4)
+                    doc.text(`${item.noClockOutCount}`, xPos + colWidths[5] / 2, textY, { align: 'center' })
+                } else {
+                    doc.setTextColor(100, 116, 139)
+                    doc.text('-', xPos + colWidths[5] / 2, textY, { align: 'center' })
+                }
+
+                currentY += rowHeight
+            })
+
+            // Save the PDF
+            const periodStr = period ? `${period.startDate}_${period.endDate}` : `${currentMonth}_${currentYear}`
+            doc.save(`rekap-absensi-${periodStr}.pdf`)
+        } catch (error) {
+            console.error('Error downloading PDF:', error)
+        } finally {
+            setDownloading(false)
+        }
+    }
 
     useEffect(() => {
         const saved = localStorage.getItem('salaryCalculationDay')
@@ -96,7 +268,7 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i)
 
     return (
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mt-8">
+        <div ref={tableRef} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mt-8">
             <div className="p-4 border-b border-border bg-muted/30">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -130,6 +302,19 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                                 <option key={y} value={y}>{y}</option>
                             ))}
                         </select>
+                        <button
+                            onClick={handleDownloadPDF}
+                            disabled={downloading || loading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download sebagai PDF"
+                        >
+                            {downloading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Download className="w-4 h-4" />
+                            )}
+                            <span className="hidden sm:inline">PDF</span>
+                        </button>
                     </div>
                 </div>
             </div>

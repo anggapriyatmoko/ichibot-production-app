@@ -36,15 +36,15 @@ async function deleteOldImage(imagePath: string | null) {
     }
 }
 
-// Image upload validation helper for log activity (2MB limit)
+// Image upload validation helper for log activity (1MB limit)
 function validateLogImageFile(file: File): { valid: boolean; error?: string } {
-    const MAX_SIZE = 2 * 1024 * 1024 // 2MB
+    const MAX_SIZE = 1 * 1024 * 1024 // 1MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
     const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
 
     // Check file size
     if (file.size > MAX_SIZE) {
-        return { valid: false, error: 'Ukuran file terlalu besar. Maksimal 2MB.' }
+        return { valid: false, error: 'File gambar melebihi 1MB' }
     }
 
     // Check MIME type

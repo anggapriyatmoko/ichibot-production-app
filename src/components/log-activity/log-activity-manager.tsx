@@ -85,9 +85,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
         if (!file) return
 
         // Client-side validation (2MB limit)
-        const MAX_SIZE = 2 * 1024 * 1024
+        const MAX_SIZE = 1 * 1024 * 1024
         if (file.size > MAX_SIZE) {
-            showError('Ukuran file terlalu besar. Maksimal 2MB.')
+            showError('File gambar melebihi 1MB')
             return
         }
 
@@ -699,7 +699,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                 </div>
                                 {/* Image Upload */}
                                 <div>
-                                    <label className="block text-sm font-medium mb-2">Gambar (Opsional, Maks. 2MB)</label>
+                                    <label className="block text-sm font-medium mb-2">Gambar (Opsional, Maks. 1MB)</label>
                                     <div className="flex items-start gap-4">
                                         {formData.image ? (
                                             <div className="relative">
@@ -723,7 +723,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                     Klik untuk pilih gambar
                                                 </span>
                                                 <span className="text-xs text-muted-foreground mt-1">
-                                                    JPG, PNG, WEBP, GIF (Maks. 2MB)
+                                                    JPG, PNG, WEBP, GIF (Maks. 1MB)
                                                 </span>
                                                 <input
                                                     type="file"

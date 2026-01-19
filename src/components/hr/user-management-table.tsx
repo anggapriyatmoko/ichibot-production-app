@@ -134,6 +134,13 @@ export default function UserManagementTable({ userRole }: Props) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
+            // Client-side validation (1MB limit)
+            const MAX_SIZE = 1 * 1024 * 1024
+            if (file.size > MAX_SIZE) {
+                showError('File gambar melebihi 1MB')
+                e.target.value = ''
+                return
+            }
             // Create preview URL
             const url = URL.createObjectURL(file)
             setPreviewUrl(url)
