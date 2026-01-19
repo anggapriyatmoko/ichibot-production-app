@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, Loader2 } from 'lucide-react'
-import { upsertAttendance } from '@/app/actions/attendance'
+import { X, Loader2, Trash2, AlertTriangle } from 'lucide-react'
+import { upsertAttendance, deleteAttendance } from '@/app/actions/attendance'
 import { cn } from '@/lib/utils'
 
 interface User {
@@ -52,6 +52,7 @@ interface EditModal {
     isHoliday: boolean
     originalIsHoliday: boolean
     status: string
+    attendanceId: string | null
 }
 
 const monthNames = [
@@ -70,6 +71,8 @@ export default function AttendanceManager({
 }: Props) {
     const router = useRouter()
     const [saving, setSaving] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [editModal, setEditModal] = useState<EditModal | null>(null)
     const [expandedUser, setExpandedUser] = useState<string | null>(monthlyData.length === 1 ? monthlyData[0]?.user.id : null)
 
@@ -100,7 +103,8 @@ export default function AttendanceManager({
             clockOut: formatTimeForInput(attendance?.clockOut || null),
             isHoliday: attendance?.isHoliday || false,
             originalIsHoliday: attendance?.isHoliday || false,
-            status: attendance?.status || 'PRESENT'
+            status: attendance?.status || 'PRESENT',
+            attendanceId: attendance?.id || null
         })
     }
 
@@ -134,6 +138,23 @@ export default function AttendanceManager({
             console.error('Failed to save attendance:', error)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!editModal || !editModal.attendanceId) return
+
+        setDeleting(true)
+        try {
+            await deleteAttendance(editModal.attendanceId)
+            router.refresh()
+            setShowDeleteConfirm(false)
+            closeModal()
+        } catch (error) {
+            console.error('Failed to delete attendance:', error)
+            alert('Gagal menghapus data absensi')
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -422,22 +443,80 @@ export default function AttendanceManager({
                                 </>
                             )}
                         </div>
-                        <div className="p-4 border-t border-border flex justify-end gap-2">
-                            <button
-                                onClick={closeModal}
-                                disabled={saving}
-                                className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg transition-colors"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                Simpan
-                            </button>
+                        <div className="p-4 border-t border-border flex justify-between gap-2">
+                            {/* Delete button - only show if editing existing attendance */}
+                            {editModal.attendanceId ? (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    disabled={saving || deleting}
+                                    className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Hapus
+                                </button>
+                            ) : (
+                                <div></div>
+                            )}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={closeModal}
+                                    disabled={saving || deleting}
+                                    className="px-4 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving || deleting}
+                                    className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    Simpan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && editModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-card w-full max-w-sm rounded-2xl border border-border shadow-lg">
+                        <div className="p-6 text-center">
+                            {/* Warning Icon */}
+                            <div className="mx-auto w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                                <AlertTriangle className="w-7 h-7 text-red-600" />
+                            </div>
+
+                            {/* Title */}
+                            <h3 className="text-lg font-bold text-foreground mb-2">
+                                Hapus Data Absensi?
+                            </h3>
+
+                            {/* Message */}
+                            <p className="text-sm text-muted-foreground mb-6">
+                                Anda yakin ingin menghapus data absensi <span className="font-semibold text-foreground">{editModal.userName}</span> pada tanggal <span className="font-semibold text-foreground">{editModal.day} {monthNames[currentMonth - 1]} {currentYear}</span>?
+                            </p>
+
+                            {/* Buttons */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    disabled={deleting}
+                                    className="flex-1 px-4 py-2.5 text-sm font-medium text-muted-foreground bg-muted hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    Ya, Hapus
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
