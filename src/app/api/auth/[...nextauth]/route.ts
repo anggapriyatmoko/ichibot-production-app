@@ -6,6 +6,7 @@ import { compare } from "bcryptjs"
 export const authOptions: AuthOptions = {
     session: {
         strategy: "jwt" as const,
+        maxAge: 60 * 60, // 1 hour in seconds (server-side backup)
     },
     pages: {
         signIn: "/login",

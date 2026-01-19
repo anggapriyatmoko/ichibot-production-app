@@ -24,8 +24,18 @@ async function saveFile(file: File, oldPath?: string | null): Promise<string> {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Ensure uploads directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'salary-slips')
+    // Determine upload directory - use environment variable or default
+    // In production (Docker), we expect a volume mount at /app/uploads
+    let baseUploadDir = process.env.UPLOAD_DIR
+    if (!baseUploadDir) {
+        baseUploadDir = path.join(process.cwd(), 'uploads')
+        // Fallback for local dev if 'uploads' doesn't exist but 'public/uploads' does
+        if (!fs.existsSync(baseUploadDir) && fs.existsSync(path.join(process.cwd(), 'public', 'uploads'))) {
+            baseUploadDir = path.join(process.cwd(), 'public', 'uploads')
+        }
+    }
+
+    const uploadDir = path.join(baseUploadDir, 'salary-slips')
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true })
     }
@@ -35,13 +45,20 @@ async function saveFile(file: File, oldPath?: string | null): Promise<string> {
 
     await writeFile(filepath, buffer)
 
-    // Return relative path for storage
-    const relativePath = `/uploads/salary-slips/${filename}`
+    // Return path for API route access
+    const relativePath = `/api/uploads/salary-slips/${filename}`
 
     // Delete old file if exists
     if (oldPath) {
         try {
-            const oldFilepath = path.join(process.cwd(), 'public', oldPath)
+            // Handle both old public path and new API path
+            let oldFilename = oldPath
+            if (oldPath.startsWith('/api/uploads/salary-slips/')) {
+                oldFilename = oldPath.replace('/api/uploads/salary-slips/', '')
+            } else if (oldPath.startsWith('/uploads/salary-slips/')) {
+                oldFilename = oldPath.replace('/uploads/salary-slips/', '')
+            }
+            const oldFilepath = path.join(uploadDir, oldFilename)
             if (fs.existsSync(oldFilepath)) {
                 await unlink(oldFilepath)
             }
@@ -82,7 +99,25 @@ export async function upsertPayroll(formData: FormData) {
         // Handle file removal
         if (removeSalarySlip && salarySlipPath) {
             try {
-                const oldFilepath = path.join(process.cwd(), 'public', salarySlipPath)
+                // Determine upload directory
+                let baseUploadDir = process.env.UPLOAD_DIR
+                if (!baseUploadDir) {
+                    baseUploadDir = path.join(process.cwd(), 'uploads')
+                    if (!fs.existsSync(baseUploadDir) && fs.existsSync(path.join(process.cwd(), 'public', 'uploads'))) {
+                        baseUploadDir = path.join(process.cwd(), 'public', 'uploads')
+                    }
+                }
+                const salarySlipsDir = path.join(baseUploadDir, 'salary-slips')
+
+                // Extract filename
+                let filename = salarySlipPath
+                if (salarySlipPath.startsWith('/api/uploads/salary-slips/')) {
+                    filename = salarySlipPath.replace('/api/uploads/salary-slips/', '')
+                } else if (salarySlipPath.startsWith('/uploads/salary-slips/')) {
+                    filename = salarySlipPath.replace('/uploads/salary-slips/', '')
+                }
+
+                const oldFilepath = path.join(salarySlipsDir, filename)
                 if (fs.existsSync(oldFilepath)) {
                     await unlink(oldFilepath)
                 }
@@ -230,9 +265,31 @@ export async function deletePayroll(id: string) {
         if (payroll?.salarySlipEnc) {
             const salarySlipPath = decrypt(payroll.salarySlipEnc)
             if (salarySlipPath) {
-                const oldFilepath = path.join(process.cwd(), 'public', salarySlipPath)
-                if (fs.existsSync(oldFilepath)) {
-                    await unlink(oldFilepath)
+                try {
+                    // Determine upload directory
+                    let baseUploadDir = process.env.UPLOAD_DIR
+                    if (!baseUploadDir) {
+                        baseUploadDir = path.join(process.cwd(), 'uploads')
+                        if (!fs.existsSync(baseUploadDir) && fs.existsSync(path.join(process.cwd(), 'public', 'uploads'))) {
+                            baseUploadDir = path.join(process.cwd(), 'public', 'uploads')
+                        }
+                    }
+                    const salarySlipsDir = path.join(baseUploadDir, 'salary-slips')
+
+                    // Extract filename
+                    let filename = salarySlipPath
+                    if (salarySlipPath.startsWith('/api/uploads/salary-slips/')) {
+                        filename = salarySlipPath.replace('/api/uploads/salary-slips/', '')
+                    } else if (salarySlipPath.startsWith('/uploads/salary-slips/')) {
+                        filename = salarySlipPath.replace('/uploads/salary-slips/', '')
+                    }
+
+                    const oldFilepath = path.join(salarySlipsDir, filename)
+                    if (fs.existsSync(oldFilepath)) {
+                        await unlink(oldFilepath)
+                    }
+                } catch (error) {
+                    console.error('Error deleting salary slip:', error)
                 }
             }
         }

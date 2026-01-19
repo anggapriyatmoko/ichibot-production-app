@@ -1,20 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginForm() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [sessionExpired, setSessionExpired] = useState(false)
+
+    useEffect(() => {
+        if (searchParams.get('expired') === 'true') {
+            setSessionExpired(true)
+        }
+    }, [searchParams])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         setError('')
+        setSessionExpired(false)
 
         try {
             const res = await signIn('credentials', {
@@ -38,6 +47,14 @@ export default function LoginForm() {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
+            {sessionExpired && (
+                <div className="p-3 text-sm text-amber-600 bg-amber-100/10 border border-amber-500/20 rounded-lg flex items-center gap-2">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Sesi Anda telah berakhir. Silakan login kembali.
+                </div>
+            )}
             {error && (
                 <div className="p-3 text-sm text-red-500 bg-red-100/10 border border-red-500/20 rounded-lg">
                     {error}
