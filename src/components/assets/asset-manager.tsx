@@ -67,7 +67,7 @@ export default function AssetManager({
 
     const { showConfirmation } = useConfirmation()
     const { showAlert } = useAlert()
-    const isAdmin = userRole === 'ADMIN'
+    const isAdmin = ['ADMIN', 'HRD'].includes(userRole || '')
 
     // Sync URL with Search Term (Debounced)
     useEffect(() => {

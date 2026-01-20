@@ -174,7 +174,7 @@ export default function RecipeList({
 
     return (
         <div className="space-y-6">
-            {userRole === 'ADMIN' && (
+            {['ADMIN', 'HRD'].includes(userRole || '') && (
                 <div className="flex justify-end gap-3">
                     <ImportRecipeModal />
                     <button
@@ -334,7 +334,7 @@ export default function RecipeList({
                             ) : (
                                 <h2 className="text-xl font-bold text-foreground flex items-center gap-3">
                                     {category.name}
-                                    {userRole === 'ADMIN' && (
+                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
                                         <button
                                             onClick={() => setEditingCategory({ id: category.id, name: category.name })}
                                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600"
@@ -395,7 +395,7 @@ function RecipeCard({ recipe, userRole, onEdit, onDelete }: { recipe: RecipeWith
     return (
         <div className="group relative bg-card border border-border rounded-xl p-3 hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between h-full">
             {/* Admin Actions - Absolute Top Right */}
-            {userRole === 'ADMIN' && (
+            {['ADMIN', 'HRD'].includes(userRole || '') && (
                 <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-10">
                     <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md bg-card/80 backdrop-blur-sm border border-border shadow-sm">
                         <Edit2 className="w-3.5 h-3.5" />

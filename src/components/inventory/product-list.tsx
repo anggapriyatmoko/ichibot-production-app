@@ -329,7 +329,7 @@ export default function ProductList({
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0">
-                    {userRole === 'ADMIN' && (
+                    {['ADMIN', 'HRD'].includes(userRole || '') && (
                         <>
                             <button
                                 onClick={handleExport}
@@ -342,7 +342,7 @@ export default function ProductList({
                             <ImportProductModal />
                         </>
                     )}
-                    {(userRole === 'ADMIN' || userRole === 'USER') && (
+                    {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
                         <button
                             onClick={() => setIsAdding(!isAdding)}
                             className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
@@ -708,7 +708,7 @@ export default function ProductList({
 
                                 {/* Actions */}
                                 <div className="flex gap-2 pt-3 border-t border-border">
-                                    {(userRole === 'ADMIN' || userRole === 'USER') && (
+                                    {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
                                         <button
                                             onClick={() => {
                                                 setEditSkuValue('')
@@ -727,7 +727,7 @@ export default function ProductList({
                                         <PackagePlus className="w-4 h-4" />
                                         Restock
                                     </button>
-                                    {userRole === 'ADMIN' && (
+                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
                                         <button
                                             onClick={() => handleDelete(product.id)}
                                             className="px-3 py-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-border"
@@ -836,7 +836,7 @@ export default function ProductList({
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {(userRole === 'ADMIN' || userRole === 'USER') && (
+                                                {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
                                                     <button
                                                         onClick={() => {
                                                             setEditSkuValue('')
@@ -855,7 +855,7 @@ export default function ProductList({
                                                 >
                                                     <PackagePlus className="w-4 h-4" />
                                                 </button>
-                                                {userRole === 'ADMIN' && (
+                                                {['ADMIN', 'HRD'].includes(userRole || '') && (
                                                     <button
                                                         onClick={() => handleDelete(product.id)}
                                                         className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors group-hover:block"

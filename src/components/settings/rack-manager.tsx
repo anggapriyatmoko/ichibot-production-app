@@ -20,7 +20,7 @@ interface RackManagerProps {
 }
 
 export default function RackManager({ userRole }: RackManagerProps) {
-    const isAdmin = userRole === 'ADMIN'
+    const isAdmin = ['ADMIN', 'HRD'].includes(userRole || '')
     const [racks, setRacks] = useState<RackWithDrawers[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isAdding, setIsAdding] = useState(false)

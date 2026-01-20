@@ -361,7 +361,7 @@ export default function IngredientManager({
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
                 </div>
                 <div className="flex gap-3">
-                    {userRole === 'ADMIN' && (
+                    {['ADMIN', 'HRD'].includes(userRole || '') && (
                         <>
                             <ImportRecipeModal targetRecipeName={recipeName} />
                             <button
@@ -396,7 +396,7 @@ export default function IngredientManager({
             <div className="flex justify-between items-center no-print py-2 px-1">
                 <div></div>
                 <div className="flex gap-2">
-                    {isEditing && userRole === 'ADMIN' && (
+                    {isEditing && ['ADMIN', 'HRD'].includes(userRole || '') && (
                         <button
                             onClick={() => setIsAddingSection(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
@@ -464,7 +464,7 @@ export default function IngredientManager({
                                         <div className="flex items-center gap-2">
                                             {isEditing && (
                                                 <>
-                                                    {userRole === 'ADMIN' && (
+                                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
                                                         <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
                                                             <Plus className="w-3 h-3" /> Add Item
                                                         </button>
@@ -518,7 +518,7 @@ export default function IngredientManager({
                                     </div>
                                 )}
                             </div>
-                            {isEditing && userRole === 'ADMIN' && (
+                            {isEditing && ['ADMIN', 'HRD'].includes(userRole || '') && (
                                 <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
                                     <Plus className="w-3 h-3" /> Add Item
                                 </button>
