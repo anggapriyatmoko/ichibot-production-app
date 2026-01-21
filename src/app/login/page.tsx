@@ -27,7 +27,8 @@ export default function LoginPage() {
             })
 
             if (res?.error) {
-                setError('Invalid credentials')
+                // NextAuth returns the error message in res.error
+                setError(res.error)
                 setLoading(false)
             } else {
                 router.push('/dashboard')

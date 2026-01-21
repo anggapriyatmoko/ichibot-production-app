@@ -33,7 +33,8 @@ export default function LoginForm() {
             })
 
             if (res?.error) {
-                setError('Invalid credentials')
+                // NextAuth returns the error message in res.error
+                setError(res.error)
             } else {
                 router.push('/inventory')
                 router.refresh()

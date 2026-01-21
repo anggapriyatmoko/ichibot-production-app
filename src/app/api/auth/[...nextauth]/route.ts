@@ -20,7 +20,7 @@ export const authOptions: AuthOptions = {
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
-                    return null
+                    throw new Error('Email and password are required')
                 }
 
                 const user = await prisma.user.findUnique({
@@ -30,13 +30,13 @@ export const authOptions: AuthOptions = {
                 })
 
                 if (!user) {
-                    return null
+                    throw new Error('Email not registered')
                 }
 
                 const isPasswordValid = await compare(credentials.password, user.password)
 
                 if (!isPasswordValid) {
-                    return null
+                    throw new Error('Sorry, your password is invalid')
                 }
 
                 return {
