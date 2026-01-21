@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Wrench, Search, ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react'
-import { createAsset, updateAsset, deleteAsset } from '@/app/actions/asset'
+import { Plus, Pencil, Trash2, Loader2, Wrench, Search, ImageIcon, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { createAsset, updateAsset, deleteAsset, getAllAssetsForExport } from '@/app/actions/asset'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import * as XLSX from 'xlsx'
+import ImportAssetModal from './import-asset-modal'
 
 interface MachineAsset {
     id: string
@@ -268,6 +270,38 @@ export default function AssetManager({
         router.push(`${pathname}?${params.toString()}`)
     }
 
+    const [exporting, setExporting] = useState(false)
+
+    const handleExport = async () => {
+        setExporting(true)
+        try {
+            const assets = await getAllAssetsForExport()
+            const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tahun Pembelian', 'Umur Ekonomis (Tahun)', 'Nilai Residu']
+            const rows = assets.map((a: any) => [
+                a.name,
+                a.code || '',
+                a.specification || '',
+                a.location,
+                a.price || '',
+                a.notes || '',
+                a.year || '',
+                a.usefulLife || '',
+                a.residualValue || ''
+            ])
+
+            const wb = XLSX.utils.book_new()
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+            XLSX.utils.book_append_sheet(wb, ws, 'Assets')
+            XLSX.writeFile(wb, `Assets_${new Date().toISOString().split('T')[0]}.xlsx`)
+            showAlert('Export berhasil', 'success')
+        } catch (error) {
+            console.error(error)
+            showAlert('Gagal melakukan export', 'error')
+        } finally {
+            setExporting(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Header / Controls */}
@@ -282,13 +316,28 @@ export default function AssetManager({
                         className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                     />
                 </div>
-                <button
-                    onClick={() => { setIsAdding(true); setEditingAsset(null); resetForm(); }}
-                    className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
-                    title="Tambah Aset"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                <div className="flex gap-2">
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={handleExport}
+                                disabled={exporting}
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                title="Export to Excel"
+                            >
+                                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                            </button>
+                            <ImportAssetModal />
+                        </>
+                    )}
+                    <button
+                        onClick={() => { setIsAdding(true); setEditingAsset(null); resetForm(); }}
+                        className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
+                        title="Tambah Aset"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Add/Edit Form */}

@@ -259,3 +259,102 @@ export async function deleteAsset(id: string) {
     revalidatePath('/assets')
     return { success: true }
 }
+
+export async function getAllAssetsForExport() {
+    await requireAdmin()
+    return prisma.machineAsset.findMany({
+        orderBy: { name: 'asc' },
+        select: {
+            name: true,
+            code: true,
+            specification: true,
+            location: true,
+            price: true,
+            notes: true,
+            year: true,
+            usefulLife: true,
+            residualValue: true,
+            image: true
+        }
+    })
+}
+
+export async function importAssets(assets: any[]) {
+    await requireAdmin()
+
+    let successCount = 0
+    let errorCount = 0
+    const errors: string[] = []
+
+    for (const item of assets) {
+        try {
+            // Validation: Name and Location are required
+            if (!item.name) {
+                errorCount++
+                errors.push(`Row missing name: ${JSON.stringify(item)}`)
+                continue
+            }
+            if (!item.location) {
+                errorCount++
+                errors.push(`Row missing location: ${JSON.stringify(item)}`)
+                continue
+            }
+
+            const name = String(item.name).trim()
+            const location = String(item.location).trim()
+            const code = item.code ? String(item.code).trim() : null
+            const specification = item.specification ? String(item.specification).trim() : null
+            const notes = item.notes ? String(item.notes).trim() : null
+            const price = item.price ? parseFloat(item.price) : null
+            const year = item.year ? parseInt(item.year) : null
+            const usefulLife = item.usefulLife ? parseInt(item.usefulLife) : null
+            const residualValue = item.residualValue ? parseFloat(item.residualValue) : null
+
+            // Check existing by name (unique identifier for import)
+            const existing = await prisma.machineAsset.findFirst({
+                where: { name }
+            })
+
+            if (existing) {
+                // Update existing asset
+                await prisma.machineAsset.update({
+                    where: { id: existing.id },
+                    data: {
+                        code,
+                        specification,
+                        location,
+                        price,
+                        notes,
+                        year,
+                        usefulLife,
+                        residualValue
+                    }
+                })
+            } else {
+                // Create new asset
+                await prisma.machineAsset.create({
+                    data: {
+                        name,
+                        code,
+                        specification,
+                        location,
+                        price,
+                        notes,
+                        year,
+                        usefulLife,
+                        residualValue
+                    }
+                })
+            }
+            successCount++
+
+        } catch (error: any) {
+            errorCount++
+            errors.push(`Failed to import item ${item.name}: ${error.message}`)
+        }
+    }
+
+    revalidatePath('/assets')
+
+    return { success: successCount, errors }
+}
