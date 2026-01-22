@@ -968,9 +968,9 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                         {service.warrantyStatus === 'YA' ? 'Ya' : 'Tidak'}
                                     </span>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <span className="text-muted-foreground">Kelengkapan:</span>
-                                    <span className="ml-1">{service.accessories || '-'}</span>
+                                    <span className="ml-1 break-words inline-block align-top">{service.accessories || '-'}</span>
                                 </div>
                             </div>
                             <div className="text-sm">
@@ -1007,6 +1007,15 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                 >
                                     <MessageCircle className="w-4 h-4" />
                                 </button>
+                                {(service.serviceStatus === 'DONE' || service.serviceStatus === 'DELIVERED') && (
+                                    <button
+                                        onClick={() => { setResiService(service); setResiModalOpen(true); }}
+                                        className="p-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-600 rounded-lg"
+                                        title="Kirim Resi"
+                                    >
+                                        <Truck className="w-4 h-4" />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => openEditForm(service)}
                                     className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg"
