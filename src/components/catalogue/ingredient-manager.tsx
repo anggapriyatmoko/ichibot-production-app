@@ -983,7 +983,7 @@ function IngredientsTable({ ingredients, onRemove, onEdit, isEditing }: { ingred
     }
 
     return (
-        <div className="overflow-x-auto rounded-xl border border-border shadow-sm bg-card">
+        <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-border shadow-sm bg-card">
             <table className="w-full text-left text-sm border-collapse">
                 <thead className="bg-[#F9FAFB] text-foreground uppercase font-normal text-xs">
                     <tr>

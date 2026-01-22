@@ -599,7 +599,7 @@ export default function AssetManager({
                 </div>
 
                 {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto overflow-y-hidden">
                     <table className="w-full text-left text-sm text-muted-foreground">
                         <thead className="bg-muted text-foreground uppercase font-normal">
                             <tr>

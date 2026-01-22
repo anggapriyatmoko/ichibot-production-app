@@ -2,8 +2,20 @@
 
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
-import { Loader2, FileText, CheckCircle, XCircle, Trash2 } from 'lucide-react'
+import { Loader2, FileText, Trash2, Users } from 'lucide-react'
 import { deletePayroll } from '@/app/actions/payroll'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableFooter,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+} from '@/components/ui/table'
 
 export interface PayrollRecapItem {
     id: string
@@ -66,8 +78,14 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
         })
     }
 
+    const totalBasicSalary = data.reduce((sum, d) => sum + (d.hasPayroll ? d.basicSalary : 0), 0)
+    const totalDeductions = data.reduce((sum, d) => sum + (d.hasPayroll ? d.totalDeductions : 0), 0)
+    const totalAdditions = data.reduce((sum, d) => sum + (d.hasPayroll ? d.totalAdditions : 0), 0)
+    const totalNetSalary = data.reduce((sum, d) => sum + (d.hasPayroll ? d.netSalary : 0), 0)
+    const employeesWithPayroll = data.filter(d => d.hasPayroll).length
+
     return (
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mt-8">
+        <TableWrapper className="mt-8" loading={isPending}>
             <div className="p-4 border-b border-border bg-muted/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="font-semibold text-foreground">Rekapitulasi Gaji</h2>
@@ -99,51 +117,55 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                        <tr>
-                            <th className="text-left p-3 font-medium text-muted-foreground">Karyawan</th>
-                            <th className="text-left p-3 font-medium text-muted-foreground">Role/Jabatan</th>
-                            <th className="text-right p-3 font-medium text-muted-foreground">Gaji Pokok</th>
-                            <th className="text-right p-3 font-medium text-muted-foreground text-red-600">Total Potongan</th>
-                            <th className="text-right p-3 font-medium text-muted-foreground text-green-600">Total Tambahan</th>
-                            <th className="text-right p-3 font-medium text-muted-foreground">Gaji Bersih</th>
-                            <th className="text-center p-3 font-medium text-muted-foreground w-32">Slip Gaji</th>
-                            <th className="text-center p-3 font-medium text-muted-foreground w-16">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
+            <TableScrollArea>
+                <Table>
+                    <TableHeader>
+                        <TableRow hoverable={false} className="bg-muted/50">
+                            <TableHead>Karyawan</TableHead>
+                            <TableHead>Role/Jabatan</TableHead>
+                            <TableHead align="right">Gaji Pokok</TableHead>
+                            <TableHead align="right" className="text-red-600">Total Potongan</TableHead>
+                            <TableHead align="right" className="text-green-600">Total Tambahan</TableHead>
+                            <TableHead align="right">Gaji Bersih</TableHead>
+                            <TableHead align="center" className="w-32">Slip Gaji</TableHead>
+                            <TableHead align="center" className="w-16">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {data.length === 0 ? (
-                            <tr>
-                                <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                                    Belum ada data karyawan.
-                                </td>
-                            </tr>
+                            <TableEmpty
+                                colSpan={8}
+                                message="Belum ada data karyawan."
+                                icon={<Users className="w-12 h-12 opacity-20" />}
+                            />
                         ) : (
                             data.map((item) => (
-                                <tr key={item.id} className="hover:bg-muted/30">
-                                    <td className="p-3 font-medium text-foreground">{item.name || '-'}</td>
-                                    <td className="p-3">
+                                <TableRow key={item.id}>
+                                    <TableCell className="font-medium text-foreground">
+                                        {item.name || '-'}
+                                    </TableCell>
+                                    <TableCell>
                                         <div className="flex flex-col">
                                             <span className="text-xs font-semibold">{item.role}</span>
                                             <span className="text-xs text-muted-foreground">{item.department || '-'}</span>
                                         </div>
-                                    </td>
+                                    </TableCell>
 
                                     {item.hasPayroll ? (
                                         <>
-                                            <td className="p-3 text-right tabular-nums">{formatCurrency(item.basicSalary)}</td>
-                                            <td className="p-3 text-right tabular-nums text-red-600">
+                                            <TableCell align="right" className="tabular-nums">
+                                                {formatCurrency(item.basicSalary)}
+                                            </TableCell>
+                                            <TableCell align="right" className="tabular-nums text-red-600">
                                                 {item.totalDeductions > 0 ? `-${formatCurrency(item.totalDeductions)}` : '-'}
-                                            </td>
-                                            <td className="p-3 text-right tabular-nums text-green-600">
+                                            </TableCell>
+                                            <TableCell align="right" className="tabular-nums text-green-600">
                                                 {item.totalAdditions > 0 ? `+${formatCurrency(item.totalAdditions)}` : '-'}
-                                            </td>
-                                            <td className="p-3 text-right tabular-nums font-bold text-foreground">
+                                            </TableCell>
+                                            <TableCell align="right" className="tabular-nums font-bold text-foreground">
                                                 {formatCurrency(item.netSalary)}
-                                            </td>
-                                            <td className="p-3 text-center">
+                                            </TableCell>
+                                            <TableCell align="center">
                                                 {item.salarySlip ? (
                                                     <a
                                                         href={item.salarySlip}
@@ -157,8 +179,8 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                                                 ) : (
                                                     <span className="text-muted-foreground text-xs">-</span>
                                                 )}
-                                            </td>
-                                            <td className="p-3 text-center">
+                                            </TableCell>
+                                            <TableCell align="center">
                                                 {item.payrollId && (
                                                     <div className="flex justify-center">
                                                         <button
@@ -170,42 +192,42 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                                                         </button>
                                                     </div>
                                                 )}
-                                            </td>
+                                            </TableCell>
                                         </>
                                     ) : (
-                                        <td colSpan={6} className="p-3 text-center text-muted-foreground text-xs italic bg-muted/10">
+                                        <td colSpan={6} className="px-4 py-3 text-center text-muted-foreground text-xs italic bg-muted/10">
                                             Belum ada data gaji bulan ini
                                         </td>
                                     )}
-                                </tr>
+                                </TableRow>
                             ))
                         )}
-                    </tbody>
+                    </TableBody>
                     {data.length > 0 && (
-                        <tfoot className="bg-muted/80 border-t-2 border-primary/30">
-                            <tr>
-                                <td colSpan={2} className="p-3 font-bold text-foreground">
-                                    TOTAL ({data.filter(d => d.hasPayroll).length} karyawan)
-                                </td>
-                                <td className="p-3 text-right tabular-nums font-bold text-foreground">
-                                    {formatCurrency(data.reduce((sum, d) => sum + (d.hasPayroll ? d.basicSalary : 0), 0))}
-                                </td>
-                                <td className="p-3 text-right tabular-nums font-bold text-red-600">
-                                    -{formatCurrency(data.reduce((sum, d) => sum + (d.hasPayroll ? d.totalDeductions : 0), 0))}
-                                </td>
-                                <td className="p-3 text-right tabular-nums font-bold text-green-600">
-                                    +{formatCurrency(data.reduce((sum, d) => sum + (d.hasPayroll ? d.totalAdditions : 0), 0))}
-                                </td>
-                                <td className="p-3 text-right tabular-nums font-bold text-primary">
-                                    {formatCurrency(data.reduce((sum, d) => sum + (d.hasPayroll ? d.netSalary : 0), 0))}
-                                </td>
-                                <td className="p-3"></td>
-                                <td className="p-3"></td>
-                            </tr>
-                        </tfoot>
+                        <TableFooter>
+                            <TableRow hoverable={false}>
+                                <TableCell colSpan={2} className="font-bold text-foreground">
+                                    TOTAL ({employeesWithPayroll} karyawan)
+                                </TableCell>
+                                <TableCell align="right" className="tabular-nums font-bold text-foreground">
+                                    {formatCurrency(totalBasicSalary)}
+                                </TableCell>
+                                <TableCell align="right" className="tabular-nums font-bold text-red-600">
+                                    -{formatCurrency(totalDeductions)}
+                                </TableCell>
+                                <TableCell align="right" className="tabular-nums font-bold text-green-600">
+                                    +{formatCurrency(totalAdditions)}
+                                </TableCell>
+                                <TableCell align="right" className="tabular-nums font-bold text-primary">
+                                    {formatCurrency(totalNetSalary)}
+                                </TableCell>
+                                <TableCell />
+                                <TableCell />
+                            </TableRow>
+                        </TableFooter>
                     )}
-                </table>
-            </div>
-        </div >
+                </Table>
+            </TableScrollArea>
+        </TableWrapper>
     )
 }

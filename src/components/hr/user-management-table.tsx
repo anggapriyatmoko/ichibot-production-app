@@ -6,6 +6,17 @@ import { getAllUsersForHRD, updateUserData } from '@/app/actions/hrd'
 import { useAlert } from '@/hooks/use-alert'
 import Image from 'next/image'
 import PayrollModal from './payroll-modal'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+} from '@/components/ui/table'
 
 interface User {
     id: string
@@ -195,113 +206,112 @@ export default function UserManagementTable({ userRole }: Props) {
         }
     }
 
-    if (loading) {
-        return (
-            <div className="bg-card border border-border rounded-xl p-12 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-                <p className="text-muted-foreground mt-4">Memuat data karyawan...</p>
-            </div>
-        )
-    }
-
     return (
         <>
-            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+            <TableWrapper loading={loading}>
                 <div className="p-4 border-b border-border bg-muted/30 flex items-center gap-3">
                     <Users className="w-5 h-5 text-primary" />
                     <h2 className="font-semibold text-foreground">Data Karyawan & Gaji</h2>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                            <tr>
-                                <th className="text-left p-3 font-medium text-muted-foreground">Nama & Role</th>
-                                <th className="text-left p-3 font-medium text-muted-foreground">Kontak</th>
-                                <th className="text-left p-3 font-medium text-muted-foreground">Info Karyawan</th>
-                                <th className="text-left p-3 font-medium text-muted-foreground">KTP & Alamat</th>
-                                <th className="text-center p-3 font-medium text-muted-foreground">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {users.map((user) => (
-                                <tr key={user.id} className="hover:bg-muted/30">
-                                    <td className="p-3">
-                                        <div className="flex items-center gap-3">
-                                            {/* Small Avatar */}
-                                            <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex-shrink-0 border border-border">
-                                                {user.photo ? (
-                                                    <Image
-                                                        src={user.photo}
-                                                        alt={user.name || 'User'}
-                                                        width={32}
-                                                        height={32}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <Users className="w-4 h-4 m-auto text-muted-foreground h-full" />
+                <TableScrollArea>
+                    <Table>
+                        <TableHeader>
+                            <TableRow hoverable={false} className="bg-muted/50">
+                                <TableHead>Nama & Role</TableHead>
+                                <TableHead>Kontak</TableHead>
+                                <TableHead>Info Karyawan</TableHead>
+                                <TableHead>KTP & Alamat</TableHead>
+                                <TableHead align="center">Aksi</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {users.length === 0 ? (
+                                <TableEmpty
+                                    colSpan={5}
+                                    message="Belum ada data karyawan."
+                                    icon={<Users className="w-12 h-12 opacity-20" />}
+                                />
+                            ) : (
+                                users.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                {/* Small Avatar */}
+                                                <div className="w-8 h-8 rounded-full bg-muted overflow-hidden flex-shrink-0 border border-border">
+                                                    {user.photo ? (
+                                                        <Image
+                                                            src={user.photo}
+                                                            alt={user.name || 'User'}
+                                                            width={32}
+                                                            height={32}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <Users className="w-4 h-4 m-auto text-muted-foreground h-full" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-foreground">{user.name || '-'}</p>
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${user.role === 'ADMIN' ? 'bg-red-500/10 text-red-600' :
+                                                        user.role === 'HRD' ? 'bg-purple-500/10 text-purple-600' :
+                                                            user.role === 'TEKNISI' ? 'bg-blue-500/10 text-blue-600' :
+                                                                'bg-gray-500/10 text-gray-600'
+                                                        }`}>
+                                                        {user.role}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-muted-foreground">{user.email}</span>
+                                                {user.phone && <span className="text-xs text-foreground">{user.phone}</span>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-foreground">{user.department || '-'}</span>
+                                                {user.contractEndDate && (
+                                                    <>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Kontrak: {new Date(user.contractEndDate).toLocaleDateString('id-ID')}
+                                                        </span>
+                                                        {calculateRemainingTime(user.contractEndDate)}
+                                                    </>
                                                 )}
                                             </div>
-                                            <div>
-                                                <p className="font-medium text-foreground">{user.name || '-'}</p>
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${user.role === 'ADMIN' ? 'bg-red-500/10 text-red-600' :
-                                                    user.role === 'HRD' ? 'bg-purple-500/10 text-purple-600' :
-                                                        user.role === 'TEKNISI' ? 'bg-blue-500/10 text-blue-600' :
-                                                            'bg-gray-500/10 text-gray-600'
-                                                    }`}>
-                                                    {user.role}
-                                                </span>
+                                        </TableCell>
+                                        <TableCell className="max-w-[200px]">
+                                            <div className="flex flex-col gap-0.5">
+                                                {user.ktpNumber && <span className="font-mono text-xs">{user.ktpNumber}</span>}
+                                                {user.address && <span className="text-xs text-muted-foreground line-clamp-2" title={user.address}>{user.address}</span>}
+                                                {!user.ktpNumber && !user.address && <span className="text-muted-foreground">-</span>}
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-3">
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-muted-foreground">{user.email}</span>
-                                            {user.phone && <span className="text-xs text-foreground">{user.phone}</span>}
-                                        </div>
-                                    </td>
-                                    <td className="p-3">
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-foreground">{user.department || '-'}</span>
-                                            {user.contractEndDate && (
-                                                <>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Kontrak: {new Date(user.contractEndDate).toLocaleDateString('id-ID')}
-                                                    </span>
-                                                    {calculateRemainingTime(user.contractEndDate)}
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="p-3 max-w-[200px]">
-                                        <div className="flex flex-col gap-0.5">
-                                            {user.ktpNumber && <span className="font-mono text-xs">{user.ktpNumber}</span>}
-                                            {user.address && <span className="text-xs text-muted-foreground line-clamp-2" title={user.address}>{user.address}</span>}
-                                            {!user.ktpNumber && !user.address && <span className="text-muted-foreground">-</span>}
-                                        </div>
-                                    </td>
-                                    <td className="p-3 text-center">
-                                        <button
-                                            onClick={() => openEditModal(user)}
-                                            className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors"
-                                            title="Edit"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => setPayrollUser(user)}
-                                            className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-500/10 rounded-lg transition-colors"
-                                            title="Input Gaji"
-                                        >
-                                            <Banknote className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            <button
+                                                onClick={() => openEditModal(user)}
+                                                className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setPayrollUser(user)}
+                                                className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-500/10 rounded-lg transition-colors"
+                                                title="Input Gaji"
+                                            >
+                                                <Banknote className="w-4 h-4" />
+                                            </button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableScrollArea>
+            </TableWrapper>
 
             {/* Edit Modal */}
             {editingUser && (

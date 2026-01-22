@@ -408,7 +408,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
                     {/* Desktop Table View */}
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto overflow-y-hidden">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-muted text-muted-foreground uppercase font-normal">
                                     <tr>
@@ -591,7 +591,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
                     {/* Recap Desktop Table View */}
                     <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto overflow-y-hidden">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-muted text-muted-foreground uppercase font-normal">
                                     <tr>

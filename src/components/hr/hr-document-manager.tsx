@@ -4,6 +4,17 @@ import { useState, useTransition } from 'react'
 import { FileText, Plus, Trash2, Edit, ExternalLink, Download, File, Loader2, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { upsertHRDocument, deleteHRDocument } from '@/app/actions/hr-document'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+} from '@/components/ui/table'
 
 interface HRDocument {
     id: string
@@ -117,8 +128,10 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
         }
     }
 
+    const colCount = readOnly ? 4 : 5
+
     return (
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mb-8">
+        <TableWrapper className="mb-8" loading={isPending}>
             <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-primary" />
@@ -139,30 +152,34 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                 )}
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                        <tr>
-                            <th className="text-left p-3 font-medium text-muted-foreground w-1/4">Nama Dokumen</th>
-                            <th className="text-left p-3 font-medium text-muted-foreground w-1/3">Keterangan</th>
-                            <th className="text-left p-3 font-medium text-muted-foreground">Tipe</th>
-                            <th className="text-left p-3 font-medium text-muted-foreground">Aksi</th>
-                            {!readOnly && <th className="text-center p-3 font-medium text-muted-foreground w-20">Edit/Hapus</th>}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
+            <TableScrollArea>
+                <Table>
+                    <TableHeader>
+                        <TableRow hoverable={false} className="bg-muted/50">
+                            <TableHead className="w-1/4">Nama Dokumen</TableHead>
+                            <TableHead className="w-1/3">Keterangan</TableHead>
+                            <TableHead>Tipe</TableHead>
+                            <TableHead>Aksi</TableHead>
+                            {!readOnly && <TableHead align="center" className="w-20">Edit/Hapus</TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
                         {documents.length === 0 ? (
-                            <tr>
-                                <td colSpan={readOnly ? 4 : 5} className="p-8 text-center text-muted-foreground">
-                                    Belum ada dokumen.
-                                </td>
-                            </tr>
+                            <TableEmpty
+                                colSpan={colCount}
+                                message="Belum ada dokumen."
+                                icon={<FileText className="w-12 h-12 opacity-20" />}
+                            />
                         ) : (
                             documents.map((doc) => (
-                                <tr key={doc.id} className="hover:bg-muted/30 group">
-                                    <td className="p-3 font-medium text-foreground align-top">{doc.name}</td>
-                                    <td className="p-3 text-muted-foreground align-top whitespace-pre-wrap">{doc.description || '-'}</td>
-                                    <td className="p-3 align-top">
+                                <TableRow key={doc.id} className="group">
+                                    <TableCell className="font-medium text-foreground align-top">
+                                        {doc.name}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground align-top whitespace-pre-wrap">
+                                        {doc.description || '-'}
+                                    </TableCell>
+                                    <TableCell className="align-top">
                                         {doc.filePath ? (
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                                                 PDF
@@ -174,8 +191,8 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                                         ) : (
                                             <span className="text-xs text-muted-foreground">-</span>
                                         )}
-                                    </td>
-                                    <td className="p-3 align-top">
+                                    </TableCell>
+                                    <TableCell className="align-top">
                                         <div className="flex gap-2">
                                             {doc.link && (
                                                 <a
@@ -200,9 +217,9 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                                                 </a>
                                             )}
                                         </div>
-                                    </td>
+                                    </TableCell>
                                     {!readOnly && (
-                                        <td className="p-3 align-top text-center">
+                                        <TableCell className="align-top" align="center">
                                             <div className="flex justify-center gap-1">
                                                 <button
                                                     onClick={() => handleOpenModal(doc)}
@@ -219,14 +236,14 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                        </td>
+                                        </TableCell>
                                     )}
-                                </tr>
+                                </TableRow>
                             ))
                         )}
-                    </tbody>
-                </table>
-            </div>
+                    </TableBody>
+                </Table>
+            </TableScrollArea>
 
             {/* Modal */}
             {isModalOpen && (
@@ -340,6 +357,6 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                     </div>
                 </div>
             )}
-        </div>
+        </TableWrapper>
     )
 }

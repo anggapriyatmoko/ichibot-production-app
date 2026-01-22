@@ -1,9 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { Edit2, Trash2, Search, UserPlus, Shield, User as UserIcon } from 'lucide-react'
+import { Edit2, Trash2, Search, UserPlus, Shield, User as UserIcon, Loader2 } from 'lucide-react'
 import { deleteUser } from '@/app/actions/user'
 import UserDialog from './user-dialog'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+} from '@/components/ui/table'
 
 interface UserTableProps {
     users: any[]
@@ -44,6 +55,22 @@ export default function UserTable({ users }: UserTableProps) {
         }
     }
 
+    const getRoleBadgeClasses = (role: string) => {
+        if (['ADMIN', 'HRD'].includes(role)) {
+            return 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+        }
+        if (role === 'TEKNISI') {
+            return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+        }
+        return 'bg-teal-500/10 text-teal-500 border-teal-500/20'
+    }
+
+    const getRoleIconClasses = (role: string) => {
+        if (['ADMIN', 'HRD'].includes(role)) return 'text-purple-600'
+        if (role === 'TEKNISI') return 'text-orange-600'
+        return 'text-teal-600'
+    }
+
     return (
         <div className="space-y-6">
             {/* Header Actions */}
@@ -73,7 +100,7 @@ export default function UserTable({ users }: UserTableProps) {
                     <div key={user.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
                         <div className="flex justify-between items-start gap-3">
                             <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${['ADMIN', 'HRD'].includes(user.role) ? 'text-purple-600' : user.role === 'TEKNISI' ? 'text-orange-600' : 'text-teal-600'}`}>
+                                <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${getRoleIconClasses(user.role)}`}>
                                     {['ADMIN', 'HRD'].includes(user.role) ? <Shield className="w-5 h-5" /> : <UserIcon className="w-5 h-5" />}
                                 </div>
                                 <div>
@@ -81,12 +108,7 @@ export default function UserTable({ users }: UserTableProps) {
                                     <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
                                 </div>
                             </div>
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${['ADMIN', 'HRD'].includes(user.role)
-                                ? 'bg-purple-500/10 text-purple-600 border-purple-500/20'
-                                : user.role === 'TEKNISI'
-                                    ? 'bg-orange-500/10 text-orange-600 border-orange-500/20'
-                                    : 'bg-teal-500/10 text-teal-600 border-teal-500/20'
-                                }`}>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getRoleBadgeClasses(user.role)}`}>
                                 {user.role}
                             </span>
                         </div>
@@ -126,80 +148,76 @@ export default function UserTable({ users }: UserTableProps) {
                 )}
             </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-muted/30 border-b border-border text-left">
-                                <th className="px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">User</th>
-                                <th className="px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Role</th>
-                                <th className="px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider">Department</th>
-                                <th className="px-6 py-4 font-semibold text-sm text-muted-foreground uppercase tracking-wider text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {filteredUsers.map((user) => (
-                                <tr key={user.id} className="hover:bg-accent/30 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${['ADMIN', 'HRD'].includes(user.role) ? 'text-purple-600' : user.role === 'TEKNISI' ? 'text-orange-600' : 'text-teal-600'}`}>
-                                                {['ADMIN', 'HRD'].includes(user.role) ? <Shield className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />}
+            {/* Desktop Table View - Using Composable Table Components */}
+            <TableWrapper className="hidden md:block rounded-2xl">
+                <TableScrollArea>
+                    <Table>
+                        <TableHeader>
+                            <TableRow hoverable={false} className="bg-muted/30 border-b border-border">
+                                <TableHead className="px-6 font-semibold">User</TableHead>
+                                <TableHead className="px-6 font-semibold">Role</TableHead>
+                                <TableHead className="px-6 font-semibold">Department</TableHead>
+                                <TableHead className="px-6 font-semibold" align="right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredUsers.length === 0 ? (
+                                <TableEmpty
+                                    colSpan={4}
+                                    message="No users found matches your search."
+                                    icon={<UserIcon className="w-12 h-12 opacity-20" />}
+                                />
+                            ) : (
+                                filteredUsers.map((user) => (
+                                    <TableRow key={user.id} className="group">
+                                        <TableCell className="px-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-full bg-white border border-gray-300 dark:border-gray-600 ${getRoleIconClasses(user.role)}`}>
+                                                    {['ADMIN', 'HRD'].includes(user.role) ? <Shield className="w-4 h-4" /> : <UserIcon className="w-4 h-4" />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-foreground">{user.name}</p>
+                                                    <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
+                                                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-foreground">{user.name}</p>
-                                                <p className="text-xs text-muted-foreground font-mono">@{user.username}</p>
-                                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                                        </TableCell>
+                                        <TableCell className="px-6">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getRoleBadgeClasses(user.role)}`}>
+                                                {user.role}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="px-6">
+                                            <span className="text-sm font-medium text-muted-foreground">
+                                                {user.department || '-'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="px-6" align="right">
+                                            <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => handleEdit(user)}
+                                                    className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(user.id)}
+                                                    disabled={isDeleting === user.id}
+                                                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                                                    title="Delete"
+                                                >
+                                                    {isDeleting === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                </button>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${['ADMIN', 'HRD'].includes(user.role)
-                                            ? 'bg-purple-500/10 text-purple-500 border-purple-500/20'
-                                            : user.role === 'TEKNISI'
-                                                ? 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-                                                : 'bg-teal-500/10 text-teal-500 border-teal-500/20'
-                                            }`}>
-                                            {user.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm font-medium text-muted-foreground">
-                                            {user.department || '-'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => handleEdit(user)}
-                                                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(user.id)}
-                                                disabled={isDeleting === user.id}
-                                                className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 rounded-lg transition-colors disabled:opacity-50"
-                                                title="Delete"
-                                            >
-                                                {isDeleting === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredUsers.length === 0 && (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
-                                        No users found matches your search.
-                                    </td>
-                                </tr>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
                             )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                        </TableBody>
+                    </Table>
+                </TableScrollArea>
+            </TableWrapper>
 
             <UserDialog
                 isOpen={isDialogOpen}
@@ -207,13 +225,5 @@ export default function UserTable({ users }: UserTableProps) {
                 user={editingUser}
             />
         </div>
-    )
-}
-
-function Loader2({ className }: { className?: string }) {
-    return (
-        <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-        </svg>
     )
 }

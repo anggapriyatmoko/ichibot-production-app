@@ -342,3 +342,11 @@ model HRDocument {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique  // e.g., "API_KEY", "API_ENDPOINT"
+  value     String   @db.Text // Value (encrypted for sensitive data)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth"
 import BackupManager from "@/components/settings/backup-manager"
+import ApiConfigManager from "@/components/settings/api-config-manager"
 
 export const metadata = {
     title: 'Settings | Ichibot Production',
@@ -15,6 +16,10 @@ export default async function SettingsPage() {
 
             <div className="mb-10">
                 <BackupManager />
+            </div>
+
+            <div className="mb-10">
+                <ApiConfigManager />
             </div>
 
             {/* Placeholder for future settings */}

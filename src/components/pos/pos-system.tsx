@@ -763,7 +763,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
                                         </div>
 
                                         {/* Desktop Table View */}
-                                        <div className="hidden sm:block overflow-x-auto">
+                                        <div className="hidden sm:block overflow-x-auto overflow-y-hidden">
                                             <table className="w-full text-sm">
                                                 <thead>
                                                     <tr className="bg-gray-50 text-left">
