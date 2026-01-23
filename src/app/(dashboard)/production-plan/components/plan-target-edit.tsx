@@ -3,13 +3,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { updateProductionPlanQuantity } from '@/app/actions/production-plan'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface PlanTargetEditProps {
     id: string
     initialQuantity: number
+    variant?: 'default' | 'small'
 }
 
-export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTargetEditProps & { userRole?: string }) {
+export default function PlanTargetEdit({ id, initialQuantity, userRole, variant = 'default' }: PlanTargetEditProps & { userRole?: string }) {
+    const isSmall = variant === 'small'
     const [isEditing, setIsEditing] = useState(false)
     const [quantity, setQuantity] = useState(initialQuantity)
     const [isLoading, setIsLoading] = useState(false)
@@ -64,7 +67,10 @@ export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTa
                 onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
-                className="w-20 text-center font-bold text-lg bg-background border border-primary rounded px-1 py-0.5 outline-none"
+                className={cn(
+                    "text-center bg-background border border-primary rounded px-1 outline-none",
+                    isSmall ? "w-14 text-xs font-medium py-0" : "w-20 text-lg font-bold py-0.5"
+                )}
                 disabled={isLoading}
             />
         )
@@ -72,8 +78,8 @@ export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTa
 
     if (userRole !== 'ADMIN') {
         return (
-            <div className="inline-flex items-center gap-2 px-2 py-1">
-                <span className="font-bold text-lg">{initialQuantity} pcs</span>
+            <div className={cn("inline-flex items-center gap-1", isSmall ? "px-0" : "px-2 py-1")}>
+                <span className={cn(isSmall ? "text-xs font-medium text-zinc-600" : "font-bold text-lg")}>{initialQuantity} pcs</span>
             </div>
         )
     }
@@ -81,14 +87,21 @@ export default function PlanTargetEdit({ id, initialQuantity, userRole }: PlanTa
     return (
         <div
             onClick={() => setIsEditing(true)}
-            className="group relative inline-flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded transition-colors"
+            className={cn(
+                "group relative inline-flex items-center gap-1 cursor-pointer hover:bg-muted/50 rounded transition-colors",
+                isSmall ? "px-1" : "px-2 py-1"
+            )}
             title="Click to edit target"
         >
-            <span className="font-bold text-lg">{initialQuantity} pcs</span>
-            {isLoading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
-            <span className="opacity-0 group-hover:opacity-100 text-[10px] text-muted-foreground absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                Click to edit
+            <span className={cn(isSmall ? "text-xs font-medium text-zinc-700 dark:text-zinc-400" : "font-bold text-lg")}>
+                {initialQuantity} pcs
             </span>
+            {isLoading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+            {!isSmall && (
+                <span className="opacity-0 group-hover:opacity-100 text-[10px] text-muted-foreground absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    Click to edit
+                </span>
+            )}
         </div>
     )
 }

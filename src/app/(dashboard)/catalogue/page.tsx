@@ -26,7 +26,7 @@ export default async function CataloguePage() {
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-8 text-right md:text-left">
+            <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Product Ichibot</h1>
                 <p className="text-muted-foreground">Manage finished goods, recipes, and BOMs.</p>
             </div>

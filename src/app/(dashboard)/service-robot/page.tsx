@@ -133,7 +133,7 @@ export default async function ServiceRobotPage({
 
     return (
         <div className="max-width-7xl mx-auto px-4 sm:px-0">
-            <div className="mb-8 text-right md:text-left">
+            <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Service Robot</h1>
                 <p className="text-muted-foreground">Kelola service dan maintenance robot.</p>
             </div>

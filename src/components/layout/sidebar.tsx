@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight, FolderKanban, UserCog, Clock } from 'lucide-react'
-import { signOut } from 'next-auth/react'
+import { LayoutDashboard, Package, ShoppingCart, LogOut, BookOpen, Calendar, Users, Settings, PanelLeftClose, PanelLeftOpen, User, Warehouse, ClipboardList, Wrench, Bot, ChevronDown, ChevronRight, FolderKanban, UserCog, Clock, FileText, Receipt, Mail, FileSignature } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
+import { useSidebar } from '@/components/providers/sidebar-provider'
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -40,6 +40,13 @@ const teknisiNavigation = [
     { name: 'Service Robot', href: '/service-robot', icon: Bot },
 ]
 
+const administrasiNavigation = [
+    { name: 'Surat Penawaran', href: '/administrasi/surat-penawaran', icon: FileText },
+    { name: 'Kwitansi', href: '/administrasi/kwitansi', icon: Receipt },
+    { name: 'Surat Balasan', href: '/administrasi/surat-balasan', icon: Mail },
+    { name: 'MoU', href: '/administrasi/mou', icon: FileSignature },
+]
+
 const hrdNavigation = [
     { name: 'HRD Dashboard', href: '/hrd-dashboard', icon: LayoutDashboard, adminOnly: true },
     { name: 'Absensi', href: '/attendance', icon: Clock },
@@ -54,19 +61,18 @@ const adminNavigation = [
 ]
 
 interface SidebarProps {
-    userProfile: React.ReactNode
     userRole?: string
 }
 
-export default function Sidebar({ userProfile, userRole }: SidebarProps) {
+export default function Sidebar({ userRole }: SidebarProps) {
     const [isOpen, setIsOpen] = useState(true)
-    const [isMobileOpen, setIsMobileOpen] = useState(false)
+    const { isMobileOpen, setIsMobileOpen } = useSidebar()
     const [openMenus, setOpenMenus] = useState<string[]>([])
     const pathname = usePathname()
 
     // On initial mount, auto-open parent menu if child is active
     useEffect(() => {
-        const allNav = [...navigation, ...teknisiNavigation, ...adminNavigation]
+        const allNav = [...navigation, ...teknisiNavigation, ...administrasiNavigation, ...adminNavigation]
 
         allNav.forEach(item => {
             if ('children' in item && item.children) {
@@ -190,31 +196,15 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                 return acc
             }, [])
         }
-        const allNav = flattenNav([...navigation, ...teknisiNavigation, ...adminNavigation])
+        const allNav = flattenNav([...navigation, ...teknisiNavigation, ...administrasiNavigation, ...adminNavigation])
         const current = allNav.find(item => pathname === item.href)
         return current?.name || 'Dashboard'
     }
 
-    const handleLogout = async () => {
-        // Clear all local/session storage to prevent data leakage
-        localStorage.clear()
-        sessionStorage.clear()
-        // Sign out
-        await signOut({ callbackUrl: '/login' })
-    }
+
 
     return (
         <>
-            {/* Mobile Menu Button - Only show when sidebar is closed */}
-            {!isMobileOpen && (
-                <button
-                    onClick={() => setIsMobileOpen(true)}
-                    className="md:hidden fixed top-4 left-4 z-30 p-2.5 rounded-xl bg-card border border-border shadow-lg hover:bg-accent text-muted-foreground transition-colors"
-                >
-                    <PanelLeftOpen className="h-5 w-5" />
-                </button>
-            )}
-
             {/* Mobile Overlay */}
             {isMobileOpen && (
                 <div
@@ -273,6 +263,26 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                     </nav>
 
 
+
+                    {/* Administrasi menu - visible for ADMIN, HRD, and ADMINISTRASI */}
+                    {['ADMIN', 'HRD', 'ADMINISTRASI'].includes(userRole || '') && (
+                        <>
+                            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                                <div className="border-t border-border" />
+                                <p className={cn(
+                                    "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                                    isOpen ? "px-3" : "text-center"
+                                )}>
+                                    {isOpen ? "Administrasi" : "..."}
+                                </p>
+                            </div>
+                            <nav className="space-y-1">
+                                {administrasiNavigation.map((item) => (
+                                    <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+                                ))}
+                            </nav>
+                        </>
+                    )}
 
                     {/* Service Robot menu - visible to ADMIN and TEKNISI */}
                     {['ADMIN', 'TEKNISI'].includes(userRole || '') && (
@@ -338,31 +348,6 @@ export default function Sidebar({ userProfile, userRole }: SidebarProps) {
                             </nav>
                         </>
                     )}
-                </div>
-
-                <div className={cn("p-4 border-t border-border space-y-4", !isOpen && "md:items-center md:flex md:flex-col")}>
-
-                    <Link href="/profile" className="block hover:opacity-80 transition-opacity">
-                        {isOpen ? userProfile : (
-                            <div className="hidden md:flex justify-center" title="User Profile">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                                    U
-                                </div>
-                            </div>
-                        )}
-                    </Link>
-
-                    <button
-                        onClick={handleLogout}
-                        className={cn(
-                            "flex items-center justify-center text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors",
-                            isOpen ? "w-full px-3 py-2" : "md:w-10 md:h-10 md:p-0"
-                        )}
-                        title="Sign Out"
-                    >
-                        <LogOut className={cn("h-4 w-4", isOpen && "mr-2")} />
-                        {isOpen && "Sign Out"}
-                    </button>
                 </div>
             </div>
         </>

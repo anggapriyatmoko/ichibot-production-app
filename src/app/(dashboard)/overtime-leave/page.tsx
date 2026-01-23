@@ -99,7 +99,7 @@ export default function OvertimeLeavePage() {
     // Unlocked - Show the actual content (empty for now)
     return (
         <div className="max-w-4xl mx-auto">
-            <div className="mb-8 text-right md:text-left">
+            <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Izin / Lembur</h1>
                 <p className="text-muted-foreground">Kelola data izin dan lembur karyawan.</p>
             </div>

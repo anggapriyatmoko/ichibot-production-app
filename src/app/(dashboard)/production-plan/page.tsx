@@ -157,7 +157,7 @@ export default async function ProductionPlanPage({
 
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-8 text-right md:text-left">
+            <div className="mb-8 text-left w-full">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Production Plan</h1>
                 <p className="text-muted-foreground">Manage production schedule and track progress.</p>
             </div>
@@ -217,9 +217,9 @@ export default async function ProductionPlanPage({
                     <table className="w-full text-left text-sm">
                         <thead className="bg-white text-foreground uppercase font-normal">
                             <tr>
-                                <th className="px-6 py-4">Product Name & Progress</th>
-                                <th className="px-6 py-4 text-center">Target</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-3 md:px-6 py-4">Product Name</th>
+                                <th className="hidden md:table-cell px-6 py-4 text-center">Target</th>
+                                <th className="px-3 md:px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -255,9 +255,13 @@ export default async function ProductionPlanPage({
                                             {groupedPlans[categoryName].map((plan: any) => {
                                                 return (
                                                     <tr key={plan.id} className="hover:bg-accent/50 transition-colors group">
-                                                        <td className="px-6 py-4">
+                                                        <td className="px-3 md:px-6 py-4">
                                                             <div className="mb-2">
-                                                                <span className="font-medium text-foreground">{plan.recipe.name}</span>
+                                                                <span className="font-medium text-foreground block md:inline">{plan.recipe.name}</span>
+                                                                <div className="md:hidden mt-1 flex items-center gap-2">
+                                                                    <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-tight">Target:</span>
+                                                                    <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} userRole={session?.user?.role} variant="small" />
+                                                                </div>
                                                             </div>
 
                                                             {/* Unit Progress List */}
@@ -323,10 +327,10 @@ export default async function ProductionPlanPage({
                                                                 })}
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-center font-bold text-lg align-top pt-6">
+                                                        <td className="hidden md:table-cell px-6 py-4 text-center font-bold text-lg align-top pt-6">
                                                             <PlanTargetEdit id={plan.id} initialQuantity={plan.quantity} userRole={session?.user?.role} />
                                                         </td>
-                                                        <td className="px-6 py-4 text-right align-top pt-6">
+                                                        <td className="px-3 md:px-6 py-4 text-right align-top pt-6">
                                                             <div className="flex items-center justify-end gap-2">
                                                                 <Link href={`/production-plan/${plan.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
                                                                     <Eye className="w-4 h-4" />

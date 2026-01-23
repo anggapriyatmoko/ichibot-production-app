@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { writeFile, unlink, mkdir } from 'fs/promises'
+import path from 'path'
 
 // Helper to check if user can access service robot
 async function requireServiceAccess() {
@@ -16,6 +18,32 @@ async function requireServiceAccess() {
     return session
 }
 
+// Helper to save image
+async function saveImage(file: File): Promise<string> {
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'service-robot')
+    await mkdir(uploadDir, { recursive: true })
+
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${path.extname(file.name) || '.jpg'}`
+    const filePath = path.join(uploadDir, uniqueName)
+    await writeFile(filePath, buffer)
+
+    return `/uploads/service-robot/${uniqueName}`
+}
+
+// Helper to delete old image
+async function deleteOldImage(imagePath: string | null) {
+    if (!imagePath) return
+    try {
+        const fullPath = path.join(process.cwd(), 'public', imagePath)
+        await unlink(fullPath)
+    } catch (error) {
+        console.log('Could not delete old image:', error)
+    }
+}
+
 export async function getServiceRobots() {
     await requireServiceAccess()
 
@@ -24,38 +52,52 @@ export async function getServiceRobots() {
     })
 }
 
-export async function createServiceRobot(data: {
-    entryDate: Date
-    customerName: string
-    customerAddress: string
-    customerPhone: string
-    robotType: string
-    accessories?: string
-    warrantyStatus: string
-    complaint: string
-    serviceStatus?: string
-    serviceNotes?: string
-}) {
+export async function createServiceRobot(formData: FormData) {
     const session = await requireServiceAccess()
+
+    // Parse form data
+    const entryDateStr = formData.get('entryDate') as string
+    const customerName = formData.get('customerName') as string
+    const customerAddress = formData.get('customerAddress') as string
+    const customerPhone = formData.get('customerPhone') as string
+    const robotType = formData.get('robotType') as string
+    const accessories = formData.get('accessories') as string
+    const warrantyStatus = formData.get('warrantyStatus') as string
+    const complaint = formData.get('complaint') as string
+    const serviceStatus = formData.get('serviceStatus') as string || 'PENDING'
+    const serviceNotes = formData.get('serviceNotes') as string
+    const imageFile = formData.get('image') as File | null
+
+    // Parse date
+    const [year, month, day] = entryDateStr.split('-').map(Number)
+    const now = new Date()
+    const entryDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds())
+
+    // Handle image upload
+    let imagePath: string | null = null
+    if (imageFile && imageFile.size > 0) {
+        imagePath = await saveImage(imageFile)
+    }
 
     const service = await prisma.serviceRobot.create({
         data: {
-            entryDate: data.entryDate,
-            customerName: data.customerName,
-            customerAddress: data.customerAddress,
-            customerPhone: data.customerPhone,
-            robotType: data.robotType,
-            accessories: data.accessories || null,
-            warrantyStatus: data.warrantyStatus,
-            complaint: data.complaint,
-            serviceStatus: data.serviceStatus || 'PENDING',
-            serviceNotes: data.serviceNotes || null,
+            entryDate,
+            customerName,
+            customerAddress,
+            customerPhone,
+            robotType,
+            accessories: accessories || null,
+            warrantyStatus,
+            complaint,
+            serviceStatus,
+            serviceNotes: serviceNotes || null,
+            image: imagePath,
         }
     })
 
     // Find Recipe for Robot Type
     const recipe = await prisma.recipe.findFirst({
-        where: { name: data.robotType }
+        where: { name: robotType }
     })
 
     // Log Transaction
@@ -64,7 +106,7 @@ export async function createServiceRobot(data: {
             type: 'Service Robot',
             quantity: 0,
             recipeId: recipe?.id,
-            description: `Service Masuk: ${data.robotType} - ${data.customerName}`,
+            description: `Service Masuk: ${robotType} - ${customerName}`,
             userId: session.user.id
         }
     })
@@ -73,21 +115,10 @@ export async function createServiceRobot(data: {
     return service
 }
 
-export async function updateServiceRobot(id: string, data: {
-    entryDate?: Date
-    customerName?: string
-    customerAddress?: string
-    customerPhone?: string
-    robotType?: string
-    accessories?: string
-    warrantyStatus?: string
-    complaint?: string
-    serviceStatus?: string
-    serviceNotes?: string
-}) {
+export async function updateServiceRobot(id: string, formData: FormData) {
     const session = await requireServiceAccess()
 
-    // Fetch existing service to check for changes
+    // Fetch existing service
     const existingService = await prisma.serviceRobot.findUnique({
         where: { id }
     })
@@ -96,22 +127,63 @@ export async function updateServiceRobot(id: string, data: {
         throw new Error('Service Robot not found')
     }
 
+    // Parse form data
+    const entryDateStr = formData.get('entryDate') as string | null
+    const customerName = formData.get('customerName') as string | null
+    const customerAddress = formData.get('customerAddress') as string | null
+    const customerPhone = formData.get('customerPhone') as string | null
+    const robotType = formData.get('robotType') as string | null
+    const accessories = formData.get('accessories') as string | null
+    const warrantyStatus = formData.get('warrantyStatus') as string | null
+    const complaint = formData.get('complaint') as string | null
+    const serviceStatus = formData.get('serviceStatus') as string | null
+    const serviceNotes = formData.get('serviceNotes') as string | null
+    const imageFile = formData.get('image') as File | null
+    const removeImage = formData.get('removeImage') === 'true'
+
+    // Build update data
+    const updateData: any = {}
+
+    if (entryDateStr) {
+        const [year, month, day] = entryDateStr.split('-').map(Number)
+        const now = new Date()
+        updateData.entryDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds())
+    }
+    if (customerName) updateData.customerName = customerName
+    if (customerAddress) updateData.customerAddress = customerAddress
+    if (customerPhone) updateData.customerPhone = customerPhone
+    if (robotType) updateData.robotType = robotType
+    if (accessories !== null) updateData.accessories = accessories || null
+    if (warrantyStatus) updateData.warrantyStatus = warrantyStatus
+    if (complaint) updateData.complaint = complaint
+    if (serviceStatus) updateData.serviceStatus = serviceStatus
+    if (serviceNotes !== null) updateData.serviceNotes = serviceNotes || null
+
+    // Handle image
+    if (removeImage) {
+        await deleteOldImage(existingService.image)
+        updateData.image = null
+    } else if (imageFile && imageFile.size > 0) {
+        await deleteOldImage(existingService.image)
+        updateData.image = await saveImage(imageFile)
+    }
+
     const service = await prisma.serviceRobot.update({
         where: { id },
-        data
+        data: updateData
     })
 
-    // Find Recipe if robotType is updated or exists
-    const robotType = data.robotType || service.robotType
+    // Find Recipe
+    const robotTypeName = robotType || service.robotType
     const recipe = await prisma.recipe.findFirst({
-        where: { name: robotType }
+        where: { name: robotTypeName }
     })
 
-    let description = `Update Info Service: ${robotType} - ${data.customerName || service.customerName}`
+    let description = `Update Info Service: ${robotTypeName} - ${customerName || service.customerName}`
 
     // Check if status changed
-    if (data.serviceStatus && data.serviceStatus !== existingService.serviceStatus) {
-        description += ` (Status: ${existingService.serviceStatus} -> ${data.serviceStatus})`
+    if (serviceStatus && serviceStatus !== existingService.serviceStatus) {
+        description += ` (Status: ${existingService.serviceStatus} -> ${serviceStatus})`
     }
 
     // Log Transaction

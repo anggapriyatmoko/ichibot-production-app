@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -12,50 +9,49 @@ datasource db {
 }
 
 model User {
-  id                 String    @id @default(cuid())
-  email              String    @unique
-  username           String    @unique
+  id                 String        @id @default(cuid())
+  email              String        @unique
+  username           String        @unique
   name               String?
   password           String
   department         String?
-  role               String    @default("USER") // USER, ADMIN, HRD, TEKNISI
-  // Personal data fields (encrypted)
-  photoEnc           String?   @db.Text // Encrypted: URL to photo
-  phoneEnc           String?   @db.Text // Encrypted: Phone number  
-  addressEnc         String?   @db.Text // Encrypted: Full address
-  ktpNumberEnc       String?   @db.Text // Encrypted: KTP number
-  contractEndDateEnc String?   @db.Text // Encrypted: Contract end date
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  transactions       Transaction[]
+  role               String        @default("USER")
+  photoEnc           String?       @db.Text
+  phoneEnc           String?       @db.Text
+  addressEnc         String?       @db.Text
+  ktpNumberEnc       String?       @db.Text
+  contractEndDateEnc String?       @db.Text
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  attendances        Attendance[]
   logs               LogActivity[]
   orders             Order[]
-  attendances        Attendance[]
   payrolls           Payroll[]
+  transactions       Transaction[]
 }
 
 model Attendance {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date         DateTime
-  clockInEnc   String?  @db.Text // Encrypted: ISO datetime string
-  clockOutEnc  String?  @db.Text // Encrypted: ISO datetime string
-  isHoliday    Boolean  @default(false)
-  statusEnc    String?  @db.Text // Encrypted: 'PRESENT', 'SICK', 'PERMIT', 'LEAVE'
-  notesEnc     String?  @db.Text // Encrypted: notes
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  clockInEnc  String?  @db.Text
+  clockOutEnc String?  @db.Text
+  isHoliday   Boolean  @default(false)
+  statusEnc   String?  @db.Text
+  notesEnc    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }
 
 model WorkSchedule {
   id        String   @id @default(cuid())
-  dayOfWeek Int      @unique // 0=Sunday, 1=Monday, ..., 6=Saturday
-  dayName   String   // Display name: Senin, Selasa, etc.
-  startTime String?  // Format: "HH:MM"
-  endTime   String?  // Format: "HH:MM"
+  dayOfWeek Int      @unique
+  dayName   String
+  startTime String?
+  endTime   String?
   isWorkDay Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -63,11 +59,11 @@ model WorkSchedule {
 
 model CustomWorkSchedule {
   id        String   @id @default(cuid())
-  startDate DateTime // Start date of the custom period
-  endDate   DateTime // End date of the custom period
-  startTime String   // Format: "HH:MM" (jam masuk)
-  endTime   String   // Format: "HH:MM" (jam pulang)
-  reason    String   // Keterangan (e.g., "Jam Ramadan", "Event Khusus")
+  startDate DateTime
+  endDate   DateTime
+  startTime String
+  endTime   String
+  reason    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -75,13 +71,13 @@ model CustomWorkSchedule {
 model LogActivity {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime // Stores the date part (time usually 00:00:00)
+  date      DateTime
   activity  String   @db.Text
   problem   String?  @db.Text
-  image     String?  // Optional image path for activity documentation
+  image     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }
@@ -89,9 +85,9 @@ model LogActivity {
 model Category {
   id        String   @id @default(cuid())
   name      String   @unique
-  recipes   Recipe[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  recipes   Recipe[]
 }
 
 model Product {
@@ -102,91 +98,97 @@ model Product {
   lowStockThreshold Float              @default(5)
   image             String?
   notes             String?
-  drawerLocation    String?            // e.g., "RK01-05"
+  drawerLocation    String?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  recipeIngredients RecipeIngredient[] // Relation to RecipeIngredient
+  recipeIngredients RecipeIngredient[]
   transactions      Transaction[]
 }
 
 model Transaction {
-  id        String   @id @default(cuid())
-  type      String // IN, OUT, BOM_ADD, BOM_REMOVE
-  quantity  Float
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipeId  String?
-  recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: SetNull)
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  type        String
+  quantity    Float
+  productId   String?
+  recipeId    String?
+  userId      String?
   description String?
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipe      Recipe?  @relation(fields: [recipeId], references: [id])
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([productId], map: "Transaction_productId_fkey")
+  @@index([recipeId], map: "Transaction_recipeId_fkey")
+  @@index([userId], map: "Transaction_userId_fkey")
 }
 
 model Recipe {
-  id           String             @id @default(cuid())
-  name         String
-  productionId String             @default("-") // Required Production ID (moved from Product)
-  description  String?
-  categoryId   String?
-  category     Category?          @relation(fields: [categoryId], references: [id])
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  ingredients  RecipeIngredient[]
-  sections     RecipeSection[]
-  transactions Transaction[]
+  id              String             @id @default(cuid())
+  name            String
+  productionId    String             @default("-")
+  description     String?
+  categoryId      String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   productionPlans ProductionPlan[]
+  category        Category?          @relation(fields: [categoryId], references: [id])
+  ingredients     RecipeIngredient[]
+  sections        RecipeSection[]
+  transactions    Transaction[]
+
+  @@index([categoryId], map: "Recipe_categoryId_fkey")
 }
 
 model ProductionPlan {
-  id               String   @id @default(cuid())
+  id               String           @id @default(cuid())
   recipeId         String
-  recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   quantity         Float
   month            Int
   year             Int
-  status           String   @default("PENDING") // PENDING, COMPLETED
-  sectionsSnapshot String?  @db.Text // JSON snapshot of sections at creation time (nullable to avoid MySQL TEXT default value error)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  status           String           @default("PENDING")
+  sectionsSnapshot String?          @db.Text
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  recipe           Recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   units            ProductionUnit[]
+
+  @@index([recipeId], map: "ProductionPlan_recipeId_fkey")
 }
 
 model ProductionUnit {
-  id               String   @id @default(cuid())
-  productionPlanId String
-  productionPlan   ProductionPlan @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
-  unitNumber       Int
-  productIdentifier String? // Serial Number / ID
-  customId         String? // Custom ID (manual input)
-  completed        String?  @db.Text // JSON string of completed ingredient IDs (nullable for MySQL TEXT compatibility)
-  
-  // Sales & Packing Tracking
-  isPacked         Boolean  @default(false)
-  isSold           Boolean  @default(false)
-  marketplace      String?
-  customer         String?
-  link             String?  // URL for QR code generation
+  id                String            @id @default(cuid())
+  productionPlanId  String
+  unitNumber        Int
+  productIdentifier String?
+  customId          String?
+  completed         String?           @db.Text
+  isPacked          Boolean           @default(false)
+  isSold            Boolean           @default(false)
+  marketplace       String?
+  customer          String?
+  link              String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  assembledAt       DateTime?
+  packedAt          DateTime?
+  issues            ProductionIssue[]
+  productionPlan    ProductionPlan    @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  // Timestamps for Daily Output Control
-  assembledAt      DateTime?
-  packedAt         DateTime?
-  
-  issues           ProductionIssue[]
+  @@index([productionPlanId], map: "ProductionUnit_productionPlanId_fkey")
 }
 
 model ProductionIssue {
-  id               String   @id @default(cuid())
+  id               String         @id @default(cuid())
   productionUnitId String
-  productionUnit   ProductionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade)
   description      String
-  resolution       String?  // How the issue was resolved
-  isResolved       Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  resolution       String?
+  isResolved       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  productionUnit   ProductionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade)
+
+  @@index([productionUnitId], map: "ProductionIssue_productionUnitId_fkey")
 }
 
 model RecipeSection {
@@ -194,22 +196,28 @@ model RecipeSection {
   name        String
   category    String?
   recipeId    String
-  recipe      Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  ingredients RecipeIngredient[]
   order       Int                @default(0)
   createdAt   DateTime           @default(now())
+  ingredients RecipeIngredient[]
+  recipe      Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId], map: "RecipeSection_recipeId_fkey")
 }
 
 model RecipeIngredient {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   recipeId  String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   sectionId String?
-  section   RecipeSection? @relation(fields: [sectionId], references: [id])
   quantity  Float
   notes     String?
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipe    Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  section   RecipeSection? @relation(fields: [sectionId], references: [id])
+
+  @@index([productId], map: "RecipeIngredient_productId_fkey")
+  @@index([recipeId], map: "RecipeIngredient_recipeId_fkey")
+  @@index([sectionId], map: "RecipeIngredient_sectionId_fkey")
 }
 
 model SectionCategory {
@@ -231,55 +239,112 @@ model Rack {
 
 model Order {
   id          String      @id @default(cuid())
-  orderNumber String      @unique  // Format: ORD-YYYYMMDD-XXX
+  orderNumber String      @unique
   userId      String?
+  createdAt   DateTime    @default(now())
   user        User?       @relation(fields: [userId], references: [id])
   items       OrderItem[]
-  createdAt   DateTime    @default(now())
+
+  @@index([userId], map: "Order_userId_fkey")
 }
 
 model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId   String
-  productName String   // Snapshot nama produk
-  productSku  String?  // Snapshot SKU
-  productNote String?  // Snapshot notes
+  productName String
+  productSku  String?
+  productNote String?
   quantity    Float
   createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId], map: "OrderItem_orderId_fkey")
 }
 
 model MachineAsset {
   id            String   @id @default(cuid())
-  name          String          // Nama mesin/alat (wajib)
-  code          String?         // Kode (opsional)
-  specification String?  @db.Text  // Spesifikasi (opsional)
-  location      String          // Lokasi (wajib)
-  price         Float?          // Harga (opsional)
-  notes         String?  @db.Text  // Keterangan (opsional)
-  image         String?         // Gambar (opsional)
-  year          Int?            // Tahun pembelian (opsional)
-  usefulLife    Int?            // Umur ekonomis dalam tahun (opsional)
-  residualValue Float?          // Nilai residu (opsional)
+  name          String
+  code          String?
+  specification String?  @db.Text
+  location      String
+  price         Float?
+  notes         String?  @db.Text
+  image         String?
+  purchaseDate  DateTime?
+  usefulLife    Int?
+  residualValue Float?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
 model ServiceRobot {
   id              String   @id @default(cuid())
-  entryDate       DateTime @default(now())  // Tanggal masuk
-  customerName    String                     // Nama pelanggan
-  customerAddress String   @db.Text          // Alamat
-  customerPhone   String                     // No HP
-  robotType       String                     // Jenis robot
-  accessories     String?  @db.Text          // Kelengkapan
-  warrantyStatus  String   @default("TIDAK") // Status garansi: YA / TIDAK
-  complaint       String   @db.Text          // Keluhan
-  serviceStatus   String   @default("PENDING") // Status service: PENDING, IN_PROGRESS, DONE, DELIVERED
-  serviceNotes    String?  @db.Text          // Keterangan yang di service apa saja
+  entryDate       DateTime @default(now())
+  customerName    String
+  customerAddress String   @db.Text
+  customerPhone   String
+  robotType       String
+  accessories     String?  @db.Text
+  warrantyStatus  String   @default("TIDAK")
+  complaint       String   @db.Text
+  serviceStatus   String   @default("PENDING")
+  serviceNotes    String?  @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  image           String?
+}
+
+model OfferLetter {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Receipt {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ReplyLetter {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MOU {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model SparepartProject {
@@ -294,59 +359,60 @@ model SparepartProject {
 }
 
 model SalaryComponent {
-  id        String   @id @default(cuid())
-  name      String
-  type      String   // "DEDUCTION" or "ADDITION"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   payrollItems PayrollItem[]
 
   @@unique([name, type])
 }
 
 model Payroll {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  month     Int      // Kept for unique constraint/indexing
-  year      Int      // Kept for unique constraint/indexing
-  monthEnc  String   @db.Text // Encrypted month for secure storage
-  yearEnc   String   @db.Text // Encrypted year for secure storage
-  basicSalaryEnc String @db.Text // Encrypted Float
-  netSalaryEnc   String @db.Text // Encrypted Float
-  salarySlipEnc  String? @db.Text // Encrypted: Path to PDF file
-
-  items     PayrollItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String        @id @default(cuid())
+  userId         String
+  month          Int
+  year           Int
+  monthEnc       String        @db.Text
+  yearEnc        String        @db.Text
+  basicSalaryEnc String        @db.Text
+  netSalaryEnc   String        @db.Text
+  salarySlipEnc  String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          PayrollItem[]
 
   @@unique([userId, month, year])
 }
 
 model PayrollItem {
-  id        String   @id @default(cuid())
-  payrollId String
-  payroll   Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  id          String          @id @default(cuid())
+  payrollId   String
   componentId String
-  component SalaryComponent @relation(fields: [componentId], references: [id])
-  amountEnc String @db.Text // Encrypted Float
+  amountEnc   String          @db.Text
+  component   SalaryComponent @relation(fields: [componentId], references: [id])
+  payroll     Payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+
+  @@index([componentId], map: "PayrollItem_componentId_fkey")
+  @@index([payrollId], map: "PayrollItem_payrollId_fkey")
 }
 
 model HRDocument {
   id          String   @id @default(cuid())
   name        String
-  description String?  @db.Text
   link        String?  @db.Text
   filePath    String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  description String?  @db.Text
 }
 
 model SystemSetting {
   id        String   @id @default(cuid())
-  key       String   @unique  // e.g., "API_KEY", "API_ENDPOINT"
-  value     String   @db.Text // Value (encrypted for sensitive data)
+  key       String   @unique
+  value     String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

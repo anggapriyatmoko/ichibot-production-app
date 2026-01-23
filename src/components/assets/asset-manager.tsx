@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Wrench, Search, ImageIcon, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Wrench, Search, ImageIcon, ChevronLeft, ChevronRight, Download, Camera, Save } from 'lucide-react'
+import { processImageFile } from '@/utils/image-compression'
 import { createAsset, updateAsset, deleteAsset, getAllAssetsForExport } from '@/app/actions/asset'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -20,7 +21,7 @@ interface MachineAsset {
     price: number | null
     notes: string | null
     image: string | null
-    year: number | null
+    purchaseDate: string | null
     usefulLife: number | null
     residualValue: number | null
 }
@@ -57,7 +58,7 @@ export default function AssetManager({
         location: '',
         price: '',
         notes: '',
-        year: '',
+        purchaseDate: '',
         usefulLife: '',
         residualValue: ''
     })
@@ -100,7 +101,7 @@ export default function AssetManager({
             location: '',
             price: '',
             notes: '',
-            year: '',
+            purchaseDate: '',
             usefulLife: '',
             residualValue: ''
         })
@@ -109,22 +110,21 @@ export default function AssetManager({
         setRemoveImage(false)
     }
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Client-side validation (1MB limit)
-            const MAX_SIZE = 1 * 1024 * 1024
-            if (file.size > MAX_SIZE) {
-                showAlert('File gambar melebihi 1MB', 'error')
+            const processedFile = await processImageFile(file, (msg) => showAlert(msg, 'error'))
+            if (!processedFile) {
                 e.target.value = ''
                 return
             }
-            setImageFile(file)
+
+            setImageFile(processedFile)
             const reader = new FileReader()
             reader.onloadend = () => {
                 setImagePreview(reader.result as string)
             }
-            reader.readAsDataURL(file)
+            reader.readAsDataURL(processedFile)
             setRemoveImage(false)
         }
     }
@@ -139,7 +139,7 @@ export default function AssetManager({
             fd.append('location', formData.location)
             fd.append('price', formData.price)
             fd.append('notes', formData.notes)
-            fd.append('year', formData.year)
+            fd.append('purchaseDate', formData.purchaseDate)
             fd.append('usefulLife', formData.usefulLife)
             fd.append('residualValue', formData.residualValue)
             if (imageFile) {
@@ -173,7 +173,7 @@ export default function AssetManager({
             fd.append('location', formData.location)
             fd.append('price', formData.price)
             fd.append('notes', formData.notes)
-            fd.append('year', formData.year)
+            fd.append('purchaseDate', formData.purchaseDate)
             fd.append('usefulLife', formData.usefulLife)
             fd.append('residualValue', formData.residualValue)
             if (imageFile) {
@@ -223,7 +223,7 @@ export default function AssetManager({
             location: asset.location,
             price: asset.price ? String(asset.price) : '',
             notes: asset.notes || '',
-            year: asset.year ? String(asset.year) : '',
+            purchaseDate: asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : '',
             usefulLife: asset.usefulLife ? String(asset.usefulLife) : '',
             residualValue: asset.residualValue ? String(asset.residualValue) : ''
         })
@@ -250,10 +250,11 @@ export default function AssetManager({
 
     // Calculate current value using residual value method
     const calculateCurrentValue = (asset: MachineAsset) => {
-        if (!asset.price || !asset.year || !asset.usefulLife) return null
+        if (!asset.price || !asset.purchaseDate || !asset.usefulLife) return null
 
+        const purchaseYear = new Date(asset.purchaseDate).getFullYear()
         const currentYear = new Date().getFullYear()
-        const age = currentYear - asset.year
+        const age = currentYear - purchaseYear
 
         if (age <= 0) return asset.price
 
@@ -284,7 +285,7 @@ export default function AssetManager({
                 a.location,
                 a.price || '',
                 a.notes || '',
-                a.year || '',
+                a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString('id-ID') : '',
                 a.usefulLife || '',
                 a.residualValue || ''
             ])
@@ -340,174 +341,219 @@ export default function AssetManager({
                 </div>
             </div>
 
-            {/* Add/Edit Form */}
+            {/* Add/Edit Form Modal */}
             {(isAdding || editingAsset) && (
-                <div className="bg-card border border-border rounded-xl p-6 animate-in slide-in-from-top-4 fade-in duration-200 shadow-sm">
-                    <h3 className="text-lg font-medium text-foreground mb-4">
-                        {isAdding ? 'Tambah Aset Baru' : 'Edit Aset'}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Image Upload */}
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">Gambar</label>
-                            {imagePreview ? (
-                                <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setImagePreview(null)
-                                            setImageFile(null)
-                                        }}
-                                        className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
-                                    >
-                                        Hapus
-                                    </button>
-                                </div>
-                            ) : editingAsset?.image && !removeImage ? (
-                                <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                    <img src={editingAsset.image} alt="Current" className="w-full h-48 object-contain rounded" />
-                                    <div className="flex justify-between mt-2 gap-2">
-                                        <label className="cursor-pointer flex-1 text-center py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-medium">
-                                            Ganti Gambar
-                                            <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
-                                        </label>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelEdit} />
+                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-2xl relative animate-in zoom-in-95 duration-200 shadow-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <Wrench className="w-5 h-5 text-primary" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground">
+                                {isAdding ? 'Tambah Aset Baru' : 'Edit Aset'}
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Image Upload */}
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gambar</label>
+                                {imagePreview ? (
+                                    <div className="relative border border-border rounded-xl p-4 bg-background/50 group">
+                                        <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded-lg" />
                                         <button
                                             type="button"
-                                            onClick={() => setRemoveImage(true)}
-                                            className="px-3 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-xs font-medium"
+                                            onClick={() => {
+                                                setImagePreview(null)
+                                                setImageFile(null)
+                                            }}
+                                            className="absolute top-4 right-4 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
                                             Hapus
                                         </button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-sm text-muted-foreground">Klik atau seret untuk upload gambar</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                Nama Mesin/Alat <span className="text-destructive">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                placeholder="Nama mesin/alat"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">Kode</label>
-                            <input
-                                type="text"
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                placeholder="Kode aset"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                Lokasi <span className="text-destructive">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.location}
-                                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                placeholder="Lokasi aset"
-                            />
-                        </div>
-                        {isAdmin && (
-                            <>
+                                ) : editingAsset?.image && !removeImage ? (
+                                    <div className="relative border border-border rounded-xl p-4 bg-background/50 group">
+                                        <img src={editingAsset.image} alt="Current" className="w-full h-48 object-contain rounded-lg" />
+                                        <div className="flex justify-between mt-4 gap-3">
+                                            <label className="cursor-pointer flex-1 text-center py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-colors">
+                                                Ganti Gambar
+                                                <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRemoveImage(true)}
+                                                className="px-4 py-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-sm font-medium transition-colors"
+                                            >
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="border-2 border-dashed border-border rounded-xl p-8 bg-background/50 hover:bg-background/80 transition-colors">
+                                        <div className="text-center mb-6">
+                                            <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                                            </div>
+                                            <p className="text-sm font-medium text-foreground">Upload gambar atau ambil foto</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP (maks 1MB)</p>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <label className="flex-1 cursor-pointer">
+                                                <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
+                                                <div className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20">
+                                                    <Camera className="w-4 h-4" />
+                                                    Ambil Foto
+                                                </div>
+                                            </label>
+                                            <label className="flex-1 cursor-pointer">
+                                                <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
+                                                <div className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all text-sm font-bold">
+                                                    <ImageIcon className="w-4 h-4" />
+                                                    Pilih File
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Harga Beli</label>
+                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                                        Nama Mesin/Alat <span className="text-destructive">*</span>
+                                    </label>
                                     <input
-                                        type="number"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                        placeholder="Harga pembelian"
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        placeholder="Nama mesin/alat"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Tahun Pembelian</label>
+                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Kode</label>
                                     <input
-                                        type="number"
-                                        value={formData.year}
-                                        onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                        placeholder="Tahun pembelian"
-                                        min="1900"
-                                        max="2100"
+                                        type="text"
+                                        value={formData.code}
+                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        placeholder="Kode aset"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Umur Ekonomis (Tahun)</label>
+                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                                        Lokasi <span className="text-destructive">*</span>
+                                    </label>
                                     <input
-                                        type="number"
-                                        value={formData.usefulLife}
-                                        onChange={(e) => setFormData({ ...formData, usefulLife: e.target.value })}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                        placeholder="Umur ekonomis dalam tahun"
-                                        min="1"
+                                        type="text"
+                                        value={formData.location}
+                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        placeholder="Lokasi aset"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Nilai Residu</label>
-                                    <input
-                                        type="number"
-                                        value={formData.residualValue}
-                                        onChange={(e) => setFormData({ ...formData, residualValue: e.target.value })}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                        placeholder="Nilai residu di akhir umur ekonomis"
-                                        min="0"
-                                    />
-                                </div>
-                            </>
-                        )}
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">Spesifikasi</label>
-                            <textarea
-                                value={formData.specification}
-                                onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none resize-none"
-                                rows={2}
-                                placeholder="Spesifikasi mesin/alat"
-                            />
+                            </div>
+
+                            <div className="space-y-4">
+                                {isAdmin && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Harga Beli</label>
+                                            <input
+                                                type="number"
+                                                value={formData.price}
+                                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                placeholder="Harga pembelian"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Tgl Beli</label>
+                                                <input
+                                                    type="date"
+                                                    value={formData.purchaseDate}
+                                                    onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
+                                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Umur (Thn)</label>
+                                                <input
+                                                    type="number"
+                                                    value={formData.usefulLife}
+                                                    onChange={(e) => setFormData({ ...formData, usefulLife: e.target.value })}
+                                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                    placeholder="5"
+                                                    min="1"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Nilai Residu</label>
+                                            <input
+                                                type="number"
+                                                value={formData.residualValue}
+                                                onChange={(e) => setFormData({ ...formData, residualValue: e.target.value })}
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                placeholder="Nilai sisa"
+                                                min="0"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Spesifikasi</label>
+                                <textarea
+                                    value={formData.specification}
+                                    onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
+                                    rows={2}
+                                    placeholder="Spesifikasi mesin/alat"
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Keterangan</label>
+                                <textarea
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
+                                    rows={2}
+                                    placeholder="Keterangan tambahan"
+                                />
+                            </div>
                         </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">Keterangan</label>
-                            <textarea
-                                value={formData.notes}
-                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none resize-none"
-                                rows={2}
-                                placeholder="Keterangan tambahan"
-                            />
+
+                        <div className="flex justify-end gap-3 pt-6 border-t border-border mt-8">
+                            <button
+                                onClick={cancelEdit}
+                                disabled={saving}
+                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={isAdding ? handleAdd : handleUpdate}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20 disabled:opacity-50"
+                            >
+                                {saving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Menyimpan...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-4 h-4" />
+                                        {isAdding ? 'Simpan Aset' : 'Update Aset'}
+                                    </>
+                                )}
+                            </button>
                         </div>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <button
-                            onClick={cancelEdit}
-                            disabled={saving}
-                            className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            Batal
-                        </button>
-                        <button
-                            onClick={isAdding ? handleAdd : handleUpdate}
-                            disabled={saving}
-                            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
-                        >
-                            {saving ? 'Menyimpan...' : 'Simpan'}
-                        </button>
                     </div>
                 </div>
             )}
@@ -557,12 +603,12 @@ export default function AssetManager({
                                             <span className="text-muted-foreground">Harga Beli:</span>
                                             <span className="font-medium text-foreground">{formatPrice(asset.price)}</span>
                                         </div>
-                                        {asset.year && asset.usefulLife && (
+                                        {asset.purchaseDate && asset.usefulLife && (
                                             <div className="flex justify-between mt-1">
                                                 <span className="text-muted-foreground text-xs">Nilai Saat Ini:</span>
                                                 <span className="text-xs text-orange-500 font-medium">
                                                     {formatPrice(calculateCurrentValue(asset))}
-                                                    <span className="text-muted-foreground ml-1">({new Date().getFullYear() - asset.year} thn)</span>
+                                                    <span className="text-muted-foreground ml-1">({new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()} thn)</span>
                                                 </span>
                                             </div>
                                         )}
@@ -648,10 +694,10 @@ export default function AssetManager({
                                     {isAdmin && (
                                         <td className="px-6 py-4">
                                             <div>{formatPrice(asset.price)}</div>
-                                            {asset.price && asset.year && asset.usefulLife && (
+                                            {asset.price && asset.purchaseDate && asset.usefulLife && (
                                                 <div className="text-xs text-orange-500 mt-1">
                                                     {formatPrice(calculateCurrentValue(asset))}
-                                                    <span className="text-muted-foreground ml-1">({new Date().getFullYear() - asset.year}/{asset.usefulLife} thn)</span>
+                                                    <span className="text-muted-foreground ml-1">({new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()}/{asset.usefulLife} thn)</span>
                                                 </div>
                                             )}
                                         </td>
@@ -750,7 +796,7 @@ export default function AssetManager({
                                 }, 0))}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
-                                {allAssets.filter(a => a.price && a.year && a.usefulLife).length} aset dengan penyusutan
+                                {allAssets.filter(a => a.price && a.purchaseDate && a.usefulLife).length} aset dengan penyusutan
                             </p>
                         </div>
 

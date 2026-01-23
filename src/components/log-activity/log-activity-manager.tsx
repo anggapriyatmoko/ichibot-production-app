@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Calendar as CalendarIcon, User, Search, Loader2, Trash, ChevronLeft, ChevronRight, FileText, Image, X } from 'lucide-react'
+import { Plus, Pencil, Calendar as CalendarIcon, User, Search, Loader2, Trash, ChevronLeft, ChevronRight, FileText, Image, X, Camera } from 'lucide-react'
+import { processImageFile } from '@/utils/image-compression'
 import { format, isSameDay } from 'date-fns'
 import { id } from 'date-fns/locale' // Indonesian locale
 import { upsertLogActivity, getLogActivities, deleteLogActivity, getDailyActivityRecap } from '@/app/actions/log-activity'
@@ -80,16 +81,12 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
     })
 
     // Handle image file selection
-    function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        // Client-side validation (2MB limit)
-        const MAX_SIZE = 1 * 1024 * 1024
-        if (file.size > MAX_SIZE) {
-            showError('File gambar melebihi 1MB')
-            return
-        }
+        const processedFile = await processImageFile(file, showError)
+        if (!processedFile) return
 
         // Preview
         const reader = new FileReader()
@@ -97,11 +94,11 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
             setFormData(prev => ({
                 ...prev,
                 image: reader.result as string,
-                imageFile: file,
+                imageFile: processedFile,
                 removeImage: false
             }))
         }
-        reader.readAsDataURL(file)
+        reader.readAsDataURL(processedFile)
     }
 
     function handleRemoveImage() {
@@ -717,21 +714,44 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 </button>
                                             </div>
                                         ) : (
-                                            <label className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors">
-                                                <Image className="w-8 h-8 text-muted-foreground mb-2" />
-                                                <span className="text-sm text-muted-foreground text-center">
-                                                    Klik untuk pilih gambar
-                                                </span>
-                                                <span className="text-xs text-muted-foreground mt-1">
-                                                    JPG, PNG, WEBP, GIF (Maks. 1MB)
-                                                </span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/jpeg,image/png,image/webp,image/gif"
-                                                    onChange={handleImageChange}
-                                                    className="hidden"
-                                                />
-                                            </label>
+                                            <div className="flex-1 border-2 border-dashed border-border rounded-lg p-4">
+                                                <div className="text-center mb-3">
+                                                    <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                                    <span className="text-sm text-muted-foreground block">
+                                                        Upload gambar atau ambil foto
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        JPG, PNG, WEBP, GIF (Maks. 1MB)
+                                                    </span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <label className="flex-1 cursor-pointer">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            capture="environment"
+                                                            onChange={handleImageChange}
+                                                            className="hidden"
+                                                        />
+                                                        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                            <Camera className="w-4 h-4" />
+                                                            Ambil Foto
+                                                        </div>
+                                                    </label>
+                                                    <label className="flex-1 cursor-pointer">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/jpeg,image/png,image/webp,image/gif"
+                                                            onChange={handleImageChange}
+                                                            className="hidden"
+                                                        />
+                                                        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                            <Image className="w-4 h-4" />
+                                                            Pilih File
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

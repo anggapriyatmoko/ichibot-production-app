@@ -89,29 +89,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ])
 
     // Process data for Overview Table
-    const overviewData = allRecipes.map(recipe => {
-        const monthlyData = Array.from({ length: 12 }, (_, i) => {
-            const month = i + 1
-            const itemPlan = annualPlans.find(p => p.recipeId === recipe.id && p.month === month)
+    const overviewData = allRecipes
+        .filter(recipe => annualPlans.some(p => p.recipeId === recipe.id))
+        .map(recipe => {
+            const monthlyData = Array.from({ length: 12 }, (_, i) => {
+                const month = i + 1
+                const itemPlan = annualPlans.find(p => p.recipeId === recipe.id && p.month === month)
 
-            if (!itemPlan) return { month, plan: 0, done: 0 }
+                if (!itemPlan) return { month, plan: 0, done: 0 }
 
-            const totalSections = recipe.sections.length
-            const doneCount = itemPlan.units.filter(u => !!u.assembledAt).length
+                const totalSections = recipe.sections.length
+                const doneCount = itemPlan.units.filter(u => !!u.assembledAt).length
+
+                return {
+                    month,
+                    plan: itemPlan.quantity,
+                    done: doneCount // "Done" means assembled -> all ingredients checked
+                }
+            })
 
             return {
-                month,
-                plan: itemPlan.quantity,
-                done: doneCount // "Done" means assembled -> all ingredients checked
+                productName: recipe.name,
+                category: recipe.category?.name || 'Uncategorized',
+                monthlyData
             }
         })
-
-        return {
-            productName: recipe.name,
-            category: recipe.category?.name || 'Uncategorized',
-            monthlyData
-        }
-    })
 
     const calculateStats = (plans: any[]) => {
         const planned = plans.reduce((acc, p) => acc + p.quantity, 0)
@@ -169,10 +171,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
     return (
         <div className="w-[98%] max-w-[98%] mx-auto space-y-8">
-            <div className="flex flex-col text-right md:text-left md:flex-row items-start justify-between">
-                <div>
+            <div className="flex flex-col text-left items-start justify-between w-full">
+                <div className="w-full text-left">
                     <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>
-                    <p className="text-muted-foreground">Overview of your inventory and production status.</p>
+                    <p className="text-muted-foreground text-left">Overview of your inventory and production status.</p>
                 </div>
             </div>
 

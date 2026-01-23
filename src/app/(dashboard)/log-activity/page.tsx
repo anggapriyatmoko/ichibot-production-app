@@ -23,7 +23,7 @@ export default async function LogActivityPage() {
 
     return (
         <div className="container mx-auto max-w-5xl">
-            <div className="mb-8 text-right md:text-left">
+            <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Log Activity</h1>
                 <p className="text-muted-foreground">Catat aktivitas harian dan masalah yang ditemukan.</p>
             </div>

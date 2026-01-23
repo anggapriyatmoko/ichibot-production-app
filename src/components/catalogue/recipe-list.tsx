@@ -293,19 +293,19 @@ export default function RecipeList({
                 </div>
             )}
 
-            {/* Grouped Display */}
+            {/* Grouped Display by Category */}
             {categories.map(category => {
                 const categoryRecipes = recipes.filter(r => r.categoryId === category.id)
                 if (categoryRecipes.length === 0) return null
 
-                const isEditing = editingCategory?.id === category.id
+                const isCategoryEditing = editingCategory?.id === category.id
 
                 return (
-                    <div key={category.id} className="mb-8">
-                        <div className="flex items-center gap-2 mb-4 group">
-                            <Tag className="w-5 h-5 text-muted-foreground" />
-                            {isEditing ? (
-                                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                    <div key={category.id} className="mb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="flex items-center gap-3 mb-4 group px-2">
+                            <Tag className="w-5 h-5 text-primary" />
+                            {isCategoryEditing ? (
+                                <div className="flex items-center gap-2">
                                     <input
                                         value={editingCategory.name}
                                         onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
@@ -319,14 +319,14 @@ export default function RecipeList({
                                     <button
                                         onClick={handleUpdateCategory}
                                         disabled={isLoading}
-                                        className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                                        className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm"
                                     >
                                         <Check className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={() => setEditingCategory(null)}
                                         disabled={isLoading}
-                                        className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors"
+                                        className="p-1.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors border border-border"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -337,7 +337,7 @@ export default function RecipeList({
                                     {['ADMIN', 'HRD'].includes(userRole || '') && (
                                         <button
                                             onClick={() => setEditingCategory({ id: category.id, name: category.name })}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground"
                                             title="Rename Category"
                                         >
                                             <Edit2 className="w-4 h-4" />
@@ -346,38 +346,172 @@ export default function RecipeList({
                                 </h2>
                             )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {categoryRecipes.map(recipe => (
-                                <RecipeCard
-                                    key={recipe.id}
-                                    recipe={recipe}
-                                    userRole={userRole}
-                                    onEdit={() => handleEdit(recipe)}
-                                    onDelete={() => handleDelete(recipe.id)}
-                                />
-                            ))}
+
+                        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider">
+                                        <tr>
+                                            <th className="hidden md:table-cell px-6 py-4 w-12 text-center">No</th>
+                                            <th className="px-4 md:px-6 py-4">Product Info</th>
+                                            <th className="hidden md:table-cell px-6 py-4">Production ID</th>
+                                            <th className="hidden md:table-cell px-6 py-4 text-center">Items</th>
+                                            <th className="hidden lg:table-cell px-6 py-4">Description</th>
+                                            <th className="px-4 md:px-6 py-4 text-right whitespace-nowrap">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {categoryRecipes.map((recipe, index) => (
+                                            <tr key={recipe.id} className="hover:bg-accent/30 transition-colors group/row">
+                                                <td className="hidden md:table-cell px-6 py-4 text-center text-muted-foreground font-mono">{index + 1}</td>
+                                                <td className="px-4 md:px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <Link href={`/catalogue/${recipe.id}`} className="font-bold text-foreground hover:text-primary transition-colors block leading-tight">
+                                                            {recipe.name}
+                                                        </Link>
+                                                        {/* Mobile-only info stack */}
+                                                        <div className="mt-1 flex items-center gap-2 md:hidden">
+                                                            <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                                                                {recipe.productionId}
+                                                            </span>
+                                                            <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-bold">
+                                                                {recipe._count.ingredients} Items
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="hidden md:table-cell px-6 py-4 font-mono text-xs">{recipe.productionId}</td>
+                                                <td className="hidden md:table-cell px-6 py-4 text-center">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground">
+                                                        {recipe._count.ingredients}
+                                                    </span>
+                                                </td>
+                                                <td className="hidden lg:table-cell px-6 py-4 text-muted-foreground text-xs italic max-w-xs truncate">
+                                                    {recipe.description || '-'}
+                                                </td>
+                                                <td className="px-4 md:px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Link
+                                                            href={`/catalogue/${recipe.id}`}
+                                                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                            title="View Detail"
+                                                        >
+                                                            <ChevronRight className="w-4 h-4" />
+                                                        </Link>
+                                                        {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleEdit(recipe)}
+                                                                    className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                                    title="Edit Product"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(recipe.id)}
+                                                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                                                    title="Delete Product"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )
             })}
 
-            {/* Uncategorized */}
+            {/* Uncategorized Products */}
             {recipes.filter(r => !r.categoryId).length > 0 && (
-                <div className="mb-8">
-                    <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                        <BookOpen className="w-5 h-5" />
-                        Uncategorized
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {recipes.filter(r => !r.categoryId).map(recipe => (
-                            <RecipeCard
-                                key={recipe.id}
-                                recipe={recipe}
-                                userRole={userRole}
-                                onEdit={() => handleEdit(recipe)}
-                                onDelete={() => handleDelete(recipe.id)}
-                            />
-                        ))}
+                <div className="mb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex items-center gap-3 mb-4 px-2">
+                        <BookOpen className="w-5 h-5 text-muted-foreground" />
+                        <h2 className="text-xl font-bold text-foreground">Uncategorized</h2>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-muted/50 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider">
+                                    <tr>
+                                        <th className="hidden md:table-cell px-6 py-4 w-12 text-center">No</th>
+                                        <th className="px-4 md:px-6 py-4">Product Info</th>
+                                        <th className="hidden md:table-cell px-6 py-4">Production ID</th>
+                                        <th className="hidden md:table-cell px-6 py-4 text-center">Items</th>
+                                        <th className="hidden lg:table-cell px-6 py-4">Description</th>
+                                        <th className="px-4 md:px-6 py-4 text-right whitespace-nowrap">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {recipes.filter(r => !r.categoryId).map((recipe, index) => (
+                                        <tr key={recipe.id} className="hover:bg-accent/30 transition-colors group/row">
+                                            <td className="hidden md:table-cell px-6 py-4 text-center text-muted-foreground font-mono">{index + 1}</td>
+                                            <td className="px-4 md:px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <Link href={`/catalogue/${recipe.id}`} className="font-bold text-foreground hover:text-primary transition-colors block leading-tight">
+                                                        {recipe.name}
+                                                    </Link>
+                                                    {/* Mobile-only info stack */}
+                                                    <div className="mt-1 flex items-center gap-2 md:hidden">
+                                                        <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                                                            {recipe.productionId}
+                                                        </span>
+                                                        <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-bold">
+                                                            {recipe._count.ingredients} Items
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="hidden md:table-cell px-6 py-4 font-mono text-xs">{recipe.productionId}</td>
+                                            <td className="hidden md:table-cell px-6 py-4 text-center">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground">
+                                                    {recipe._count.ingredients}
+                                                </span>
+                                            </td>
+                                            <td className="hidden lg:table-cell px-6 py-4 text-muted-foreground text-xs italic max-w-xs truncate">
+                                                {recipe.description || '-'}
+                                            </td>
+                                            <td className="px-4 md:px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link
+                                                        href={`/catalogue/${recipe.id}`}
+                                                        className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                        title="View Detail"
+                                                    >
+                                                        <ChevronRight className="w-4 h-4" />
+                                                    </Link>
+                                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleEdit(recipe)}
+                                                                className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                                title="Edit Product"
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(recipe.id)}
+                                                                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                                                title="Delete Product"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
@@ -391,66 +525,3 @@ export default function RecipeList({
     )
 }
 
-function RecipeCard({ recipe, userRole, onEdit, onDelete }: { recipe: RecipeWithCount, userRole?: string, onEdit: () => void, onDelete: () => void }) {
-    return (
-        <div className="group relative bg-card border border-border rounded-xl p-3 hover:border-primary/50 transition-all hover:shadow-md flex flex-col justify-between h-full">
-            {/* Admin Actions - Absolute Top Right */}
-            {['ADMIN', 'HRD'].includes(userRole || '') && (
-                <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-10">
-                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md bg-card/80 backdrop-blur-sm border border-border shadow-sm">
-                        <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); }} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md bg-card/80 backdrop-blur-sm border border-border shadow-sm">
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-            )}
-
-            <Link href={`/catalogue/${recipe.id}`} className="block flex-1">
-                {/* Header: Icon + Product Info */}
-                <div className="flex gap-6 mb-2">
-                    <div className="flex-shrink-0 self-stretch">
-                        <div className="h-full aspect-square p-2 bg-primary/10 rounded-lg text-primary flex items-center justify-center">
-                            <BookOpen className="w-5 h-5" />
-                        </div>
-                    </div>
-
-                    <div className="flex-1 min-w-0 pt-0.5">
-                        <h3 className="font-bold text-foreground text-sm leading-tight truncate pr-6 group-hover:text-primary transition-colors">
-                            {recipe.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            {recipe.category && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-md px-2 py-0.5">
-                                    <Tag className="w-3 h-3" />
-                                    <span className="truncate">{recipe.category.name}</span>
-                                </div>
-                            )}
-                            {recipe.productionId && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-md px-2 py-0.5">
-                                    <span className="font-mono">Product ID: {recipe.productionId}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Description under the header area */}
-                <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2.5em] mb-3">
-                    {recipe.description || 'No description'}
-                </p>
-            </Link>
-
-            <Link href={`/catalogue/${recipe.id}`} className="block mt-auto">
-                <div className="flex items-center justify-between pt-2 border-t border-border border-dashed">
-                    <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-md">
-                        {recipe._count.ingredients} Item
-                    </span>
-                    <span className="flex items-center text-[10px] text-primary font-medium uppercase tracking-wider">
-                        Detail <ChevronRight className="w-3 h-3 ml-0.5" />
-                    </span>
-                </div>
-            </Link>
-        </div>
-    )
-}

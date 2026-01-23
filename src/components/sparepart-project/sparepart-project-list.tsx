@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createSparepartProject, deleteSparepartProject, addSparepartProjectStock, updateSparepartProject, reduceSparepartProjectStock, moveToProduction } from '@/app/actions/sparepart-project'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle } from 'lucide-react'
+import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
@@ -92,41 +92,148 @@ export default function SparepartProjectList({
         fetchUnusedDrawers()
     }, [])
 
-    const handleAddImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Helper function to compress image using Canvas API
+    const compressImage = async (file: File, maxSizeKB: number = 700): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = (event) => {
+                const img = new window.Image()
+                img.onload = () => {
+                    const canvas = document.createElement('canvas')
+                    let width = img.width
+                    let height = img.height
+
+                    // Max dimension 1200px
+                    const MAX_DIMENSION = 1200
+                    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                        if (width > height) {
+                            height = (height / width) * MAX_DIMENSION
+                            width = MAX_DIMENSION
+                        } else {
+                            width = (width / height) * MAX_DIMENSION
+                            height = MAX_DIMENSION
+                        }
+                    }
+
+                    canvas.width = width
+                    canvas.height = height
+
+                    const ctx = canvas.getContext('2d')
+                    if (!ctx) {
+                        reject(new Error('Could not get canvas context'))
+                        return
+                    }
+
+                    ctx.drawImage(img, 0, 0, width, height)
+
+                    // Start with quality 0.8 and reduce if needed
+                    let quality = 0.8
+                    const targetSizeBytes = maxSizeKB * 1024
+
+                    const tryCompress = () => {
+                        canvas.toBlob(
+                            (blob) => {
+                                if (!blob) {
+                                    reject(new Error('Failed to compress image'))
+                                    return
+                                }
+
+                                if (blob.size > targetSizeBytes && quality > 0.1) {
+                                    // Reduce quality and try again
+                                    quality -= 0.1
+                                    tryCompress()
+                                } else {
+                                    // Create new file from blob
+                                    const compressedFile = new File([blob], file.name, {
+                                        type: 'image/jpeg',
+                                        lastModified: Date.now()
+                                    })
+                                    console.log(`Compressed from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB (quality: ${quality.toFixed(1)})`)
+                                    resolve(compressedFile)
+                                }
+                            },
+                            'image/jpeg',
+                            quality
+                        )
+                    }
+
+                    tryCompress()
+                }
+                img.onerror = () => reject(new Error('Failed to load image'))
+                img.src = event.target?.result as string
+            }
+            reader.onerror = () => reject(new Error('Failed to read file'))
+            reader.readAsDataURL(file)
+        })
+    }
+
+    const handleAddImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Client-side validation (1MB limit)
-            const MAX_SIZE = 1 * 1024 * 1024
+            const MAX_SIZE = 700 * 1024 // 700KB target for compression
+
+            let processedFile = file
+
+            // If file is larger than 700KB, compress it
             if (file.size > MAX_SIZE) {
-                showError('File gambar melebihi 1MB')
+                try {
+                    processedFile = await compressImage(file, 700)
+                } catch (error) {
+                    console.error('Compression failed:', error)
+                    showError('Gagal mengkompresi gambar')
+                    e.target.value = ''
+                    return
+                }
+            }
+
+            // Final check - if still over 1MB after compression, reject
+            if (processedFile.size > 1 * 1024 * 1024) {
+                showError('File gambar terlalu besar, tidak dapat dikompres di bawah 1MB')
                 e.target.value = ''
                 return
             }
-            setAddImageFile(file)
+
+            setAddImageFile(processedFile)
             const reader = new FileReader()
             reader.onloadend = () => {
                 setAddImagePreview(reader.result as string)
             }
-            reader.readAsDataURL(file)
+            reader.readAsDataURL(processedFile)
         }
     }
 
-    const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEditImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Client-side validation (1MB limit)
-            const MAX_SIZE = 1 * 1024 * 1024
+            const MAX_SIZE = 700 * 1024 // 700KB target for compression
+
+            let processedFile = file
+
+            // If file is larger than 700KB, compress it
             if (file.size > MAX_SIZE) {
-                showError('File gambar melebihi 1MB')
+                try {
+                    processedFile = await compressImage(file, 700)
+                } catch (error) {
+                    console.error('Compression failed:', error)
+                    showError('Gagal mengkompresi gambar')
+                    e.target.value = ''
+                    return
+                }
+            }
+
+            // Final check - if still over 1MB after compression, reject
+            if (processedFile.size > 1 * 1024 * 1024) {
+                showError('File gambar terlalu besar, tidak dapat dikompres di bawah 1MB')
                 e.target.value = ''
                 return
             }
-            setEditImageFile(file)
+
+            setEditImageFile(processedFile)
             const reader = new FileReader()
             reader.onloadend = () => {
                 setEditImagePreview(reader.result as string)
             }
-            reader.readAsDataURL(file)
+            reader.readAsDataURL(processedFile)
             setRemoveImage(false)
         }
     }
@@ -277,128 +384,159 @@ export default function SparepartProjectList({
                 </div>
             </div>
 
-            {/* Add Item Form */}
+            {/* Add Item Modal */}
             {isAdding && (
-                <div className="bg-card border border-border rounded-xl p-6 mb-6 animate-in slide-in-from-top-4 fade-in duration-200 shadow-sm">
-                    <h3 className="text-lg font-normal text-foreground mb-4">New Item</h3>
-                    <form onSubmit={handleAddItem} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-normal text-muted-foreground mb-1">Image</label>
-                                {addImagePreview ? (
-                                    <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                        <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setAddImagePreview(null)
-                                                setAddImageFile(null)
-                                            }}
-                                            className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-normal"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleAddImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                        <p className="text-sm text-muted-foreground">Click or Drag to upload thumbnail</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-normal text-muted-foreground mb-1">Name</label>
-                                <input
-                                    name="name"
-                                    value={addForm.name}
-                                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. Motor DC 12V"
-                                />
-                            </div>
-                            <div className="relative">
-                                <label className="block text-xs font-normal text-muted-foreground mb-1">SKU</label>
-                                <input
-                                    name="sku"
-                                    value={addForm.sku}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase()
-                                        setAddForm({ ...addForm, sku: val })
-                                        if (val.length > 0) {
-                                            const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
-                                            setSkuSuggestions(filtered.slice(0, 10))
-                                            setShowSkuSuggestions(true)
-                                        } else {
-                                            setSkuSuggestions([])
-                                            setShowSkuSuggestions(false)
-                                        }
-                                    }}
-                                    onFocus={() => {
-                                        if (addForm.sku.length > 0) {
-                                            const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
-                                            setSkuSuggestions(filtered.slice(0, 10))
-                                            setShowSkuSuggestions(true)
-                                        }
-                                    }}
-                                    onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
-                                    autoComplete="off"
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. RK01-04"
-                                />
-                                {showSkuSuggestions && skuSuggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        {skuSuggestions.map(sku => (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 mt-10 mb-10">
+                        <h3 className="text-xl font-bold text-foreground mb-6">Add New Sparepart Project</h3>
+                        <form onSubmit={handleAddItem} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-normal text-muted-foreground mb-1">Image</label>
+                                    {addImagePreview ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
                                             <button
-                                                key={sku}
                                                 type="button"
                                                 onClick={() => {
-                                                    setAddForm({ ...addForm, sku })
-                                                    setShowSkuSuggestions(false)
+                                                    setAddImagePreview(null)
+                                                    setAddImageFile(null)
                                                 }}
-                                                className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-normal"
                                             >
-                                                <span className="font-mono text-emerald-600">{sku}</span>
-                                                <span className="text-xs text-muted-foreground">Available</span>
+                                                Remove
                                             </button>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    ) : (
+                                        <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                            <div className="text-center mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                <p className="text-xs text-muted-foreground">Upload gambar atau ambil foto (maks 1MB)</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        name="image"
+                                                        accept="image/*"
+                                                        capture="environment"
+                                                        onChange={handleAddImageChange}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        name="image"
+                                                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                                                        onChange={handleAddImageChange}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-xs font-medium">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-normal text-muted-foreground mb-1">Name</label>
+                                    <input
+                                        name="name"
+                                        value={addForm.name}
+                                        onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. Motor DC 12V"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <label className="block text-xs font-normal text-muted-foreground mb-1">SKU (Storage Location)</label>
+                                    <input
+                                        name="sku"
+                                        value={addForm.sku}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase()
+                                            setAddForm({ ...addForm, sku: val })
+                                            if (val.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowSkuSuggestions(true)
+                                            } else {
+                                                setSkuSuggestions([])
+                                                setShowSkuSuggestions(false)
+                                            }
+                                        }}
+                                        onFocus={() => {
+                                            if (addForm.sku.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowSkuSuggestions(true)
+                                            }
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
+                                        autoComplete="off"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. RK01-04"
+                                    />
+                                    {showSkuSuggestions && skuSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {skuSuggestions.map(sku => (
+                                                <button
+                                                    key={sku}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAddForm({ ...addForm, sku })
+                                                        setShowSkuSuggestions(false)
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="font-mono text-emerald-600">{sku}</span>
+                                                    <span className="text-xs text-muted-foreground">Available Drawer</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-normal text-muted-foreground mb-1">Initial Stock</label>
+                                    <input
+                                        name="stock"
+                                        type="number"
+                                        value={addForm.stock}
+                                        onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="0"
+                                        step="any"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-normal text-muted-foreground mb-1">Notes (Optional)</label>
+                                    <textarea
+                                        name="notes"
+                                        value={addForm.notes}
+                                        onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        rows={2}
+                                        placeholder="Specific project usage or requirements..."
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-normal text-muted-foreground mb-1">Stock</label>
-                                <input
-                                    name="stock"
-                                    type="number"
-                                    value={addForm.stock}
-                                    onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="0"
-                                    step="any"
-                                />
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                                <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+                                <button disabled={isLoading} type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors shadow-sm">
+                                    {isLoading ? 'Saving...' : 'Create Item'}
+                                </button>
                             </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-normal text-muted-foreground mb-1">Notes (Optional)</label>
-                                <textarea
-                                    name="notes"
-                                    value={addForm.notes}
-                                    onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    rows={2}
-                                    placeholder="Additional information..."
-                                />
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button type="button" onClick={() => setIsAdding(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-                            <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-normal transition-colors shadow-sm">
-                                {isLoading ? 'Saving...' : 'Save Item'}
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             )}
 
@@ -444,11 +582,41 @@ export default function SparepartProjectList({
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                            <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                            <p className="text-sm text-muted-foreground">Click or Drag to upload new thumbnail</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                        <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                            <div className="text-center mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
+                                                <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        name="image"
+                                                        accept="image/*"
+                                                        capture="environment"
+                                                        onChange={handleEditImageChange}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        name="image"
+                                                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                                                        onChange={handleEditImageChange}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

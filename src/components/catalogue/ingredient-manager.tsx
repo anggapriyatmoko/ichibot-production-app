@@ -570,7 +570,7 @@ export default function IngredientManager({
                                             <td className="px-2 py-1 border font-medium">{ing.product.name}</td>
                                             <td className="px-2 py-1 border font-bold">{formatNumber(ing.quantity)}</td>
                                             <td className="px-2 py-1 border text-xs">
-                                                {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
+                                                {ing.notes && <div>{ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                             </td>
                                         </tr>
@@ -610,7 +610,7 @@ export default function IngredientManager({
                                             <td className="px-2 py-1 border font-medium">{ing.product.name}</td>
                                             <td className="px-2 py-1 border font-bold">{formatNumber(ing.quantity)}</td>
                                             <td className="px-2 py-1 border text-xs">
-                                                {ing.notes && <div><span className="font-semibold">Recipe:</span> {ing.notes}</div>}
+                                                {ing.notes && <div>{ing.notes}</div>}
                                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                             </td>
                                         </tr>
@@ -1008,7 +1008,7 @@ function IngredientsTable({ ingredients, onRemove, onEdit, isEditing }: { ingred
                             </td>
                             <td className="px-2 py-2 border-b border-r border-border font-bold text-foreground bg-white">{ing.quantity}</td>
                             <td className={`px-2 py-2 border-b border-border text-muted-foreground bg-white text-xs ${isEditing ? 'border-r' : ''}`}>
-                                {ing.notes && <div><span className="text-foreground font-medium">Recipe:</span> {ing.notes}</div>}
+                                {ing.notes && <div>{ing.notes}</div>}
                                 {ing.product.notes && <div>{ing.product.notes}</div>}
                                 {!ing.notes && !ing.product.notes && '-'}
                             </td>

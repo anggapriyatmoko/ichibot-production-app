@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, ChevronLeft, ChevronRight, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, ChevronLeft, ChevronRight, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck, Camera, ImageIcon } from 'lucide-react'
 import { createServiceRobot, updateServiceRobot, deleteServiceRobot, getServiceRobots } from '@/app/actions/service-robot'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import ImportServiceRobotModal from './import-service-robot-modal'
 import SendResiModal from './send-resi-modal'
+import { processImageFile } from '@/utils/image-compression'
+import Image from 'next/image'
 
 interface ServiceRobot {
     id: string
@@ -22,6 +24,7 @@ interface ServiceRobot {
     complaint: string
     serviceStatus: string
     serviceNotes: string | null
+    image: string | null
 }
 
 interface ServiceRobotManagerProps {
@@ -155,6 +158,30 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
         serviceNotes: '',
     })
 
+    // Image state
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [removeImage, setRemoveImage] = useState(false)
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            const processedFile = await processImageFile(file, (msg) => showAlert(msg, 'error'))
+            if (!processedFile) {
+                e.target.value = ''
+                return
+            }
+
+            setImageFile(processedFile)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(processedFile)
+            setRemoveImage(false)
+        }
+    }
+
     const resetForm = () => {
         setFormData({
             entryDate: new Date().toISOString().split('T')[0],
@@ -168,6 +195,9 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
             serviceStatus: 'PENDING',
             serviceNotes: '',
         })
+        setImagePreview(null)
+        setImageFile(null)
+        setRemoveImage(false)
     }
 
     const openAddForm = () => {
@@ -189,6 +219,9 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
             serviceStatus: service.serviceStatus,
             serviceNotes: service.serviceNotes || '',
         })
+        setImagePreview(service.image || null)
+        setImageFile(null)
+        setRemoveImage(false)
         setEditingService(service)
         setIsAdding(true)
     }
@@ -198,48 +231,31 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
         setSaving(true)
 
         try {
-            // Construct date with current time
-            const [year, month, day] = formData.entryDate.split('-').map(Number)
-            const now = new Date()
-            const entryDateWithTime = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds())
+            // Build FormData
+            const fd = new FormData()
+            fd.append('entryDate', formData.entryDate)
+            fd.append('customerName', formData.customerName)
+            fd.append('customerAddress', formData.customerAddress)
+            fd.append('customerPhone', formData.customerPhone)
+            fd.append('robotType', formData.robotType)
+            fd.append('accessories', formData.accessories || '')
+            fd.append('warrantyStatus', formData.warrantyStatus)
+            fd.append('complaint', formData.complaint)
+            fd.append('serviceStatus', formData.serviceStatus)
+            fd.append('serviceNotes', formData.serviceNotes || '')
+
+            if (imageFile) {
+                fd.append('image', imageFile)
+            }
+            if (removeImage) {
+                fd.append('removeImage', 'true')
+            }
 
             if (editingService) {
-                // Keep original time if date hasn't changed? 
-                // Using current time is safer/easier request compliant for "just input"
-                // Actually for edit, if they didn't change the date, maybe we shouldn't update the time?
-                // But the form data only has the date part string. We lost the original time.
-                // Re-using current time on edit might be annoying if looking at history.
-                // BUT, limiting complexity: user asked about "input" (creation).
-                // Let's use current time for both for consistency with the form's "date only" view, 
-                // OR try to preserve original time if date matches?
-                // For now, simple fix: use current time. It refreshes the "Last Updated" feel effectively.
-
-                await updateServiceRobot(editingService.id, {
-                    entryDate: entryDateWithTime,
-                    customerName: formData.customerName,
-                    customerAddress: formData.customerAddress,
-                    customerPhone: formData.customerPhone,
-                    robotType: formData.robotType,
-                    accessories: formData.accessories || undefined,
-                    warrantyStatus: formData.warrantyStatus,
-                    complaint: formData.complaint,
-                    serviceStatus: formData.serviceStatus,
-                    serviceNotes: formData.serviceNotes || undefined,
-                })
+                await updateServiceRobot(editingService.id, fd)
                 showAlert('Data service berhasil diupdate', 'success')
             } else {
-                await createServiceRobot({
-                    entryDate: entryDateWithTime,
-                    customerName: formData.customerName,
-                    customerAddress: formData.customerAddress,
-                    customerPhone: formData.customerPhone,
-                    robotType: formData.robotType,
-                    accessories: formData.accessories || undefined,
-                    warrantyStatus: formData.warrantyStatus,
-                    complaint: formData.complaint,
-                    serviceStatus: formData.serviceStatus,
-                    serviceNotes: formData.serviceNotes || undefined,
-                })
+                await createServiceRobot(fd)
                 showAlert('Data service berhasil ditambahkan', 'success')
             }
             setIsAdding(false)
@@ -278,9 +294,9 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
         if (!selectedStatusService) return
         setSaving(true)
         try {
-            await updateServiceRobot(selectedStatusService.id, {
-                serviceStatus: tempStatus
-            })
+            const fd = new FormData()
+            fd.append('serviceStatus', tempStatus)
+            await updateServiceRobot(selectedStatusService.id, fd)
             showAlert('Status service berhasil diupdate', 'success')
             setStatusModalOpen(false)
             router.refresh()
@@ -301,9 +317,9 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
         if (!currentSolutionService) return
         setSaving(true)
         try {
-            await updateServiceRobot(currentSolutionService.id, {
-                serviceNotes: solutionText
-            })
+            const fd = new FormData()
+            fd.append('serviceNotes', solutionText)
+            await updateServiceRobot(currentSolutionService.id, fd)
             showAlert('Solusi berhasil disimpan', 'success')
             setSolutionModalOpen(false)
             router.refresh()
@@ -767,6 +783,51 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                         />
                                     </div>
 
+                                    {/* Image Upload */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Foto Robot (Opsional)</label>
+                                        {imagePreview ? (
+                                            <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                                <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setImagePreview(null)
+                                                        setImageFile(null)
+                                                        setRemoveImage(editingService?.image ? true : false)
+                                                    }}
+                                                    className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
+                                                >
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                                <div className="text-center mb-3">
+                                                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                    <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
+                                                    <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <label className="flex-1 cursor-pointer">
+                                                        <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
+                                                        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                            <Camera className="w-4 h-4" />
+                                                            Ambil Foto
+                                                        </div>
+                                                    </label>
+                                                    <label className="flex-1 cursor-pointer">
+                                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
+                                                        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                            <ImageIcon className="w-4 h-4" />
+                                                            Pilih File
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                 </div>
                                 <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                     <button
@@ -799,6 +860,7 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                     <th onClick={() => handleSort('entryDate')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                                         <div className="flex items-center">Tgl Masuk <SortIcon column="entryDate" /></div>
                                     </th>
+                                    <th className="px-2 py-3 w-12">Foto</th>
                                     <th onClick={() => handleSort('customerName')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                                         <div className="flex items-center">Pelanggan <SortIcon column="customerName" /></div>
                                     </th>
@@ -819,6 +881,21 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                             <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+                                        </td>
+                                        <td className="px-2 py-3">
+                                            {service.image ? (
+                                                <a href={service.image} target="_blank" rel="noopener noreferrer" className="block">
+                                                    <img
+                                                        src={service.image}
+                                                        alt="Robot"
+                                                        className="w-10 h-10 object-cover rounded-lg border border-border hover:border-primary hover:opacity-80 transition-all cursor-pointer"
+                                                    />
+                                                </a>
+                                            ) : (
+                                                <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                                                    <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 min-w-0">
                                             <div className="flex items-start gap-2">
@@ -947,30 +1024,47 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                     {getStatusBadge(service.serviceStatus, () => handleStatusClick(service))}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <span className="text-muted-foreground">Tanggal:</span>
-                                    <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                                    <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+                            <div className="flex items-center gap-3 py-2 border-y border-border/50 border-dashed">
+                                <div className="shrink-0">
+                                    {service.image ? (
+                                        <a href={service.image} target="_blank" rel="noopener noreferrer" className="block">
+                                            <img
+                                                src={service.image}
+                                                alt="Robot"
+                                                className="w-14 h-14 object-cover rounded-lg border border-border"
+                                            />
+                                        </a>
+                                    ) : (
+                                        <div className="w-14 h-14 bg-muted rounded-lg flex items-center justify-center">
+                                            <ImageIcon className="w-6 h-6 text-muted-foreground/30" />
+                                        </div>
+                                    )}
                                 </div>
-                                <div>
-                                    <span className="text-muted-foreground">Robot:</span>
-                                    <span className="ml-1 font-medium">{service.robotType}</span>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] text-muted-foreground uppercase font-semibold">Tgl Masuk</div>
+                                    <div className="font-medium text-sm truncate">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                    <div className="text-[10px] text-muted-foreground">{new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
                                 </div>
-                                <div>
-                                    <span className="text-muted-foreground">Garansi:</span>
+                                <div className="shrink-0 text-right">
+                                    <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1 text-center">Garansi</div>
                                     <span className={cn(
-                                        "ml-1 font-medium inline-flex items-center px-1.5 py-0.5 rounded text-xs",
+                                        "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
                                         service.warrantyStatus === 'YA'
-                                            ? 'bg-green-500/10 text-green-600 border border-green-500/20'
-                                            : 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-orange-500 text-white'
                                     )}>
-                                        {service.warrantyStatus === 'YA' ? 'Ya' : 'Tidak'}
+                                        {service.warrantyStatus === 'YA' ? 'YA' : 'TIDAK'}
                                     </span>
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground font-medium">Jenis Robot:</span>
+                                    <div className="font-bold">{service.robotType}</div>
+                                </div>
                                 <div className="min-w-0">
-                                    <span className="text-muted-foreground">Kelengkapan:</span>
-                                    <span className="ml-1 break-words inline-block align-top">{service.accessories || '-'}</span>
+                                    <span className="text-muted-foreground font-medium">Kelengkapan:</span>
+                                    <div className="break-words line-clamp-2">{service.accessories || '-'}</div>
                                 </div>
                             </div>
                             <div className="text-sm">

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport } from '@/app/actions/product'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download } from 'lucide-react'
+import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Camera } from 'lucide-react'
+import { processImageFile } from '@/utils/image-compression'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
@@ -132,42 +133,40 @@ export default function ProductList({
     }, [])
     const [removeImage, setRemoveImage] = useState(false)
 
-    const handleAddImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAddImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Client-side validation (1MB limit)
-            const MAX_SIZE = 1 * 1024 * 1024
-            if (file.size > MAX_SIZE) {
-                showError('File gambar melebihi 1MB')
+            const processedFile = await processImageFile(file, showError)
+            if (!processedFile) {
                 e.target.value = ''
                 return
             }
-            setAddImageFile(file)
+
+            setAddImageFile(processedFile)
             const reader = new FileReader()
             reader.onloadend = () => {
                 setAddImagePreview(reader.result as string)
             }
-            reader.readAsDataURL(file)
+            reader.readAsDataURL(processedFile)
         }
     }
 
-    const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEditImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
-            // Client-side validation (1MB limit)
-            const MAX_SIZE = 1 * 1024 * 1024
-            if (file.size > MAX_SIZE) {
-                showError('File gambar melebihi 1MB')
+            const processedFile = await processImageFile(file, showError)
+            if (!processedFile) {
                 e.target.value = ''
                 return
             }
-            setEditImageFile(file)
+
+            setEditImageFile(processedFile)
             const reader = new FileReader()
             reader.onloadend = () => {
                 setEditImagePreview(reader.result as string)
             }
-            reader.readAsDataURL(file)
-            setRemoveImage(false) // Reset remove flag if new image selected
+            reader.readAsDataURL(processedFile)
+            setRemoveImage(false)
         }
     }
 
@@ -302,7 +301,9 @@ export default function ProductList({
         : initialProducts
 
     const handlePageChange = (newPage: number) => {
-        router.push(`/inventory?page=${newPage}`)
+        const params = new URLSearchParams(searchParams)
+        params.set('page', newPage.toString())
+        replace(`${pathname}?${params.toString()}`)
     }
 
     // Helper to render sort icon
@@ -354,140 +355,157 @@ export default function ProductList({
                 </div>
             </div>
 
-            {/* Add Product Form */}
+            {/* Add Product Modal */}
             {isAdding && (
-                <div className="bg-card border border-border rounded-xl p-6 mb-6 animate-in slide-in-from-top-4 fade-in duration-200 shadow-sm">
-                    <h3 className="text-lg font-medium text-foreground mb-4">New Product</h3>
-                    <form onSubmit={handleAddProduct} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Product Image</label>
-                                {addImagePreview ? (
-                                    <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                        <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setAddImagePreview(null)
-                                                setAddImageFile(null)
-                                            }}
-                                            className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleAddImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                        <p className="text-sm text-muted-foreground">Click or Drag to upload thumbnail</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
-                                <input
-                                    name="name"
-                                    value={addForm.name}
-                                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. Resistor SMD"
-                                />
-                            </div>
-                            <div className="relative">
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
-                                <input
-                                    name="sku"
-                                    value={addForm.sku}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase()
-                                        setAddForm({ ...addForm, sku: val })
-                                        // Filter suggestions based on input
-                                        if (val.length > 0) {
-                                            const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
-                                            setSkuSuggestions(filtered.slice(0, 10))
-                                            setShowSkuSuggestions(true)
-                                        } else {
-                                            setSkuSuggestions([])
-                                            setShowSkuSuggestions(false)
-                                        }
-                                    }}
-                                    onFocus={() => {
-                                        if (addForm.sku.length > 0) {
-                                            const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
-                                            setSkuSuggestions(filtered.slice(0, 10))
-                                            setShowSkuSuggestions(true)
-                                        }
-                                    }}
-                                    onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
-                                    autoComplete="off"
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="e.g. RK01-04"
-                                />
-                                {showSkuSuggestions && skuSuggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        {skuSuggestions.map(sku => (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 mt-10 mb-10">
+                        <h3 className="text-xl font-bold text-foreground mb-6">Create New Product</h3>
+                        <form onSubmit={handleAddProduct} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Product Image</label>
+                                    {addImagePreview ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
                                             <button
-                                                key={sku}
                                                 type="button"
                                                 onClick={() => {
-                                                    setAddForm({ ...addForm, sku })
-                                                    setShowSkuSuggestions(false)
+                                                    setAddImagePreview(null)
+                                                    setAddImageFile(null)
                                                 }}
-                                                className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
                                             >
-                                                <span className="font-mono text-emerald-600">{sku}</span>
-                                                <span className="text-xs text-muted-foreground">Available</span>
+                                                Remove
                                             </button>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    ) : (
+                                        <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                            <div className="text-center mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                <p className="text-xs text-muted-foreground">Upload gambar atau ambil foto (maks 1MB)</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept="image/*" capture="environment" onChange={handleAddImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleAddImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-xs font-medium">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
+                                    <input
+                                        name="name"
+                                        value={addForm.name}
+                                        onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. Resistor SMD"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">SKU (Storage Location)</label>
+                                    <input
+                                        name="sku"
+                                        value={addForm.sku}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase()
+                                            setAddForm({ ...addForm, sku: val })
+                                            if (val.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowSkuSuggestions(true)
+                                            } else {
+                                                setSkuSuggestions([])
+                                                setShowSkuSuggestions(false)
+                                            }
+                                        }}
+                                        onFocus={() => {
+                                            if (addForm.sku.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowSkuSuggestions(true)
+                                            }
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
+                                        autoComplete="off"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. RK01-04"
+                                    />
+                                    {showSkuSuggestions && skuSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {skuSuggestions.map(sku => (
+                                                <button
+                                                    key={sku}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAddForm({ ...addForm, sku })
+                                                        setShowSkuSuggestions(false)
+                                                    }}
+                                                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="font-mono text-emerald-600">{sku}</span>
+                                                    <span className="text-xs text-muted-foreground">Available Drawer</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Initial Stock</label>
+                                    <input
+                                        name="stock"
+                                        type="number"
+                                        value={addForm.stock}
+                                        onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="0"
+                                        step="any"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
+                                    <input
+                                        name="lowStockThreshold"
+                                        type="number"
+                                        value={addForm.lowStockThreshold}
+                                        onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        step="any"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                                    <textarea
+                                        name="notes"
+                                        value={addForm.notes}
+                                        onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                        rows={2}
+                                        placeholder="Additional info, size, or specific usage..."
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Initial Stock</label>
-                                <input
-                                    name="stock"
-                                    type="number"
-                                    value={addForm.stock}
-                                    onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    placeholder="0"
-                                    step="any"
-                                />
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                                <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+                                <button disabled={isLoading} type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors shadow-sm">
+                                    {isLoading ? 'Creating...' : 'Create Product'}
+                                </button>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Low Stock Threshold</label>
-                                <input
-                                    name="lowStockThreshold"
-                                    type="number"
-                                    value={addForm.lowStockThreshold}
-                                    onChange={(e) => setAddForm({ ...addForm, lowStockThreshold: e.target.value })}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    step="any"
-                                />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
-                                <textarea
-                                    name="notes"
-                                    value={addForm.notes}
-                                    onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    rows={2}
-                                    placeholder="Additional information..."
-                                />
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-2">
-                            <button type="button" onClick={() => setIsAdding(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-                            <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                {isLoading ? 'Saving...' : 'Save Product'}
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             )}
 
@@ -533,11 +551,28 @@ export default function ProductList({
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="border border-dashed border-border rounded-lg p-4 text-center hover:bg-accent transition-colors cursor-pointer relative bg-background/50">
-                                            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                            <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                            <p className="text-sm text-muted-foreground">Click or Drag to upload new thumbnail</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                        <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                            <div className="text-center mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
+                                                <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept="image/*" capture="environment" onChange={handleEditImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

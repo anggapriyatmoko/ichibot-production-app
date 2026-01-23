@@ -76,7 +76,7 @@ export async function createAsset(formData: FormData) {
     const priceStr = formData.get('price') as string | null
     const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
-    const yearStr = formData.get('year') as string | null
+    const purchaseDateStr = formData.get('purchaseDate') as string | null
     const usefulLifeStr = formData.get('usefulLife') as string | null
     const residualValueStr = formData.get('residualValue') as string | null
 
@@ -133,7 +133,7 @@ export async function createAsset(formData: FormData) {
             price: priceStr ? parseFloat(priceStr) : null,
             notes: notes?.trim() || null,
             image: imagePath,
-            year: yearStr ? parseInt(yearStr) : null,
+            purchaseDate: purchaseDateStr ? new Date(purchaseDateStr) : null,
             usefulLife: usefulLifeStr ? parseInt(usefulLifeStr) : null,
             residualValue: residualValueStr ? parseFloat(residualValueStr) : null
         }
@@ -154,7 +154,7 @@ export async function updateAsset(formData: FormData) {
     const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
     const removeImage = formData.get('removeImage') === 'true'
-    const yearStr = formData.get('year') as string | null
+    const purchaseDateStr = formData.get('purchaseDate') as string | null
     const usefulLifeStr = formData.get('usefulLife') as string | null
     const residualValueStr = formData.get('residualValue') as string | null
 
@@ -178,7 +178,7 @@ export async function updateAsset(formData: FormData) {
         location: location.trim(),
         price: priceStr ? parseFloat(priceStr) : null,
         notes: notes?.trim() || null,
-        year: yearStr ? parseInt(yearStr) : null,
+        purchaseDate: purchaseDateStr ? new Date(purchaseDateStr) : null,
         usefulLife: usefulLifeStr ? parseInt(usefulLifeStr) : null,
         residualValue: residualValueStr ? parseFloat(residualValueStr) : null
     }
@@ -271,7 +271,7 @@ export async function getAllAssetsForExport() {
             location: true,
             price: true,
             notes: true,
-            year: true,
+            purchaseDate: true,
             usefulLife: true,
             residualValue: true,
             image: true
@@ -306,7 +306,7 @@ export async function importAssets(assets: any[]) {
             const specification = item.specification ? String(item.specification).trim() : null
             const notes = item.notes ? String(item.notes).trim() : null
             const price = item.price ? parseFloat(item.price) : null
-            const year = item.year ? parseInt(item.year) : null
+            const purchaseDate = item.purchaseDate ? new Date(item.purchaseDate) : (item.year ? new Date(item.year, 0, 1) : null)
             const usefulLife = item.usefulLife ? parseInt(item.usefulLife) : null
             const residualValue = item.residualValue ? parseFloat(item.residualValue) : null
 
@@ -325,7 +325,7 @@ export async function importAssets(assets: any[]) {
                         location,
                         price,
                         notes,
-                        year,
+                        purchaseDate,
                         usefulLife,
                         residualValue
                     }
@@ -340,7 +340,7 @@ export async function importAssets(assets: any[]) {
                         location,
                         price,
                         notes,
-                        year,
+                        purchaseDate,
                         usefulLife,
                         residualValue
                     }

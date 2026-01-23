@@ -62,12 +62,16 @@ export default function UserTable({ users }: UserTableProps) {
         if (role === 'TEKNISI') {
             return 'bg-orange-500/10 text-orange-500 border-orange-500/20'
         }
+        if (role === 'ADMINISTRASI') {
+            return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+        }
         return 'bg-teal-500/10 text-teal-500 border-teal-500/20'
     }
 
     const getRoleIconClasses = (role: string) => {
         if (['ADMIN', 'HRD'].includes(role)) return 'text-purple-600'
         if (role === 'TEKNISI') return 'text-orange-600'
+        if (role === 'ADMINISTRASI') return 'text-blue-600'
         return 'text-teal-600'
     }
 

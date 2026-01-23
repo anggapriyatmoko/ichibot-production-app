@@ -13,7 +13,7 @@ type ImportPreview = {
     location: string
     price: number | null
     notes: string
-    year: number | null
+    purchaseDate: string | null
     usefulLife: number | null
     residualValue: number | null
     isValid: boolean
@@ -29,7 +29,7 @@ export default function ImportAssetModal() {
     const [importResult, setImportResult] = useState<{ success: number, errors: string[] } | null>(null)
 
     const downloadTemplate = (format: 'xlsx' | 'csv') => {
-        const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tahun Pembelian', 'Umur Ekonomis (Tahun)', 'Nilai Residu']
+        const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tgl/Thn Beli', 'Umur Ekonomis (Tahun)', 'Nilai Residu']
         const sampleData = [
             ['Mesin CNC 5-Axis', 'CNC-001', 'Precision 0.01mm, Max Speed 10000rpm', 'Workshop A', 150000000, 'Kondisi baik', 2020, 10, 15000000],
             ['Kompresor Angin', 'KOM-002', '10HP, 500L Tank', 'Workshop B', 25000000, '', 2022, 8, 2500000]
@@ -80,7 +80,7 @@ export default function ImportAssetModal() {
                 const locationIdx = headers.findIndex(h => h.includes('lokasi') || h.includes('location'))
                 const priceIdx = headers.findIndex(h => h.includes('harga') || h.includes('price'))
                 const notesIdx = headers.findIndex(h => h.includes('keterangan') || h.includes('notes'))
-                const yearIdx = headers.findIndex(h => h.includes('tahun') || h.includes('year'))
+                const purchaseDateIdx = headers.findIndex(h => h.includes('tgl') || h.includes('tanggal') || h.includes('date') || h.includes('tahun') || h.includes('year'))
                 const usefulLifeIdx = headers.findIndex(h => h.includes('umur') || h.includes('useful'))
                 const residualIdx = headers.findIndex(h => h.includes('residu') || h.includes('residual'))
 
@@ -115,7 +115,7 @@ export default function ImportAssetModal() {
                     const location = locationIdx !== -1 && row[locationIdx] ? String(row[locationIdx]).trim() : ''
                     const price = priceIdx !== -1 && row[priceIdx] ? parseFloat(row[priceIdx]) : null
                     const notes = notesIdx !== -1 && row[notesIdx] ? String(row[notesIdx]).trim() : ''
-                    const year = yearIdx !== -1 && row[yearIdx] ? parseInt(row[yearIdx]) : null
+                    const purchaseDate = purchaseDateIdx !== -1 && row[purchaseDateIdx] ? String(row[purchaseDateIdx]).trim() : null
                     const usefulLife = usefulLifeIdx !== -1 && row[usefulLifeIdx] ? parseInt(row[usefulLifeIdx]) : null
                     const residualValue = residualIdx !== -1 && row[residualIdx] ? parseFloat(row[residualIdx]) : null
 
@@ -135,7 +135,7 @@ export default function ImportAssetModal() {
                         location,
                         price,
                         notes,
-                        year,
+                        purchaseDate,
                         usefulLife,
                         residualValue,
                         isValid: errors.length === 0,
@@ -174,7 +174,7 @@ export default function ImportAssetModal() {
                 location: d.location,
                 price: d.price,
                 notes: d.notes,
-                year: d.year,
+                purchaseDate: d.purchaseDate,
                 usefulLife: d.usefulLife,
                 residualValue: d.residualValue
             }))
@@ -318,7 +318,7 @@ export default function ImportAssetModal() {
                                                         <th className="p-3 border-b border-border bg-muted">Kode</th>
                                                         <th className="p-3 border-b border-border bg-muted">Lokasi</th>
                                                         <th className="p-3 border-b border-border bg-muted text-right">Harga</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Tahun</th>
+                                                        <th className="p-3 border-b border-border bg-muted">Tgl/Thn</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border bg-card">
@@ -340,7 +340,7 @@ export default function ImportAssetModal() {
                                                             <td className="p-3 font-mono text-xs">{row.code || '-'}</td>
                                                             <td className="p-3">{row.location}</td>
                                                             <td className="p-3 text-right tabular-nums">{formatPrice(row.price)}</td>
-                                                            <td className="p-3">{row.year || '-'}</td>
+                                                            <td className="p-3">{row.purchaseDate || '-'}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
