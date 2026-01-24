@@ -270,7 +270,7 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
     // Get all users
     const users = await prisma.user.findMany({
         where: {
-            role: { in: ['USER', 'HRD', 'TEKNISI', 'ADMIN'] }
+            role: { in: ['USER', 'HRD', 'TEKNISI', 'ADMIN', 'ADMINISTRASI'] }
         },
         orderBy: { name: 'asc' },
         select: {

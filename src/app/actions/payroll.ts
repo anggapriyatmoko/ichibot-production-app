@@ -315,7 +315,7 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
         const users = await prisma.user.findMany({
             where: {
                 role: {
-                    in: ['USER', 'HRD', 'TEKNISI', 'ADMIN'] // All roles
+                    in: ['USER', 'HRD', 'TEKNISI', 'ADMIN', 'ADMINISTRASI'] // All roles
                 }
             },
             orderBy: {
