@@ -10,8 +10,9 @@ import { cn } from '@/lib/utils'
 import TimeDisplay from './time-display'
 import { useSidebar } from '@/components/providers/sidebar-provider'
 
-const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+const dashboardItem = { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
+
+const barangNavigation = [
     {
         name: 'Spareparts',
         icon: Package,
@@ -41,17 +42,41 @@ const teknisiNavigation = [
 ]
 
 const administrasiNavigation = [
-    { name: 'Surat Penawaran', href: '/administrasi/surat-penawaran', icon: FileText },
-    { name: 'Kwitansi', href: '/administrasi/kwitansi', icon: Receipt },
-    { name: 'Surat Balasan', href: '/administrasi/surat-balasan', icon: Mail },
-    { name: 'MoU', href: '/administrasi/mou', icon: FileSignature },
+    {
+        name: 'Administrasi',
+        icon: FileText,
+        children: [
+            { name: 'Surat Penawaran', href: '/administrasi/surat-penawaran', icon: FileText },
+            { name: 'Kwitansi', href: '/administrasi/kwitansi', icon: Receipt },
+            { name: 'Surat Balasan', href: '/administrasi/surat-balasan', icon: Mail },
+            { name: 'MoU', href: '/administrasi/mou', icon: FileSignature },
+        ]
+    },
 ]
+
+const projectNavigation = [
+    {
+        name: 'Project',
+        icon: FolderKanban,
+        children: [
+            { name: 'Daftar Project', href: '/projects', icon: ClipboardList },
+            { name: 'Setting', href: '/projects/settings', icon: Settings, adminOnly: true },
+        ]
+    }
+]
+
 
 const hrdNavigation = [
     { name: 'HRD Dashboard', href: '/hrd-dashboard', icon: LayoutDashboard, adminOnly: true },
-    { name: 'Absensi', href: '/attendance', icon: Clock },
-    { name: 'Izin/Lembur', href: '/overtime-leave', icon: ClipboardList },
-    { name: 'Data Lainnya', href: '/hr-other-data', icon: FolderKanban },
+    {
+        name: 'Human Resource',
+        icon: Users,
+        children: [
+            { name: 'Absensi', href: '/attendance', icon: Clock },
+            { name: 'Izin/Lembur', href: '/overtime-leave', icon: ClipboardList },
+            { name: 'Data Lainnya', href: '/hr-other-data', icon: FolderKanban },
+        ]
+    },
     { name: 'Setting', href: '/hr-settings', icon: Settings, adminOnly: true },
 ]
 
@@ -72,7 +97,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
 
     // On initial mount, auto-open parent menu if child is active
     useEffect(() => {
-        const allNav = [...navigation, ...teknisiNavigation, ...administrasiNavigation, ...adminNavigation]
+        const allNav = [dashboardItem, ...projectNavigation, ...barangNavigation, ...teknisiNavigation, ...administrasiNavigation, ...hrdNavigation, ...adminNavigation]
 
         allNav.forEach(item => {
             if ('children' in item && item.children) {
@@ -137,9 +162,13 @@ export default function Sidebar({ userRole }: SidebarProps) {
                     </button>
                     {isMenuOpen && !isCollapsed && (
                         <div className="ml-4 space-y-1 border-l border-border pl-2">
-                            {item.children.map((child: any) => (
-                                <NavItem key={child.name} item={child} isCollapsed={isCollapsed} isSubItem={true} />
-                            ))}
+                            {item.children.map((child: any) => {
+                                // Filter based on adminOnly rule
+                                if (child.adminOnly && userRole !== 'ADMIN') {
+                                    return null
+                                }
+                                return <NavItem key={child.name} item={child} isCollapsed={isCollapsed} isSubItem={true} />
+                            })}
                         </div>
                     )}
                 </div>
@@ -196,7 +225,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
                 return acc
             }, [])
         }
-        const allNav = flattenNav([...navigation, ...teknisiNavigation, ...administrasiNavigation, ...adminNavigation])
+        const allNav = flattenNav([dashboardItem, ...projectNavigation, ...barangNavigation, ...teknisiNavigation, ...administrasiNavigation, ...hrdNavigation, ...adminNavigation])
         const current = allNav.find(item => pathname === item.href)
         return current?.name || 'Dashboard'
     }
@@ -257,7 +286,19 @@ export default function Sidebar({ userRole }: SidebarProps) {
 
                 <div className="flex-1 overflow-y-auto py-6 px-3">
                     <nav className="space-y-1">
-                        {navigation.map((item) => (
+                        <NavItem item={dashboardItem} isCollapsed={!isOpen} />
+
+
+                        <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                            <div className="border-t border-border" />
+                            <p className={cn(
+                                "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                                isOpen ? "px-3" : "text-center"
+                            )}>
+                                {isOpen ? "Barang" : "..."}
+                            </p>
+                        </div>
+                        {barangNavigation.map((item) => (
                             <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
                         ))}
                     </nav>
@@ -278,6 +319,26 @@ export default function Sidebar({ userRole }: SidebarProps) {
                             </div>
                             <nav className="space-y-1">
                                 {administrasiNavigation.map((item) => (
+                                    <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+                                ))}
+                            </nav>
+                        </>
+                    )}
+
+                    {/* Project menu - visible for ADMIN, HRD, ADMINISTRASI, and USER */}
+                    {['ADMIN', 'HRD', 'ADMINISTRASI', 'USER'].includes(userRole || '') && (
+                        <>
+                            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                                <div className="border-t border-border" />
+                                <p className={cn(
+                                    "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                                    isOpen ? "px-3" : "text-center"
+                                )}>
+                                    {isOpen ? "Project" : "..."}
+                                </p>
+                            </div>
+                            <nav className="space-y-1">
+                                {projectNavigation.map((item) => (
                                     <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
                                 ))}
                             </nav>

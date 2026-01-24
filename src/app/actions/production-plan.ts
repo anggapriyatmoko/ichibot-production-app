@@ -545,3 +545,40 @@ export async function importProductionPlan(rows: any[], month: number, year: num
     revalidatePath('/production-plan')
     return { success: successCount, errors }
 }
+
+export async function getUnresolvedProductionIssuesCount() {
+    try {
+        const count = await prisma.productionIssue.count({
+            where: { isResolved: false }
+        })
+        return { success: true, count }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getUnresolvedProductionIssuesDetails() {
+    try {
+        const data = await prisma.productionIssue.findMany({
+            where: { isResolved: false },
+            include: {
+                productionUnit: {
+                    include: {
+                        productionPlan: {
+                            include: {
+                                recipe: {
+                                    select: { name: true }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5
+        })
+        return { success: true, data }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}

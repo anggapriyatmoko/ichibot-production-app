@@ -42,7 +42,8 @@ export function encrypt(value: string | null | undefined): string | null {
 }
 
 /**
- * Decrypt a base64 encoded encrypted string
+ * Decrypt a base64 encoded encrypted string.
+ * Fallback to original value if decryption fails (handles legacy unencrypted data).
  */
 export function decrypt(encryptedValue: string | null | undefined): string | null {
     if (encryptedValue === null || encryptedValue === undefined || encryptedValue === '') {
@@ -56,9 +57,7 @@ export function decrypt(encryptedValue: string | null | undefined): string | nul
         // Minimum size: IV (16) + AuthTag (16) + at least 1 byte of data
         const MIN_ENCRYPTED_LENGTH = IV_LENGTH + AUTH_TAG_LENGTH + 1
         if (combined.length < MIN_ENCRYPTED_LENGTH) {
-            // Data is too short to be properly encrypted, might be plain text or corrupted
-            console.warn('Encrypted data too short, returning null. Data may be unencrypted or corrupted.')
-            return null
+            return encryptedValue // Looks like plain text
         }
 
         // Extract components
@@ -74,10 +73,27 @@ export function decrypt(encryptedValue: string | null | undefined): string | nul
 
         return decrypted.toString('utf8')
     } catch (error: any) {
-        // Common causes: key mismatch, corrupted data, or plain text data being decrypted
-        console.error('Decryption failed:', error?.message || error)
-        return null
+        // Fallback to original if it wasn't encrypted
+        return encryptedValue
     }
+}
+
+/**
+ * Encrypt a number value
+ */
+export function encryptNumber(value: number | null | undefined): string | null {
+    if (value === null || value === undefined) return null
+    return encrypt(value.toString())
+}
+
+/**
+ * Decrypt to a number
+ */
+export function decryptNumber(encryptedValue: string | null | undefined): number | null {
+    const decrypted = decrypt(encryptedValue)
+    if (decrypted === null) return null
+    const num = parseFloat(decrypted)
+    return isNaN(num) ? null : num
 }
 
 /**

@@ -330,28 +330,30 @@ export default function ProductList({
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0">
-                    {['ADMIN', 'HRD'].includes(userRole || '') && (
-                        <>
+                    <div className="flex gap-2 flex-shrink-0">
+                        {['ADMIN', 'HRD', 'TEKNISI', 'USER'].includes(userRole || '') && (
+                            <>
+                                <button
+                                    onClick={handleExport}
+                                    disabled={isLoading}
+                                    className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                    title="Export"
+                                >
+                                    <Download className="w-4 h-4" />
+                                </button>
+                                <ImportProductModal />
+                            </>
+                        )}
+                        {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                             <button
-                                onClick={handleExport}
-                                disabled={isLoading}
-                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                                title="Export"
+                                onClick={() => setIsAdding(!isAdding)}
+                                className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
+                                title="Add Product"
                             >
-                                <Download className="w-4 h-4" />
+                                <Plus className="w-4 h-4" />
                             </button>
-                            <ImportProductModal />
-                        </>
-                    )}
-                    {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
-                        <button
-                            onClick={() => setIsAdding(!isAdding)}
-                            className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
-                            title="Add Product"
-                        >
-                            <Plus className="w-4 h-4" />
-                        </button>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -743,7 +745,7 @@ export default function ProductList({
 
                                 {/* Actions */}
                                 <div className="flex gap-2 pt-3 border-t border-border">
-                                    {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
+                                    {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                                         <button
                                             onClick={() => {
                                                 setEditSkuValue('')

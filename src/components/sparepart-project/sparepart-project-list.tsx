@@ -372,7 +372,7 @@ export default function SparepartProjectList({
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0">
-                    {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
+                    {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                         <button
                             onClick={() => setIsAdding(!isAdding)}
                             className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors shadow-sm"
@@ -838,7 +838,7 @@ export default function SparepartProjectList({
 
                             {/* Actions */}
                             <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border">
-                                {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
+                                {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                                     <button
                                         onClick={() => {
                                             setEditSkuValue('')
@@ -948,7 +948,7 @@ export default function SparepartProjectList({
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
+                                            {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                                                 <button
                                                     onClick={() => {
                                                         setEditSkuValue('')

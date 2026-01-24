@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { verifyUserPassword } from '@/app/actions/profile'
+import OvertimeLeaveManager from '@/components/hr/overtime-leave-manager'
 
 export default function OvertimeLeavePage() {
     const [isUnlocked, setIsUnlocked] = useState(false)
@@ -96,19 +97,15 @@ export default function OvertimeLeavePage() {
         )
     }
 
-    // Unlocked - Show the actual content (empty for now)
+    // Unlocked - Show the actual content
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Izin / Lembur</h1>
                 <p className="text-muted-foreground">Kelola data izin dan lembur karyawan.</p>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-12 text-center">
-                <p className="text-muted-foreground">
-                    Halaman ini masih dalam pengembangan.
-                </p>
-            </div>
+            <OvertimeLeaveManager userRole={''} />
         </div>
     )
 }

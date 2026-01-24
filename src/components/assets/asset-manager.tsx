@@ -21,7 +21,7 @@ interface MachineAsset {
     price: number | null
     notes: string | null
     image: string | null
-    purchaseDate: string | null
+    purchaseDate: Date | string | null
     usefulLife: number | null
     residualValue: number | null
 }

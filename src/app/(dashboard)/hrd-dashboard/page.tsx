@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { Users, Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react'
 import UserManagementTable from '@/components/hr/user-management-table'
+import OvertimeLeaveApproval from '@/components/hr/overtime-leave-approval'
 import SalaryComponentList from '@/components/hr/salary-component-list'
 import PayrollRecapTable from '@/components/hr/payroll-recap-table'
 import AttendanceSummaryTable from '@/components/hr/attendance-summary-table'
@@ -56,8 +57,8 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
                     <p className="text-muted-foreground">Monitoring dan statistik karyawan.</p>
                 </div>
 
-                {/* HR Documents */}
                 <div className="mb-8">
+                    <OvertimeLeaveApproval />
                     <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
                 </div>
 

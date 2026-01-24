@@ -60,8 +60,8 @@ export default async function AssetsPage({
             </div>
 
             <AssetManager
-                initialAssets={assets}
-                allAssets={allAssets}
+                initialAssets={assets as any}
+                allAssets={allAssets as any}
                 totalPages={totalPages}
                 currentPage={page}
                 userRole={session?.user?.role}

@@ -28,6 +28,8 @@ model User {
   orders             Order[]
   payrolls           Payroll[]
   transactions       Transaction[]
+  assignedProjects   Project[]
+  overtimeLeaves     OvertimeLeave[]
 }
 
 model Attendance {
@@ -415,4 +417,55 @@ model SystemSetting {
   value     String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+model ProjectCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+}
+
+model Project {
+  id          String           @id @default(cuid())
+  name        String
+  client      String?
+  date        DateTime?
+  description String?          @db.Text
+  status      String           @default("PENDING")
+  categoryId  String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  category    ProjectCategory? @relation(fields: [categoryId], references: [id])
+  links       ProjectLink[]
+  assignedUsers User[]
+}
+
+model ProjectLink {
+  id        String   @id @default(cuid())
+  label     String
+  url       String   @db.Text
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OvertimeLeave {
+  id          String   @id @default(cuid())
+  userId      String
+  date        String
+  type        String
+  reason      String   @db.Text
+  attachment  String?  @db.Text
+  requesterName String?
+  job           String?
+  amount        String?
+  adminNote     String?  @db.Text
+  status      String
+  createdAt   String
+  updatedAt   String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
