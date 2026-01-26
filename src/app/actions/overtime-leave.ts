@@ -130,12 +130,9 @@ export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: strin
     const salaryCalcDay = 25
 
     if (month && year) {
-        if (month === 1) {
-            startDate = new Date(year - 1, 11, salaryCalcDay)
-        } else {
-            startDate = new Date(year, month - 2, salaryCalcDay)
-        }
-        endDate = new Date(year, month - 1, salaryCalcDay - 1)
+        // Use Calendar Month (1st to Last Day)
+        startDate = new Date(year, month - 1, 1) // 1st day of month
+        endDate = new Date(year, month, 0) // Last day of month
         startDate.setHours(0, 0, 0, 0)
         endDate.setHours(23, 59, 59, 999)
     }
@@ -192,10 +189,7 @@ export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: strin
             data: paginatedData,
             total,
             pages: Math.ceil(total / limit),
-            period: startDate && endDate ? {
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString()
-            } : null
+            period: null // Remove period display to avoid confusion
         }
     } catch (error: any) {
         return { error: error.message }
