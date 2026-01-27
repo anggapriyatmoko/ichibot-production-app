@@ -70,7 +70,7 @@ export default function OvertimeLeaveApproval() {
     // Period state
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-    const [period, setPeriod] = useState<{ startDate: string, endDate: string } | null>(null)
+
 
     const { showAlert, showError } = useAlert()
     const { showConfirmation } = useConfirmation()
@@ -82,9 +82,7 @@ export default function OvertimeLeaveApproval() {
             setRequests(res.data || [])
             setTotalPages(res.pages || 1)
             setTotalItems(res.total || 0)
-            if (res.period) {
-                setPeriod(res.period)
-            }
+
         }
         setIsLoading(false)
     }
@@ -245,11 +243,6 @@ export default function OvertimeLeaveApproval() {
                     <div>
                         <h2 className="font-semibold text-foreground flex items-center gap-2">
                             Rekap Izin & Lembur
-                            {period && (
-                                <span className="text-xs font-normal text-muted-foreground bg-background px-2 py-0.5 rounded border border-border">
-                                    {formatDate(period.startDate)} - {formatDate(period.endDate)}
-                                </span>
-                            )}
                         </h2>
                         <p className="text-xs text-muted-foreground">Monitoring pengajuan izin dan lembur karyawan.</p>
                     </div>
