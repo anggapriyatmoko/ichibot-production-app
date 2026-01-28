@@ -59,6 +59,27 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
     return { valid: true }
 }
 
+// Helper function to check SKU uniqueness across both tables
+async function isSkuTaken(sku: string, excludeSparepartId?: string) {
+    // Check in Products (Inventory)
+    const existingProduct = await prisma.product.findFirst({
+        where: { sku }
+    })
+    if (existingProduct) return true
+
+    // Check in SparepartProjects
+    const existingSparepart = await prisma.sparepartProject.findFirst({
+        where: {
+            sku,
+            // Exclude current item if updating
+            ...(excludeSparepartId ? { id: { not: excludeSparepartId } } : {})
+        }
+    })
+    if (existingSparepart) return true
+
+    return false
+}
+
 export async function getSparepartProjects(search: string = '') {
     await requireAuth()
 
@@ -85,6 +106,12 @@ export async function createSparepartProject(formData: FormData) {
     const stock = parseFloat(formData.get('stock') as string) || 0
     const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
+
+    if (sku) {
+        if (await isSkuTaken(sku)) {
+            return { error: `SKU "${sku}" sudah digunakan di Inventory atau Sparepart Project lain.` }
+        }
+    }
 
     let imagePath = null
 
@@ -151,6 +178,12 @@ export async function updateSparepartProject(formData: FormData) {
     const notes = formData.get('notes') as string | null
     const imageFile = formData.get('image') as File | null
     const removeImage = formData.get('removeImage') === 'true'
+
+    if (sku) {
+        if (await isSkuTaken(sku, id)) {
+            return { error: `SKU "${sku}" sudah digunakan di Inventory atau Sparepart Project lain.` }
+        }
+    }
 
     // Fetch existing item to get current image path
     const existingItem = await prisma.sparepartProject.findUnique({

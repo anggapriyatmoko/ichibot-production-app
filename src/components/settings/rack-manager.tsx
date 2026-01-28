@@ -132,7 +132,7 @@ export default function RackManager({ userRole }: RackManagerProps) {
                         className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
                     >
                         <Plus className="w-4 h-4" />
-                        Tambah Rak
+                        <span className="hidden md:inline">Tambah Rak</span>
                     </button>
                 )}
             </div>

@@ -9,6 +9,7 @@ import SalaryComponentList from '@/components/hr/salary-component-list'
 import PayrollRecapTable from '@/components/hr/payroll-recap-table'
 import AttendanceSummaryTable from '@/components/hr/attendance-summary-table'
 import HRDocumentManager from '@/components/hr/hr-document-manager'
+import { AnnouncementManager } from '@/components/hr/announcement-manager'
 import { getSalaryComponents } from '@/app/actions/salary-settings'
 import { getMonthlyPayrollRecap } from '@/app/actions/payroll'
 import { getHRDocuments } from '@/app/actions/hr-document'
@@ -35,10 +36,14 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
 
     // Get Salary Components
     try {
-        const [deductionComponents, additionComponents, hrDocs] = await Promise.all([
+        const [deductionComponents, additionComponents, hrDocs, allUsers] = await Promise.all([
             getSalaryComponents('DEDUCTION'),
             getSalaryComponents('ADDITION'),
-            getHRDocuments()
+            getHRDocuments(),
+            prisma.user.findMany({
+                select: { id: true, name: true, username: true, role: true },
+                orderBy: { name: 'asc' }
+            })
         ])
 
         // Get Payroll Recap Data
@@ -59,6 +64,9 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
 
                 <div className="mb-8">
                     <OvertimeLeaveApproval />
+                    <div className="mb-8">
+                        <AnnouncementManager allUsers={allUsers} />
+                    </div>
                     <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
                 </div>
 

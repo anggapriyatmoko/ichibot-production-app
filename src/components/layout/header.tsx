@@ -6,6 +6,7 @@ import TimeDisplay from './time-display'
 import { PanelLeftOpen } from 'lucide-react'
 import { useSidebar } from '@/components/providers/sidebar-provider'
 import NotificationBadge from './notification-badge'
+import AnnouncementBanner from './announcement-banner'
 
 export default function Header() {
     const { data: session } = useSession()
@@ -30,9 +31,9 @@ export default function Header() {
                 </div>
             </div>
 
+            <AnnouncementBanner />
+
             <div className="flex items-center gap-3 md:gap-6">
-
-
                 <NotificationBadge role={session.user.role || 'USER'} />
                 <UserNav user={session.user} />
             </div>

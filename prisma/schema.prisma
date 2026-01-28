@@ -30,6 +30,8 @@ model User {
   transactions       Transaction[]
   assignedProjects   Project[]
   overtimeLeaves     OvertimeLeave[]
+  targetedAnnouncements Announcement[] @relation("TargetedUsers")
+  createdAnnouncements  Announcement[] @relation("CreatedAnnouncements")
 }
 
 model Attendance {
@@ -468,4 +470,16 @@ model OvertimeLeave {
   createdAt   String
   updatedAt   String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  isActive    Boolean  @default(true)
+  speed       Int      @default(12)
+  creatorId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  targetUsers User[]   @relation("TargetedUsers")
+  creator     User     @relation("CreatedAnnouncements", fields: [creatorId], references: [id])
 }

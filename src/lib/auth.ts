@@ -8,6 +8,11 @@ export async function getSession() {
     return await getServerSession(authOptions)
 }
 
+export async function getCurrentUser() {
+    const session: any = await getServerSession(authOptions)
+    return session?.user
+}
+
 export async function requireAdmin() {
     const session: any = await getServerSession(authOptions)
 

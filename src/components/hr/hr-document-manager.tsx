@@ -147,7 +147,7 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                         disabled={isPending}
                     >
                         <Plus className="w-4 h-4" />
-                        Tambah Dokumen
+                        <span className="hidden md:inline">Tambah Dokumen</span>
                     </button>
                 )}
             </div>

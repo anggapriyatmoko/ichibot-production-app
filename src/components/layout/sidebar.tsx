@@ -258,13 +258,15 @@ export default function Sidebar({ userRole }: SidebarProps) {
                 )}>
                     {isOpen && (
                         <div className="flex flex-col overflow-hidden whitespace-nowrap">
-                            <Image
-                                src="/uploads/ichibot.png"
-                                alt="Ichibot Production"
-                                width={180}
-                                height={40}
-                                className="object-contain"
-                            />
+                            <Link href="/dashboard">
+                                <Image
+                                    src="/uploads/ichibot.png"
+                                    alt="Ichibot Production"
+                                    width={180}
+                                    height={40}
+                                    className="object-contain cursor-pointer"
+                                />
+                            </Link>
                         </div>
                     )}
                     <button

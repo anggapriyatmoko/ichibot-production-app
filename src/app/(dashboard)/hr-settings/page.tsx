@@ -2,9 +2,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import { getWorkSchedules, getCustomWorkSchedules } from '@/app/actions/work-schedule'
+import { getSystemSetting } from '@/app/actions/settings'
 import WorkScheduleManager from '@/components/hr/work-schedule-manager'
 import CustomWorkScheduleManager from '@/components/hr/custom-work-schedule-manager'
 import SalaryCalculationDateCard from '@/components/hr/salary-calculation-date-card'
+import AnnouncementSettings from '@/components/hr/announcement-settings'
 
 export const metadata = {
     title: 'Setting HR | Ichibot Production',
@@ -25,9 +27,10 @@ export default async function HRSettingsPage() {
         redirect('/dashboard')
     }
 
-    const [schedules, customSchedules] = await Promise.all([
+    const [schedules, customSchedules, announcementSpeed] = await Promise.all([
         getWorkSchedules(),
-        getCustomWorkSchedules()
+        getCustomWorkSchedules(),
+        getSystemSetting('ANNOUNCEMENT_SPEED')
     ])
 
     return (
@@ -39,6 +42,7 @@ export default async function HRSettingsPage() {
 
             <div className="space-y-6">
                 <SalaryCalculationDateCard />
+                <AnnouncementSettings initialSpeed={parseInt(announcementSpeed || '12')} />
                 <WorkScheduleManager schedules={schedules} />
                 <CustomWorkScheduleManager schedules={customSchedules} />
             </div>

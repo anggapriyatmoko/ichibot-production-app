@@ -163,8 +163,8 @@ export default function GenericDocManager({ type, title, initialData, labels = {
     return (
         <div className="space-y-6">
             {/* Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-                <div className="relative w-full sm:w-80">
+            <div className="flex flex-row gap-4 justify-between items-center">
+                <div className="relative w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                         type="text"
@@ -176,10 +176,10 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                 </div>
                 <button
                     onClick={openAddModal}
-                    className="w-full sm:w-auto px-6 py-2 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    className="shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
                 >
                     <Plus className="w-5 h-5" />
-                    Tambah {title}
+                    <span className="hidden md:inline">Tambah {title}</span>
                 </button>
             </div>
 
@@ -318,129 +318,131 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-4 overflow-y-auto flex-1 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">Tanggal</label>
-                                    <div className="relative">
-                                        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="p-4 overflow-y-auto flex-1 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Tanggal</label>
+                                        <div className="relative">
+                                            <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                            <input
+                                                type="date"
+                                                value={formData.date}
+                                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                                required
+                                                className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.number}</label>
                                         <input
-                                            type="date"
-                                            value={formData.date}
-                                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                            type="text"
+                                            value={formData.number}
+                                            onChange={(e) => setFormData({ ...formData, number: e.target.value })}
                                             required
-                                            className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                                            placeholder={`Nomor ${title}`}
+                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
                                         />
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.number}</label>
-                                    <input
-                                        type="text"
-                                        value={formData.number}
-                                        onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-                                        required
-                                        placeholder={`Nomor ${title}`}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.name}</label>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                        placeholder="Nama PIC/Kontak"
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.institution}</label>
-                                    <input
-                                        type="text"
-                                        value={formData.institution}
-                                        onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                                        required
-                                        placeholder="Nama Perusahaan/Instansi"
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.content}</label>
-                                    <textarea
-                                        value={formData.content}
-                                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                        required
-                                        rows={3}
-                                        placeholder={`Ringkasan ${fieldLabels.content.toLowerCase()}...`}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">Link (Opsional)</label>
-                                    <input
-                                        type="url"
-                                        value={formData.link}
-                                        onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-                                        placeholder="https://..."
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                                        File Dokumen (Opsional)
-                                        <span className="text-[10px] ml-2 text-primary font-normal">(Maks 2MB: PDF, DOC, DOCX)</span>
-                                    </label>
-                                    {editingData?.filePath && !removeFile ? (
-                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border border-dashed">
-                                            <div className="flex items-center gap-2">
-                                                <FileText className="w-5 h-5 text-primary" />
-                                                <span className="text-sm truncate max-w-[200px]">{editingData.filePath.split('/').pop()}</span>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setRemoveFile(true)}
-                                                className="text-xs text-red-600 font-bold hover:underline"
-                                            >
-                                                Hapus & Ganti
-                                            </button>
-                                        </div>
-                                    ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.name}</label>
                                         <input
-                                            type="file"
-                                            accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0] || null
-                                                if (file) {
-                                                    // Validate size (2MB)
-                                                    if (file.size > 2 * 1024 * 1024) {
-                                                        showAlert('Ukuran file maksimal adalah 2MB', 'error')
-                                                        e.target.value = ''
-                                                        setSelectedFile(null)
-                                                        return
-                                                    }
-                                                    // Validate type
-                                                    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-                                                    const allowedExt = ['.pdf', '.doc', '.docx']
-                                                    const fileName = file.name.toLowerCase()
-                                                    const isValidExt = allowedExt.some(ext => fileName.endsWith(ext))
-
-                                                    if (!allowedTypes.includes(file.type) && !isValidExt) {
-                                                        showAlert('Hanya format PDF, DOC, atau DOCX yang diperbolehkan', 'error')
-                                                        e.target.value = ''
-                                                        setSelectedFile(null)
-                                                        return
-                                                    }
-                                                }
-                                                setSelectedFile(file)
-                                            }}
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            required
+                                            placeholder="Nama PIC/Kontak"
+                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
                                         />
-                                    )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.institution}</label>
+                                        <input
+                                            type="text"
+                                            value={formData.institution}
+                                            onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+                                            required
+                                            placeholder="Nama Perusahaan/Instansi"
+                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">{fieldLabels.content}</label>
+                                        <textarea
+                                            value={formData.content}
+                                            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                                            required
+                                            rows={3}
+                                            placeholder={`Ringkasan ${fieldLabels.content.toLowerCase()}...`}
+                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Link (Opsional)</label>
+                                        <input
+                                            type="url"
+                                            value={formData.link}
+                                            onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                                            placeholder="https://..."
+                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                            File Dokumen (Opsional)
+                                            <span className="text-[10px] ml-2 text-primary font-normal">(Maks 2MB: PDF, DOC, DOCX)</span>
+                                        </label>
+                                        {editingData?.filePath && !removeFile ? (
+                                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border border-dashed">
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="w-5 h-5 text-primary" />
+                                                    <span className="text-sm truncate max-w-[200px]">{editingData.filePath.split('/').pop()}</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRemoveFile(true)}
+                                                    className="text-xs text-red-600 font-bold hover:underline"
+                                                >
+                                                    Hapus & Ganti
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0] || null
+                                                    if (file) {
+                                                        // Validate size (2MB)
+                                                        if (file.size > 2 * 1024 * 1024) {
+                                                            showAlert('Ukuran file maksimal adalah 2MB', 'error')
+                                                            e.target.value = ''
+                                                            setSelectedFile(null)
+                                                            return
+                                                        }
+                                                        // Validate type
+                                                        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+                                                        const allowedExt = ['.pdf', '.doc', '.docx']
+                                                        const fileName = file.name.toLowerCase()
+                                                        const isValidExt = allowedExt.some(ext => fileName.endsWith(ext))
+
+                                                        if (!allowedTypes.includes(file.type) && !isValidExt) {
+                                                            showAlert('Hanya format PDF, DOC, atau DOCX yang diperbolehkan', 'error')
+                                                            e.target.value = ''
+                                                            setSelectedFile(null)
+                                                            return
+                                                        }
+                                                    }
+                                                    setSelectedFile(file)
+                                                }}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                            <div className="p-4 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}

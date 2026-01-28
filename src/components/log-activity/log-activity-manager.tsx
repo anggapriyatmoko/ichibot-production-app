@@ -297,10 +297,10 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                         {selectedUserId === currentUser.id && (
                             <button
                                 onClick={openAddModal}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                                className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
                             >
-                                <Plus className="w-4 h-4" />
-                                Tambah Kegiatan
+                                <Plus className="w-5 h-5" />
+                                <span className="hidden md:inline">Tambah Kegiatan</span>
                             </button>
                         )}
                     </div>
@@ -658,9 +658,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-                    <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[90vh] flex flex-col">
-                        <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]" autoComplete="off">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" autoComplete="off">
                             <div className="p-6 border-b border-border shrink-0">
                                 <h3 className="text-lg font-medium">Input Log Activity</h3>
                             </div>

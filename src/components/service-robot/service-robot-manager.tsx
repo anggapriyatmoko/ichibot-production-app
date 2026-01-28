@@ -606,245 +606,249 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
-                            <form onSubmit={handleSubmit} className="p-4 overflow-y-auto flex-1 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Tanggal Masuk</label>
-                                        <input
-                                            type="date"
-                                            value={formData.entryDate}
-                                            onChange={(e) => setFormData({ ...formData, entryDate: e.target.value })}
-                                            required
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Nama Pelanggan</label>
-                                        <input
-                                            type="text"
-                                            value={formData.customerName}
+                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                                <div className="p-4 overflow-y-auto flex-1 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Tanggal Masuk</label>
+                                            <input
+                                                type="date"
+                                                value={formData.entryDate}
+                                                onChange={(e) => setFormData({ ...formData, entryDate: e.target.value })}
+                                                required
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Nama Pelanggan</label>
+                                            <input
+                                                type="text"
+                                                value={formData.customerName}
 
-                                            required
-                                            placeholder="Nama lengkap"
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg"
-                                            onFocus={() => {
-                                                if (formData.customerName) {
-                                                    const filtered = customers.filter(c =>
-                                                        c.name.toLowerCase().includes(formData.customerName.toLowerCase())
-                                                    )
-                                                    setFilteredCustomers(filtered)
-                                                    setShowSuggestions(true)
-                                                }
-                                            }}
-                                            onChange={(e) => {
-                                                const value = e.target.value
-                                                setFormData({ ...formData, customerName: value })
-                                                if (value) {
-                                                    const filtered = customers.filter(c =>
-                                                        c.name.toLowerCase().includes(value.toLowerCase())
-                                                    )
-                                                    setFilteredCustomers(filtered)
-                                                    setShowSuggestions(true)
-                                                } else {
-                                                    setShowSuggestions(false)
-                                                }
-                                            }}
-                                            onBlur={() => {
-                                                // Delay hiding suggestions to allow clicking
-                                                setTimeout(() => setShowSuggestions(false), 200)
-                                            }}
-                                        />
-                                        {showSuggestions && filteredCustomers.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
-                                                {filteredCustomers.map((customer, index) => (
-                                                    <button
-                                                        key={index}
-                                                        type="button"
-                                                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
-                                                        onClick={() => {
-                                                            setFormData({
-                                                                ...formData,
-                                                                customerName: customer.name,
-                                                                customerAddress: customer.address,
-                                                                customerPhone: customer.phone
-                                                            })
-                                                            setShowSuggestions(false)
-                                                        }}
-                                                    >
-                                                        <div className="font-medium">{customer.name}</div>
-                                                        <div className="text-xs text-muted-foreground">{customer.phone}</div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Alamat</label>
-                                        <textarea
-                                            value={formData.customerAddress}
-                                            onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
-                                            required
-                                            placeholder="Alamat lengkap"
-                                            rows={2}
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">No HP</label>
-                                        <input
-                                            type="text"
-                                            value={formData.customerPhone}
-                                            onChange={(e) => {
-                                                const value = e.target.value.replace(/[^0-9]/g, '')
-                                                setFormData({ ...formData, customerPhone: value })
-                                            }}
-                                            required
-                                            placeholder="08xxxxxxxxxx"
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Jenis Robot</label>
-                                        <input
-                                            type="text"
-                                            value={formData.robotType}
-                                            onChange={(e) => {
-                                                const value = e.target.value
-                                                setFormData({ ...formData, robotType: value })
-                                                if (value) {
-                                                    const filtered = products.filter(p =>
-                                                        p.toLowerCase().includes(value.toLowerCase())
-                                                    )
-                                                    setFilteredProducts(filtered)
+                                                required
+                                                placeholder="Nama lengkap"
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                                                onFocus={() => {
+                                                    if (formData.customerName) {
+                                                        const filtered = customers.filter(c =>
+                                                            c.name.toLowerCase().includes(formData.customerName.toLowerCase())
+                                                        )
+                                                        setFilteredCustomers(filtered)
+                                                        setShowSuggestions(true)
+                                                    }
+                                                }}
+                                                onChange={(e) => {
+                                                    const value = e.target.value
+                                                    setFormData({ ...formData, customerName: value })
+                                                    if (value) {
+                                                        const filtered = customers.filter(c =>
+                                                            c.name.toLowerCase().includes(value.toLowerCase())
+                                                        )
+                                                        setFilteredCustomers(filtered)
+                                                        setShowSuggestions(true)
+                                                    } else {
+                                                        setShowSuggestions(false)
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    // Delay hiding suggestions to allow clicking
+                                                    setTimeout(() => setShowSuggestions(false), 200)
+                                                }}
+                                            />
+                                            {showSuggestions && filteredCustomers.length > 0 && (
+                                                <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
+                                                    {filteredCustomers.map((customer, index) => (
+                                                        <button
+                                                            key={index}
+                                                            type="button"
+                                                            className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
+                                                            onClick={() => {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    customerName: customer.name,
+                                                                    customerAddress: customer.address,
+                                                                    customerPhone: customer.phone
+                                                                })
+                                                                setShowSuggestions(false)
+                                                            }}
+                                                        >
+                                                            <div className="font-medium">{customer.name}</div>
+                                                            <div className="text-xs text-muted-foreground">{customer.phone}</div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Alamat</label>
+                                            <textarea
+                                                value={formData.customerAddress}
+                                                onChange={(e) => setFormData({ ...formData, customerAddress: e.target.value })}
+                                                required
+                                                placeholder="Alamat lengkap"
+                                                rows={2}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">No HP</label>
+                                            <input
+                                                type="text"
+                                                value={formData.customerPhone}
+                                                onChange={(e) => {
+                                                    const value = e.target.value.replace(/[^0-9]/g, '')
+                                                    setFormData({ ...formData, customerPhone: value })
+                                                }}
+                                                required
+                                                placeholder="08xxxxxxxxxx"
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Jenis Robot</label>
+                                            <input
+                                                type="text"
+                                                value={formData.robotType}
+                                                onChange={(e) => {
+                                                    const value = e.target.value
+                                                    setFormData({ ...formData, robotType: value })
+                                                    if (value) {
+                                                        const filtered = products.filter(p =>
+                                                            p.toLowerCase().includes(value.toLowerCase())
+                                                        )
+                                                        setFilteredProducts(filtered)
+                                                        setShowProductSuggestions(true)
+                                                    } else {
+                                                        setShowProductSuggestions(false)
+                                                    }
+                                                }}
+                                                onFocus={() => {
+                                                    setFilteredProducts(products)
                                                     setShowProductSuggestions(true)
-                                                } else {
-                                                    setShowProductSuggestions(false)
-                                                }
-                                            }}
-                                            onFocus={() => {
-                                                setFilteredProducts(products)
-                                                setShowProductSuggestions(true)
-                                            }}
-                                            onBlur={() => {
-                                                setTimeout(() => setShowProductSuggestions(false), 200)
-                                            }}
-                                            required
-                                            placeholder="Pilih atau ketik jenis robot"
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg"
-                                        />
-                                        {showProductSuggestions && filteredProducts.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
-                                                {filteredProducts.map((product, index) => (
+                                                }}
+                                                onBlur={() => {
+                                                    setTimeout(() => setShowProductSuggestions(false), 200)
+                                                }}
+                                                required
+                                                placeholder="Pilih atau ketik jenis robot"
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                                            />
+                                            {showProductSuggestions && filteredProducts.length > 0 && (
+                                                <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-md max-h-48 overflow-y-auto">
+                                                    {filteredProducts.map((product, index) => (
+                                                        <button
+                                                            key={index}
+                                                            type="button"
+                                                            className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
+                                                            onClick={() => {
+                                                                setFormData({ ...formData, robotType: product })
+                                                                setShowProductSuggestions(false)
+                                                            }}
+                                                        >
+                                                            {product}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Kelengkapan</label>
+                                            <textarea
+                                                value={formData.accessories}
+                                                onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
+                                                placeholder="Charger, remote, dll"
+                                                rows={2}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Status Garansi</label>
+                                            <select
+                                                value={formData.warrantyStatus}
+                                                onChange={(e) => setFormData({ ...formData, warrantyStatus: e.target.value })}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg"
+                                            >
+                                                <option value="TIDAK">Tidak Garansi</option>
+                                                <option value="YA">Masih Garansi</option>
+                                            </select>
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Keluhan</label>
+                                            <textarea
+                                                value={formData.complaint}
+                                                onChange={(e) => setFormData({ ...formData, complaint: e.target.value })}
+                                                required
+                                                placeholder="Jelaskan keluhan/kerusakan"
+                                                rows={3}
+                                                className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none"
+                                            />
+                                        </div>
+
+                                        {/* Image Upload */}
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">Foto Robot (Opsional)</label>
+                                            {imagePreview ? (
+                                                <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
                                                     <button
-                                                        key={index}
                                                         type="button"
-                                                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
                                                         onClick={() => {
-                                                            setFormData({ ...formData, robotType: product })
-                                                            setShowProductSuggestions(false)
+                                                            setImagePreview(null)
+                                                            setImageFile(null)
+                                                            setRemoveImage(editingService?.image ? true : false)
                                                         }}
+                                                        className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
                                                     >
-                                                        {product}
+                                                        Hapus
                                                     </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Kelengkapan</label>
-                                        <textarea
-                                            value={formData.accessories}
-                                            onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
-                                            placeholder="Charger, remote, dll"
-                                            rows={2}
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Status Garansi</label>
-                                        <select
-                                            value={formData.warrantyStatus}
-                                            onChange={(e) => setFormData({ ...formData, warrantyStatus: e.target.value })}
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg"
-                                        >
-                                            <option value="TIDAK">Tidak Garansi</option>
-                                            <option value="YA">Masih Garansi</option>
-                                        </select>
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Keluhan</label>
-                                        <textarea
-                                            value={formData.complaint}
-                                            onChange={(e) => setFormData({ ...formData, complaint: e.target.value })}
-                                            required
-                                            placeholder="Jelaskan keluhan/kerusakan"
-                                            rows={3}
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none"
-                                        />
-                                    </div>
-
-                                    {/* Image Upload */}
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Foto Robot (Opsional)</label>
-                                        {imagePreview ? (
-                                            <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                                <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setImagePreview(null)
-                                                        setImageFile(null)
-                                                        setRemoveImage(editingService?.image ? true : false)
-                                                    }}
-                                                    className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
-                                                >
-                                                    Hapus
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
-                                                <div className="text-center mb-3">
-                                                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                                    <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
-                                                            <Camera className="w-4 h-4" />
-                                                            Ambil Foto
-                                                        </div>
-                                                    </label>
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
-                                                            <ImageIcon className="w-4 h-4" />
-                                                            Pilih File
-                                                        </div>
-                                                    </label>
+                                            ) : (
+                                                <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                                    <div className="text-center mb-3">
+                                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                        <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
+                                                        <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <label className="flex-1 cursor-pointer">
+                                                            <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
+                                                            <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                                <Camera className="w-4 h-4" />
+                                                                Ambil Foto
+                                                            </div>
+                                                        </label>
+                                                        <label className="flex-1 cursor-pointer">
+                                                            <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
+                                                            <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                                <ImageIcon className="w-4 h-4" />
+                                                                Pilih File
+                                                            </div>
+                                                        </label>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                        </div>
 
+                                    </div>
                                 </div>
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAdding(false)}
-                                        className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                        {editingService ? 'Update' : 'Simpan'}
-                                    </button>
+                                <div className="p-4 border-t border-border shrink-0 bg-card rounded-b-xl">
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAdding(false)}
+                                            className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={saving}
+                                            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                            {editingService ? 'Update' : 'Simpan'}
+                                        </button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
