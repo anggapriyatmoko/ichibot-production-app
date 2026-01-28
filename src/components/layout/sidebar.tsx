@@ -20,6 +20,7 @@ const barangNavigation = [
             { name: 'Sparepart Production', href: '/inventory', icon: Package },
             { name: 'POS Production', href: '/pos', icon: ShoppingCart },
             { name: 'Sparepart Project', href: '/sparepart-project', icon: FolderKanban },
+            { name: 'POS Project', href: '/pos-project', icon: ShoppingCart },
             { name: 'Rack Management', href: '/rack-management', icon: Warehouse }
         ]
     },
