@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createSparepartProject, deleteSparepartProject, addSparepartProjectStock, updateSparepartProject, reduceSparepartProjectStock, moveToProduction } from '@/app/actions/sparepart-project'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera } from 'lucide-react'
+import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera, Pencil, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
@@ -62,6 +62,8 @@ export default function SparepartProjectList({
     const [takeModalItem, setTakeModalItem] = useState<SparepartProject | null>(null)
     // Move to Production Modal State
     const [moveModalItem, setMoveModalItem] = useState<SparepartProject | null>(null)
+    // Mobile Action Modal State
+    const [mobileActionItem, setMobileActionItem] = useState<SparepartProject | null>(null)
     const [moveSku, setMoveSku] = useState('')
 
     // Image states
@@ -628,7 +630,7 @@ export default function SparepartProjectList({
                                     <label className="block text-xs font-normal text-muted-foreground mb-1">SKU</label>
                                     <input
                                         name="sku"
-                                        value={editSkuValue || editingItem.sku || ''}
+                                        value={editSkuValue}
                                         onChange={(e) => {
                                             const val = e.target.value.toUpperCase()
                                             setEditSkuValue(val)
@@ -806,12 +808,22 @@ export default function SparepartProjectList({
                 {/* Mobile Card View */}
                 <div className="md:hidden divide-y divide-border">
                     {filteredItems.map((item) => (
-                        <div key={item.id} className="p-4 transition-colors">
-                            <div className="flex gap-3 mb-3">
+                        <div key={item.id} className="p-4 transition-colors relative">
+                            {/* Action Pencil Button - Top Right */}
+                            <button
+                                onClick={() => setMobileActionItem(item)}
+                                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+                            >
+                                <Pencil className="w-5 h-5" />
+                            </button>
+
+                            <div className="flex gap-3 mb-3 pr-10"> {/* Added pr-10 to prevent overlap with button */}
                                 {/* Image */}
                                 <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
                                     {item.image ? (
-                                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                        <a href={item.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                            <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                        </a>
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-gray-600">
                                             <ImageIcon className="w-6 h-6" />
@@ -829,57 +841,11 @@ export default function SparepartProjectList({
                             </div>
 
                             {/* Stock */}
-                            <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-2">
                                 <p className="text-sm text-muted-foreground">Stock:</p>
                                 <p className="text-lg font-bold text-emerald-500">
                                     {formatNumber(item.stock)}
                                 </p>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border">
-                                {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
-                                    <button
-                                        onClick={() => {
-                                            setEditSkuValue('')
-                                            setEditingItem(item)
-                                        }}
-                                        className="flex items-center justify-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20 text-sm font-normal"
-                                    >
-                                        <Edit className="w-4 h-4" />
-                                        Edit
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => setStockModalItem(item)}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20 text-sm font-normal"
-                                >
-                                    <PackagePlus className="w-4 h-4" />
-                                    Restock
-                                </button>
-                                <button
-                                    onClick={() => setTakeModalItem(item)}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors border border-orange-500/20 text-sm font-normal"
-                                >
-                                    <PackageMinus className="w-4 h-4" />
-                                    Ambil
-                                </button>
-                                <button
-                                    onClick={() => setMoveModalItem(item)}
-                                    className="flex items-center justify-center gap-2 px-3 py-2 text-purple-500 hover:bg-purple-500/10 rounded-lg transition-colors border border-purple-500/20 text-sm font-normal"
-                                >
-                                    <ArrowRightCircle className="w-4 h-4" />
-                                    Move
-                                </button>
-                                {['ADMIN', 'HRD'].includes(userRole || '') && (
-                                    <button
-                                        onClick={() => handleDelete(item.id)}
-                                        className="col-span-2 flex items-center justify-center gap-2 px-3 py-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-border text-sm"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </button>
-                                )}
                             </div>
                         </div>
                     ))}
@@ -889,6 +855,90 @@ export default function SparepartProjectList({
                         </div>
                     )}
                 </div>
+
+                {/* Mobile Actions Modal */}
+                {mobileActionItem && (
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                        onClick={() => setMobileActionItem(null)}
+                    >
+                        <div
+                            className="bg-card border border-border rounded-xl p-5 w-full max-w-xs shadow-2xl animate-in zoom-in-95 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="font-bold text-foreground text-lg truncate max-w-[200px]">{mobileActionItem.name}</h3>
+                                    <p className="text-xs text-muted-foreground">Select an action</p>
+                                </div>
+                                <button
+                                    onClick={() => setMobileActionItem(null)}
+                                    className="p-2 text-muted-foreground hover:bg-accent rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
+                                    <button
+                                        onClick={() => {
+                                            setEditSkuValue(mobileActionItem.sku || '')
+                                            setEditingItem(mobileActionItem)
+                                            setMobileActionItem(null)
+                                        }}
+                                        className="flex flex-col items-center justify-center gap-2 p-3 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-colors border border-blue-500/20 text-sm font-medium"
+                                    >
+                                        <Edit className="w-5 h-5" />
+                                        Edit
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setStockModalItem(mobileActionItem)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="flex flex-col items-center justify-center gap-2 p-3 text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-colors border border-emerald-500/20 text-sm font-medium"
+                                >
+                                    <PackagePlus className="w-5 h-5" />
+                                    Restock
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setTakeModalItem(mobileActionItem)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="flex flex-col items-center justify-center gap-2 p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-colors border border-orange-500/20 text-sm font-medium"
+                                >
+                                    <PackageMinus className="w-5 h-5" />
+                                    Ambil
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setMoveModalItem(mobileActionItem)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="flex flex-col items-center justify-center gap-2 p-3 text-purple-500 hover:bg-purple-500/10 rounded-xl transition-colors border border-purple-500/20 text-sm font-medium"
+                                >
+                                    <ArrowRightCircle className="w-5 h-5" />
+                                    Move
+                                </button>
+                                {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                    <button
+                                        onClick={() => {
+                                            handleDelete(mobileActionItem.id)
+                                            setMobileActionItem(null)
+                                        }}
+                                        className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-muted-foreground hover:text-white hover:bg-destructive rounded-xl transition-colors border border-border hover:border-destructive text-sm font-medium"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                        Delete Item
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block">
@@ -908,9 +958,11 @@ export default function SparepartProjectList({
                                 <tr key={item.id} className="hover:bg-accent/50 transition-colors group">
                                     <td className="px-6 py-4">
                                         <div className="relative group/image">
-                                            <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
+                                            <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border">
                                                 {item.image ? (
-                                                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                                    <a href={item.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                                    </a>
                                                 ) : (
                                                     <div className="flex items-center justify-center h-full text-gray-600">
                                                         <ImageIcon className="w-4 h-4" />
@@ -951,7 +1003,7 @@ export default function SparepartProjectList({
                                             {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                                                 <button
                                                     onClick={() => {
-                                                        setEditSkuValue('')
+                                                        setEditSkuValue(item.sku || '')
                                                         setEditingItem(item)
                                                     }}
                                                     className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"

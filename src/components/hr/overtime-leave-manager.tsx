@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Clock, Check, X, FileText, Image as ImageIcon, Calendar, AlertCircle, Loader2, ChevronRight, File, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createOvertimeLeave, getOvertimeLeaves, deleteOvertimeLeave } from '@/app/actions/overtime-leave'
+import { createOvertimeLeave, getOvertimeLeaves, deleteOvertimeLeave, respondToOvertimeOrder } from '@/app/actions/overtime-leave'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import {
@@ -70,6 +70,7 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
                 attachment: null
             })
             fetchRequests()
+            window.dispatchEvent(new Event('refresh-notifications'))
         } else {
             showError(res.error || 'Terjadi kesalahan')
         }
@@ -85,6 +86,26 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
                 if (res.success) {
                     showAlert('Pengajuan dihapus', 'Terhapus')
                     fetchRequests()
+                    window.dispatchEvent(new Event('refresh-notifications'))
+                } else {
+                    showError(res.error || 'Terjadi kesalahan')
+                }
+            }
+        })
+    }
+
+    const handleRespond = async (id: string, action: 'ACCEPT' | 'REJECT') => {
+        showConfirmation({
+            title: action === 'ACCEPT' ? 'Terima Perintah Lembur' : 'Tolak Perintah Lembur',
+            message: action === 'ACCEPT'
+                ? 'Anda yakin menerima tugas lembur ini?'
+                : 'Anda yakin menolak tugas lembur ini?',
+            action: async () => {
+                const res = await respondToOvertimeOrder(id, action)
+                if (res.success) {
+                    showAlert(action === 'ACCEPT' ? 'Tugas diterima' : 'Tugas ditolak', 'Berhasil')
+                    fetchRequests()
+                    window.dispatchEvent(new Event('refresh-notifications'))
                 } else {
                     showError(res.error || 'Terjadi kesalahan')
                 }
@@ -95,6 +116,7 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'APPROVED': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+            case 'MANDATE': return 'bg-blue-500/10 text-blue-600 border-blue-500/20'
             case 'REJECTED': return 'bg-rose-500/10 text-rose-600 border-rose-500/20'
             default: return 'bg-amber-500/10 text-amber-600 border-amber-500/20'
         }
@@ -103,6 +125,7 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
     const getStatusText = (status: string) => {
         switch (status) {
             case 'APPROVED': return 'Disetujui'
+            case 'MANDATE': return 'Menunggu Konfirmasi'
             case 'REJECTED': return 'Ditolak'
             default: return 'Menunggu'
         }
@@ -374,7 +397,24 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
                                         </div>
                                     </TableCell>
                                     <TableCell align="right">
-                                        {req.status === 'PENDING' ? (
+                                        {req.status === 'MANDATE' ? (
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleRespond(req.id, 'ACCEPT')}
+                                                    className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all border border-emerald-500/20"
+                                                    title="Terima Perintah Lembur"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRespond(req.id, 'REJECT')}
+                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20"
+                                                    title="Tolak Perintah Lembur"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ) : req.status === 'PENDING' ? (
                                             <button
                                                 onClick={() => handleDelete(req.id)}
                                                 className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-border"

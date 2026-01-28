@@ -1,0 +1,32 @@
+
+export async function getUserOvertimeOrders() {
+    const session: any = await requireAuth()
+    
+    try {
+        // Fetch recent overtime entries for this user
+        // Since fields are encrypted, we might need to fetch more and filter in memory
+        // But we can limit by userId at least
+        const allData = await (prisma as any).overtimeLeave.findMany({
+            where: { userId: session.user.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20 // Fetch 20 most recent to be safe before filtering
+        })
+        
+        const decrypted = allData.map(decryptOvertimeLeave)
+        
+        // Filter for:
+        // 1. Type IS 'OVERTIME'
+        // 2. Has requesterName (indicating it's an order/command)
+        // 3. Status is 'APPROVED' (orders are approved by default)
+        // 4. (Optional) Maybe recency? For now just take top 5.
+        const orders = decrypted.filter((item: any) => 
+            item.type === 'OVERTIME' && 
+            item.requesterName && 
+            item.status === 'APPROVED'
+        ).slice(0, 5) // Last 5 orders
+
+        return { success: true, data: orders }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}

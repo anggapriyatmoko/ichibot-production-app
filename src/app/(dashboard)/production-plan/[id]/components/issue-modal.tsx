@@ -73,6 +73,7 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
                 await reportIssue(unitId, description)
                 onClose()
             }
+            window.dispatchEvent(new Event('refresh-notifications'))
         } catch (error) {
             console.error('Failed to save issue:', error)
             alert('Failed to save. Please try again.')
@@ -93,6 +94,7 @@ export default function IssueModal({ isOpen, onClose, unitId, unitNumber, existi
         try {
             await resolveIssue(existingIssue.id, resolution)
             onClose()
+            window.dispatchEvent(new Event('refresh-notifications'))
         } catch (error) {
             console.error('Failed to resolve issue:', error)
             alert('Failed to resolve. Please try again.')

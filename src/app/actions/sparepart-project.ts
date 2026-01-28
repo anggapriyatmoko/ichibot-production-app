@@ -160,7 +160,7 @@ export async function updateSparepartProject(formData: FormData) {
 
     const data: any = {
         name,
-        sku,
+        sku: sku || null, // Allow clearing SKU by passing empty string
         stock,
         notes
     }

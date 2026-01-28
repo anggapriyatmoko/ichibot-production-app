@@ -272,7 +272,7 @@ export async function createOvertimeOrder(formData: FormData) {
                 requesterName: encrypt(requesterName),
                 job: encrypt(job),
                 amount: encrypt(amount.toString()),
-                status: encrypt('APPROVED'),
+                status: encrypt('MANDATE'),
                 createdAt: encrypt(now),
                 updatedAt: encrypt(now),
             }
@@ -330,6 +330,98 @@ export async function updateOvertimeLeave(id: string, data: any) {
                 amount: encrypt(data.amount?.toString() || '0'),
                 adminNote: encrypt(data.adminNote),
                 status: encrypt(data.status),
+                updatedAt: encrypt(now)
+            }
+        })
+
+        revalidatePath('/overtime-leave')
+        revalidatePath('/hrd-dashboard')
+        return { success: true }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getUserOvertimeOrders() {
+    const session: any = await requireAuth()
+
+    try {
+        const allData = await (prisma as any).overtimeLeave.findMany({
+            where: { userId: session.user.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        })
+
+        const decrypted = allData.map(decryptOvertimeLeave)
+
+        const orders = decrypted.filter((item: any) =>
+            item.type === 'OVERTIME' &&
+            item.requesterName &&
+            item.status === 'MANDATE'
+        ).slice(0, 5)
+
+        return { success: true, data: orders }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getUserStatusUpdates() {
+    const session: any = await requireAuth()
+
+    try {
+        const allData = await (prisma as any).overtimeLeave.findMany({
+            where: {
+                userId: session.user.id,
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 20
+        })
+
+        const decrypted = allData.map(decryptOvertimeLeave)
+
+        // Filter for items that are APPROVED or REJECTED recently?
+        // Or we just return the latest updates and let frontend filter/display/handle "read" state
+        // For this specific request: "if submitted... and accepted or rejected... notification"
+        // We will return items that are NOT PENDING (i.e. APPROVED/REJECTED)
+        // And maybe filter by time? For now, we return specific statuses.
+
+        const updates = decrypted.filter((item: any) =>
+            ['APPROVED', 'REJECTED'].includes(item.status)
+        ).slice(0, 5)
+
+        return { success: true, data: updates }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function respondToOvertimeOrder(id: string, response: 'ACCEPT' | 'REJECT') {
+    const session: any = await requireAuth()
+
+    const request = await (prisma as any).overtimeLeave.findUnique({
+        where: { id }
+    })
+
+    if (!request) return { error: 'Request not found' }
+
+    if (request.userId !== session.user.id) {
+        return { error: 'Forbidden' }
+    }
+
+    const decryptedStatus = decrypt(request.status)
+    if (decryptedStatus !== 'MANDATE') {
+        return { error: 'Invalid status for this action' }
+    }
+
+    const newStatus = response === 'ACCEPT' ? 'APPROVED' : 'REJECTED'
+    const now = new Date().toISOString()
+
+    try {
+        await (prisma as any).overtimeLeave.update({
+            where: { id },
+            data: {
+                status: encrypt(newStatus),
                 updatedAt: encrypt(now)
             }
         })

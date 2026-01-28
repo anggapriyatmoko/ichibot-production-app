@@ -121,6 +121,7 @@ export default function OvertimeLeaveApproval() {
                 if (res.success) {
                     showAlert('Data berhasil dihapus', 'Berhasil')
                     fetchRequests()
+                    window.dispatchEvent(new Event('refresh-notifications'))
                 } else {
                     showError(res.error || 'Gagal menghapus data')
                 }
@@ -153,6 +154,7 @@ export default function OvertimeLeaveApproval() {
             showAlert('Data berhasil diperbarui', 'Berhasil')
             setIsEditing(false)
             fetchRequests()
+            window.dispatchEvent(new Event('refresh-notifications'))
         } else {
             showError(res.error || 'Gagal memperbarui data')
         }
@@ -180,6 +182,7 @@ export default function OvertimeLeaveApproval() {
             setIsDeciding(false)
             setDecisionId(null)
             fetchRequests()
+            window.dispatchEvent(new Event('refresh-notifications'))
         } else {
             showError(res.error || 'Terjadi kesalahan')
         }
@@ -200,6 +203,7 @@ export default function OvertimeLeaveApproval() {
             setIsAddingOrder(false)
             setOrderForm({ userId: '', requesterName: '', job: '', amount: '' })
             fetchRequests()
+            window.dispatchEvent(new Event('refresh-notifications'))
         } else {
             showError(res.error || 'Gagal membuat perintah lembur')
         }

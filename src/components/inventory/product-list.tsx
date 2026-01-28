@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport } from '@/app/actions/product'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Camera } from 'lucide-react'
+import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Camera, Pencil, X } from 'lucide-react'
 import { processImageFile } from '@/utils/image-compression'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
@@ -110,6 +110,9 @@ export default function ProductList({
     const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
     const [addImageFile, setAddImageFile] = useState<File | null>(null)
     const [editImageFile, setEditImageFile] = useState<File | null>(null)
+
+    // Mobile Action Modal State
+    const [mobileActionItem, setMobileActionItem] = useState<Product | null>(null)
 
     // SKU Suggestion State
     const [allUnusedDrawers, setAllUnusedDrawers] = useState<string[]>([])
@@ -586,7 +589,7 @@ export default function ProductList({
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">SKU</label>
                                     <input
                                         name="sku"
-                                        value={editSkuValue || editingProduct.sku || ''}
+                                        value={editSkuValue}
                                         onChange={(e) => {
                                             const val = e.target.value.toUpperCase()
                                             setEditSkuValue(val)
@@ -694,15 +697,25 @@ export default function ProductList({
                             <div
                                 key={product.id}
                                 className={cn(
-                                    "p-4 transition-colors",
+                                    "p-4 transition-colors relative",
                                     isLowStock ? "bg-red-500/5" : ""
                                 )}
                             >
-                                <div className="flex gap-3 mb-3">
+                                {/* Action Pencil Button - Top Right */}
+                                <button
+                                    onClick={() => setMobileActionItem(product)}
+                                    className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-colors"
+                                >
+                                    <Pencil className="w-5 h-5" />
+                                </button>
+
+                                <div className="flex gap-3 mb-3 pr-10">
                                     {/* Image */}
                                     <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
                                         {product.image ? (
-                                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                            <a href={product.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                                <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                            </a>
                                         ) : (
                                             <div className="flex items-center justify-center h-full text-gray-600">
                                                 <ImageIcon className="w-6 h-6" />
@@ -721,7 +734,7 @@ export default function ProductList({
                                 </div>
 
                                 {/* Stock and Status */}
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Stock</p>
                                         <p className={cn("text-xl font-bold", isLowStock ? "text-red-500" : "text-emerald-500")}>
@@ -742,37 +755,6 @@ export default function ProductList({
                                         <p className="text-[10px] text-muted-foreground mt-1">Min: {product.lowStockThreshold}</p>
                                     </div>
                                 </div>
-
-                                {/* Actions */}
-                                <div className="flex gap-2 pt-3 border-t border-border">
-                                    {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
-                                        <button
-                                            onClick={() => {
-                                                setEditSkuValue('')
-                                                setEditingProduct(product)
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20 text-sm font-medium"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                            Edit
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setStockModalProduct(product)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20 text-sm font-medium"
-                                    >
-                                        <PackagePlus className="w-4 h-4" />
-                                        Restock
-                                    </button>
-                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
-                                        <button
-                                            onClick={() => handleDelete(product.id)}
-                                            className="px-3 py-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-border"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
                             </div>
                         )
                     })}
@@ -782,6 +764,70 @@ export default function ProductList({
                         </div>
                     )}
                 </div>
+
+                {/* Mobile Actions Modal */}
+                {mobileActionItem && (
+                    <div
+                        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                        onClick={() => setMobileActionItem(null)}
+                    >
+                        <div
+                            className="bg-card border border-border rounded-xl p-5 w-full max-w-xs shadow-2xl animate-in zoom-in-95 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="font-bold text-foreground text-lg truncate max-w-[200px]">{mobileActionItem.name}</h3>
+                                    <p className="text-xs text-muted-foreground">Select an action</p>
+                                </div>
+                                <button
+                                    onClick={() => setMobileActionItem(null)}
+                                    className="p-2 text-muted-foreground hover:bg-accent rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
+                                    <button
+                                        onClick={() => {
+                                            setEditSkuValue(mobileActionItem.sku || '')
+                                            setEditingProduct(mobileActionItem)
+                                            setMobileActionItem(null)
+                                        }}
+                                        className="flex flex-col items-center justify-center gap-2 p-3 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-colors border border-blue-500/20 text-sm font-medium"
+                                    >
+                                        <Edit className="w-5 h-5" />
+                                        Edit
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setStockModalProduct(mobileActionItem)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="flex flex-col items-center justify-center gap-2 p-3 text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-colors border border-emerald-500/20 text-sm font-medium"
+                                >
+                                    <PackagePlus className="w-5 h-5" />
+                                    Restock
+                                </button>
+                                {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                    <button
+                                        onClick={() => {
+                                            handleDelete(mobileActionItem.id)
+                                            setMobileActionItem(null)
+                                        }}
+                                        className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-muted-foreground hover:text-white hover:bg-destructive rounded-xl transition-colors border border-border hover:border-destructive text-sm font-medium"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                        Delete Product
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto overflow-y-hidden">
@@ -816,9 +862,11 @@ export default function ProductList({
                                     >
                                         <td className="px-6 py-4">
                                             <div className="relative group/image">
-                                                <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
+                                                <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border">
                                                     {product.image ? (
-                                                        <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                                        <a href={product.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                                        </a>
                                                     ) : (
                                                         <div className="flex items-center justify-center h-full text-gray-600">
                                                             <ImageIcon className="w-4 h-4" />
@@ -876,7 +924,7 @@ export default function ProductList({
                                                 {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
                                                     <button
                                                         onClick={() => {
-                                                            setEditSkuValue('')
+                                                            setEditSkuValue(product.sku || '')
                                                             setEditingProduct(product)
                                                         }}
                                                         className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
