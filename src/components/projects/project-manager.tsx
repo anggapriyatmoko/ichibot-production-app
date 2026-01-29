@@ -234,7 +234,7 @@ export default function ProjectManager({ initialProjects, categories, allUsers, 
 
             {/* Modal Form */}
             {(isAdding || editingProject) && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 overflow-y-auto p-2 sm:p-4">
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setIsAdding(false); setEditingProject(null); }} />
                     <div className="bg-card border border-border rounded-xl w-full max-w-3xl relative animate-in zoom-in-95 duration-200 shadow-2xl max-h-[95vh] flex flex-col">
                         <div className="p-6 border-b border-border shrink-0">

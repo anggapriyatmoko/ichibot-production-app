@@ -525,7 +525,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
 
             {/* Receipt Modal */}
             {showReceipt && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm no-print">
                     <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full">
                         {/* Receipt Header - No Print */}
                         <div className="p-4 border-b border-gray-200 flex justify-between items-center no-print">
@@ -647,8 +647,8 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
 
             {/* Order History Modal */}
             {showHistory && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col">
                         {/* Header */}
                         <div className="p-4 border-b border-gray-200 flex justify-between items-center shrink-0">
                             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -855,7 +855,7 @@ export default function POSSystem({ products, userName = 'Admin' }: { products: 
 
             {/* History Receipt Modal */}
             {selectedHistoryOrder && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm no-print">
                     <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full">
                         {/* Receipt Header - No Print */}
                         <div className="p-4 border-b border-gray-200 flex justify-between items-center no-print">

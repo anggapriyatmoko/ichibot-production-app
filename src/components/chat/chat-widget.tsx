@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MessageCircle, X, Send, Users, ArrowLeft, RefreshCw } from 'lucide-react'
+import { MessageCircle, X, Send, Users, ArrowLeft, RefreshCw, Smile } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
     getChatRooms,
@@ -60,6 +60,21 @@ export default function ChatWidget() {
     const lastMessageTimeRef = useRef<string | null>(null)
     const prevUnreadCountRef = useRef<number>(0)
     const audioContextRef = useRef<AudioContext | null>(null)
+    const [showEmoji, setShowEmoji] = useState(false)
+
+    // Common emoji categories
+    const emojis = {
+        'Sering': ['😀', '😂', '🥰', '😎', '👍', '❤️', '🙏', '💪', '🔥', '✨', '🎉', '👏'],
+        'Wajah': ['😊', '😁', '😅', '🤣', '😇', '😍', '🤩', '😘', '😋', '🤔', '😏', '😌', '😢', '😭', '😱', '😡', '🥺', '😴'],
+        'Gesture': ['👋', '🤝', '👌', '✌️', '🤞', '🤙', '👊', '✋', '🙌', '👐', '💪', '🙏'],
+        'Simbol': ['❤️', '💕', '💯', '✅', '❌', '⭐', '🌟', '💡', '📌', '🔔', '⏰', '📅']
+    }
+
+    // Insert emoji to message
+    const insertEmoji = (emoji: string) => {
+        setNewMessage(prev => prev + emoji)
+        setShowEmoji(false)
+    }
 
     // Play notification sound using Web Audio API
     const playNotificationSound = useCallback(() => {
@@ -587,12 +602,44 @@ export default function ChatWidget() {
                                 </div>
 
                                 {/* Message Input */}
-                                <div className="p-3 border-t border-gray-100 bg-white">
+                                <div className="p-3 border-t border-gray-100 bg-white relative">
+                                    {/* Emoji Picker */}
+                                    {showEmoji && (
+                                        <div className="absolute bottom-full left-0 right-0 bg-white border border-gray-200 rounded-t-xl shadow-lg p-2 max-h-48 overflow-y-auto">
+                                            {Object.entries(emojis).map(([category, emojiList]) => (
+                                                <div key={category} className="mb-2">
+                                                    <p className="text-xs text-gray-500 font-medium mb-1">{category}</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {emojiList.map((emoji, idx) => (
+                                                            <button
+                                                                key={idx}
+                                                                onClick={() => insertEmoji(emoji)}
+                                                                className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded text-lg transition-colors"
+                                                            >
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <div className="flex items-end gap-2">
+                                        <button
+                                            onClick={() => setShowEmoji(!showEmoji)}
+                                            className={cn(
+                                                "p-2 rounded-lg transition-colors",
+                                                showEmoji ? "bg-blue-100 text-blue-600" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                            )}
+                                        >
+                                            <Smile className="w-5 h-5" />
+                                        </button>
                                         <textarea
                                             value={newMessage}
                                             onChange={(e) => setNewMessage(e.target.value)}
                                             onKeyDown={handleKeyPress}
+                                            onFocus={() => setShowEmoji(false)}
                                             placeholder="Ketik pesan..."
                                             rows={1}
                                             className="flex-1 px-3 py-2 bg-gray-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-20"

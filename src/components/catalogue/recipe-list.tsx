@@ -200,7 +200,7 @@ export default function RecipeList({
             )}
 
             {isAdding && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
                     <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-foreground mb-4">{editingRecipeId ? 'Edit Product' : 'Add New Product'}</h3>
                         <form onSubmit={handleAdd} className="space-y-4">

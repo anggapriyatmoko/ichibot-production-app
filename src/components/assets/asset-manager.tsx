@@ -343,9 +343,9 @@ export default function AssetManager({
 
             {/* Add/Edit Form Modal */}
             {(isAdding || editingAsset) && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto">
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelEdit} />
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl relative animate-in zoom-in-95 duration-200 shadow-2xl max-h-[90vh] flex flex-col">
+                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl relative animate-in zoom-in-95 duration-200 shadow-2xl max-h-[85vh] flex flex-col">
                         <div className="p-6 border-b border-border shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-primary/10 rounded-lg">

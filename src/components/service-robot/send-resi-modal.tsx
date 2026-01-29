@@ -111,8 +111,8 @@ export default function SendResiModal({ isOpen, onClose, service, onSuccess }: S
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-card border border-border rounded-xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+            <div className="bg-card border border-border rounded-xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto">
                 {/* Header */}
                 <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-card z-10">
                     <div className="flex items-center gap-2">

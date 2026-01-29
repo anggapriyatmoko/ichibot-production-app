@@ -247,8 +247,8 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
+                    <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border flex flex-col max-h-[85vh]">
                         <div className="p-4 border-b border-border">
                             <h3 className="font-semibold text-lg">{editingDoc ? 'Edit Dokumen' : 'Tambah Dokumen'}</h3>
                         </div>

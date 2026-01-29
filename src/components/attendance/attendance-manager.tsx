@@ -381,7 +381,7 @@ export default function AttendanceManager({
 
             {/* Edit Modal */}
             {editModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
                     <div className="bg-card w-full max-w-sm rounded-2xl border border-border shadow-lg">
                         <div className="p-4 border-b border-border">
                             <h3 className="text-lg font-bold">Input Absensi</h3>

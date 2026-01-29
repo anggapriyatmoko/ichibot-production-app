@@ -255,8 +255,8 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
 
             {/* Modal Create */}
             {isAdding && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
                         <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20 rounded-t-xl">
                             <h3 className="text-lg font-bold flex items-center gap-2">
                                 <Megaphone className="w-5 h-5 text-primary" />

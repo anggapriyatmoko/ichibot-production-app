@@ -362,8 +362,8 @@ export default function ProductList({
 
             {/* Add Product Modal */}
             {isAdding && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
                         <div className="p-6 border-b border-border shrink-0">
                             <h3 className="text-xl font-bold text-foreground">Create New Product</h3>
                         </div>
@@ -520,8 +520,8 @@ export default function ProductList({
 
             {/* Edit Product Modal */}
             {editingProduct && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
                         <div className="p-6 border-b border-border shrink-0">
                             <h3 className="text-lg font-medium text-foreground">Edit Product: {editingProduct.name}</h3>
                         </div>
@@ -664,7 +664,7 @@ export default function ProductList({
 
             {/* Add Stock Modal */}
             {stockModalProduct && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
                     <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-foreground mb-2">Restock: {stockModalProduct.name}</h3>
                         <p className="text-sm text-muted-foreground mb-6">Current Stock: {stockModalProduct.stock}</p>
