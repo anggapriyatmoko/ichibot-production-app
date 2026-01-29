@@ -136,6 +136,19 @@ export default function ProductList({
     }, [])
     const [removeImage, setRemoveImage] = useState(false)
 
+    // Lock body scroll when any modal is open
+    useEffect(() => {
+        const isAnyModalOpen = isAdding || !!editingProduct || !!stockModalProduct || !!mobileActionItem
+        if (isAnyModalOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [isAdding, editingProduct, stockModalProduct, mobileActionItem])
+
     const handleAddImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) {
@@ -362,12 +375,12 @@ export default function ProductList({
 
             {/* Add Product Modal */}
             {isAdding && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-                        <div className="p-6 border-b border-border shrink-0">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                        <div className="p-4 md:p-6 border-b border-border shrink-0">
                             <h3 className="text-xl font-bold text-foreground">Create New Product</h3>
                         </div>
-                        <div className="p-6 overflow-y-auto flex-1">
+                        <div className="p-4 md:p-6 overflow-y-auto flex-1">
                             <form onSubmit={handleAddProduct} className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="md:col-span-2">
@@ -520,12 +533,12 @@ export default function ProductList({
 
             {/* Edit Product Modal */}
             {editingProduct && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-                        <div className="p-6 border-b border-border shrink-0">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                        <div className="p-4 md:p-6 border-b border-border shrink-0">
                             <h3 className="text-lg font-medium text-foreground">Edit Product: {editingProduct.name}</h3>
                         </div>
-                        <div className="p-6 overflow-y-auto flex-1">
+                        <div className="p-4 md:p-6 overflow-y-auto flex-1">
                             <form action={handleUpdateProduct} className="space-y-4">
                                 <input type="hidden" name="id" value={editingProduct.id} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -664,8 +677,8 @@ export default function ProductList({
 
             {/* Add Stock Modal */}
             {stockModalProduct && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-foreground mb-2">Restock: {stockModalProduct.name}</h3>
                         <p className="text-sm text-muted-foreground mb-6">Current Stock: {stockModalProduct.stock}</p>
 

@@ -193,8 +193,8 @@ export default function ImportRecipeModal({ targetRecipeName }: { targetRecipeNa
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card border border-border rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
                         {/* Header */}
                         <div className="p-6 border-b border-border flex justify-between items-start flex-shrink-0">
                             <div>

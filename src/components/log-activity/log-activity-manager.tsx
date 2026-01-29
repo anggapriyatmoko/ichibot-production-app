@@ -80,6 +80,18 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
         removeImage: false
     })
 
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (isModalOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [isModalOpen])
+
     // Handle image file selection
     async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0]
@@ -655,11 +667,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
             )}
 
             {/* Modal */}
-
-            {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50">
-                    <div className="bg-background rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-background rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" autoComplete="off">
                             <div className="p-6 border-b border-border shrink-0">
                                 <h3 className="text-lg font-medium">Input Log Activity</h3>

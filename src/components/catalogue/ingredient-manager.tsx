@@ -717,7 +717,7 @@ export default function IngredientManager({
             {/* Edit Section Modal */}
             {
                 editingSectionId && (
-                    <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm no-print">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
                         <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-lg font-bold text-foreground mb-4">Edit Section</h3>
                             <form action={handleUpdateSection} className="space-y-4">
@@ -758,7 +758,7 @@ export default function IngredientManager({
             {/* Create Section Modal */}
             {
                 isAddingSection && (
-                    <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm no-print">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
                         <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-lg font-bold text-foreground mb-4">New Section</h3>
                             <form action={handleCreateSection} className="space-y-4">
@@ -845,7 +845,7 @@ export default function IngredientManager({
             {/* Add Sparepart Modal */}
             {
                 isAddingIngredient && (
-                    <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm no-print">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
                         <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-lg font-bold text-foreground mb-4">
                                 Add Sparepart {activeSectionId ? 'to Section' : ''}
@@ -923,7 +923,7 @@ export default function IngredientManager({
             {/* Edit Ingredient Modal */}
             {
                 editingIngredient && (
-                    <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm no-print">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
                         <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
                             <h3 className="text-lg font-bold text-foreground mb-4">Edit Sparepart</h3>
 

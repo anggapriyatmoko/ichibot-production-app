@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { upsertAttendance, deleteAttendance } from '@/app/actions/attendance'
@@ -75,6 +75,18 @@ export default function AttendanceManager({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [editModal, setEditModal] = useState<EditModal | null>(null)
     const [expandedUser, setExpandedUser] = useState<string | null>(monthlyData.length === 1 ? monthlyData[0]?.user.id : null)
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (editModal || showDeleteConfirm) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [editModal, showDeleteConfirm])
 
     const formatTimeForInput = (date: Date | null) => {
         if (!date) return ''
@@ -381,7 +393,7 @@ export default function AttendanceManager({
 
             {/* Edit Modal */}
             {editModal && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-card w-full max-w-sm rounded-2xl border border-border shadow-lg">
                         <div className="p-4 border-b border-border">
                             <h3 className="text-lg font-bold">Input Absensi</h3>

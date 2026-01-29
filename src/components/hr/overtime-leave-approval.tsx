@@ -533,7 +533,7 @@ export default function OvertimeLeaveApproval() {
             )}
             {/* Perintah Lembur Modal */}
             {isAddingOrder && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-border flex justify-between items-center">
                             <h3 className="font-bold text-lg flex items-center gap-2">
@@ -619,7 +619,7 @@ export default function OvertimeLeaveApproval() {
             )}
             {/* Decision Modal (Approve/Reject) */}
             {isDeciding && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-card w-full max-w-sm rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200">
                         <div className={cn(
                             "p-4 border-b border-border flex justify-between items-center",
@@ -692,8 +692,8 @@ export default function OvertimeLeaveApproval() {
             )}
             {/* Edit Modal */}
             {isEditing && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[85vh]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-blue-500/5">
                             <h3 className="font-bold text-lg flex items-center gap-2 text-blue-600">
                                 <Pencil className="w-5 h-5" />

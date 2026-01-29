@@ -310,8 +310,8 @@ export default function GenericDocManager({ type, title, initialData, labels = {
 
             {/* Form Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[85vh]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[90vh]">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
                             <h2 className="text-lg font-bold">{editingData ? `Edit ${title}` : `Tambah ${title}`}</h2>
                             <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-accent rounded-full text-muted-foreground">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { FileText, Plus, Trash2, Edit, ExternalLink, Download, File, Loader2, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { upsertHRDocument, deleteHRDocument } from '@/app/actions/hr-document'
@@ -45,6 +45,18 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
     const [error, setError] = useState('')
 
     const [removeFile, setRemoveFile] = useState(false)
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (isModalOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [isModalOpen])
 
     // Reset removeFile when opening modal
     const handleOpenModal = (doc?: HRDocument) => {
@@ -247,8 +259,8 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/50 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-md rounded-xl shadow-lg border border-border flex flex-col max-h-[85vh]">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card w-full max-w-md rounded-2xl shadow-lg border border-border flex flex-col max-h-[90vh]">
                         <div className="p-4 border-b border-border">
                             <h3 className="font-semibold text-lg">{editingDoc ? 'Edit Dokumen' : 'Tambah Dokumen'}</h3>
                         </div>

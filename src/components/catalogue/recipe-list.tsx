@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createRecipe, deleteRecipe, updateRecipe, getAllRecipesForExport } from '@/app/actions/recipe'
 import { createCategory, updateCategory } from '@/app/actions/category'
 import { Plus, BookOpen, Trash2, ChevronRight, Tag, Edit2, Download, Hash, Barcode, X, Check } from 'lucide-react'
@@ -41,6 +41,18 @@ export default function RecipeList({
     const router = useRouter()
     const { showConfirmation } = useConfirmation()
     const { showError } = useAlert()
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (isAdding) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [isAdding])
 
     // Form State
     const [formData, setFormData] = useState({
@@ -200,8 +212,8 @@ export default function RecipeList({
             )}
 
             {isAdding && (
-                <div className="fixed inset-0 z-[100] flex items-start md:items-center justify-center py-20 md:py-8 px-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-foreground mb-4">{editingRecipeId ? 'Edit Product' : 'Add New Product'}</h3>
                         <form onSubmit={handleAdd} className="space-y-4">
                             <div>
