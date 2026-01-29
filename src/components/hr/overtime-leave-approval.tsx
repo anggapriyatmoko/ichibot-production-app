@@ -68,9 +68,21 @@ export default function OvertimeLeaveApproval() {
         status: ''
     })
 
-    // Period state
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+    // Date Range state (30 days before and 30 days after today)
+    const getDefaultStartDate = () => {
+        const date = new Date()
+        date.setDate(date.getDate() - 30)
+        return date.toISOString().split('T')[0]
+    }
+
+    const getDefaultEndDate = () => {
+        const date = new Date()
+        date.setDate(date.getDate() + 30)
+        return date.toISOString().split('T')[0]
+    }
+
+    const [startDate, setStartDate] = useState(getDefaultStartDate())
+    const [endDate, setEndDate] = useState(getDefaultEndDate())
 
 
     const { showAlert, showError } = useAlert()
@@ -78,7 +90,7 @@ export default function OvertimeLeaveApproval() {
 
     const fetchRequests = async () => {
         setIsLoading(true)
-        const res = await getOvertimeLeaves(page, limit, filterTypes, false, selectedMonth, selectedYear)
+        const res = await getOvertimeLeaves(page, limit, filterTypes, false, startDate, endDate)
         if (res.success) {
             setRequests(res.data || [])
             setTotalPages(res.pages || 1)
@@ -91,12 +103,12 @@ export default function OvertimeLeaveApproval() {
     useEffect(() => {
         fetchRequests()
         loadUsers()
-    }, [page, filterTypes, selectedMonth, selectedYear])
+    }, [page, filterTypes, startDate, endDate])
 
     // Reset page on filter change
     useEffect(() => {
         setPage(1)
-    }, [filterTypes, selectedMonth, selectedYear])
+    }, [filterTypes, startDate, endDate])
 
     const loadUsers = async () => {
         const data = await getUsers()
@@ -229,13 +241,6 @@ export default function OvertimeLeaveApproval() {
 
     const pendingCount = requests.filter(r => r.status === 'PENDING').length
 
-    const months = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ]
-
-    const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i)
-
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
     }
@@ -254,24 +259,20 @@ export default function OvertimeLeaveApproval() {
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        <label className="text-[10px] font-bold text-muted-foreground">Dari:</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
                             className="bg-background border border-border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                            {months.map((m, i) => (
-                                <option key={i} value={i + 1}>{m}</option>
-                            ))}
-                        </select>
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        />
+                        <label className="text-[10px] font-bold text-muted-foreground">Sampai:</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
                             className="bg-background border border-border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                            {years.map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
 
                     {pendingCount > 0 && (
@@ -495,41 +496,43 @@ export default function OvertimeLeaveApproval() {
             </TableScrollArea>
 
             {/* Pagination Controls */}
-            {totalItems > 0 && totalPages > 1 && (
+            {totalItems > 0 && (
                 <div className="bg-muted/30 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
                     <p className="text-xs text-muted-foreground">
                         Showing <span className="font-bold text-foreground">{(page - 1) * limit + 1}-{Math.min(page * limit, totalItems)}</span> of <span className="font-bold text-foreground">{totalItems}</span>
                     </p>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1 || isLoading}
-                            className="p-2 hover:bg-card rounded-lg border border-border disabled:opacity-30 transition-all shadow-sm"
-                        >
-                            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                        <div className="flex items-center gap-1 px-2">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                <button
-                                    key={p}
-                                    onClick={() => setPage(p)}
-                                    className={cn(
-                                        "w-8 h-8 rounded-lg text-xs font-bold transition-all",
-                                        page === p ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:bg-card border border-transparent hover:border-border"
-                                    )}
-                                >
-                                    {p}
-                                </button>
-                            ))}
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1 || isLoading}
+                                className="p-2 hover:bg-card rounded-lg border border-border disabled:opacity-30 transition-all shadow-sm"
+                            >
+                                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <div className="flex items-center gap-1 px-2">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPage(p)}
+                                        className={cn(
+                                            "w-8 h-8 rounded-lg text-xs font-bold transition-all",
+                                            page === p ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:bg-card border border-transparent hover:border-border"
+                                        )}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages || isLoading}
+                                className="p-2 hover:bg-card rounded-lg border border-border disabled:opacity-30 transition-all shadow-sm"
+                            >
+                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                            </button>
                         </div>
-                        <button
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages || isLoading}
-                            className="p-2 hover:bg-card rounded-lg border border-border disabled:opacity-30 transition-all shadow-sm"
-                        >
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                    </div>
+                    )}
                 </div>
             )}
             {/* Perintah Lembur Modal */}
