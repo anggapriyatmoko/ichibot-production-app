@@ -41,7 +41,8 @@ export default function OvertimeLeaveApproval() {
         userId: '',
         requesterName: '',
         job: '',
-        amount: ''
+        amount: '',
+        date: new Date().toISOString().split('T')[0] // Default to today
     })
 
     // Pagination state
@@ -201,7 +202,7 @@ export default function OvertimeLeaveApproval() {
         if (res.success) {
             showAlert('Perintah lembur berhasil dikirim', 'Berhasil')
             setIsAddingOrder(false)
-            setOrderForm({ userId: '', requesterName: '', job: '', amount: '' })
+            setOrderForm({ userId: '', requesterName: '', job: '', amount: '', date: new Date().toISOString().split('T')[0] })
             fetchRequests()
             window.dispatchEvent(new Event('refresh-notifications'))
         } else {
@@ -559,6 +560,17 @@ export default function OvertimeLeaveApproval() {
                                         <option key={u.id} value={u.id}>{u.name || u.username} ({u.role})</option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Tanggal Lembur</label>
+                                <input
+                                    type="date"
+                                    value={orderForm.date}
+                                    onChange={e => setOrderForm({ ...orderForm, date: e.target.value })}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    required
+                                />
                             </div>
 
                             <div className="space-y-1">

@@ -259,7 +259,8 @@ export async function createOvertimeOrder(formData: FormData) {
     const requesterName = formData.get('requesterName') as string
     const job = formData.get('job') as string
     const amount = parseFloat(formData.get('amount') as string)
-    const date = new Date()
+    const dateStr = formData.get('date') as string
+    const date = dateStr ? new Date(dateStr) : new Date()
 
     const now = new Date().toISOString()
     try {
