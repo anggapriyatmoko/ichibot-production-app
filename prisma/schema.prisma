@@ -465,7 +465,7 @@ model OvertimeLeave {
   reason      String   @db.Text
   attachment  String?  @db.Text
   requesterName String?
-  job           String?
+  job           String?  @db.Text
   amount        String?
   adminNote     String?  @db.Text
   status      String
