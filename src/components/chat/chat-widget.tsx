@@ -363,6 +363,52 @@ export default function ChatWidget() {
         return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
     }
 
+    // Render message content with clickable links
+    const renderMessageWithLinks = (content: string, isOwn: boolean) => {
+        // URL regex pattern - matches http, https, and www URLs
+        const urlPattern = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi
+
+        // Split content by URLs while preserving them
+        const parts = content.split(urlPattern).filter(Boolean)
+
+        if (parts.length === 1 && !urlPattern.test(content)) {
+            // No URLs found, return plain text
+            return content
+        }
+
+        // Reset pattern for testing
+        urlPattern.lastIndex = 0
+
+        return content.split(/(https?:\/\/[^\s]+|www\.[^\s]+)/gi).map((part, index) => {
+            if (!part) return null
+
+            // Check if this part is a URL
+            const isUrl = /^(https?:\/\/|www\.)/i.test(part)
+
+            if (isUrl) {
+                // Ensure URL has protocol
+                const href = part.startsWith('www.') ? `https://${part}` : part
+                return (
+                    <a
+                        key={index}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                            "underline hover:opacity-80 break-all",
+                            isOwn ? "text-white" : "text-blue-600"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part}
+                    </a>
+                )
+            }
+
+            return part
+        })
+    }
+
     return (
         <div className="fixed bottom-6 right-6 z-50 hidden lg:block">
             {/* Chat Button */}
@@ -584,7 +630,7 @@ export default function ChatWidget() {
                                                                 {!msg.isOwn && currentRoom?.isGroup && (
                                                                     <p className="text-xs font-semibold text-blue-600 mb-1">{msg.senderName}</p>
                                                                 )}
-                                                                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                                                                <p className="text-sm whitespace-pre-wrap break-words">{renderMessageWithLinks(msg.content, msg.isOwn)}</p>
                                                                 <p className={cn(
                                                                     "text-[10px] mt-1 text-right",
                                                                     msg.isOwn ? "text-white/70" : "text-gray-400"
