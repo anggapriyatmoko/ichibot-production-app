@@ -1,0 +1,188 @@
+/* ============================================ */
+/* FullCalendar Custom Styling - Ichibot       */
+/* OVERRIDE dengan specificity tinggi          */
+/* ============================================ */
+
+/* ============================================ */
+/* HARI LIBUR - BACKGROUND MERAH MUDA          */
+/* ============================================ */
+
+/* Override semua background event menjadi merah muda */
+.fullcalendar-container .fc .fc-bg-event,
+.fullcalendar-container .fc-bg-event,
+.fc .fc-bg-event,
+.fc-bg-event {
+  background-color: #fee2e2 !important;
+  opacity: 1 !important;
+  z-index: 1 !important;
+}
+
+/* Text libur - MERAH dan posisi di bawah tanggal */
+.fullcalendar-container .fc .fc-bg-event .fc-event-title,
+.fullcalendar-container .fc-bg-event .fc-event-title,
+.fc .fc-bg-event .fc-event-title,
+.fc-bg-event .fc-event-title {
+  color: #dc2626 !important;
+  font-weight: 600 !important;
+  font-size: 0.65rem !important;
+  font-style: normal !important;
+  margin-top: 1.5rem !important;
+  display: block !important;
+  padding: 2px 4px !important;
+}
+
+/* Tanggal selalu di atas */
+.fullcalendar-container .fc .fc-daygrid-day-top,
+.fc .fc-daygrid-day-top {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Tanggal di sel yang ada libur - MERAH (termasuk bulan lain) */
+.fullcalendar-container .fc .fc-daygrid-day:has(.fc-bg-event) .fc-daygrid-day-number,
+.fc .fc-daygrid-day:has(.fc-bg-event) .fc-daygrid-day-number,
+.fullcalendar-container .fc .fc-day-other:has(.fc-bg-event) .fc-daygrid-day-number,
+.fc .fc-day-other:has(.fc-bg-event) .fc-daygrid-day-number {
+  color: #dc2626 !important;
+}
+
+/* ============================================ */
+/* HARI MINGGU - TANGGAL MERAH                 */
+/* ============================================ */
+
+/* Header Minggu */
+.fullcalendar-container .fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
+.fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
+.fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
+.fc-day-sun .fc-col-header-cell-cushion {
+  color: #dc2626 !important;
+}
+
+/* Tanggal Minggu */
+.fullcalendar-container .fc .fc-day-sun .fc-daygrid-day-number,
+.fc .fc-day-sun .fc-daygrid-day-number,
+.fc-day-sun .fc-daygrid-day-number,
+.fc-day-sun a {
+  color: #dc2626 !important;
+}
+
+/* ============================================ */
+/* HEADER HARI                                 */
+/* ============================================ */
+
+.fullcalendar-container .fc .fc-col-header-cell,
+.fc .fc-col-header-cell {
+  padding: 0.75rem 0;
+  background-color: #f9fafb !important;
+}
+
+.dark .fullcalendar-container .fc .fc-col-header-cell,
+.dark .fc .fc-col-header-cell {
+  background-color: #1f2937 !important;
+}
+
+.fullcalendar-container .fc .fc-col-header-cell-cushion,
+.fc .fc-col-header-cell-cushion {
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  color: #6b7280 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  text-decoration: none !important;
+}
+
+/* ============================================ */
+/* SEL TANGGAL                                 */
+/* ============================================ */
+
+.fullcalendar-container .fc .fc-daygrid-day,
+.fc .fc-daygrid-day {
+  min-height: 100px;
+}
+
+.fullcalendar-container .fc .fc-daygrid-day-number,
+.fc .fc-daygrid-day-number {
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  color: #374151 !important;
+  padding: 0.5rem !important;
+  text-decoration: none !important;
+}
+
+.dark .fullcalendar-container .fc .fc-daygrid-day-number,
+.dark .fc .fc-daygrid-day-number {
+  color: #e5e7eb !important;
+}
+
+/* Bulan lain - lebih gelap agar terlihat */
+.fullcalendar-container .fc .fc-day-other .fc-daygrid-day-number,
+.fc .fc-day-other .fc-daygrid-day-number {
+  color: #9ca3af !important;
+}
+
+.dark .fullcalendar-container .fc .fc-day-other .fc-daygrid-day-number,
+.dark .fc .fc-day-other .fc-daygrid-day-number {
+  color: #6b7280 !important;
+}
+
+/* ============================================ */
+/* HARI INI                                    */
+/* ============================================ */
+
+.fullcalendar-container .fc .fc-day-today,
+.fc .fc-day-today {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+.fullcalendar-container .fc .fc-day-today .fc-daygrid-day-number,
+.fc .fc-day-today .fc-daygrid-day-number {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  border-radius: 0.375rem !important;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0.25rem !important;
+}
+
+/* ============================================ */
+/* BORDER                                      */
+/* ============================================ */
+
+.fullcalendar-container .fc td,
+.fullcalendar-container .fc th,
+.fc td,
+.fc th {
+  border-color: #e5e7eb !important;
+}
+
+.dark .fullcalendar-container .fc td,
+.dark .fullcalendar-container .fc th,
+.dark .fc td,
+.dark .fc th {
+  border-color: #374151 !important;
+}
+
+.fullcalendar-container .fc .fc-scrollgrid,
+.fc .fc-scrollgrid {
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+}
+
+/* ============================================ */
+/* RESPONSIVE                                  */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .fullcalendar-container .fc .fc-daygrid-day,
+  .fc .fc-daygrid-day {
+    min-height: 70px;
+  }
+  
+  .fullcalendar-container .fc .fc-bg-event .fc-event-title,
+  .fc .fc-bg-event .fc-event-title {
+    font-size: 0.6rem !important;
+  }
+}

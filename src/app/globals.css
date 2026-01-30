@@ -145,3 +145,6 @@ th {
 .fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* FullCalendar CSS - di akhir untuk prioritas tinggi */
+@import "../styles/fullcalendar.css";
