@@ -516,7 +516,7 @@ export default function InvoiceManager({
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(invoice.id)}
+                      onClick={() => handleDelete(invoice)}
                       className="p-2 bg-red-500/10 text-red-600 rounded-lg"
                     >
                       <Trash2 className="w-4 h-4" />
