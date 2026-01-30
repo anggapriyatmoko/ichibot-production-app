@@ -59,7 +59,7 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
 export async function getAllUsersForHRD() {
     const session: any = await getServerSession(authOptions)
 
-    if (!session?.user || !['ADMIN', 'HRD'].includes(session?.user?.role)) {
+    if (!session?.user || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
         throw new Error('Unauthorized')
     }
 
@@ -102,7 +102,7 @@ export async function getAllUsersForHRD() {
 export async function getUserForEdit(userId: string) {
     const session: any = await getServerSession(authOptions)
 
-    if (!session?.user || !['ADMIN', 'HRD'].includes(session?.user?.role)) {
+    if (!session?.user || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
         throw new Error('Unauthorized')
     }
 
@@ -145,7 +145,7 @@ export async function getUserForEdit(userId: string) {
 export async function updateUserData(formData: FormData) {
     const session: any = await getServerSession(authOptions)
 
-    if (!session?.user || !['ADMIN', 'HRD'].includes(session?.user?.role)) {
+    if (!session?.user || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
         throw new Error('Unauthorized')
     }
 

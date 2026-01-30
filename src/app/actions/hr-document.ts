@@ -65,8 +65,8 @@ export async function getHRDocuments() {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
 
-    // Allow ADMIN, HRD, USER, and TEKNISI to access (non-admin roles are read-only in UI)
-    if (!['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(session?.user?.role)) {
+    // Allow ADMIN, HRD, USER, TEKNISI, and ADMINISTRASI to access
+    if (!['ADMIN', 'HRD', 'USER', 'TEKNISI', 'ADMINISTRASI'].includes(session?.user?.role)) {
         throw new Error('Unauthorized')
     }
 
@@ -80,8 +80,8 @@ export async function upsertHRDocument(formData: FormData) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
 
-    // Only ADMIN and HRD can modify
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+    // Only ADMIN, HRD and ADMINISTRASI can modify
+    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
         throw new Error('Unauthorized')
     }
 
@@ -156,8 +156,8 @@ export async function deleteHRDocument(id: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
 
-    // Only ADMIN and HRD can access
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+    // Only ADMIN, HRD and ADMINISTRASI can access
+    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
         throw new Error('Unauthorized')
     }
 

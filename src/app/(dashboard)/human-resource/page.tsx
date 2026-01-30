@@ -11,8 +11,8 @@ export default async function HumanResourcePage() {
         redirect('/login')
     }
 
-    // Only ADMIN and HRD can access this page
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
+    // Only ADMIN, HRD, and ADMINISTRASI can access this page
+    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
         redirect('/dashboard')
     }
 

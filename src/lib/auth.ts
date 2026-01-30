@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 // Roles that have admin-level access
-const ADMIN_ROLES = ['ADMIN', 'HRD']
+const ADMIN_ROLES = ['ADMIN', 'HRD', 'ADMINISTRASI']
 
 export async function getSession() {
     return await getServerSession(authOptions)

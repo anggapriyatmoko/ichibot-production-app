@@ -15,13 +15,9 @@ export async function updateProfile(formData: FormData) {
     }
 
     const userId = session.user.id
-    const name = formData.get('name') as string
+    const name = formData.get('name') as string | null
     const currentPassword = formData.get('currentPassword') as string
     const newPassword = formData.get('newPassword') as string
-
-    if (!name) {
-        throw new Error('Name is required')
-    }
 
     // Get current user data
     const user = await prisma.user.findUnique({
@@ -34,17 +30,17 @@ export async function updateProfile(formData: FormData) {
 
     const updateData: any = {}
 
-    // Handle Name Update (Only for ADMIN or HRD)
-    if (['ADMIN', 'HRD'].includes(session.user.role) && name) {
-        updateData.name = name
-    } else if (name && name !== user.name) {
-        // Silently ignore or throw error? User request "untuk mengganti nama user tidak bisa" implies restriction.
-        // Let's throw reasonable error if they try to hack it, but UI will prevent it.
-        if (session.user.role !== 'USER') { // strict check
-            // allow if not changing? no.
+    // Handle Name Update (Only for ADMIN, HRD, or ADMINISTRASI)
+    if (['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session.user.role)) {
+        // If name is provided by ADMIN, validate it
+        if (name !== null && name !== undefined) {
+            if (!name.trim()) {
+                throw new Error('Name cannot be empty')
+            }
+            updateData.name = name
         }
-        // Actually, simpler: just don't add it to updateData if not ADMIN
-        // But we should probably error if they try.
+    } else if (name !== null && name !== user.name) {
+        // Non-admin users trying to change their name
         throw new Error('Only Admins can update their name')
     }
 
@@ -83,9 +79,17 @@ export async function verifyUserPassword(password: string): Promise<{ success: b
         return { success: false, error: 'Unauthorized' }
     }
 
-    const user = await prisma.user.findUnique({
+    // Try to find user by ID first
+    let user = await prisma.user.findUnique({
         where: { id: session.user.id }
     })
+
+    // If not found by ID, try by email as fallback (in case session ID is outdated)
+    if (!user && session.user.email) {
+        user = await prisma.user.findUnique({
+            where: { email: session.user.email }
+        })
+    }
 
     if (!user) {
         return { success: false, error: 'User not found' }
@@ -108,8 +112,8 @@ export async function getMyProfileData() {
         return null
     }
 
-    const start = Date.now()
-    const user = await prisma.user.findUnique({
+    // Try to find user by ID first
+    let user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: {
             id: true,
@@ -123,6 +127,24 @@ export async function getMyProfileData() {
             contractEndDateEnc: true,
         }
     })
+
+    // If not found by ID, try by email as fallback
+    if (!user && session.user.email) {
+        user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                department: true,
+                photoEnc: true,
+                phoneEnc: true,
+                addressEnc: true,
+                ktpNumberEnc: true,
+                contractEndDateEnc: true,
+            }
+        })
+    }
 
     if (!user) return null
 
@@ -150,13 +172,31 @@ export async function getMyPayrollData(month?: number, year?: number) {
         return null
     }
 
+    let userId = session.user.id
+
+    // Check if user exists with this ID, fallback to email if not
+    const userExists = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true }
+    })
+
+    if (!userExists && session.user.email) {
+        const userByEmail = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            select: { id: true }
+        })
+        if (userByEmail) {
+            userId = userByEmail.id
+        }
+    }
+
     const targetMonth = month || new Date().getMonth() + 1
     const targetYear = year || new Date().getFullYear()
 
     const payroll = await prisma.payroll.findUnique({
         where: {
             userId_month_year: {
-                userId: session.user.id,
+                userId: userId,
                 month: targetMonth,
                 year: targetYear
             }

@@ -21,11 +21,12 @@ export default function ProfilePage() {
         setError(null)
         setSuccess(null)
 
-        const name = formData.get('name') as string
+        const name = formData.get('name') as string | null
         const currentPassword = formData.get('currentPassword') as string
         const newPass = formData.get('newPassword') as string
 
-        if (!name.trim()) {
+        // Only validate name if it's provided (for ADMIN users)
+        if (name !== null && !name.trim()) {
             setError('Name cannot be empty')
             return
         }
@@ -48,7 +49,10 @@ export default function ProfilePage() {
         startTransition(async () => {
             try {
                 await updateProfile(formData)
-                await update({ name }) // Update client-side session with new name
+                // Only update session name if name was provided (for ADMIN users)
+                if (name !== null) {
+                    await update({ name }) // Update client-side session with new name
+                }
                 setSuccess('Profile updated successfully')
                 setNewPassword('')
                 setConfirmPassword('')
