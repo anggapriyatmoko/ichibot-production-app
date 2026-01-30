@@ -61,7 +61,7 @@ export interface CertificateFormData {
     signature_name: string
     materi_judul?: string
     materi?: string[]
-    nilai?: number[]
+    nilai?: (number | string)[]
 }
 
 export interface CertificateListResponse {
@@ -243,7 +243,7 @@ export async function createCertificate(data: CertificateFormData): Promise<Cert
         // Ensure certificate_number is set
         const payload = {
             ...data,
-            certificate_number: data.certificate_number || generateCertificateNumber(),
+            certificate_number: data.certificate_number || await generateCertificateNumber(),
         }
 
         const response = await apiClient.post<CertificateSingleResponse>(API_ENDPOINT, payload)
