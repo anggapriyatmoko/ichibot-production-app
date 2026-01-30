@@ -881,9 +881,12 @@ export default function SparepartProjectList({
                                     )}
                                 </div>
 
-                                {/* Name, Stock, and Notes */}
+                                {/* Name, SKU, Stock, and Notes */}
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-bold text-foreground text-sm mb-1 truncate">{item.name}</h3>
+                                    {item.sku && (
+                                        <p className="font-mono text-xs text-muted-foreground mb-1">SKU: {item.sku}</p>
+                                    )}
                                     <p className={cn(
                                         "text-xs font-bold mb-1",
                                         item.stock <= 0 ? "text-red-500" : "text-emerald-500"

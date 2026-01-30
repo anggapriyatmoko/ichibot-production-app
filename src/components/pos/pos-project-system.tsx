@@ -40,7 +40,23 @@ type OrderHistoryItem = {
 }
 
 export default function POSProjectSystem({ products, userName = 'Admin' }: { products: Product[], userName?: string }) {
-    const [cart, setCart] = useState<CartItem[]>([])
+    const CART_STORAGE_KEY = 'pos_project_cart'
+
+    // Load cart from localStorage on mount
+    const [cart, setCart] = useState<CartItem[]>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const savedCart = localStorage.getItem(CART_STORAGE_KEY)
+                if (savedCart) {
+                    return JSON.parse(savedCart)
+                }
+            } catch (error) {
+                console.error('Failed to load cart from localStorage:', error)
+            }
+        }
+        return []
+    })
+
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -56,6 +72,17 @@ export default function POSProjectSystem({ products, userName = 'Admin' }: { pro
     const [historyPage, setHistoryPage] = useState(1)
     const HISTORY_PER_PAGE = 10
     const { showConfirmation } = useConfirmation()
+
+    // Save cart to localStorage whenever it changes
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+            } catch (error) {
+                console.error('Failed to save cart to localStorage:', error)
+            }
+        }
+    }, [cart])
 
     // Multi-word search: all words must match (in name OR sku)
     const filteredProducts = products.filter(p => {
