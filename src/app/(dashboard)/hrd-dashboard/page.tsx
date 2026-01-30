@@ -13,6 +13,7 @@ import { AnnouncementManager } from '@/components/hr/announcement-manager'
 import { getSalaryComponents } from '@/app/actions/salary-settings'
 import { getMonthlyPayrollRecap } from '@/app/actions/payroll'
 import { getHRDocuments } from '@/app/actions/hr-document'
+import ConfidentialAccess from '@/components/auth/confidential-access'
 
 export const metadata = {
     title: 'HRD Dashboard | Ichibot Production',
@@ -56,52 +57,54 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
         const recapData = await getMonthlyPayrollRecap(month, year)
 
         return (
-            <div className="max-w-6xl mx-auto">
-                <div className="mb-8 text-left">
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">HRD Dashboard</h1>
-                    <p className="text-muted-foreground">Monitoring dan statistik karyawan.</p>
-                </div>
-
-                <div className="mb-8">
-                    <OvertimeLeaveApproval />
-                    <div className="mb-8">
-                        <AnnouncementManager allUsers={allUsers} />
+            <ConfidentialAccess>
+                <div className="max-w-6xl mx-auto">
+                    <div className="mb-8 text-left">
+                        <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">HRD Dashboard</h1>
+                        <p className="text-muted-foreground">Monitoring dan statistik karyawan.</p>
                     </div>
-                    <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
-                </div>
 
-                {/* Salary Components Settings */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    <SalaryComponentList
-                        title="Komponen Pemotongan Gaji"
-                        type="DEDUCTION"
-                        initialData={deductionComponents.data || []}
+                    <div className="mb-8">
+                        <OvertimeLeaveApproval />
+                        <div className="mb-8">
+                            <AnnouncementManager allUsers={allUsers} />
+                        </div>
+                        <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
+                    </div>
+
+                    {/* Salary Components Settings */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                        <SalaryComponentList
+                            title="Komponen Pemotongan Gaji"
+                            type="DEDUCTION"
+                            initialData={deductionComponents.data || []}
+                        />
+                        <SalaryComponentList
+                            title="Komponen Penambahan Gaji"
+                            type="ADDITION"
+                            initialData={additionComponents.data || []}
+                        />
+                    </div>
+
+                    {/* Payroll Recap Table */}
+                    <PayrollRecapTable
+                        data={recapData.success ? (recapData.data as any[]) : []}
+                        currentMonth={month}
+                        currentYear={year}
                     />
-                    <SalaryComponentList
-                        title="Komponen Penambahan Gaji"
-                        type="ADDITION"
-                        initialData={additionComponents.data || []}
+
+                    {/* Attendance Summary Table */}
+                    <AttendanceSummaryTable
+                        currentMonth={attMonth}
+                        currentYear={attYear}
                     />
+
+                    {/* User Management Table */}
+                    <div className="mt-8">
+                        <UserManagementTable userRole={session.user.role} />
+                    </div>
                 </div>
-
-                {/* Payroll Recap Table */}
-                <PayrollRecapTable
-                    data={recapData.success ? (recapData.data as any[]) : []}
-                    currentMonth={month}
-                    currentYear={year}
-                />
-
-                {/* Attendance Summary Table */}
-                <AttendanceSummaryTable
-                    currentMonth={attMonth}
-                    currentYear={attYear}
-                />
-
-                {/* User Management Table */}
-                <div className="mt-8">
-                    <UserManagementTable userRole={session.user.role} />
-                </div>
-            </div>
+            </ConfidentialAccess>
         )
     } catch (error) {
         console.error('Error loading dashboard data:', error)

@@ -1,0 +1,254 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Shield, X, Delete } from 'lucide-react'
+
+// Security layer - Do not modify these values
+const AUTH_PARTS = {
+    alpha: '4951',  // '1' + '3'
+    beta: '4953',   // '1' + '5'
+    gamma: '5353',  // '5' + '5'
+}
+
+
+// Decode security token
+function decodeAuthToken(): string {
+    const parts = [AUTH_PARTS.alpha, AUTH_PARTS.beta, AUTH_PARTS.gamma]
+    return parts.map(p => String.fromCharCode(parseInt(p.slice(0, 2)), parseInt(p.slice(2)))).join('')
+}
+
+// Validate access code
+function validateAccessCode(input: string): boolean {
+    const decoded = decodeAuthToken()
+    return input === decoded
+}
+
+export default function ConfidentialAccess({ children }: { children: React.ReactNode }) {
+    const [code, setCode] = useState('')
+    const [isAuthorized, setIsAuthorized] = useState(false)
+    const [isValidating, setIsValidating] = useState(true)
+    const [hasError, setHasError] = useState(false)
+    const router = useRouter()
+
+    useEffect(() => {
+        // Check session storage for existing authorization
+        const authStatus = sessionStorage.getItem('hrd_access_granted')
+        const authTimestamp = sessionStorage.getItem('hrd_access_time')
+
+        if (authStatus === 'true' && authTimestamp) {
+            const timestamp = parseInt(authTimestamp)
+            const sessionDuration = 6 * 60 * 60 * 1000 // 6 hours
+
+            if (Date.now() - timestamp < sessionDuration) {
+                setIsAuthorized(true)
+            } else {
+                sessionStorage.removeItem('hrd_access_granted')
+                sessionStorage.removeItem('hrd_access_time')
+            }
+        }
+
+        setIsValidating(false)
+    }, [])
+
+    useEffect(() => {
+        if (code.length === 6) {
+            performValidation(code)
+        }
+    }, [code])
+
+    // Listen for keyboard input (desktop)
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            // Only listen when modal is open (not authorized)
+            if (isAuthorized || isValidating) return
+
+            // Handle number keys (0-9)
+            if (e.key >= '0' && e.key <= '9') {
+                e.preventDefault()
+                if (code.length < 6) {
+                    setCode(code + e.key)
+                    setHasError(false)
+                }
+            }
+
+            // Handle Backspace
+            if (e.key === 'Backspace') {
+                e.preventDefault()
+                setCode(code.slice(0, -1))
+                setHasError(false)
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyPress)
+        return () => window.removeEventListener('keydown', handleKeyPress)
+    }, [code, isAuthorized, isValidating])
+
+    const performValidation = (input: string) => {
+        setHasError(false)
+
+        // Validate the access code
+        if (validateAccessCode(input)) {
+            sessionStorage.setItem('hrd_access_granted', 'true')
+            sessionStorage.setItem('hrd_access_time', Date.now().toString())
+            setIsAuthorized(true)
+        } else {
+            setHasError(true)
+            setTimeout(() => {
+                setCode('')
+                setHasError(false)
+            }, 2000)
+        }
+    }
+
+    const handleDigitPress = (digit: string) => {
+        if (code.length < 6) {
+            setCode(code + digit)
+            setHasError(false)
+        }
+    }
+
+    const handleRemoveDigit = () => {
+        setCode(code.slice(0, -1))
+        setHasError(false)
+    }
+
+    const handleExit = () => {
+        router.push('/dashboard')
+    }
+
+    if (isValidating) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center space-y-4">
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-sm text-muted-foreground">Validating access...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (isAuthorized) {
+        return <>{children}</>
+    }
+
+    return (
+        <div>
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="p-6 pb-4 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <Shield className="w-6 h-6 text-primary" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-foreground">Proteksi HRD</h2>
+                                    <p className="text-xs text-muted-foreground">Akses Terbatas</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleExit}
+                                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        <div className="text-center space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                                Masukkan kode akses untuk mengakses HRD Dashboard
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-muted-foreground ml-1">
+                                KODE AKSES
+                            </label>
+
+                            <div className="flex gap-2 justify-center">
+                                {[0, 1, 2, 3, 4, 5].map((index) => (
+                                    <div
+                                        key={index}
+                                        className={`w-12 h-14 flex items-center justify-center border-2 rounded-lg transition-all ${hasError
+                                            ? 'border-red-500'
+                                            : 'border-border'
+                                            }`}
+                                    >
+                                        <div className={`w-3 h-3 rounded-full transition-colors ${index < code.length
+                                            ? 'bg-foreground'
+                                            : 'bg-muted-foreground/30'
+                                            }`} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex items-center justify-between px-2">
+                                <p className="text-xs text-muted-foreground">
+                                    {code.length}/6 digit
+                                </p>
+                                {hasError && (
+                                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1 animate-in fade-in slide-in-from-right">
+                                        <X className="w-3 h-3" />
+                                        Kode Salah
+                                    </p>
+                                )}
+                                {code.length === 6 && !hasError && (
+                                    <p className="text-xs text-primary flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                        Memvalidasi...
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                                    <button
+                                        key={num}
+                                        onClick={() => handleDigitPress(num.toString())}
+                                        className="py-3 bg-muted hover:bg-muted/80 active:bg-primary/20 rounded-lg text-xl font-bold text-foreground transition-all touch-manipulation"
+                                        disabled={code.length >= 6}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                                <div />
+                                <button
+                                    onClick={() => handleDigitPress('0')}
+                                    className="py-3 bg-muted hover:bg-muted/80 active:bg-primary/20 rounded-lg text-xl font-bold text-foreground transition-all touch-manipulation"
+                                    disabled={code.length >= 6}
+                                >
+                                    0
+                                </button>
+                                <button
+                                    onClick={handleRemoveDigit}
+                                    className="py-3 bg-muted hover:bg-muted/80 active:bg-red-500/20 rounded-lg flex items-center justify-center transition-all touch-manipulation"
+                                    disabled={code.length === 0}
+                                >
+                                    <Delete className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="px-6 py-4 bg-muted/30 border-t border-border">
+                        <p className="text-xs text-center text-muted-foreground">
+                            Hubungi administrator jika Anda lupa kode akses
+                        </p>
+                        <p className="text-xs text-center text-muted-foreground/60 mt-1 hidden md:block">
+                            💡 Desktop: Klik keypad atau ketik langsung dengan keyboard
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="filter blur-md pointer-events-none">
+                {children}
+            </div>
+        </div>
+    )
+}

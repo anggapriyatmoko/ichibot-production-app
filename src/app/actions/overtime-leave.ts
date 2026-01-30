@@ -116,7 +116,7 @@ export async function createOvertimeLeave(formData: FormData) {
     }
 }
 
-export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: string[] = ['ORDER', 'OVERTIME_SUBMISSION', 'LEAVE', 'VACATION'], ownOnly = false, month?: number, year?: number) {
+export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: string[] = ['ORDER', 'OVERTIME_SUBMISSION', 'LEAVE', 'VACATION'], ownOnly = false, startDateStr?: string, endDateStr?: string) {
     const session: any = await requireAuth()
 
     // If Admin/HRD, they can see all. Otherwise, only their own.
@@ -124,15 +124,13 @@ export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: strin
 
     let where: any = (isAdmin && !ownOnly) ? {} : { userId: session.user.id }
 
-    // Period Calculation (matching attendance logic)
+    // Date Range Calculation
     let startDate: Date | null = null
     let endDate: Date | null = null
-    const salaryCalcDay = 25
 
-    if (month && year) {
-        // Use Calendar Month (1st to Last Day)
-        startDate = new Date(year, month - 1, 1) // 1st day of month
-        endDate = new Date(year, month, 0) // Last day of month
+    if (startDateStr && endDateStr) {
+        startDate = new Date(startDateStr)
+        endDate = new Date(endDateStr)
         startDate.setHours(0, 0, 0, 0)
         endDate.setHours(23, 59, 59, 999)
     }
@@ -259,7 +257,8 @@ export async function createOvertimeOrder(formData: FormData) {
     const requesterName = formData.get('requesterName') as string
     const job = formData.get('job') as string
     const amount = parseFloat(formData.get('amount') as string)
-    const date = new Date()
+    const dateStr = formData.get('date') as string
+    const date = dateStr ? new Date(dateStr) : new Date()
 
     const now = new Date().toISOString()
     try {
