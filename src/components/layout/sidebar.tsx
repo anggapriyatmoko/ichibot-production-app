@@ -445,28 +445,28 @@ export default function Sidebar({ userRole }: SidebarProps) {
           )}
 
           {/* Project menu - visible for ADMIN, HRD, ADMINISTRASI, and USER */}
-          {["ADMIN", "HRD", "ADMINISTRASI", "USER"].includes(
+          {["ADMIN", "HRD", "ADMINISTRASI", "USER", "TEKNISI"].includes(
             userRole || "",
           ) && (
-            <>
-              <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
-                <div className="border-t border-border" />
-                <p
-                  className={cn(
-                    "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
-                    isOpen ? "px-3" : "text-center",
-                  )}
-                >
-                  {isOpen ? "Project" : "..."}
-                </p>
-              </div>
-              <nav className="space-y-1">
-                {projectNavigation.map((item) => (
-                  <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
-                ))}
-              </nav>
-            </>
-          )}
+              <>
+                <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                  <div className="border-t border-border" />
+                  <p
+                    className={cn(
+                      "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                      isOpen ? "px-3" : "text-center",
+                    )}
+                  >
+                    {isOpen ? "Project" : "..."}
+                  </p>
+                </div>
+                <nav className="space-y-1">
+                  {projectNavigation.map((item) => (
+                    <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+                  ))}
+                </nav>
+              </>
+            )}
 
           {/* Service Robot menu - visible to ADMIN and TEKNISI */}
           {["ADMIN", "TEKNISI"].includes(userRole || "") && (

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport } from '@/app/actions/product'
+import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport, moveToSparepartProject } from '@/app/actions/product'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Camera, Pencil, X } from 'lucide-react'
+import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Camera, Pencil, X, FolderKanban } from 'lucide-react'
 import { processImageFile } from '@/utils/image-compression'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
@@ -193,6 +193,29 @@ export default function ProductList({
             type: 'confirm',
             action: async () => {
                 await deleteProduct(id)
+            }
+        })
+    }
+
+    const handleMoveToProject = async (product: Product) => {
+        showConfirmation({
+            title: 'Pindah ke Sparepart Project',
+            message: `Apakah Anda yakin ingin memindah "${product.name}" ke Sparepart Project? Produk akan dihapus dari Inventory.`,
+            type: 'confirm',
+            action: async () => {
+                setIsLoading(true)
+                try {
+                    const result = await moveToSparepartProject(product.id)
+                    if (result.success) {
+                        router.refresh()
+                    } else {
+                        showError(result.error || 'Gagal memindah produk')
+                    }
+                } catch (error: any) {
+                    showError(error.message || 'Terjadi kesalahan')
+                } finally {
+                    setIsLoading(false)
+                }
             }
         })
     }
@@ -834,16 +857,30 @@ export default function ProductList({
                                     Restock
                                 </button>
                                 {['ADMIN', 'HRD'].includes(userRole || '') && (
-                                    <button
-                                        onClick={() => {
-                                            handleDelete(mobileActionItem.id)
-                                            setMobileActionItem(null)
-                                        }}
-                                        className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-muted-foreground hover:text-white hover:bg-destructive rounded-xl transition-colors border border-border hover:border-destructive text-sm font-medium"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                        Delete Product
-                                    </button>
+                                    <>
+                                        {userRole === 'ADMIN' && (
+                                            <button
+                                                onClick={() => {
+                                                    handleMoveToProject(mobileActionItem)
+                                                    setMobileActionItem(null)
+                                                }}
+                                                className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-colors border border-orange-500/20 text-sm font-medium"
+                                            >
+                                                <FolderKanban className="w-5 h-5" />
+                                                Move to Project
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                handleDelete(mobileActionItem.id)
+                                                setMobileActionItem(null)
+                                            }}
+                                            className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-muted-foreground hover:text-white hover:bg-destructive rounded-xl transition-colors border border-border hover:border-destructive text-sm font-medium"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                            Delete Product
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -961,10 +998,20 @@ export default function ProductList({
                                                 >
                                                     <PackagePlus className="w-4 h-4" />
                                                 </button>
+                                                {userRole === 'ADMIN' && (
+                                                    <button
+                                                        onClick={() => handleMoveToProject(product)}
+                                                        className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors border border-orange-500/20"
+                                                        title="Move to Sparepart Project"
+                                                    >
+                                                        <FolderKanban className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 {['ADMIN', 'HRD'].includes(userRole || '') && (
                                                     <button
                                                         onClick={() => handleDelete(product.id)}
                                                         className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors group-hover:block"
+                                                        title="Delete Product"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>

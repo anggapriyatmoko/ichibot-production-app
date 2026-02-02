@@ -427,3 +427,56 @@ export async function getAllProductsForExport() {
         }
     })
 }
+
+export async function moveToSparepartProject(id: string) {
+    await requireAdmin()
+
+    try {
+        // Fetch the product
+        const product = await prisma.product.findUnique({
+            where: { id }
+        })
+
+        if (!product) {
+            return { error: 'Produk tidak ditemukan' }
+        }
+
+        // Check if a sparepart project item with the same name already exists
+        const existingSparepart = await prisma.sparepartProject.findFirst({
+            where: { name: product.name }
+        })
+
+        if (existingSparepart) {
+            // Add stock to existing sparepart project item
+            await prisma.sparepartProject.update({
+                where: { id: existingSparepart.id },
+                data: { stock: { increment: product.stock } }
+            })
+        } else {
+            // Create new sparepart project item with the same data
+            await prisma.sparepartProject.create({
+                data: {
+                    name: product.name,
+                    sku: product.sku,
+                    stock: product.stock,
+                    notes: product.notes,
+                    image: product.image
+                }
+            })
+        }
+
+        // Delete the product record
+        // We delete directly via prisma to avoid deleteOldImage helper which would remove the file
+        await prisma.product.delete({
+            where: { id }
+        })
+
+        revalidatePath('/inventory')
+        revalidatePath('/sparepart-project')
+
+        return { success: true, merged: !!existingSparepart }
+    } catch (error: any) {
+        console.error('Error moving product:', error)
+        return { error: 'Gagal memindah produk: ' + error.message }
+    }
+}
