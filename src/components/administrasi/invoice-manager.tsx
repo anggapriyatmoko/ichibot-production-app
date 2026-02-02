@@ -174,6 +174,18 @@ export default function InvoiceManager({
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
   // Reset form
   const resetForm = () => {
     setFormData({
@@ -577,29 +589,28 @@ export default function InvoiceManager({
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal - Full Page on Mobile, Modal on Desktop */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-3xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
+        <>
+          {/* Mobile Full Page View */}
+          <div className="md:hidden fixed inset-0 z-[100] bg-background flex flex-col">
+            <div className="flex items-center gap-3 p-4 border-b border-border bg-card shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 hover:bg-accent rounded-lg transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
               <h2 className="text-lg font-bold">
                 {editingInvoice ? "Edit Invoice" : "Tambah Invoice Baru"}
               </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-accent rounded-full text-muted-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
-
-            {/* Modal Body */}
             <form
               onSubmit={handleSubmit}
               className="flex flex-col flex-1 overflow-hidden"
             >
-              <div className="p-4 overflow-y-auto flex-1 space-y-6">
+              <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-6">
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -840,19 +851,12 @@ export default function InvoiceManager({
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
-                >
-                  Batal
-                </button>
+              {/* Modal Footer - Mobile */}
+              <div className="p-4 border-t border-border shrink-0 bg-card">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {editingInvoice ? "Simpan Perubahan" : "Buat Invoice"}
@@ -860,7 +864,291 @@ export default function InvoiceManager({
               </div>
             </form>
           </div>
-        </div>
+
+          {/* Desktop Modal View */}
+          <div className="hidden md:flex fixed inset-0 z-[100] items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-card w-full max-w-3xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[90vh]">
+              {/* Modal Header */}
+              <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
+                <h2 className="text-lg font-bold">
+                  {editingInvoice ? "Edit Invoice" : "Tambah Invoice Baru"}
+                </h2>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-accent rounded-full text-muted-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form
+                onSubmit={handleSubmit}
+                className="flex flex-col flex-1 overflow-hidden"
+              >
+                <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-6">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        <CalendarIcon className="w-4 h-4 inline mr-1" />
+                        Tanggal Invoice
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.invoice_date}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            invoice_date: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        <User className="w-4 h-4 inline mr-1" />
+                        Nama Customer *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.customer_name}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            customer_name: e.target.value,
+                          })
+                        }
+                        required
+                        placeholder="PT. Example Company"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      <MapPin className="w-4 h-4 inline mr-1" />
+                      Alamat Customer
+                    </label>
+                    <textarea
+                      value={formData.customer_address}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          customer_address: e.target.value,
+                        })
+                      }
+                      rows={2}
+                      placeholder="Alamat lengkap customer..."
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
+                    />
+                  </div>
+
+                  {/* Reference Numbers */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        PO Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.po_number}
+                        onChange={(e) =>
+                          setFormData({ ...formData, po_number: e.target.value })
+                        }
+                        placeholder="PO-XXX"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        SVO Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.svo_number}
+                        onChange={(e) =>
+                          setFormData({ ...formData, svo_number: e.target.value })
+                        }
+                        placeholder="SVO-XXX"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        DO Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.do_number}
+                        onChange={(e) =>
+                          setFormData({ ...formData, do_number: e.target.value })
+                        }
+                        placeholder="DO-XXX"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Catatan Pesanan
+                    </label>
+                    <textarea
+                      value={formData.order_notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, order_notes: e.target.value })
+                      }
+                      rows={2}
+                      placeholder="Catatan tambahan..."
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
+                    />
+                  </div>
+
+                  {/* Items */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Package className="w-4 h-4 text-primary" />
+                        Item Invoice *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        className="text-xs px-3 py-1 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                      >
+                        + Tambah Item
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {formData.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-3 bg-muted/30 rounded-lg border border-border"
+                        >
+                          <div className="grid grid-cols-12 gap-3">
+                            <div className="col-span-12 md:col-span-5">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) =>
+                                  updateItem(index, "name", e.target.value)
+                                }
+                                placeholder="Nama Item"
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-4 md:col-span-2">
+                              <input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) =>
+                                  updateItem(
+                                    index,
+                                    "price",
+                                    parseFloat(e.target.value) || 0,
+                                  )
+                                }
+                                placeholder="Harga"
+                                required
+                                min="0"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-3 md:col-span-2">
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  updateItem(
+                                    index,
+                                    "quantity",
+                                    parseFloat(e.target.value) || 1,
+                                  )
+                                }
+                                placeholder="Qty"
+                                required
+                                min="0.01"
+                                step="0.01"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-3 md:col-span-2">
+                              <input
+                                type="text"
+                                value={item.unit}
+                                onChange={(e) =>
+                                  updateItem(index, "unit", e.target.value)
+                                }
+                                placeholder="Unit"
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-2 md:col-span-1 flex items-center justify-center">
+                              {formData.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(index)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-2 text-right text-sm text-muted-foreground">
+                            Subtotal:{" "}
+                            <span className="font-medium text-foreground">
+                              {formatCurrency(item.price * item.quantity)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Grand Total */}
+                    <div className="flex justify-end pt-3 border-t border-border">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          Grand Total
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatCurrency(grandTotal)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer - Desktop */}
+                <div className="p-4 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {editingInvoice ? "Simpan Perubahan" : "Buat Invoice"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </>
       )}
       {/* PDF Signature Modal */}
       <PdfSignatureModal

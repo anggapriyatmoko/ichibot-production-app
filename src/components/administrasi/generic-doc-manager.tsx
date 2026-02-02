@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Search, Pencil, Trash2, X, Loader2, FileText, Link as LinkIcon, Download, ExternalLink, Calendar as CalendarIcon } from 'lucide-react'
 import { createDoc, updateDoc, deleteDoc } from '@/app/actions/administrasi'
 import { useRouter } from 'next/navigation'
@@ -82,6 +82,18 @@ export default function GenericDocManager({ type, title, initialData, labels = {
             item.content.toLowerCase().includes(search.toLowerCase())
         )
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (isModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isModalOpen]);
 
     const openAddModal = () => {
         setEditingData(null)
@@ -319,7 +331,7 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                             </button>
                         </div>
                         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-                            <div className="p-4 overflow-y-auto flex-1 space-y-4">
+                            <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-muted-foreground mb-1">Tanggal</label>

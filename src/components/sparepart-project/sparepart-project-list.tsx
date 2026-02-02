@@ -95,6 +95,18 @@ export default function SparepartProjectList({
         fetchUnusedDrawers()
     }, [])
 
+    // Lock body scroll when Add or Edit form is open (mobile full-page view)
+    useEffect(() => {
+        if (isAdding || editingItem) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [isAdding, editingItem])
+
     // Helper function to compress image using Canvas API
     const compressImage = async (file: File, maxSizeKB: number = 700): Promise<File> => {
         return new Promise((resolve, reject) => {
@@ -389,320 +401,622 @@ export default function SparepartProjectList({
                 </div>
             </div>
 
-            {/* Add Item Modal */}
+            {/* Add Item - Full Page on Mobile, Modal on Desktop */}
             {isAdding && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-border shrink-0">
-                            <h3 className="text-xl font-bold text-foreground">Add New Sparepart Project</h3>
+                <>
+                    {/* Mobile Full Page View */}
+                    <div className="md:hidden fixed inset-0 z-[100] bg-background flex flex-col">
+                        <div className="flex items-center gap-3 p-4 border-b border-border bg-card shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setIsAdding(false)}
+                                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <h3 className="text-lg font-bold text-foreground">Tambah Sparepart Baru</h3>
                         </div>
-                        <div className="p-6 overflow-y-auto flex-1">
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4">
                             <form onSubmit={handleAddItem} className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Image</label>
-                                        {addImagePreview ? (
-                                            <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                                <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Foto</label>
+                                    {addImagePreview ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setAddImagePreview(null)
+                                                    setAddImageFile(null)
+                                                }}
+                                                className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
+                                            >
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                            <div className="text-center mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                <p className="text-xs text-muted-foreground">Upload gambar atau ambil foto (maks 1MB)</p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept="image/*" capture="environment" onChange={handleAddImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleAddImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Nama</label>
+                                    <input
+                                        name="name"
+                                        value={addForm.name}
+                                        onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. Motor DC 12V"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">SKU (Lokasi Penyimpanan)</label>
+                                    <input
+                                        name="sku"
+                                        value={addForm.sku}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase()
+                                            setAddForm({ ...addForm, sku: val })
+                                            if (val.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowSkuSuggestions(true)
+                                            } else {
+                                                setSkuSuggestions([])
+                                                setShowSkuSuggestions(false)
+                                            }
+                                        }}
+                                        onFocus={() => {
+                                            if (addForm.sku.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowSkuSuggestions(true)
+                                            }
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
+                                        autoComplete="off"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. RK01-04"
+                                    />
+                                    {showSkuSuggestions && skuSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {skuSuggestions.map(sku => (
                                                 <button
+                                                    key={sku}
                                                     type="button"
                                                     onClick={() => {
-                                                        setAddImagePreview(null)
-                                                        setAddImageFile(null)
+                                                        setAddForm({ ...addForm, sku })
+                                                        setShowSkuSuggestions(false)
                                                     }}
-                                                    className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-normal"
+                                                    className="w-full px-3 py-2.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
                                                 >
-                                                    Remove
+                                                    <span className="font-mono text-emerald-600">{sku}</span>
+                                                    <span className="text-xs text-muted-foreground">Available</span>
                                                 </button>
-                                            </div>
-                                        ) : (
-                                            <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
-                                                <div className="text-center mb-3">
-                                                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                                    <p className="text-xs text-muted-foreground">Upload gambar atau ambil foto (maks 1MB)</p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input
-                                                            type="file"
-                                                            name="image"
-                                                            accept="image/*"
-                                                            capture="environment"
-                                                            onChange={handleAddImageChange}
-                                                            className="hidden"
-                                                        />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-medium">
-                                                            <Camera className="w-4 h-4" />
-                                                            Ambil Foto
-                                                        </div>
-                                                    </label>
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input
-                                                            type="file"
-                                                            name="image"
-                                                            accept=".jpg,.jpeg,.png,.webp,.gif"
-                                                            onChange={handleAddImageChange}
-                                                            className="hidden"
-                                                        />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-xs font-medium">
-                                                            <ImageIcon className="w-4 h-4" />
-                                                            Pilih File
-                                                        </div>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Name</label>
-                                        <input
-                                            name="name"
-                                            value={addForm.name}
-                                            onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                                            required
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                            placeholder="e.g. Motor DC 12V"
-                                        />
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">SKU (Storage Location)</label>
-                                        <input
-                                            name="sku"
-                                            value={addForm.sku}
-                                            onChange={(e) => {
-                                                const val = e.target.value.toUpperCase()
-                                                setAddForm({ ...addForm, sku: val })
-                                                if (val.length > 0) {
-                                                    const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
-                                                    setSkuSuggestions(filtered.slice(0, 10))
-                                                    setShowSkuSuggestions(true)
-                                                } else {
-                                                    setSkuSuggestions([])
-                                                    setShowSkuSuggestions(false)
-                                                }
-                                            }}
-                                            onFocus={() => {
-                                                if (addForm.sku.length > 0) {
-                                                    const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
-                                                    setSkuSuggestions(filtered.slice(0, 10))
-                                                    setShowSkuSuggestions(true)
-                                                }
-                                            }}
-                                            onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
-                                            autoComplete="off"
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                            placeholder="e.g. RK01-04"
-                                        />
-                                        {showSkuSuggestions && skuSuggestions.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                {skuSuggestions.map(sku => (
-                                                    <button
-                                                        key={sku}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setAddForm({ ...addForm, sku })
-                                                            setShowSkuSuggestions(false)
-                                                        }}
-                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-                                                    >
-                                                        <span className="font-mono text-emerald-600">{sku}</span>
-                                                        <span className="text-xs text-muted-foreground">Available Drawer</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Initial Stock</label>
-                                        <input
-                                            name="stock"
-                                            type="number"
-                                            value={addForm.stock}
-                                            onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
-                                            required
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                            placeholder="0"
-                                            step="any"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Notes (Optional)</label>
-                                        <textarea
-                                            name="notes"
-                                            value={addForm.notes}
-                                            onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                            rows={2}
-                                            placeholder="Specific project usage or requirements..."
-                                        />
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
-                                    <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-                                    <button disabled={isLoading} type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors shadow-sm">
-                                        {isLoading ? 'Saving...' : 'Create Item'}
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Stok Awal</label>
+                                    <input
+                                        name="stock"
+                                        type="number"
+                                        value={addForm.stock}
+                                        onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="0"
+                                        step="any"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Catatan (Opsional)</label>
+                                    <textarea
+                                        name="notes"
+                                        value={addForm.notes}
+                                        onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        rows={3}
+                                        placeholder="Penggunaan khusus proyek..."
+                                    />
+                                </div>
+                                <div className="pt-4">
+                                    <button
+                                        disabled={isLoading}
+                                        type="submit"
+                                        className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                                    >
+                                        {isLoading ? 'Menyimpan...' : 'Simpan Item'}
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
-                </div>
-            )}
 
-            {editingItem && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-border shrink-0">
-                            <h3 className="text-lg font-normal text-foreground">Edit Item: {editingItem.name}</h3>
-                        </div>
-                        <div className="p-6 overflow-y-auto flex-1">
-                            <form action={handleUpdateItem} className="space-y-4">
-                                <input type="hidden" name="id" value={editingItem.id} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Change Image (Optional)</label>
-                                        {editImagePreview ? (
-                                            <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                                <img src={editImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setEditImagePreview(null)
-                                                        setEditImageFile(null)
-                                                    }}
-                                                    className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-normal"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        ) : editingItem.image && !removeImage ? (
-                                            <div className="relative border border-border rounded-lg p-4 bg-background/50">
-                                                <img src={editingItem.image} alt="Current" className="w-full h-48 object-contain rounded" />
-                                                <div className="flex justify-between mt-2 gap-2">
-                                                    <label className="cursor-pointer flex-1 text-center py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-normal">
-                                                        Change Image
-                                                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
-                                                    </label>
+                    {/* Desktop Modal View */}
+                    <div className="hidden md:flex fixed inset-0 z-[100] items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                            <div className="p-6 border-b border-border shrink-0 flex items-center justify-between">
+                                <h3 className="text-xl font-bold text-foreground">Add New Sparepart Project</h3>
+                                <button type="button" onClick={() => setIsAdding(false)} className="p-2 hover:bg-accent rounded-lg transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="p-6 overflow-y-auto flex-1">
+                                <form onSubmit={handleAddItem} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Image</label>
+                                            {addImagePreview ? (
+                                                <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                                    <img src={addImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
                                                     <button
                                                         type="button"
-                                                        onClick={() => setRemoveImage(true)}
-                                                        className="px-3 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-xs font-normal"
+                                                        onClick={() => {
+                                                            setAddImagePreview(null)
+                                                            setAddImageFile(null)
+                                                        }}
+                                                        className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-normal"
                                                     >
                                                         Remove
                                                     </button>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
-                                                <div className="text-center mb-3">
-                                                    <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-                                                    <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                            ) : (
+                                                <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                                    <div className="text-center mb-3">
+                                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                        <p className="text-xs text-muted-foreground">Upload gambar atau ambil foto (maks 1MB)</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <label className="flex-1 cursor-pointer">
+                                                            <input type="file" name="image" accept="image/*" capture="environment" onChange={handleAddImageChange} className="hidden" />
+                                                            <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-medium">
+                                                                <Camera className="w-4 h-4" />
+                                                                Ambil Foto
+                                                            </div>
+                                                        </label>
+                                                        <label className="flex-1 cursor-pointer">
+                                                            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleAddImageChange} className="hidden" />
+                                                            <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-xs font-medium">
+                                                                <ImageIcon className="w-4 h-4" />
+                                                                Pilih File
+                                                            </div>
+                                                        </label>
+                                                    </div>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input
-                                                            type="file"
-                                                            name="image"
-                                                            accept="image/*"
-                                                            capture="environment"
-                                                            onChange={handleEditImageChange}
-                                                            className="hidden"
-                                                        />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
-                                                            <Camera className="w-4 h-4" />
-                                                            Ambil Foto
-                                                        </div>
-                                                    </label>
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input
-                                                            type="file"
-                                                            name="image"
-                                                            accept=".jpg,.jpeg,.png,.webp,.gif"
-                                                            onChange={handleEditImageChange}
-                                                            className="hidden"
-                                                        />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
-                                                            <ImageIcon className="w-4 h-4" />
-                                                            Pilih File
-                                                        </div>
-                                                    </label>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Name</label>
+                                            <input
+                                                name="name"
+                                                value={addForm.name}
+                                                onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                                                required
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                                placeholder="e.g. Motor DC 12V"
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">SKU (Storage Location)</label>
+                                            <input
+                                                name="sku"
+                                                value={addForm.sku}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.toUpperCase()
+                                                    setAddForm({ ...addForm, sku: val })
+                                                    if (val.length > 0) {
+                                                        const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                        setSkuSuggestions(filtered.slice(0, 10))
+                                                        setShowSkuSuggestions(true)
+                                                    } else {
+                                                        setSkuSuggestions([])
+                                                        setShowSkuSuggestions(false)
+                                                    }
+                                                }}
+                                                onFocus={() => {
+                                                    if (addForm.sku.length > 0) {
+                                                        const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(addForm.sku.toLowerCase()))
+                                                        setSkuSuggestions(filtered.slice(0, 10))
+                                                        setShowSkuSuggestions(true)
+                                                    }
+                                                }}
+                                                onBlur={() => setTimeout(() => setShowSkuSuggestions(false), 200)}
+                                                autoComplete="off"
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                                placeholder="e.g. RK01-04"
+                                            />
+                                            {showSkuSuggestions && skuSuggestions.length > 0 && (
+                                                <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                    {skuSuggestions.map(sku => (
+                                                        <button
+                                                            key={sku}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setAddForm({ ...addForm, sku })
+                                                                setShowSkuSuggestions(false)
+                                                            }}
+                                                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                        >
+                                                            <span className="font-mono text-emerald-600">{sku}</span>
+                                                            <span className="text-xs text-muted-foreground">Available Drawer</span>
+                                                        </button>
+                                                    ))}
                                                 </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Initial Stock</label>
+                                            <input
+                                                name="stock"
+                                                type="number"
+                                                value={addForm.stock}
+                                                onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                                                required
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                                placeholder="0"
+                                                step="any"
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Notes (Optional)</label>
+                                            <textarea
+                                                name="notes"
+                                                value={addForm.notes}
+                                                onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                                rows={2}
+                                                placeholder="Specific project usage or requirements..."
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                                        <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+                                        <button disabled={isLoading} type="submit" className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors shadow-sm">
+                                            {isLoading ? 'Saving...' : 'Create Item'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Edit Item - Full Page on Mobile, Modal on Desktop */}
+            {editingItem && (
+                <>
+                    {/* Mobile Full Page View */}
+                    <div className="md:hidden fixed inset-0 z-[100] bg-background flex flex-col">
+                        <div className="flex items-center gap-3 p-4 border-b border-border bg-card shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setEditingItem(null)}
+                                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <h3 className="text-lg font-bold text-foreground">Edit Item</h3>
+                        </div>
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+                            <form action={handleUpdateItem} className="space-y-4">
+                                <input type="hidden" name="id" value={editingItem.id} />
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Ganti Gambar (Opsional)</label>
+                                    {editImagePreview ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={editImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setEditImagePreview(null)
+                                                    setEditImageFile(null)
+                                                }}
+                                                className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium"
+                                            >
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    ) : editingItem.image && !removeImage ? (
+                                        <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                            <img src={editingItem.image} alt="Current" className="w-full h-48 object-contain rounded" />
+                                            <div className="flex justify-between mt-2 gap-2">
+                                                <label className="cursor-pointer flex-1 text-center py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium">
+                                                    Ganti Gambar
+                                                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRemoveImage(true)}
+                                                    className="px-4 py-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-sm font-medium"
+                                                >
+                                                    Hapus
+                                                </button>
                                             </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Name</label>
-                                        <input name="name" defaultValue={editingItem.name} required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
-                                    </div>
-                                    <div className="relative">
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">SKU</label>
-                                        <input
-                                            name="sku"
-                                            value={editSkuValue}
-                                            onChange={(e) => {
-                                                const val = e.target.value.toUpperCase()
-                                                setEditSkuValue(val)
-                                                if (val.length > 0) {
-                                                    const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
-                                                    setSkuSuggestions(filtered.slice(0, 10))
-                                                    setShowEditSkuSuggestions(true)
-                                                } else {
-                                                    setSkuSuggestions([])
-                                                    setShowEditSkuSuggestions(false)
-                                                }
-                                            }}
-                                            onFocus={() => {
-                                                const currentVal = editSkuValue || editingItem.sku || ''
-                                                if (currentVal.length > 0) {
-                                                    const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(currentVal.toLowerCase()))
-                                                    setSkuSuggestions(filtered.slice(0, 10))
-                                                    setShowEditSkuSuggestions(true)
-                                                }
-                                            }}
-                                            onBlur={() => setTimeout(() => setShowEditSkuSuggestions(false), 200)}
-                                            autoComplete="off"
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                            placeholder="e.g. RK01-04"
-                                        />
-                                        {showEditSkuSuggestions && skuSuggestions.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                {skuSuggestions.map(sku => (
-                                                    <button
-                                                        key={sku}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setEditSkuValue(sku)
-                                                            setShowEditSkuSuggestions(false)
-                                                        }}
-                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
-                                                    >
-                                                        <span className="font-mono text-emerald-600">{sku}</span>
-                                                        <span className="text-xs text-muted-foreground">Available</span>
-                                                    </button>
-                                                ))}
+                                        </div>
+                                    ) : (
+                                        <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                            <div className="text-center mb-3">
+                                                <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                <p className="text-xs text-muted-foreground">Upload gambar atau ambil foto (maks 1MB)</p>
                                             </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Stock</label>
-                                        <input name="stock" type="number" defaultValue={editingItem.stock} required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" step="any" />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-xs font-normal text-muted-foreground mb-1">Notes</label>
-                                        <textarea name="notes" defaultValue={editingItem.notes || ''} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" rows={3} />
-                                    </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept="image/*" capture="environment" onChange={handleEditImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
-                                    <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-normal transition-colors shadow-sm">
-                                        {isLoading ? 'Updating...' : 'Save Changes'}
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Nama</label>
+                                    <input
+                                        name="name"
+                                        defaultValue={editingItem.name}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">SKU (Lokasi Penyimpanan)</label>
+                                    <input
+                                        name="sku"
+                                        value={editSkuValue}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toUpperCase()
+                                            setEditSkuValue(val)
+                                            if (val.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowEditSkuSuggestions(true)
+                                            } else {
+                                                setSkuSuggestions([])
+                                                setShowEditSkuSuggestions(false)
+                                            }
+                                        }}
+                                        onFocus={() => {
+                                            const currentVal = editSkuValue || editingItem.sku || ''
+                                            if (currentVal.length > 0) {
+                                                const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(currentVal.toLowerCase()))
+                                                setSkuSuggestions(filtered.slice(0, 10))
+                                                setShowEditSkuSuggestions(true)
+                                            }
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowEditSkuSuggestions(false), 200)}
+                                        autoComplete="off"
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        placeholder="e.g. RK01-04"
+                                    />
+                                    {showEditSkuSuggestions && skuSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {skuSuggestions.map(sku => (
+                                                <button
+                                                    key={sku}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditSkuValue(sku)
+                                                        setShowEditSkuSuggestions(false)
+                                                    }}
+                                                    className="w-full px-3 py-2.5 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="font-mono text-emerald-600">{sku}</span>
+                                                    <span className="text-xs text-muted-foreground">Available</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Stok</label>
+                                    <input
+                                        name="stock"
+                                        type="number"
+                                        defaultValue={editingItem.stock}
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        step="any"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Catatan</label>
+                                    <textarea
+                                        name="notes"
+                                        defaultValue={editingItem.notes || ''}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:border-primary outline-none"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="pt-4">
+                                    <button
+                                        disabled={isLoading}
+                                        type="submit"
+                                        className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                                    >
+                                        {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
-                </div>
+
+                    {/* Desktop Modal View */}
+                    <div className="hidden md:flex fixed inset-0 z-[100] items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                            <div className="p-6 border-b border-border shrink-0 flex items-center justify-between">
+                                <h3 className="text-lg font-medium text-foreground">Edit Item: {editingItem.name}</h3>
+                                <button type="button" onClick={() => setEditingItem(null)} className="p-2 hover:bg-accent rounded-lg transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="p-6 overflow-y-auto flex-1">
+                                <form action={handleUpdateItem} className="space-y-4">
+                                    <input type="hidden" name="id" value={editingItem.id} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Change Image (Optional)</label>
+                                            {editImagePreview ? (
+                                                <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                                    <img src={editImagePreview} alt="Preview" className="w-full h-48 object-contain rounded" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEditImagePreview(null)
+                                                            setEditImageFile(null)
+                                                        }}
+                                                        className="absolute top-2 right-2 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-normal"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            ) : editingItem.image && !removeImage ? (
+                                                <div className="relative border border-border rounded-lg p-4 bg-background/50">
+                                                    <img src={editingItem.image} alt="Current" className="w-full h-48 object-contain rounded" />
+                                                    <div className="flex justify-between mt-2 gap-2">
+                                                        <label className="cursor-pointer flex-1 text-center py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-normal">
+                                                            Change Image
+                                                            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
+                                                        </label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setRemoveImage(true)}
+                                                            className="px-3 py-2 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-xs font-normal"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="border border-dashed border-border rounded-lg p-4 bg-background/50">
+                                                    <div className="text-center mb-3">
+                                                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
+                                                        <p className="text-sm text-muted-foreground">Upload gambar atau ambil foto</p>
+                                                        <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP, GIF (maks 1MB)</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <label className="flex-1 cursor-pointer">
+                                                            <input type="file" name="image" accept="image/*" capture="environment" onChange={handleEditImageChange} className="hidden" />
+                                                            <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                                <Camera className="w-4 h-4" />
+                                                                Ambil Foto
+                                                            </div>
+                                                        </label>
+                                                        <label className="flex-1 cursor-pointer">
+                                                            <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleEditImageChange} className="hidden" />
+                                                            <div className="flex items-center justify-center gap-2 px-3 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                                <ImageIcon className="w-4 h-4" />
+                                                                Pilih File
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Name</label>
+                                            <input name="name" defaultValue={editingItem.name} required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" />
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">SKU</label>
+                                            <input
+                                                name="sku"
+                                                value={editSkuValue}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.toUpperCase()
+                                                    setEditSkuValue(val)
+                                                    if (val.length > 0) {
+                                                        const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(val.toLowerCase()))
+                                                        setSkuSuggestions(filtered.slice(0, 10))
+                                                        setShowEditSkuSuggestions(true)
+                                                    } else {
+                                                        setSkuSuggestions([])
+                                                        setShowEditSkuSuggestions(false)
+                                                    }
+                                                }}
+                                                onFocus={() => {
+                                                    const currentVal = editSkuValue || editingItem.sku || ''
+                                                    if (currentVal.length > 0) {
+                                                        const filtered = allUnusedDrawers.filter(d => d.toLowerCase().includes(currentVal.toLowerCase()))
+                                                        setSkuSuggestions(filtered.slice(0, 10))
+                                                        setShowEditSkuSuggestions(true)
+                                                    }
+                                                }}
+                                                onBlur={() => setTimeout(() => setShowEditSkuSuggestions(false), 200)}
+                                                autoComplete="off"
+                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                                                placeholder="e.g. RK01-04"
+                                            />
+                                            {showEditSkuSuggestions && skuSuggestions.length > 0 && (
+                                                <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                    {skuSuggestions.map(sku => (
+                                                        <button
+                                                            key={sku}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditSkuValue(sku)
+                                                                setShowEditSkuSuggestions(false)
+                                                            }}
+                                                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                                                        >
+                                                            <span className="font-mono text-emerald-600">{sku}</span>
+                                                            <span className="text-xs text-muted-foreground">Available</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Stock</label>
+                                            <input name="stock" type="number" defaultValue={editingItem.stock} required className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" step="any" />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-normal text-muted-foreground mb-1">Notes</label>
+                                            <textarea name="notes" defaultValue={editingItem.notes || ''} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none" rows={3} />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                                        <button type="button" onClick={() => setEditingItem(null)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+                                        <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors shadow-sm">
+                                            {isLoading ? 'Updating...' : 'Save Changes'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* Add Stock Modal */}

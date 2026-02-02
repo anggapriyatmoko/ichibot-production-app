@@ -198,6 +198,18 @@ export default function InvoiceEnglishManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
   // Reset form
   const resetForm = () => {
     setFormData({
@@ -623,7 +635,7 @@ export default function InvoiceEnglishManager({
               onSubmit={handleSubmit}
               className="flex flex-col flex-1 overflow-hidden"
             >
-              <div className="p-4 overflow-y-auto flex-1 space-y-6">
+              <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-6">
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

@@ -121,6 +121,18 @@ export default function SuratTugasManager({
     return () => clearTimeout(timer);
   };
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
   const openAddModal = () => {
     setEditingST(null);
     setFormData({
@@ -516,7 +528,7 @@ export default function SuratTugasManager({
 
             <form
               onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto p-8 custom-scrollbar"
+              className="flex-1 overflow-y-auto overscroll-contain p-8 custom-scrollbar"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Basic Info Section */}
@@ -539,11 +551,10 @@ export default function SuratTugasManager({
                               onClick={() =>
                                 setFormData({ ...formData, instansi: inst })
                               }
-                              className={`py-2.5 rounded-xl font-bold text-sm transition-all border ${
-                                formData.instansi === inst
-                                  ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                  : "bg-white border-gray-200 text-gray-500 hover:border-blue-200 hover:bg-blue-50/50"
-                              }`}
+                              className={`py-2.5 rounded-xl font-bold text-sm transition-all border ${formData.instansi === inst
+                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                : "bg-white border-gray-200 text-gray-500 hover:border-blue-200 hover:bg-blue-50/50"
+                                }`}
                             >
                               {inst === "ICHI" ? "ICHIBOT" : "PT. GAN"}
                             </button>

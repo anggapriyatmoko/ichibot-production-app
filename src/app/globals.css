@@ -106,9 +106,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* iOS Safe Area Support */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+}
+
 /* Override browser default bold for th */
 th {
   font-weight: inherit;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus */
+@media screen and (max-width: 767px) {
+
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* Custom Scrollbar - Adapted for Theme */

@@ -1,5 +1,6 @@
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
+import MobileSidebarToggle from '@/components/layout/mobile-sidebar-toggle'
 import { SidebarProvider } from '@/components/providers/sidebar-provider'
 import ChatWidget from '@/components/chat/chat-widget'
 
@@ -25,20 +26,27 @@ export default async function DashboardLayout({
 
     return (
         <SidebarProvider>
-            <div className="flex h-screen bg-background overflow-hidden flex-col md:flex-row">
+            <div className="flex h-dvh bg-background flex-col md:flex-row">
                 <Sidebar userRole={session?.user?.role} />
-                <main className="flex-1 flex flex-col overflow-hidden relative">
-                    {/* Top gradient accent */}
-                    <div className="absolute top-0 left-0 w-full h-[500px] bg-blue-600/5 blur-[120px] pointer-events-none" />
 
-                    {/* Sticky Header - Desktop - z-30 so modals (z-50) can appear above */}
-                    <div className="relative z-30 shrink-0">
+                {/* Main content wrapper */}
+                <main className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+                    {/* Top gradient accent */}
+                    <div className="absolute top-0 left-0 w-full h-[500px] bg-blue-600/5 blur-[120px] pointer-events-none z-0" />
+
+                    {/* Header - Desktop Only */}
+                    <div className="hidden md:block relative z-30 shrink-0 bg-background">
                         <Header />
                     </div>
 
-                    {/* Scrollable Content - no z-index to avoid creating stacking context */}
-                    <div className="flex-1 overflow-auto relative">
-                        <div className="px-2 md:px-8 py-4 md:py-8">
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto overscroll-contain relative z-10">
+                        {/* Mobile Sidebar Toggle - Above page content */}
+                        <div className="md:hidden px-2 pt-4">
+                            <MobileSidebarToggle />
+                        </div>
+
+                        <div className="px-2 md:px-8 py-4 md:py-8 pb-8">
                             {children}
                         </div>
                     </div>

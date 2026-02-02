@@ -99,6 +99,18 @@ export default function SuratJalanManager({
     return () => clearTimeout(timer);
   };
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
   const openAddModal = async () => {
     setEditingSJ(null);
     setFormData({
@@ -512,7 +524,7 @@ export default function SuratJalanManager({
 
             <form
               onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto p-8 custom-scrollbar"
+              className="flex-1 overflow-y-auto overscroll-contain p-8 custom-scrollbar"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Information Section */}

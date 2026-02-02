@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Package,
@@ -32,10 +33,13 @@ import {
   FileSignature,
   Award,
   Truck,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TimeDisplay from "./time-display";
 import { useSidebar } from "@/components/providers/sidebar-provider";
+import UserNav from "./user-nav";
+import NotificationBadge from "./notification-badge";
 
 const dashboardItem = {
   name: "Dashboard",
@@ -159,6 +163,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ userRole }: SidebarProps) {
+  const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(true);
   const { isMobileOpen, setIsMobileOpen } = useSidebar();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -396,14 +401,21 @@ export default function Sidebar({ userRole }: SidebarProps) {
           </button>
         </div>
 
-        {/* Mobile Sidebar Header (Close Button) */}
-        <div className="md:hidden flex items-center justify-between p-4 border-b border-border">
-          <span className="font-bold text-lg">Menu</span>
+        {/* Mobile Sidebar Header - User Profile, Notifications, Close */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+          <div className="flex items-center gap-3">
+            {session?.user && (
+              <>
+                <UserNav user={session.user} />
+                <NotificationBadge role={userRole || 'USER'} />
+              </>
+            )}
+          </div>
           <button
             onClick={() => setIsMobileOpen(false)}
             className="p-2 rounded-lg hover:bg-accent text-muted-foreground"
           >
-            <PanelLeftClose className="h-5 w-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 

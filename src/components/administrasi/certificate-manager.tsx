@@ -247,6 +247,18 @@ export default function CertificateManager({
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
   // Reset form - certificate_number left empty so backend generates it correctly
   const resetForm = () => {
     setFormData({
@@ -814,7 +826,7 @@ export default function CertificateManager({
               onSubmit={handleSubmit}
               className="flex flex-col flex-1 overflow-hidden"
             >
-              <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              <div className="p-6 overflow-y-auto overscroll-contain flex-1 space-y-6">
                 {/* Main Content - Two Column Layout */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-2">

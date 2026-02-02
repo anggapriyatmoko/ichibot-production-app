@@ -56,7 +56,7 @@ export default function UserNav({ user }: UserNavProps) {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-2xl shadow-xl shadow-black/5 animate-in fade-in zoom-in duration-200 z-50 overflow-hidden">
+                <div className="absolute left-0 md:left-auto md:right-0 mt-2 w-64 bg-card border border-border rounded-2xl shadow-xl shadow-black/5 animate-in fade-in zoom-in duration-200 z-50 overflow-hidden">
                     <div className="p-4 border-b border-border bg-muted/30">
                         <p className="text-sm font-bold text-foreground truncate">{user.name}</p>
                         <p className="text-xs text-muted-foreground truncate font-mono">{user.email}</p>
