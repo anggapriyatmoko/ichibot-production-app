@@ -64,14 +64,16 @@ const MODEL_MAP: any = {
     'surat-penawaran': prisma.offerLetter,
     'kwitansi': prisma.receipt,
     'surat-balasan': prisma.replyLetter,
-    'mou': prisma.mOU
+    'mou': prisma.mOU,
+    'surat-undangan': (prisma as any).invitationLetter
 }
 
 const REVALIDATE_PATHS: any = {
     'surat-penawaran': '/administrasi/surat-penawaran',
     'kwitansi': '/administrasi/kwitansi',
     'surat-balasan': '/administrasi/surat-balasan',
-    'mou': '/administrasi/mou'
+    'mou': '/administrasi/mou',
+    'surat-undangan': '/administrasi/surat-undangan'
 }
 
 export async function createDoc(type: string, formData: FormData) {

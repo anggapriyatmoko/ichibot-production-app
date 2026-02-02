@@ -340,6 +340,19 @@ model ReplyLetter {
   updatedAt   DateTime @updatedAt
 }
 
+model InvitationLetter {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model MOU {
   id          String   @id @default(cuid())
   date        DateTime @default(now())

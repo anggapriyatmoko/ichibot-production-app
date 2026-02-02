@@ -32,7 +32,7 @@ type DocData = {
 }
 
 interface GenericDocManagerProps {
-    type: 'surat-penawaran' | 'kwitansi' | 'surat-balasan' | 'mou'
+    type: 'surat-penawaran' | 'kwitansi' | 'surat-balasan' | 'mou' | 'surat-undangan'
     title: string
     initialData: DocData[]
     labels?: {

@@ -93,6 +93,11 @@ const administrasiNavigation = [
         href: "/administrasi/surat-balasan",
         icon: Mail,
       },
+      {
+        name: "Surat Undangan",
+        href: "/administrasi/surat-undangan",
+        icon: Mail,
+      },
       { name: "MoU", href: "/administrasi/mou", icon: FileSignature },
       { name: "Invoice (ID)", href: "/administrasi/invoice-id", icon: Receipt },
       { name: "Invoice (EN)", href: "/administrasi/invoice-en", icon: Receipt },
