@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'crypto'
 
 const prisma = new PrismaClient()
 
@@ -8,12 +9,14 @@ async function main() {
 
     const admin = await prisma.user.create({
         data: {
+            id: randomUUID(),
             email: 'admin@ichibot.id',
             username: 'admin',
             name: 'Administrator',
             password: hashedPassword,
             role: 'ADMIN',
-            department: 'Management'
+            department: 'Management',
+            updatedAt: new Date(),
         }
     })
 

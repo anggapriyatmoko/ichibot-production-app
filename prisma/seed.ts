@@ -1,19 +1,22 @@
 import { PrismaClient } from '@prisma/client'
 import { hash } from 'bcryptjs'
+import { randomUUID } from 'crypto'
 
 const prisma = new PrismaClient()
 
 async function main() {
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@example.com' },
+        where: { email: 'admin@ichibot.id' },
         update: {},
         create: {
+            id: randomUUID(),
             email: 'admin@ichibot.id',
             username: 'admin',
             name: 'Hokage',
             password: await hash('admin1234567890', 12), // Hashed password
             role: 'ADMIN',
             department: 'Hokage',
+            updatedAt: new Date(),
         },
     })
 
@@ -23,10 +26,12 @@ async function main() {
         where: { sku: 'RM-001' },
         update: {},
         create: {
+            id: randomUUID(),
             name: 'Ultimate 5 Max',
             sku: 'RM-001',
             stock: 50,
-            lowStockThreshold: 10
+            lowStockThreshold: 10,
+            updatedAt: new Date(),
         }
     })
 
