@@ -6,6 +6,7 @@ import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
 import { requireAuth, requireAdmin } from '@/lib/auth'
+import { downloadExternalImage } from '@/lib/upload'
 
 // Helper function to delete old image file from storage
 async function deleteOldImage(imagePath: string | null) {
@@ -364,4 +365,86 @@ export async function moveToProduction(id: string, sku?: string) {
     revalidatePath('/inventory')
 
     return { success: true, merged: !!existingProduct }
+}
+
+export async function getAllSparepartProjectsForExport(baseUrl: string) {
+    await requireAdmin()
+    const items = await prisma.sparepartProject.findMany({
+        orderBy: { name: 'asc' },
+        select: {
+            name: true,
+            sku: true,
+            stock: true,
+            notes: true,
+            image: true
+        }
+    })
+
+    return items.map(p => ({
+        ...p,
+        image: p.image ? (p.image.startsWith('http') ? p.image : `${baseUrl}${p.image}`) : ''
+    }))
+}
+
+export async function importSparepartProjects(items: any[]) {
+    await requireAdmin()
+    let successCount = 0
+    const errors: string[] = []
+
+    for (const item of items) {
+        try {
+            if (!item.name) {
+                errors.push(`Row missing name`)
+                continue
+            }
+
+            const name = String(item.name).trim()
+            const sku = item.sku ? String(item.sku).trim() : null
+            const stock = parseFloat(item.stock) || 0
+            const notes = item.notes ? String(item.notes).trim() : null
+
+            let imagePath = item.image ? String(item.image).trim() : null
+            if (imagePath && imagePath.startsWith('http')) {
+                const downloaded = await downloadExternalImage(imagePath)
+                if (downloaded) imagePath = downloaded
+            }
+
+            const existing = await prisma.sparepartProject.findFirst({
+                where: {
+                    OR: [
+                        { sku: sku || undefined },
+                        { name: name }
+                    ]
+                }
+            })
+
+            if (existing) {
+                await prisma.sparepartProject.update({
+                    where: { id: existing.id },
+                    data: {
+                        stock: stock || existing.stock,
+                        sku: sku || existing.sku,
+                        notes: notes || existing.notes,
+                        image: imagePath || existing.image
+                    }
+                })
+            } else {
+                await prisma.sparepartProject.create({
+                    data: {
+                        name,
+                        sku,
+                        stock,
+                        notes,
+                        image: imagePath
+                    }
+                })
+            }
+            successCount++
+        } catch (error: any) {
+            errors.push(`Error processing ${item.name}: ${error.message}`)
+        }
+    }
+
+    revalidatePath('/sparepart-project')
+    return { success: successCount, errors }
 }

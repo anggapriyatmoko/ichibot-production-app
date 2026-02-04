@@ -288,8 +288,8 @@ export default function AssetManager({
     const handleExport = async () => {
         setExporting(true)
         try {
-            const assets = await getAllAssetsForExport()
-            const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tahun Pembelian', 'Umur Ekonomis (Tahun)', 'Nilai Residu']
+            const assets = await getAllAssetsForExport(window.location.origin)
+            const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tahun Pembelian', 'Umur Ekonomis (Tahun)', 'Nilai Residu', 'Image URL']
             const rows = assets.map((a: any) => [
                 a.name,
                 a.code || '',
@@ -299,7 +299,8 @@ export default function AssetManager({
                 a.notes || '',
                 a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString('id-ID') : '',
                 a.usefulLife || '',
-                a.residualValue || ''
+                a.residualValue || '',
+                a.image || ''
             ])
 
             const wb = XLSX.utils.book_new()

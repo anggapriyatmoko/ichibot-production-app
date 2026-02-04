@@ -2,31 +2,46 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { hash } from 'bcryptjs'
+import { hash as hashPassword } from 'bcryptjs'
+import { encrypt, decrypt, hash } from '@/lib/crypto'
 
 export async function getUsers() {
-    return await prisma.user.findMany({
+    const users = await prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,
-            name: true,
-            email: true,
-            username: true,
-            department: true,
-            role: true,
+            nameEnc: true,
+            emailEnc: true,
+            usernameEnc: true,
+            departmentEnc: true,
+            roleEnc: true,
             createdAt: true,
         }
     })
+
+    return users.map(user => ({
+        ...user,
+        name: decrypt(user.nameEnc),
+        email: decrypt(user.emailEnc),
+        username: decrypt(user.usernameEnc),
+        department: decrypt(user.departmentEnc),
+        role: decrypt(user.roleEnc) || 'USER'
+    }))
 }
 
 export async function createUser(data: any) {
-    const { name, email, username, password, department, role } = data
+    const { name, email, username, password, pin, department, role } = data
+
+    const emailHash = hash(email)
+    const usernameHash = hash(username)
+
+    if (!emailHash || !usernameHash) throw new Error('Invalid email or username')
 
     const existingUser = await prisma.user.findFirst({
         where: {
             OR: [
-                { email },
-                { username }
+                { emailHash },
+                { usernameHash }
             ]
         }
     })
@@ -35,16 +50,24 @@ export async function createUser(data: any) {
         throw new Error('Email or Username already exists')
     }
 
-    const hashedPassword = await hash(password, 12)
+    const hashedPassword = await hashPassword(password, 12)
 
-    await prisma.user.create({
+    // Validate PIN if provided
+    if (pin && !/^\d{4,6}$/.test(pin)) {
+        throw new Error('PIN harus 4-6 digit angka')
+    }
+
+    await (prisma.user as any).create({
         data: {
-            name,
-            email,
-            username,
+            nameEnc: encrypt(name),
+            emailEnc: encrypt(email),
+            emailHash,
+            usernameEnc: encrypt(username),
+            usernameHash,
             password: hashedPassword,
-            department,
-            role: role || 'USER'
+            pinEnc: pin ? encrypt(pin) : null,
+            departmentEnc: encrypt(department),
+            roleEnc: encrypt(role || 'USER')
         }
     })
 
@@ -52,7 +75,12 @@ export async function createUser(data: any) {
 }
 
 export async function updateUser(id: string, data: any) {
-    const { name, email, username, password, department, role } = data
+    const { name, email, username, password, pin, department, role } = data
+
+    const emailHash = hash(email)
+    const usernameHash = hash(username)
+
+    if (!emailHash || !usernameHash) throw new Error('Invalid email or username')
 
     // Check uniqueness if email/username changed
     const existingUser = await prisma.user.findFirst({
@@ -61,8 +89,8 @@ export async function updateUser(id: string, data: any) {
                 { id: { not: id } },
                 {
                     OR: [
-                        { email },
-                        { username }
+                        { emailHash },
+                        { usernameHash }
                     ]
                 }
             ]
@@ -74,18 +102,28 @@ export async function updateUser(id: string, data: any) {
     }
 
     const updateData: any = {
-        name,
-        email,
-        username,
-        department,
-        role
+        nameEnc: encrypt(name),
+        emailEnc: encrypt(email),
+        emailHash,
+        usernameEnc: encrypt(username),
+        usernameHash,
+        departmentEnc: encrypt(department),
+        roleEnc: encrypt(role)
     }
 
     if (password && password.trim() !== '') {
-        updateData.password = await hash(password, 12)
+        updateData.password = await hashPassword(password, 12)
     }
 
-    await prisma.user.update({
+    // Handle PIN update
+    if (pin && pin.trim() !== '') {
+        if (!/^\d{4,6}$/.test(pin)) {
+            throw new Error('PIN harus 4-6 digit angka')
+        }
+        updateData.pinEnc = encrypt(pin)
+    }
+
+    await (prisma.user as any).update({
         where: { id },
         data: updateData
     })
@@ -109,11 +147,13 @@ export async function toggleUserRole(id: string) {
 
     if (!user) throw new Error('User not found')
 
-    const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN'
+    const newRole = (decrypt(user.roleEnc)) === 'ADMIN' ? 'USER' : 'ADMIN'
 
     await prisma.user.update({
         where: { id },
-        data: { role: newRole }
+        data: {
+            roleEnc: encrypt(newRole)
+        }
     })
     revalidatePath('/users')
 }

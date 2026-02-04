@@ -187,7 +187,9 @@ export async function getLogActivities(targetUserId?: string) {
         queryUserId = targetUserId
     }
 
-    return prisma.logActivity.findMany({
+    const { decrypt } = require('@/lib/crypto')
+
+    const logs = await prisma.logActivity.findMany({
         where: {
             userId: queryUserId
         },
@@ -197,10 +199,23 @@ export async function getLogActivities(targetUserId?: string) {
         include: {
             user: {
                 select: {
-                    name: true,
-                    username: true,
-                    department: true
+                    nameEnc: true,
+                    usernameEnc: true,
+                    departmentEnc: true
                 }
+            }
+        }
+    })
+
+    return logs.map(log => {
+        const user = log.user || { nameEnc: null, usernameEnc: null, departmentEnc: null }
+        return {
+            ...log,
+            user: {
+                ...user,
+                name: decrypt(user.nameEnc),
+                username: decrypt(user.usernameEnc) || 'Unknown',
+                department: decrypt(user.departmentEnc)
             }
         }
     })
@@ -216,17 +231,26 @@ export async function getUsersForLog() {
 
     if (!isAdmin) return []
 
-    return prisma.user.findMany({
+    const { decrypt } = require('@/lib/crypto')
+
+    const users = await prisma.user.findMany({
         select: {
             id: true,
-            name: true,
-            username: true,
-            department: true
+            nameEnc: true,
+            usernameEnc: true,
+            departmentEnc: true
         },
         orderBy: {
-            name: 'asc'
+            createdAt: 'desc'
         }
     })
+
+    return users.map(user => ({
+        id: user.id,
+        name: decrypt(user.nameEnc),
+        username: decrypt(user.usernameEnc) || 'Unknown',
+        department: decrypt(user.departmentEnc)
+    }))
 }
 
 export async function deleteLogActivity(id: string) {
@@ -251,18 +275,27 @@ export async function getDailyActivityRecap(dateStr: string) {
     const session: any = await getServerSession(authOptions)
     if (!['ADMIN', 'HRD'].includes(session?.user?.role)) return []
 
+    const { decrypt } = require('@/lib/crypto')
+
     const dateObj = new Date(dateStr)
     dateObj.setHours(0, 0, 0, 0)
 
-    const users = await prisma.user.findMany({
-        orderBy: { name: 'asc' },
+    const rawUsers = await prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
         select: {
             id: true,
-            name: true,
-            username: true,
-            department: true
+            nameEnc: true,
+            usernameEnc: true,
+            departmentEnc: true
         }
     })
+
+    const users = rawUsers.map((u: any) => ({
+        id: u.id,
+        name: decrypt(u.nameEnc),
+        username: decrypt(u.usernameEnc) || 'Unknown',
+        department: decrypt(u.departmentEnc)
+    }))
 
     const logs = await prisma.logActivity.findMany({
         where: {
@@ -270,7 +303,7 @@ export async function getDailyActivityRecap(dateStr: string) {
         }
     })
 
-    return users.map(user => {
+    return users.map((user: any) => {
         const log = logs.find(l => l.userId === user.id)
         return {
             user,

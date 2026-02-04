@@ -291,7 +291,7 @@ export default function ProductList({
     async function handleExport() {
         setIsLoading(true)
         try {
-            const data = await getAllProductsForExport()
+            const data = await getAllProductsForExport(window.location.origin)
             const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Notes', 'Image URL']
             const rows = data.map(p => [
                 p.name,

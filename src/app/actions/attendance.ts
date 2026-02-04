@@ -39,13 +39,13 @@ export async function getAttendances(dateStr?: string) {
 
     // Get all users
     const users = await prisma.user.findMany({
-        orderBy: { name: 'asc' },
+        orderBy: { id: 'asc' },
         select: {
             id: true,
-            name: true,
-            username: true,
-            department: true,
-            role: true
+            nameEnc: true,
+            usernameEnc: true,
+            departmentEnc: true,
+            roleEnc: true
         }
     })
 
@@ -58,9 +58,9 @@ export async function getAttendances(dateStr?: string) {
             user: {
                 select: {
                     id: true,
-                    name: true,
-                    username: true,
-                    department: true
+                    nameEnc: true,
+                    usernameEnc: true,
+                    departmentEnc: true
                 }
             }
         }
@@ -70,7 +70,13 @@ export async function getAttendances(dateStr?: string) {
     return users.map(user => {
         const attendance = attendances.find((a: any) => a.userId === user.id)
         return {
-            user,
+            user: {
+                ...user,
+                name: decrypt(user.nameEnc),
+                username: decrypt(user.usernameEnc) || 'Unknown',
+                department: decrypt(user.departmentEnc),
+                role: decrypt(user.roleEnc) || 'USER'
+            },
             attendance: decryptAttendance(attendance)
         }
     })
@@ -269,15 +275,13 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
 
     // Get all users
     const users = await prisma.user.findMany({
-        where: {
-            role: { in: ['USER', 'HRD', 'TEKNISI', 'ADMIN', 'ADMINISTRASI'] }
-        },
-        orderBy: { name: 'asc' },
+        where: {},
+        orderBy: { id: 'asc' },
         select: {
             id: true,
-            name: true,
-            department: true,
-            role: true
+            nameEnc: true,
+            departmentEnc: true,
+            roleEnc: true
         }
     })
 
@@ -376,9 +380,9 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
 
         return {
             id: user.id,
-            name: user.name,
-            department: user.department,
-            role: user.role,
+            name: decrypt(user.nameEnc),
+            department: decrypt(user.departmentEnc),
+            role: decrypt(user.roleEnc) || 'USER',
             totalWorkDays,
             lateCount,
             lateMinutes,
@@ -435,9 +439,9 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
         where: { id: userId },
         select: {
             id: true,
-            name: true,
-            department: true,
-            role: true
+            nameEnc: true,
+            departmentEnc: true,
+            roleEnc: true
         }
     })
 
@@ -537,9 +541,9 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
         success: true,
         data: {
             id: user.id,
-            name: user.name,
-            department: user.department,
-            role: user.role,
+            name: decrypt(user.nameEnc),
+            department: decrypt(user.departmentEnc),
+            role: decrypt(user.roleEnc) || 'USER',
             totalWorkDays,
             lateCount,
             lateMinutes,

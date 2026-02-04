@@ -13,19 +13,29 @@ function decryptOvertimeLeave(item: any) {
     if (!item) return item
     const decrypted = {
         ...item,
-        type: decrypt(item.type),
-        reason: decrypt(item.reason),
-        attachment: decrypt(item.attachment),
-        requesterName: decrypt(item.requesterName),
-        job: decrypt(item.job),
-        adminNote: decrypt(item.adminNote),
-        status: decrypt(item.status),
-        date: decrypt(item.date),
-        createdAt: decrypt(item.createdAt),
-        updatedAt: decrypt(item.updatedAt),
+        type: decrypt(item.typeEnc),
+        reason: decrypt(item.reasonEnc),
+        attachment: decrypt(item.attachmentEnc),
+        requesterName: decrypt(item.requesterNameEnc),
+        job: decrypt(item.jobEnc),
+        adminNote: decrypt(item.adminNoteEnc),
+        status: decrypt(item.statusEnc),
+        date: decrypt(item.dateEnc),
+        createdAt: decrypt(item.createdAtEnc),
+        updatedAt: decrypt(item.updatedAtEnc),
     }
-    if (item.amount) {
-        const decAmount = decrypt(item.amount)
+
+    if (item.user && (item.user.nameEnc || item.user.roleEnc || item.user.usernameEnc)) {
+        decrypted.user = {
+            ...item.user,
+            name: item.user.nameEnc ? decrypt(item.user.nameEnc) : null,
+            username: item.user.usernameEnc ? decrypt(item.user.usernameEnc) : null,
+            role: item.user.roleEnc ? decrypt(item.user.roleEnc) : null
+        }
+    }
+
+    if (item.amountEnc) {
+        const decAmount = decrypt(item.amountEnc)
         decrypted.amount = decAmount ? parseFloat(decAmount) : null
     }
     return decrypted
@@ -95,16 +105,16 @@ export async function createOvertimeLeave(formData: FormData) {
 
     const now = new Date().toISOString()
     try {
-        await (prisma as any).overtimeLeave.create({
+        await (prisma as any).overtimeleave.create({
             data: {
                 userId,
-                date: encrypt(date.toISOString()),
-                type: encrypt(type),
-                reason: encrypt(reason),
-                attachment: encrypt(attachmentPath),
-                status: encrypt('PENDING'),
-                createdAt: encrypt(now),
-                updatedAt: encrypt(now),
+                dateEnc: encrypt(date.toISOString()) || '',
+                typeEnc: encrypt(type) || '',
+                reasonEnc: encrypt(reason) || '',
+                attachmentEnc: encrypt(attachmentPath),
+                statusEnc: encrypt('PENDING') || '',
+                createdAtEnc: encrypt(now) || '',
+                updatedAtEnc: encrypt(now) || '',
             }
         })
 
@@ -137,14 +147,14 @@ export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: strin
 
     try {
         // Fetch all relevant data and filter in memory because fields are encrypted
-        const allData = await (prisma as any).overtimeLeave.findMany({
+        const allData = await (prisma as any).overtimeleave.findMany({
             where: isAdmin && !ownOnly ? {} : { userId: session.user.id },
             include: {
                 user: {
                     select: {
-                        name: true,
-                        username: true,
-                        role: true
+                        nameEnc: true,
+                        usernameEnc: true,
+                        roleEnc: true
                     }
                 }
             },
@@ -200,13 +210,13 @@ export async function updateOvertimeLeaveStatus(id: string, status: string, amou
     const now = new Date().toISOString()
     try {
         const updateData: any = {
-            status: encrypt(status),
-            updatedAt: encrypt(now)
+            statusEnc: encrypt(status) || '',
+            updatedAtEnc: encrypt(now) || ''
         }
-        if (amount !== undefined) updateData.amount = encrypt(amount.toString())
-        if (adminNote !== undefined) updateData.adminNote = encrypt(adminNote)
+        if (amount !== undefined) updateData.amountEnc = encrypt(amount.toString()) || ''
+        if (adminNote !== undefined) updateData.adminNoteEnc = encrypt(adminNote)
 
-        await (prisma as any).overtimeLeave.update({
+        await (prisma as any).overtimeleave.update({
             where: { id },
             data: updateData
         })
@@ -223,7 +233,7 @@ export async function deleteOvertimeLeave(id: string) {
     const session: any = await requireAuth()
 
     // Check if the user owns it or is admin
-    const request = await (prisma as any).overtimeLeave.findUnique({
+    const request = await (prisma as any).overtimeleave.findUnique({
         where: { id }
     })
 
@@ -239,7 +249,7 @@ export async function deleteOvertimeLeave(id: string) {
     }
 
     try {
-        await (prisma as any).overtimeLeave.delete({
+        await (prisma as any).overtimeleave.delete({
             where: { id }
         })
         revalidatePath('/overtime-leave')
@@ -262,18 +272,18 @@ export async function createOvertimeOrder(formData: FormData) {
 
     const now = new Date().toISOString()
     try {
-        await (prisma as any).overtimeLeave.create({
+        await (prisma as any).overtimeleave.create({
             data: {
                 userId,
-                date: encrypt(date.toISOString()),
-                type: encrypt('OVERTIME'),
-                reason: encrypt(`Perintah Lembur: ${job}`),
-                requesterName: encrypt(requesterName),
-                job: encrypt(job),
-                amount: encrypt(amount.toString()),
-                status: encrypt('MANDATE'),
-                createdAt: encrypt(now),
-                updatedAt: encrypt(now),
+                dateEnc: encrypt(date.toISOString()) || '',
+                typeEnc: encrypt('OVERTIME') || '',
+                reasonEnc: encrypt(`Perintah Lembur: ${job}`) || '',
+                requesterNameEnc: encrypt(requesterName),
+                jobEnc: encrypt(job),
+                amountEnc: encrypt(amount.toString()),
+                statusEnc: encrypt('MANDATE') || '',
+                createdAtEnc: encrypt(now) || '',
+                updatedAtEnc: encrypt(now) || '',
             }
         })
 
@@ -286,8 +296,8 @@ export async function createOvertimeOrder(formData: FormData) {
 }
 export async function getPendingOvertimeLeaveCount() {
     try {
-        const allData = await (prisma as any).overtimeLeave.findMany({
-            include: { user: { select: { name: true, username: true } } }
+        const allData = await (prisma as any).overtimeleave.findMany({
+            include: { user: { select: { nameEnc: true, usernameEnc: true } } }
         })
         const decrypted = allData.map(decryptOvertimeLeave)
         const pending = decrypted.filter((item: any) => item.status === 'PENDING')
@@ -298,8 +308,8 @@ export async function getPendingOvertimeLeaveCount() {
 }
 export async function getPendingOvertimeLeavesDetails() {
     try {
-        const allData = await (prisma as any).overtimeLeave.findMany({
-            include: { user: { select: { name: true, username: true } } }
+        const allData = await (prisma as any).overtimeleave.findMany({
+            include: { user: { select: { nameEnc: true, usernameEnc: true } } }
         })
         const decrypted = allData.map(decryptOvertimeLeave)
         const pending = decrypted
@@ -318,18 +328,18 @@ export async function updateOvertimeLeave(id: string, data: any) {
 
     const now = new Date().toISOString()
     try {
-        await (prisma as any).overtimeLeave.update({
+        await (prisma as any).overtimeleave.update({
             where: { id },
             data: {
-                date: data.date ? encrypt(new Date(data.date).toISOString()) : undefined,
-                type: encrypt(data.type),
-                reason: encrypt(data.reason),
-                job: encrypt(data.job),
-                requesterName: encrypt(data.requesterName),
-                amount: encrypt(data.amount?.toString() || '0'),
-                adminNote: encrypt(data.adminNote),
-                status: encrypt(data.status),
-                updatedAt: encrypt(now)
+                dateEnc: data.date ? (encrypt(new Date(data.date).toISOString()) || '') : undefined,
+                typeEnc: data.type ? (encrypt(data.type) || '') : undefined,
+                reasonEnc: data.reason ? (encrypt(data.reason) || '') : undefined,
+                jobEnc: data.job ? encrypt(data.job) : undefined,
+                requesterNameEnc: data.requesterName ? encrypt(data.requesterName) : undefined,
+                amountEnc: data.amount !== undefined ? encrypt(data.amount?.toString() || '0') : undefined,
+                adminNoteEnc: data.adminNote !== undefined ? encrypt(data.adminNote) : undefined,
+                statusEnc: data.status ? (encrypt(data.status) || '') : undefined,
+                updatedAtEnc: encrypt(now) || ''
             }
         })
 
@@ -345,7 +355,7 @@ export async function getUserOvertimeOrders() {
     const session: any = await requireAuth()
 
     try {
-        const allData = await (prisma as any).overtimeLeave.findMany({
+        const allData = await (prisma as any).overtimeleave.findMany({
             where: { userId: session.user.id },
             orderBy: { createdAt: 'desc' },
             take: 20
@@ -369,7 +379,7 @@ export async function getUserStatusUpdates() {
     const session: any = await requireAuth()
 
     try {
-        const allData = await (prisma as any).overtimeLeave.findMany({
+        const allData = await (prisma as any).overtimeleave.findMany({
             where: {
                 userId: session.user.id,
             },
@@ -398,7 +408,7 @@ export async function getUserStatusUpdates() {
 export async function respondToOvertimeOrder(id: string, response: 'ACCEPT' | 'REJECT') {
     const session: any = await requireAuth()
 
-    const request = await (prisma as any).overtimeLeave.findUnique({
+    const request = await (prisma as any).overtimeleave.findUnique({
         where: { id }
     })
 
@@ -408,7 +418,7 @@ export async function respondToOvertimeOrder(id: string, response: 'ACCEPT' | 'R
         return { error: 'Forbidden' }
     }
 
-    const decryptedStatus = decrypt(request.status)
+    const decryptedStatus = decrypt(request.statusEnc)
     if (decryptedStatus !== 'MANDATE') {
         return { error: 'Invalid status for this action' }
     }
@@ -417,11 +427,11 @@ export async function respondToOvertimeOrder(id: string, response: 'ACCEPT' | 'R
     const now = new Date().toISOString()
 
     try {
-        await (prisma as any).overtimeLeave.update({
+        await (prisma as any).overtimeleave.update({
             where: { id },
             data: {
-                status: encrypt(newStatus),
-                updatedAt: encrypt(now)
+                statusEnc: encrypt(newStatus) || '',
+                updatedAtEnc: encrypt(now) || ''
             }
         })
 

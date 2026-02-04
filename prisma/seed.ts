@@ -1,22 +1,25 @@
 import { PrismaClient } from '@prisma/client'
-import { hash } from 'bcryptjs'
-import { randomUUID } from 'crypto'
+import { hash as hashPassword } from 'bcryptjs'
+import { encrypt, hash } from '../src/lib/crypto'
 
 const prisma = new PrismaClient()
 
 async function main() {
+    const adminEmail = 'admin@ichibot.id'
+    const adminUsername = 'admin'
+
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@ichibot.id' },
+        where: { emailHash: hash(adminEmail)! },
         update: {},
         create: {
-            id: randomUUID(),
-            email: 'admin@ichibot.id',
-            username: 'admin',
-            name: 'Hokage',
-            password: await hash('admin1234567890', 12), // Hashed password
-            role: 'ADMIN',
-            department: 'Hokage',
-            updatedAt: new Date(),
+            emailEnc: encrypt(adminEmail),
+            emailHash: hash(adminEmail)!,
+            usernameEnc: encrypt(adminUsername),
+            usernameHash: hash(adminUsername)!,
+            nameEnc: encrypt('Hokage'),
+            password: await hashPassword('admin1234567890', 12), // Hashed password
+            roleEnc: encrypt('ADMIN'),
+            departmentEnc: encrypt('Hokage'),
         },
     })
 
@@ -26,12 +29,10 @@ async function main() {
         where: { sku: 'RM-001' },
         update: {},
         create: {
-            id: randomUUID(),
             name: 'Ultimate 5 Max',
             sku: 'RM-001',
             stock: 50,
-            lowStockThreshold: 10,
-            updatedAt: new Date(),
+            lowStockThreshold: 10
         }
     })
 

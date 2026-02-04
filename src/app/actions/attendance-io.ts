@@ -38,8 +38,8 @@ export async function exportAttendance(month: number, year: number) {
 
     // 1. Get all users
     const users = await prisma.user.findMany({
-        orderBy: { name: 'asc' },
-        select: { id: true, name: true, username: true, department: true }
+        orderBy: { id: 'asc' },
+        select: { id: true, nameEnc: true, usernameEnc: true, departmentEnc: true }
     })
 
     // 2. Get all attendance for the period
@@ -62,7 +62,7 @@ export async function exportAttendance(month: number, year: number) {
     const headers = ['Month', 'Year', 'User ID', 'Username', 'Name', 'Department', ...days.map(String)]
 
     const dataRows = users.map(user => {
-        const row: any[] = [month, year, user.id, user.username, user.name, user.department || '-']
+        const row: any[] = [month, year, user.id, decrypt(user.usernameEnc) || 'Unknown', decrypt(user.nameEnc), decrypt(user.departmentEnc) || '-']
 
         days.forEach(day => {
             const att = attendances.find((a: any) =>
@@ -137,8 +137,8 @@ export async function getAttendanceTemplate(month: number, year: number) {
 
     // Get all users
     const users = await prisma.user.findMany({
-        orderBy: { name: 'asc' },
-        select: { id: true, name: true, username: true, department: true }
+        orderBy: { id: 'asc' },
+        select: { id: true, nameEnc: true, usernameEnc: true, departmentEnc: true }
     })
 
     // Build empty template with users
@@ -146,7 +146,7 @@ export async function getAttendanceTemplate(month: number, year: number) {
     const headers = ['Month', 'Year', 'User ID', 'Username', 'Name', 'Department', ...days.map(String)]
 
     const dataRows = users.map(user => {
-        const row: any[] = [month, year, user.id, user.username, user.name || '-', user.department || '-']
+        const row: any[] = [month, year, user.id, decrypt(user.usernameEnc) || 'Unknown', decrypt(user.nameEnc) || '-', decrypt(user.departmentEnc) || '-']
         // Leave day columns empty for user to fill
         days.forEach(() => row.push(''))
         return row

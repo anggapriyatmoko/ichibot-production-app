@@ -3,13 +3,14 @@
 import prisma from '@/lib/prisma'
 import { getCurrentUser, requireAuth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { encrypt, decrypt } from '@/lib/crypto'
 
 // Get all chat rooms for current user
 export async function getChatRooms() {
     const user = await getCurrentUser()
     if (!user) return []
 
-    const chatRooms = await prisma.chatRoom.findMany({
+    const chatRooms = await (prisma.chatRoom as any).findMany({
         where: {
             participants: {
                 some: {
@@ -23,8 +24,8 @@ export async function getChatRooms() {
                     user: {
                         select: {
                             id: true,
-                            name: true,
-                            username: true
+                            nameEnc: true,
+                            usernameEnc: true
                         }
                     }
                 }
@@ -38,7 +39,7 @@ export async function getChatRooms() {
                     sender: {
                         select: {
                             id: true,
-                            name: true
+                            nameEnc: true
                         }
                     }
                 }
@@ -47,15 +48,15 @@ export async function getChatRooms() {
         orderBy: {
             updatedAt: 'desc'
         }
-    })
+    }) as any[]
 
     // Calculate unread count for each room
-    const roomsWithUnread = await Promise.all(chatRooms.map(async (room) => {
-        const otherParticipants = room.participants.filter(p => p.userId !== user.id)
+    const roomsWithUnread = await Promise.all(chatRooms.map(async (room: any) => {
+        const otherParticipants = room.participants.filter((p: any) => p.userId !== user.id)
         const lastMessage = room.messages[0] || null
 
         // Get current user's participant record to check lastSeenAt
-        const myParticipant = room.participants.find(p => p.userId === user.id)
+        const myParticipant = room.participants.find((p: any) => p.userId === user.id)
         const lastSeenAt = myParticipant?.lastSeenAt || new Date(0)
 
         // Count unread messages (messages after lastSeenAt, not sent by current user)
@@ -69,15 +70,15 @@ export async function getChatRooms() {
 
         return {
             id: room.id,
-            name: room.isGroup ? (room.name || 'Semua User') : otherParticipants[0]?.user.name || otherParticipants[0]?.user.username || 'Unknown',
+            name: room.isGroup ? (decrypt(room.nameEnc) || 'Semua User') : decrypt(otherParticipants[0]?.user.nameEnc) || decrypt(otherParticipants[0]?.user.usernameEnc) || 'Unknown',
             isGroup: room.isGroup,
-            participants: room.participants.map(p => ({
+            participants: room.participants.map((p: any) => ({
                 id: p.user.id,
-                name: p.user.name || p.user.username
+                name: decrypt(p.user.nameEnc) || decrypt(p.user.usernameEnc) || 'Unknown'
             })),
             lastMessage: lastMessage ? {
-                content: lastMessage.content,
-                senderName: lastMessage.sender.name || 'Unknown',
+                content: decrypt(lastMessage.contentEnc),
+                senderName: decrypt(lastMessage.sender.nameEnc) || 'Unknown',
                 createdAt: lastMessage.createdAt
             } : null,
             updatedAt: room.updatedAt,
@@ -98,7 +99,7 @@ export async function getOrCreateDirectChat(otherUserId: string) {
     }
 
     // Find existing direct chat
-    const existingChat = await prisma.chatRoom.findFirst({
+    const existingChat = await (prisma.chatRoom as any).findFirst({
         where: {
             isGroup: false,
             AND: [
@@ -113,22 +114,22 @@ export async function getOrCreateDirectChat(otherUserId: string) {
                 },
                 include: {
                     user: {
-                        select: { id: true, name: true, username: true }
+                        select: { id: true, nameEnc: true, usernameEnc: true }
                     }
                 }
             }
         }
-    })
+    }) as any
 
     if (existingChat) {
         return {
             chatRoomId: existingChat.id,
-            name: existingChat.participants[0]?.user.name || existingChat.participants[0]?.user.username || 'Unknown'
+            name: decrypt(existingChat.participants[0]?.user.nameEnc) || decrypt(existingChat.participants[0]?.user.usernameEnc) || 'Unknown'
         }
     }
 
     // Create new direct chat
-    const newChat = await prisma.chatRoom.create({
+    const newChat = await (prisma.chatRoom as any).create({
         data: {
             isGroup: false,
             participants: {
@@ -145,16 +146,16 @@ export async function getOrCreateDirectChat(otherUserId: string) {
                 },
                 include: {
                     user: {
-                        select: { id: true, name: true, username: true }
+                        select: { id: true, nameEnc: true, usernameEnc: true }
                     }
                 }
             }
         }
-    })
+    }) as any
 
     return {
         chatRoomId: newChat.id,
-        name: newChat.participants[0]?.user.name || newChat.participants[0]?.user.username || 'Unknown'
+        name: decrypt(newChat.participants[0]?.user.nameEnc) || decrypt(newChat.participants[0]?.user.usernameEnc) || 'Unknown'
     }
 }
 
@@ -164,12 +165,12 @@ export async function getOrCreateGroupChat() {
     if (!user) return { error: 'Unauthorized' }
 
     // Find existing group chat named "Semua User"
-    const existingGroup = await prisma.chatRoom.findFirst({
+    const existingGroup = await (prisma.chatRoom as any).findFirst({
         where: {
             isGroup: true,
-            name: 'Semua User'
+            nameEnc: encrypt('Semua User')
         }
-    })
+    }) as any
 
     if (existingGroup) {
         // Make sure current user is a participant
@@ -199,15 +200,15 @@ export async function getOrCreateGroupChat() {
         select: { id: true }
     })
 
-    const newGroup = await prisma.chatRoom.create({
+    const newGroup = await (prisma.chatRoom as any).create({
         data: {
-            name: 'Semua User',
+            nameEnc: encrypt('Semua User'),
             isGroup: true,
             participants: {
                 create: allUsers.map(u => ({ userId: u.id }))
             }
         }
-    })
+    }) as any
 
     return { chatRoomId: newGroup.id, name: 'Semua User' }
 }
@@ -231,7 +232,7 @@ export async function getMessages(chatRoomId: string, cursor?: string, limit: nu
         return { error: 'Not a participant', messages: [] }
     }
 
-    const messages = await prisma.chatMessage.findMany({
+    const messages = await (prisma.chatMessage as any).findMany({
         where: {
             chatRoomId,
             ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {})
@@ -240,8 +241,8 @@ export async function getMessages(chatRoomId: string, cursor?: string, limit: nu
             sender: {
                 select: {
                     id: true,
-                    name: true,
-                    username: true
+                    nameEnc: true,
+                    usernameEnc: true
                 }
             }
         },
@@ -249,7 +250,7 @@ export async function getMessages(chatRoomId: string, cursor?: string, limit: nu
             createdAt: 'desc'
         },
         take: limit
-    })
+    }) as any[]
 
     // Update last seen
     await prisma.chatParticipant.update({
@@ -265,11 +266,11 @@ export async function getMessages(chatRoomId: string, cursor?: string, limit: nu
     })
 
     return {
-        messages: messages.reverse().map(m => ({
+        messages: messages.reverse().map((m: any) => ({
             id: m.id,
-            content: m.content,
+            content: decrypt(m.contentEnc) || 'Pesan terenkripsi',
             senderId: m.senderId,
-            senderName: m.sender.name || m.sender.username,
+            senderName: decrypt(m.sender.nameEnc) || decrypt(m.sender.usernameEnc) || 'Unknown',
             createdAt: m.createdAt,
             isOwn: m.senderId === user.id
         }))
@@ -299,22 +300,22 @@ export async function sendMessage(chatRoomId: string, content: string) {
         return { error: 'Not a participant' }
     }
 
-    const message = await prisma.chatMessage.create({
+    const message = await (prisma.chatMessage as any).create({
         data: {
             chatRoomId,
             senderId: user.id,
-            content: content.trim()
+            contentEnc: encrypt(content.trim())
         },
         include: {
             sender: {
                 select: {
                     id: true,
-                    name: true,
-                    username: true
+                    nameEnc: true,
+                    usernameEnc: true
                 }
             }
         }
-    })
+    }) as any
 
     // Update chat room's updatedAt
     await prisma.chatRoom.update({
@@ -325,9 +326,9 @@ export async function sendMessage(chatRoomId: string, content: string) {
     return {
         message: {
             id: message.id,
-            content: message.content,
+            content: decrypt(message.contentEnc) || 'Pesan terenkripsi',
             senderId: message.senderId,
-            senderName: message.sender.name || message.sender.username,
+            senderName: decrypt(message.sender.nameEnc) || decrypt(message.sender.usernameEnc) || 'Unknown',
             createdAt: message.createdAt,
             isOwn: true
         }
@@ -339,7 +340,7 @@ export async function getNewMessages(chatRoomId: string, afterTimestamp: string)
     const user = await getCurrentUser()
     if (!user) return { messages: [] }
 
-    const messages = await prisma.chatMessage.findMany({
+    const messages = await (prisma.chatMessage as any).findMany({
         where: {
             chatRoomId,
             createdAt: { gt: new Date(afterTimestamp) }
@@ -348,15 +349,15 @@ export async function getNewMessages(chatRoomId: string, afterTimestamp: string)
             sender: {
                 select: {
                     id: true,
-                    name: true,
-                    username: true
+                    nameEnc: true,
+                    usernameEnc: true
                 }
             }
         },
         orderBy: {
             createdAt: 'asc'
         }
-    })
+    }) as any[]
 
     // Update lastSeenAt to mark messages as read
     if (messages.length > 0) {
@@ -374,11 +375,11 @@ export async function getNewMessages(chatRoomId: string, afterTimestamp: string)
     }
 
     return {
-        messages: messages.map(m => ({
+        messages: messages.map((m: any) => ({
             id: m.id,
-            content: m.content,
+            content: decrypt(m.contentEnc) || 'Pesan terenkripsi',
             senderId: m.senderId,
-            senderName: m.sender.name || m.sender.username,
+            senderName: decrypt(m.sender.nameEnc) || decrypt(m.sender.usernameEnc) || 'Unknown',
             createdAt: m.createdAt,
             isOwn: m.senderId === user.id
         }))
@@ -390,23 +391,23 @@ export async function getChatUsers() {
     const user = await getCurrentUser()
     if (!user) return []
 
-    const users = await prisma.user.findMany({
+    const users = await (prisma.user as any).findMany({
         where: {
             id: { not: user.id }
         },
         select: {
             id: true,
-            name: true,
-            username: true
+            nameEnc: true,
+            usernameEnc: true
         },
         orderBy: {
-            name: 'asc'
+            id: 'asc'
         }
-    })
+    }) as any[]
 
-    return users.map(u => ({
+    return users.map((u: any) => ({
         id: u.id,
-        name: u.name || u.username
+        name: decrypt(u.nameEnc) || decrypt(u.usernameEnc) || 'Unknown'
     }))
 }
 

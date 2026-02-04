@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { decrypt } from '@/lib/crypto'
 
 // Generate order number format: ORD-YYYYMMDD-XXX
 async function generateOrderNumber(): Promise<string> {
@@ -30,8 +31,8 @@ export async function getOrderHistory() {
         include: {
             user: {
                 select: {
-                    name: true,
-                    username: true
+                    nameEnc: true,
+                    usernameEnc: true
                 }
             },
             items: true
@@ -42,7 +43,14 @@ export async function getOrderHistory() {
         take: 100 // Limit to last 100 orders
     })
 
-    return orders
+    return orders.map(order => ({
+        ...order,
+        user: order.user ? {
+            ...order.user,
+            name: decrypt(order.user.nameEnc),
+            username: decrypt(order.user.usernameEnc) || 'Unknown'
+        } : null
+    }))
 }
 
 export async function getOrderById(orderId: string) {
@@ -51,15 +59,23 @@ export async function getOrderById(orderId: string) {
         include: {
             user: {
                 select: {
-                    name: true,
-                    username: true
+                    nameEnc: true,
+                    usernameEnc: true
                 }
             },
             items: true
         }
     })
 
-    return order
+    if (!order) return null
+
+    return {
+        ...order,
+        user: order.user ? {
+            ...order.user,
+            name: decrypt(order.user.nameEnc)
+        } : null
+    }
 }
 
 export { generateOrderNumber }

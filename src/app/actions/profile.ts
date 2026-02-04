@@ -3,9 +3,9 @@
 import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { hash, compare } from 'bcryptjs'
+import { hash as hashPassword, compare } from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
-import { decrypt } from '@/lib/crypto'
+import { encrypt, decrypt, hash } from '@/lib/crypto'
 
 export async function updateProfile(formData: FormData) {
     const session: any = await getServerSession(authOptions)
@@ -37,9 +37,9 @@ export async function updateProfile(formData: FormData) {
             if (!name.trim()) {
                 throw new Error('Name cannot be empty')
             }
-            updateData.name = name
+            updateData.nameEnc = encrypt(name)
         }
-    } else if (name !== null && name !== user.name) {
+    } else if (name !== null && name !== decrypt(user.nameEnc)) {
         // Non-admin users trying to change their name
         throw new Error('Only Admins can update their name')
     }
@@ -57,7 +57,7 @@ export async function updateProfile(formData: FormData) {
         }
 
         // Hash new password
-        const hashedPassword = await hash(newPassword, 12)
+        const hashedPassword = await hashPassword(newPassword, 12)
         updateData.password = hashedPassword
     }
 
@@ -69,6 +69,64 @@ export async function updateProfile(formData: FormData) {
     revalidatePath('/dashboard')
     revalidatePath('/profile')
     return { success: true }
+}
+
+// Update user's PIN
+export async function updatePin(currentPassword: string, newPin: string) {
+    const session: any = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+        return { success: false, error: 'Unauthorized' }
+    }
+
+    const userId = session.user.id
+
+    // Validate PIN format (4-6 digits)
+    if (!/^\d{4,6}$/.test(newPin)) {
+        return { success: false, error: 'PIN harus 4-6 digit angka' }
+    }
+
+    // Get current user data
+    const user = await prisma.user.findUnique({
+        where: { id: userId }
+    })
+
+    if (!user) {
+        return { success: false, error: 'User not found' }
+    }
+
+    // Verify current password
+    const isPasswordValid = await compare(currentPassword, user.password)
+    if (!isPasswordValid) {
+        return { success: false, error: 'Password salah' }
+    }
+
+    // Encrypt and save new PIN
+    await prisma.user.update({
+        where: { id: userId },
+        data: {
+            pinEnc: encrypt(newPin)
+        }
+    })
+
+    revalidatePath('/profile')
+    return { success: true }
+}
+
+// Get current user's PIN status (has PIN or not)
+export async function getMyPinStatus() {
+    const session: any = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+        return { hasPin: false }
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { pinEnc: true }
+    })
+
+    return { hasPin: !!user?.pinEnc }
 }
 
 // Verify user's password (for protected page access)
@@ -86,8 +144,8 @@ export async function verifyUserPassword(password: string): Promise<{ success: b
 
     // If not found by ID, try by email as fallback (in case session ID is outdated)
     if (!user && session.user.email) {
-        user = await prisma.user.findUnique({
-            where: { email: session.user.email }
+        user = await prisma.user.findFirst({
+            where: { emailHash: hash(session.user.email) }
         })
     }
 
@@ -117,9 +175,9 @@ export async function getMyProfileData() {
         where: { id: session.user.id },
         select: {
             id: true,
-            name: true,
-            email: true,
-            department: true,
+            nameEnc: true,
+            emailEnc: true,
+            departmentEnc: true,
             photoEnc: true,
             phoneEnc: true,
             addressEnc: true,
@@ -130,13 +188,13 @@ export async function getMyProfileData() {
 
     // If not found by ID, try by email as fallback
     if (!user && session.user.email) {
-        user = await prisma.user.findUnique({
-            where: { email: session.user.email },
+        user = await prisma.user.findFirst({
+            where: { emailHash: hash(session.user.email) },
             select: {
                 id: true,
-                name: true,
-                email: true,
-                department: true,
+                nameEnc: true,
+                emailEnc: true,
+                departmentEnc: true,
                 photoEnc: true,
                 phoneEnc: true,
                 addressEnc: true,
@@ -151,9 +209,9 @@ export async function getMyProfileData() {
     // Decrypt data
     const decryptedUser = {
         id: user.id,
-        name: user.name,
-        email: user.email,
-        department: user.department,
+        name: decrypt(user.nameEnc),
+        email: decrypt(user.emailEnc),
+        department: decrypt(user.departmentEnc),
         photo: decrypt(user.photoEnc),
         phone: decrypt(user.phoneEnc),
         address: decrypt(user.addressEnc),
@@ -180,31 +238,34 @@ export async function getMyPayrollData(month?: number, year?: number) {
         select: { id: true }
     })
 
-    if (!userExists && session.user.email) {
-        const userByEmail = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: { id: true }
-        })
-        if (userByEmail) {
-            userId = userByEmail.id
+    if (!userExists && session.user?.email) {
+        const emailHash = hash(session.user.email)
+        if (emailHash) {
+            const userByEmail = await prisma.user.findUnique({
+                where: { emailHash },
+                select: { id: true }
+            })
+            if (userByEmail) {
+                userId = userByEmail.id
+            }
         }
     }
 
     const targetMonth = month || new Date().getMonth() + 1
     const targetYear = year || new Date().getFullYear()
+    const monthYearHash = hash(`${targetMonth}-${targetYear}`) || ''
 
     const payroll = await prisma.payroll.findUnique({
         where: {
-            userId_month_year: {
+            userId_monthYearHash: {
                 userId: userId,
-                month: targetMonth,
-                year: targetYear
+                monthYearHash
             }
         },
         include: {
-            items: {
+            payrollitem: {
                 include: {
-                    component: true
+                    salarycomponent: true
                 }
             }
         }
@@ -215,16 +276,16 @@ export async function getMyPayrollData(month?: number, year?: number) {
     // Decrypt salary data
     const decryptedPayroll = {
         id: payroll.id,
-        month: targetMonth,
-        year: targetYear,
+        month: decryptNumber(payroll.monthEnc),
+        year: decryptNumber(payroll.yearEnc),
         basicSalary: decryptNumber(payroll.basicSalaryEnc),
         netSalary: decryptNumber(payroll.netSalaryEnc),
         salarySlip: decrypt(payroll.salarySlipEnc),
-        items: payroll.items.map(item => ({
+        items: payroll.payrollitem.map(item => ({
             id: item.id,
             componentId: item.componentId,
-            componentName: item.component.name,
-            componentType: item.component.type,
+            componentName: decrypt(item.salarycomponent.nameEnc) || '',
+            componentType: decrypt(item.salarycomponent.typeEnc) || '',
             amount: decryptNumber(item.amountEnc)
         }))
     }

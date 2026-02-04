@@ -379,11 +379,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
             <div className="flex flex-col overflow-hidden whitespace-nowrap">
               <Link href="/dashboard">
                 <Image
-                  src="/uploads/ichibot.png"
+                  src="/uploads/ichibot-text-logo.png"
                   alt="Ichibot Production"
-                  width={180}
+                  width={150}
                   height={40}
                   className="object-contain cursor-pointer"
+                  priority
                 />
               </Link>
             </div>

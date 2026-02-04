@@ -3,11 +3,12 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { requireAuth, requireAdmin } from '@/lib/auth'
+import { decrypt } from '@/lib/crypto'
 
 // Project Category Actions
 export async function getProjectCategories() {
     await requireAuth()
-    return (prisma as any).projectCategory.findMany({
+    return (prisma as any).projectcategory.findMany({
         orderBy: { name: 'asc' }
     })
 }
@@ -28,7 +29,7 @@ export async function createProjectCategory(name: string) {
 export async function updateProjectCategory(id: string, name: string) {
     await requireAdmin()
     try {
-        const category = await (prisma as any).projectCategory.update({
+        const category = await (prisma as any).projectcategory.update({
             where: { id },
             data: { name: name.trim() }
         })
@@ -42,7 +43,7 @@ export async function updateProjectCategory(id: string, name: string) {
 export async function deleteProjectCategory(id: string) {
     await requireAdmin()
     try {
-        await (prisma as any).projectCategory.delete({
+        await (prisma as any).projectcategory.delete({
             where: { id }
         })
         revalidatePath('/projects/settings')
@@ -67,21 +68,36 @@ export async function getProjects() {
         }
     }
 
-    return (prisma as any).project.findMany({
+    const projects = await (prisma as any).project.findMany({
         where,
         include: {
-            category: true,
-            links: true,
-            assignedUsers: {
-                select: {
-                    id: true,
-                    name: true,
-                    role: true
+            projectcategory: true,
+            projectlink: true,
+            projecttouser: {
+                include: {
+                    User: {
+                        select: {
+                            id: true,
+                            nameEnc: true,
+                            roleEnc: true
+                        }
+                    }
                 }
             }
         },
         orderBy: { date: 'desc' }
     })
+
+    return projects.map((p: any) => ({
+        ...p,
+        category: p.projectcategory,
+        links: p.projectlink,
+        assignedUsers: p.projecttouser.map((pt: any) => ({
+            id: pt.User.id,
+            name: decrypt(pt.User.nameEnc),
+            role: decrypt(pt.User.roleEnc) || 'USER'
+        }))
+    }))
 }
 
 export async function createProject(formData: FormData) {
@@ -109,14 +125,16 @@ export async function createProject(formData: FormData) {
                 description: description?.trim(),
                 status,
                 categoryId: categoryId || null,
-                links: {
+                projectlink: {
                     create: links.map((l: any) => ({
                         label: l.label,
                         url: l.url
                     }))
                 },
-                assignedUsers: {
-                    connect: assignedUserIds.map((id: string) => ({ id }))
+                projecttouser: {
+                    create: assignedUserIds.map((userId: string) => ({
+                        User: { connect: { id: userId } }
+                    }))
                 }
             }
         })
@@ -147,8 +165,13 @@ export async function updateProject(formData: FormData) {
         const assignedUserIds = assignedUserIdsJson ? JSON.parse(assignedUserIdsJson) : []
 
         // Delete old links and create new ones
-        await (prisma as any).projectLink.deleteMany({
+        await (prisma as any).projectlink.deleteMany({
             where: { projectId: id }
+        })
+
+        // Delete old assigned users and create new ones
+        await (prisma as any).projecttouser.deleteMany({
+            where: { A: id }
         })
 
         const project = await (prisma as any).project.update({
@@ -160,14 +183,16 @@ export async function updateProject(formData: FormData) {
                 description: description?.trim(),
                 status,
                 categoryId: categoryId || null,
-                links: {
+                projectlink: {
                     create: links.map((l: any) => ({
                         label: l.label,
                         url: l.url
                     }))
                 },
-                assignedUsers: {
-                    set: assignedUserIds.map((id: string) => ({ id }))
+                projecttouser: {
+                    create: assignedUserIds.map((userId: string) => ({
+                        User: { connect: { id: userId } }
+                    }))
                 }
             }
         })

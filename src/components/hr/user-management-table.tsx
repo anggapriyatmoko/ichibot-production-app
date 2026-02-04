@@ -20,7 +20,7 @@ import {
 
 interface User {
     id: string
-    email: string
+    email: string | null
     username: string
     name: string | null
     department: string | null
@@ -32,6 +32,10 @@ interface User {
     contractEndDate: string | null
     createdAt: Date
 }
+
+// ... (lines 36-100 irrelevant for replacement, using large chunk logic or specific points?
+// I'll make separate chunks if possible using multi, or just replace interface and specific lines)
+
 
 // Helper to calculate remaining time
 function calculateRemainingTime(dateString: string | null) {
@@ -119,7 +123,7 @@ export default function UserManagementTable({ userRole }: Props) {
         setFormData({
             userId: user.id,
             name: user.name || '',
-            email: user.email,
+            email: user.email || '',
             department: user.department || '',
             role: user.role,
             phone: user.phone || '',

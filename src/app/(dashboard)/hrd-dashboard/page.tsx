@@ -37,15 +37,25 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
 
     // Get Salary Components
     try {
-        const [deductionComponents, additionComponents, hrDocs, allUsers] = await Promise.all([
+        const { decrypt } = require('@/lib/crypto')
+
+        const [deductionComponents, additionComponents, hrDocs, rawUsers] = await Promise.all([
             getSalaryComponents('DEDUCTION'),
             getSalaryComponents('ADDITION'),
             getHRDocuments(),
             prisma.user.findMany({
-                select: { id: true, name: true, username: true, role: true },
-                orderBy: { name: 'asc' }
+                select: { id: true, nameEnc: true, usernameEnc: true, roleEnc: true },
+                orderBy: { createdAt: 'desc' }
             })
         ])
+
+        // Decrypt user data for UI
+        const allUsers = rawUsers.map((u: any) => ({
+            id: u.id,
+            name: decrypt(u.nameEnc),
+            username: decrypt(u.usernameEnc) || 'Unknown',
+            role: decrypt(u.roleEnc) || 'USER'
+        }))
 
         // Get Payroll Recap Data
         const month = searchParams?.month ? parseInt(searchParams.month) : new Date().getMonth() + 1

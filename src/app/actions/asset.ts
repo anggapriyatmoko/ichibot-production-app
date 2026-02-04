@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
+import { downloadExternalImage } from '@/lib/upload'
 
 // Helper function to delete old image file from storage
 async function deleteOldImage(imagePath: string | null) {
@@ -260,9 +261,9 @@ export async function deleteAsset(id: string) {
     return { success: true }
 }
 
-export async function getAllAssetsForExport() {
+export async function getAllAssetsForExport(baseUrl: string) {
     await requireAdmin()
-    return prisma.machineAsset.findMany({
+    const assets = await prisma.machineAsset.findMany({
         orderBy: { name: 'asc' },
         select: {
             name: true,
@@ -277,6 +278,11 @@ export async function getAllAssetsForExport() {
             image: true
         }
     })
+
+    return assets.map(a => ({
+        ...a,
+        image: a.image ? (a.image.startsWith('http') ? a.image : `${baseUrl}${a.image}`) : ''
+    }))
 }
 
 export async function importAssets(assets: any[]) {
@@ -310,6 +316,13 @@ export async function importAssets(assets: any[]) {
             const usefulLife = item.usefulLife ? parseInt(item.usefulLife) : null
             const residualValue = item.residualValue ? parseFloat(item.residualValue) : null
 
+            let imagePath = item.image ? String(item.image).trim() : null
+            if (imagePath && imagePath.startsWith('http')) {
+                const downloaded = await downloadExternalImage(imagePath)
+                if (downloaded) imagePath = downloaded
+                else imagePath = null
+            }
+
             // Check existing by name (unique identifier for import)
             const existing = await prisma.machineAsset.findFirst({
                 where: { name }
@@ -327,7 +340,8 @@ export async function importAssets(assets: any[]) {
                         notes,
                         purchaseDate,
                         usefulLife,
-                        residualValue
+                        residualValue,
+                        image: imagePath || existing.image
                     }
                 })
             } else {
@@ -342,7 +356,8 @@ export async function importAssets(assets: any[]) {
                         notes,
                         purchaseDate,
                         usefulLife,
-                        residualValue
+                        residualValue,
+                        image: imagePath
                     }
                 })
             }

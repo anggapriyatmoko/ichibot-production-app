@@ -56,7 +56,7 @@ export async function getCategories() {
         orderBy: { name: 'asc' },
         include: {
             _count: {
-                select: { recipes: true }
+                select: { recipe: true }
             }
         }
     })

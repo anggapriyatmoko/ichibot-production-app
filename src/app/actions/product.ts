@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import { requireAdmin, requireAuth } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { downloadExternalImage } from '@/lib/upload'
 
 // Helper function to delete old image file from storage
 async function deleteOldImage(imagePath: string | null) {
@@ -303,6 +304,8 @@ export async function deleteProduct(id: string) {
     revalidatePath('/inventory')
 }
 
+// Helper removed, using shared version in @/lib/upload
+
 export async function importProducts(products: any[]) {
     await requireAdmin()
     const session: any = await getServerSession(authOptions)
@@ -325,6 +328,23 @@ export async function importProducts(products: any[]) {
             const name = String(item.name).trim()
             const stock = item.stock ? parseFloat(item.stock) : 0
             const lowStockThreshold = item.lowStockThreshold ? parseFloat(item.lowStockThreshold) : 10
+            const notes = item.notes ? String(item.notes).trim() : null
+
+            // Image handling: Check if it's a URL and download if needed
+            let imagePath = item.image ? String(item.image).trim() : null
+            if (imagePath && imagePath.startsWith('http')) {
+                const downloadedPath = await downloadExternalImage(imagePath)
+                if (downloadedPath) {
+                    imagePath = downloadedPath
+                } else {
+                    // If download fails, keep existing or null
+                    imagePath = null
+                }
+            } else if (imagePath && imagePath.includes('/api/uploads/')) {
+                // Already an internal path, just extract the relative part
+                const filename = imagePath.split('/api/uploads/').pop()
+                imagePath = '/api/uploads/' + filename
+            }
 
             // Check existing logic: Priority SKU -> Name
             let existing = null
@@ -348,7 +368,8 @@ export async function importProducts(products: any[]) {
                     name,
                     stock: stock,
                     lowStockThreshold,
-                    image: item.image ? String(item.image).trim() : existing.image
+                    notes: notes || existing.notes,
+                    image: imagePath || existing.image
                 }
 
                 // Only update SKU if provided and not empty
@@ -383,7 +404,8 @@ export async function importProducts(products: any[]) {
                         sku: sku as any, // can be null
                         stock,
                         lowStockThreshold,
-                        image: item.image ? String(item.image).trim() : null
+                        notes,
+                        image: imagePath
                     }
                 })
 
@@ -413,9 +435,9 @@ export async function importProducts(products: any[]) {
     return { success: successCount, errors }
 }
 
-export async function getAllProductsForExport() {
+export async function getAllProductsForExport(baseUrl: string) {
     await requireAdmin()
-    return await prisma.product.findMany({
+    const products = await prisma.product.findMany({
         orderBy: { name: 'asc' },
         select: {
             name: true,
@@ -426,6 +448,11 @@ export async function getAllProductsForExport() {
             image: true
         }
     })
+
+    return products.map(p => ({
+        ...p,
+        image: p.image ? (p.image.startsWith('http') ? p.image : `${baseUrl}${p.image}`) : ''
+    }))
 }
 
 export async function moveToSparepartProject(id: string) {

@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
-import { encrypt, decrypt } from '@/lib/crypto'
+import { encrypt, decrypt, hash } from '@/lib/crypto'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
@@ -66,11 +66,11 @@ export async function getAllUsersForHRD() {
     const users = await prisma.user.findMany({
         select: {
             id: true,
-            email: true,
-            username: true,
-            name: true,
-            department: true,
-            role: true,
+            emailEnc: true,
+            usernameEnc: true,
+            nameEnc: true,
+            departmentEnc: true,
+            roleEnc: true,
             photoEnc: true,
             phoneEnc: true,
             addressEnc: true,
@@ -78,17 +78,17 @@ export async function getAllUsersForHRD() {
             contractEndDateEnc: true,
             createdAt: true,
         },
-        orderBy: { name: 'asc' }
+        orderBy: { createdAt: 'desc' }
     })
 
     // Decrypt sensitive fields
     return users.map(user => ({
         id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        department: user.department,
-        role: user.role,
+        email: decrypt(user.emailEnc),
+        username: decrypt(user.usernameEnc) || 'Unknown',
+        name: decrypt(user.nameEnc),
+        department: decrypt(user.departmentEnc),
+        role: decrypt(user.roleEnc) || 'USER',
         photo: decrypt(user.photoEnc),
         phone: decrypt(user.phoneEnc),
         address: decrypt(user.addressEnc),
@@ -110,11 +110,11 @@ export async function getUserForEdit(userId: string) {
         where: { id: userId },
         select: {
             id: true,
-            email: true,
-            username: true,
-            name: true,
-            department: true,
-            role: true,
+            emailEnc: true,
+            usernameEnc: true,
+            nameEnc: true,
+            departmentEnc: true,
+            roleEnc: true,
             photoEnc: true,
             phoneEnc: true,
             addressEnc: true,
@@ -128,11 +128,11 @@ export async function getUserForEdit(userId: string) {
     // Decrypt for display/edit
     return {
         id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        department: user.department,
-        role: user.role,
+        email: decrypt(user.emailEnc),
+        username: decrypt(user.usernameEnc) || 'Unknown',
+        name: decrypt(user.nameEnc),
+        department: decrypt(user.departmentEnc),
+        role: decrypt(user.roleEnc) || 'USER',
         photo: decrypt(user.photoEnc),
         phone: decrypt(user.phoneEnc),
         address: decrypt(user.addressEnc),
@@ -231,9 +231,10 @@ export async function updateUserData(formData: FormData) {
     // Wait, if I don't include it in updateData, it won't update.
 
     const updateData: any = {
-        name: name || null,
-        email,
-        department: department || null,
+        nameEnc: encrypt(name),
+        emailEnc: encrypt(email),
+        emailHash: hash(email),
+        departmentEnc: encrypt(department),
         // Encrypt sensitive fields
         photoEnc: encrypt(finalPhotoPath),
         phoneEnc: encrypt(phone),

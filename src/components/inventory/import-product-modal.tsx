@@ -10,6 +10,7 @@ type ImportPreview = {
     sku: string
     stock: number
     lowStockThreshold: number
+    notes: string
     image?: string
     isValid: boolean
     errors: string[]
@@ -26,10 +27,10 @@ export default function ImportProductModal() {
     const [importResult, setImportResult] = useState<{ success: number, errors: string[] } | null>(null)
 
     const downloadTemplate = (format: 'xlsx' | 'csv') => {
-        const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Image URL']
+        const headers = ['Product Name', 'SKU', 'Stock', 'Low Stock Threshold', 'Notes', 'Image URL']
         const sampleData = [
-            ['Sample Product A', 'SPA-001', 100, 10, 'https://example.com/image.jpg'],
-            ['Sample Product B', 'SPB-002', 50, 5, '']
+            ['Sample Product A', 'SPA-001', 100, 10, 'Sample notes', 'https://example.com/image.jpg'],
+            ['Sample Product B', 'SPB-002', 50, 5, '', '']
         ]
 
         if (format === 'csv') {
@@ -75,6 +76,7 @@ export default function ImportProductModal() {
                 const skuIdx = headers.findIndex(h => h === ('sku'))
                 const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('stok'))
                 const thresholdIdx = headers.findIndex(h => h.includes('threshold') || h.includes('low') || h.includes('min'))
+                const notesIdx = headers.findIndex(h => h.includes('note') || h.includes('catatan'))
                 const imageIdx = headers.findIndex(h => h.includes('image') || h.includes('gambar') || h.includes('url'))
 
                 if (nameIdx === -1) {
@@ -109,6 +111,7 @@ export default function ImportProductModal() {
                     const sku = rawSku ? String(rawSku).trim() : ''
                     const stock = stockIdx !== -1 ? (row[stockIdx] || 0) : 0
                     const lowStockThreshold = thresholdIdx !== -1 ? (row[thresholdIdx] || 10) : 10
+                    const notes = notesIdx !== -1 ? (row[notesIdx] ? String(row[notesIdx]).trim() : '') : ''
                     const image = imageIdx !== -1 ? (row[imageIdx] ? String(row[imageIdx]).trim() : '') : ''
 
                     const errors = []
@@ -127,6 +130,7 @@ export default function ImportProductModal() {
                         sku,
                         stock,
                         lowStockThreshold,
+                        notes,
                         image,
                         isValid: errors.length === 0,
                         errors

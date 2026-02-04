@@ -16,6 +16,7 @@ type ImportPreview = {
     purchaseDate: string | null
     usefulLife: number | null
     residualValue: number | null
+    image?: string
     isValid: boolean
     errors: string[]
 }
@@ -29,10 +30,10 @@ export default function ImportAssetModal() {
     const [importResult, setImportResult] = useState<{ success: number, errors: string[] } | null>(null)
 
     const downloadTemplate = (format: 'xlsx' | 'csv') => {
-        const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tgl/Thn Beli', 'Umur Ekonomis (Tahun)', 'Nilai Residu']
+        const headers = ['Nama Aset', 'Kode', 'Spesifikasi', 'Lokasi', 'Harga Beli', 'Keterangan', 'Tgl/Thn Beli', 'Umur Ekonomis (Tahun)', 'Nilai Residu', 'Image URL']
         const sampleData = [
-            ['Mesin CNC 5-Axis', 'CNC-001', 'Precision 0.01mm, Max Speed 10000rpm', 'Workshop A', 150000000, 'Kondisi baik', 2020, 10, 15000000],
-            ['Kompresor Angin', 'KOM-002', '10HP, 500L Tank', 'Workshop B', 25000000, '', 2022, 8, 2500000]
+            ['Mesin CNC 5-Axis', 'CNC-001', 'Precision 0.01mm, Max Speed 10000rpm', 'Workshop A', 150000000, 'Kondisi baik', 2020, 10, 15000000, 'https://example.com/cnc.jpg'],
+            ['Kompresor Angin', 'KOM-002', '10HP, 500L Tank', 'Workshop B', 25000000, '', 2022, 8, 2500000, '']
         ]
 
         if (format === 'csv') {
@@ -83,6 +84,7 @@ export default function ImportAssetModal() {
                 const purchaseDateIdx = headers.findIndex(h => h.includes('tgl') || h.includes('tanggal') || h.includes('date') || h.includes('tahun') || h.includes('year'))
                 const usefulLifeIdx = headers.findIndex(h => h.includes('umur') || h.includes('useful'))
                 const residualIdx = headers.findIndex(h => h.includes('residu') || h.includes('residual'))
+                const imageIdx = headers.findIndex(h => h.includes('image') || h.includes('gambar') || h.includes('url'))
 
                 if (nameIdx === -1) {
                     showError('Required column "Nama Aset" not found in headers.')
@@ -118,6 +120,7 @@ export default function ImportAssetModal() {
                     const purchaseDate = purchaseDateIdx !== -1 && row[purchaseDateIdx] ? String(row[purchaseDateIdx]).trim() : null
                     const usefulLife = usefulLifeIdx !== -1 && row[usefulLifeIdx] ? parseInt(row[usefulLifeIdx]) : null
                     const residualValue = residualIdx !== -1 && row[residualIdx] ? parseFloat(row[residualIdx]) : null
+                    const image = imageIdx !== -1 && row[imageIdx] ? String(row[imageIdx]).trim() : ''
 
                     const errors = []
                     if (!name) errors.push('Missing Name')
@@ -138,6 +141,7 @@ export default function ImportAssetModal() {
                         purchaseDate,
                         usefulLife,
                         residualValue,
+                        image,
                         isValid: errors.length === 0,
                         errors
                     }
@@ -176,7 +180,8 @@ export default function ImportAssetModal() {
                 notes: d.notes,
                 purchaseDate: d.purchaseDate,
                 usefulLife: d.usefulLife,
-                residualValue: d.residualValue
+                residualValue: d.residualValue,
+                image: d.image
             }))
 
             const result = await importAssets(formData)
@@ -257,7 +262,7 @@ export default function ImportAssetModal() {
                                             <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
                                                 <li>First row must be <strong>Headers</strong></li>
                                                 <li>Required: <strong>Nama Aset, Lokasi</strong></li>
-                                                <li>Optional: <strong>Kode, Spesifikasi, Harga, Keterangan, Tahun, Umur Ekonomis, Nilai Residu</strong></li>
+                                                <li>Optional: <strong>Kode, Spesifikasi, Harga, Keterangan, Tahun, Umur Ekonomis, Nilai Residu, Image URL</strong></li>
                                                 <li>Existing assets with same name will be <strong>UPDATED</strong></li>
                                             </ul>
                                         </div>
@@ -319,6 +324,7 @@ export default function ImportAssetModal() {
                                                         <th className="p-3 border-b border-border bg-muted">Lokasi</th>
                                                         <th className="p-3 border-b border-border bg-muted text-right">Harga</th>
                                                         <th className="p-3 border-b border-border bg-muted">Tgl/Thn</th>
+                                                        <th className="p-3 border-b border-border bg-muted">Image</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-border bg-card">
@@ -341,6 +347,13 @@ export default function ImportAssetModal() {
                                                             <td className="p-3">{row.location}</td>
                                                             <td className="p-3 text-right tabular-nums">{formatPrice(row.price)}</td>
                                                             <td className="p-3">{row.purchaseDate || '-'}</td>
+                                                            <td className="p-3">
+                                                                {row.image ? (
+                                                                    <div className="relative w-8 h-8 rounded overflow-hidden border border-border">
+                                                                        <img src={row.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                                                    </div>
+                                                                ) : <span className="text-xs text-muted-foreground">-</span>}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

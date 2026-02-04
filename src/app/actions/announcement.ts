@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { requireAuth, requireAdmin } from '@/lib/auth'
 import { getCurrentUser } from '@/lib/auth'
+import { encrypt, decrypt } from '@/lib/crypto'
 
 export async function createAnnouncement(content: string, targetUserIds: string[], speed: number = 12) {
     await requireAdmin()
@@ -14,7 +15,7 @@ export async function createAnnouncement(content: string, targetUserIds: string[
     try {
         await prisma.announcement.create({
             data: {
-                content,
+                contentEnc: encrypt(content) || '',
                 isActive: true,
                 speed,
                 creatorId: user.id,
@@ -50,10 +51,11 @@ export async function updateAnnouncementSpeed(id: string, speed: number) {
 
 export async function getAnnouncements(page: number = 1, limit: number = 5) {
     await requireAdmin()
+    const { decrypt } = require('@/lib/crypto')
 
     const skip = (page - 1) * limit
 
-    const [data, total] = await prisma.$transaction([
+    const [rawData, total] = await prisma.$transaction([
         prisma.announcement.findMany({
             skip,
             take: limit,
@@ -62,19 +64,32 @@ export async function getAnnouncements(page: number = 1, limit: number = 5) {
                 targetUsers: {
                     select: {
                         id: true,
-                        name: true,
-                        username: true
+                        nameEnc: true,
+                        usernameEnc: true
                     }
                 },
                 creator: {
                     select: {
-                        name: true
+                        nameEnc: true
                     }
                 }
             }
         }),
         prisma.announcement.count()
     ])
+
+    const data = rawData.map((ann: any) => ({
+        ...ann,
+        content: decrypt(ann.contentEnc) || '',
+        targetUsers: ann.targetUsers.map((u: any) => ({
+            id: u.id,
+            name: decrypt(u.nameEnc) || '',
+            username: decrypt(u.usernameEnc) || 'Unknown'
+        })),
+        creator: ann.creator ? {
+            name: decrypt(ann.creator.nameEnc) || ''
+        } : null
+    }))
 
     return {
         data,
@@ -118,7 +133,7 @@ export async function getActiveAnnouncementsForUser() {
     const user = await getCurrentUser()
     if (!user) return []
 
-    return await prisma.announcement.findMany({
+    const announcementsData = await prisma.announcement.findMany({
         where: {
             isActive: true,
             targetUsers: {
@@ -130,8 +145,13 @@ export async function getActiveAnnouncementsForUser() {
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,
-            content: true,
+            contentEnc: true,
             speed: true
         }
     })
+
+    return announcementsData.map(ann => ({
+        ...ann,
+        content: decrypt(ann.contentEnc) || ''
+    }))
 }

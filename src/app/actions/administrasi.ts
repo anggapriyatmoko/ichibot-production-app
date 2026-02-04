@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { writeFile, unlink, mkdir } from 'fs/promises'
 import path from 'path'
+import { encrypt, decrypt } from '@/lib/crypto'
 
 // Helper to check if user can access administrasi
 async function requireAdministrasiAccess() {
@@ -76,6 +77,26 @@ const REVALIDATE_PATHS: any = {
     'surat-undangan': '/administrasi/surat-undangan'
 }
 
+export async function getDocs(type: string) {
+    await requireAdministrasiAccess()
+    const model = MODEL_MAP[type]
+    if (!model) throw new Error('Invalid doc type')
+
+    const data = await (model as any).findMany({
+        orderBy: { createdAt: 'desc' }
+    })
+
+    return data.map((doc: any) => ({
+        ...doc,
+        number: decrypt(doc.numberEnc) || '',
+        name: decrypt(doc.nameEnc) || '',
+        institution: decrypt(doc.institutionEnc) || '',
+        content: decrypt(doc.contentEnc) || '',
+        link: doc.linkEnc ? decrypt(doc.linkEnc) : null,
+        filePath: doc.filePathEnc ? decrypt(doc.filePathEnc) : null
+    }))
+}
+
 export async function createDoc(type: string, formData: FormData) {
     await requireAdministrasiAccess()
     const model = MODEL_MAP[type]
@@ -97,12 +118,12 @@ export async function createDoc(type: string, formData: FormData) {
     await (model as any).create({
         data: {
             date: new Date(date),
-            number,
-            name,
-            institution,
-            content,
-            link: link || null,
-            filePath
+            numberEnc: encrypt(number) || '',
+            nameEnc: encrypt(name) || '',
+            institutionEnc: encrypt(institution) || '',
+            contentEnc: encrypt(content) || '',
+            linkEnc: link ? encrypt(link) : null,
+            filePathEnc: filePath ? encrypt(filePath) : null
         }
     })
 
@@ -128,19 +149,20 @@ export async function updateDoc(type: string, id: string, formData: FormData) {
 
     const updateData: any = {
         date: new Date(date),
-        number,
-        name,
-        institution,
-        content,
-        link: link || null,
+        numberEnc: encrypt(number) || '',
+        nameEnc: encrypt(name) || '',
+        institutionEnc: encrypt(institution) || '',
+        contentEnc: encrypt(content) || '',
+        linkEnc: link ? encrypt(link) : null,
     }
 
     if (removeFile) {
-        await deleteOldFile(existing.filePath)
-        updateData.filePath = null
+        await deleteOldFile(existing.filePathEnc ? decrypt(existing.filePathEnc) : null)
+        updateData.filePathEnc = null
     } else if (file && file.size > 0) {
-        await deleteOldFile(existing.filePath)
-        updateData.filePath = await saveFile(file, type)
+        await deleteOldFile(existing.filePathEnc ? decrypt(existing.filePathEnc) : null)
+        const filePath = await saveFile(file, type)
+        updateData.filePathEnc = encrypt(filePath)
     }
 
     await (model as any).update({
@@ -157,8 +179,8 @@ export async function deleteDoc(type: string, id: string) {
     if (!model) throw new Error('Invalid doc type')
 
     const existing = await (model as any).findUnique({ where: { id } })
-    if (existing?.filePath) {
-        await deleteOldFile(existing.filePath)
+    if (existing?.filePathEnc) {
+        await deleteOldFile(decrypt(existing.filePathEnc))
     }
 
     await (model as any).delete({

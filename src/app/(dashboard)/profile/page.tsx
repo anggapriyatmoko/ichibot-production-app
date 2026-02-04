@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateProfile } from '@/app/actions/profile'
+import { updateProfile, updatePin, getMyPinStatus } from '@/app/actions/profile'
 import { useSession } from 'next-auth/react'
-import { User, Lock, Save, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { User, Lock, Key, Save, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function ProfilePage() {
     const { data: session, update } = useSession()
@@ -16,6 +16,19 @@ export default function ProfilePage() {
     // Form inputs handled via native FormData, but we need state for password confirmation check
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+
+    // PIN state
+    const [hasPin, setHasPin] = useState(false)
+    const [pinCurrentPassword, setPinCurrentPassword] = useState('')
+    const [newPin, setNewPin] = useState('')
+    const [confirmPin, setConfirmPin] = useState('')
+    const [pinError, setPinError] = useState<string | null>(null)
+    const [pinSuccess, setPinSuccess] = useState<string | null>(null)
+    const [pinPending, setPinPending] = useState(false)
+
+    useEffect(() => {
+        getMyPinStatus().then(res => setHasPin(res.hasPin))
+    }, [])
 
     async function handleSubmit(formData: FormData) {
         setError(null)
@@ -56,12 +69,8 @@ export default function ProfilePage() {
                 setSuccess('Profile updated successfully')
                 setNewPassword('')
                 setConfirmPassword('')
-                // Clear password fields in the form directly if needed, but they are uncontrolled mostly
-                // We'll rely on the reset of state variables if they controlled value, 
-                // but here for FormData inputs, we might want to reset the form.
                 const form = document.querySelector('form') as HTMLFormElement
                 if (form) {
-                    // Reset password fields only
                     const inputs = form.querySelectorAll('input[type="password"]')
                     inputs.forEach((input: any) => input.value = '')
                 }
@@ -70,6 +79,45 @@ export default function ProfilePage() {
                 setError(e.message)
             }
         })
+    }
+
+    async function handlePinSubmit(e: React.FormEvent) {
+        e.preventDefault()
+        setPinError(null)
+        setPinSuccess(null)
+
+        if (!pinCurrentPassword) {
+            setPinError('Masukkan password untuk verifikasi')
+            return
+        }
+
+        if (!/^\d{4,6}$/.test(newPin)) {
+            setPinError('PIN harus 4-6 digit angka')
+            return
+        }
+
+        if (newPin !== confirmPin) {
+            setPinError('PIN tidak cocok')
+            return
+        }
+
+        setPinPending(true)
+        try {
+            const result = await updatePin(pinCurrentPassword, newPin)
+            if (result.success) {
+                setPinSuccess(hasPin ? 'PIN berhasil diubah' : 'PIN berhasil diatur')
+                setHasPin(true)
+                setPinCurrentPassword('')
+                setNewPin('')
+                setConfirmPin('')
+            } else {
+                setPinError(result.error || 'Gagal menyimpan PIN')
+            }
+        } catch (e: any) {
+            setPinError(e.message)
+        } finally {
+            setPinPending(false)
+        }
     }
 
     return (
@@ -108,7 +156,7 @@ export default function ProfilePage() {
                     <div className="space-y-4 pt-4">
                         <div className="flex items-center gap-2 text-lg font-semibold border-b border-border pb-2">
                             <Lock className="w-5 h-5 text-primary" />
-                            <h3>Security</h3>
+                            <h3>Password</h3>
                         </div>
 
                         <div className="grid gap-2">
@@ -177,6 +225,101 @@ export default function ProfilePage() {
                                 <>
                                     <Save className="w-4 h-4" />
                                     Save Changes
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {/* PIN Section */}
+            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                <form onSubmit={handlePinSubmit} className="space-y-4">
+                    <div className="flex items-center gap-2 text-lg font-semibold border-b border-border pb-2">
+                        <Key className="w-5 h-5 text-primary" />
+                        <h3>PIN Login</h3>
+                        {hasPin && (
+                            <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-1 rounded-full">
+                                PIN Aktif
+                            </span>
+                        )}
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                        {hasPin
+                            ? 'Anda dapat mengubah PIN login Anda. Masukkan password untuk verifikasi.'
+                            : 'Atur PIN untuk login cepat sebagai alternatif password. PIN terdiri dari 4-6 digit angka.'}
+                    </p>
+
+                    <div className="grid gap-2">
+                        <label className="text-sm font-medium text-foreground">Password (untuk verifikasi)</label>
+                        <input
+                            type="password"
+                            value={pinCurrentPassword}
+                            onChange={(e) => setPinCurrentPassword(e.target.value)}
+                            className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                            placeholder="Masukkan password Anda"
+                        />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-foreground">{hasPin ? 'PIN Baru' : 'PIN'}</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={6}
+                                value={newPin}
+                                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                                className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                                placeholder="4-6 digit"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-foreground">Konfirmasi PIN</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                maxLength={6}
+                                value={confirmPin}
+                                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                                className="w-full h-10 px-3 rounded-lg border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                                placeholder="Ulangi PIN"
+                            />
+                        </div>
+                    </div>
+
+                    {/* PIN Messages */}
+                    {pinError && (
+                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                            <AlertCircle className="w-4 h-4" />
+                            {pinError}
+                        </div>
+                    )}
+                    {pinSuccess && (
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-4 h-4" />
+                            {pinSuccess}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end pt-2">
+                        <button
+                            type="submit"
+                            disabled={pinPending}
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 px-6 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {pinPending ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                <>
+                                    <Key className="w-4 h-4" />
+                                    {hasPin ? 'Ubah PIN' : 'Atur PIN'}
                                 </>
                             )}
                         </button>

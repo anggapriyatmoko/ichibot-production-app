@@ -5,10 +5,11 @@ import { requireAuth } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
-import { writeFile, unlink } from 'fs/promises'
+import { writeFile, unlink, mkdir } from 'fs/promises'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import fs from 'fs'
+import { encrypt, decrypt } from '@/lib/crypto'
 
 // Helper to save file
 async function saveFile(file: File, oldPath?: string | null): Promise<string> {
@@ -73,7 +74,16 @@ export async function getHRDocuments() {
     const docs = await prisma.hRDocument.findMany({
         orderBy: { createdAt: 'desc' }
     })
-    return { success: true, data: docs }
+    return {
+        success: true,
+        data: docs.map(doc => ({
+            ...doc,
+            name: decrypt(doc.nameEnc) || '',
+            description: decrypt(doc.descriptionEnc) || '',
+            link: decrypt(doc.linkEnc) || '',
+            filePath: decrypt(doc.filePathEnc) || ''
+        }))
+    }
 }
 
 export async function upsertHRDocument(formData: FormData) {
@@ -102,7 +112,7 @@ export async function upsertHRDocument(formData: FormData) {
 
         if (id) {
             existingDoc = await prisma.hRDocument.findUnique({ where: { id } })
-            filePath = existingDoc?.filePath
+            filePath = existingDoc?.filePathEnc ? decrypt(existingDoc.filePathEnc) : null
         }
 
         if (file && file.size > 0) {
@@ -127,19 +137,19 @@ export async function upsertHRDocument(formData: FormData) {
             await prisma.hRDocument.update({
                 where: { id },
                 data: {
-                    name,
-                    description,
-                    link,
-                    filePath
+                    nameEnc: encrypt(name) || '',
+                    descriptionEnc: encrypt(description || ''),
+                    linkEnc: encrypt(link || ''),
+                    filePathEnc: encrypt(filePath || '')
                 }
             })
         } else {
             await prisma.hRDocument.create({
                 data: {
-                    name,
-                    description,
-                    link,
-                    filePath
+                    nameEnc: encrypt(name) || '',
+                    descriptionEnc: encrypt(description || ''),
+                    linkEnc: encrypt(link || ''),
+                    filePathEnc: encrypt(filePath || '')
                 }
             })
         }
@@ -164,7 +174,7 @@ export async function deleteHRDocument(id: string) {
     try {
         const doc = await prisma.hRDocument.findUnique({ where: { id } })
 
-        if (doc?.filePath) {
+        if (doc?.filePathEnc) {
             try {
                 // Determine upload directory
                 let baseUploadDir = process.env.UPLOAD_DIR
@@ -177,16 +187,18 @@ export async function deleteHRDocument(id: string) {
                 const hrDocsDir = path.join(baseUploadDir, 'hr-docs')
 
                 // Extract filename from path
-                let filename = doc.filePath
-                if (doc.filePath.startsWith('/api/uploads/hr-docs/')) {
-                    filename = doc.filePath.replace('/api/uploads/hr-docs/', '')
-                } else if (doc.filePath.startsWith('/uploads/hr-docs/')) {
-                    filename = doc.filePath.replace('/uploads/hr-docs/', '')
-                }
+                let filename = doc.filePathEnc ? (decrypt(doc.filePathEnc) || '') : ''
+                if (filename) {
+                    if (filename.startsWith('/api/uploads/hr-docs/')) {
+                        filename = filename.replace('/api/uploads/hr-docs/', '')
+                    } else if (filename.startsWith('/uploads/hr-docs/')) {
+                        filename = filename.replace('/uploads/hr-docs/', '')
+                    }
 
-                const oldFilepath = path.join(hrDocsDir, filename)
-                if (fs.existsSync(oldFilepath)) {
-                    await unlink(oldFilepath)
+                    const oldFilepath = path.join(hrDocsDir, filename)
+                    if (fs.existsSync(oldFilepath)) {
+                        await unlink(oldFilepath)
+                    }
                 }
             } catch (error) {
                 console.error('Error deleting file:', error)

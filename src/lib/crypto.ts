@@ -112,3 +112,16 @@ export function decryptDate(encryptedValue: string | null | undefined): Date | n
     if (!decrypted) return null
     return new Date(decrypted)
 }
+
+/**
+ * Hash a string value for deterministic search indexes.
+ * Uses HMAC-SHA256 with the app's AUTH_KEY.
+ */
+export function hash(value: string | null | undefined): string | null {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const key = getEncryptionKey()
+    return crypto.createHmac('sha256', key).update(value).digest('hex')
+}

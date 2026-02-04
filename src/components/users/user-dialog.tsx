@@ -21,6 +21,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
         username: '',
         email: '',
         password: '',
+        pin: '',
         department: '',
         role: 'USER'
     })
@@ -35,6 +36,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                     username: user.username || '',
                     email: user.email || '',
                     password: '', // Password empty on edit unless changing
+                    pin: '', // PIN empty on edit unless changing
                     department: user.department || '',
                     role: user.role || 'USER'
                 })
@@ -44,6 +46,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                     username: '',
                     email: '',
                     password: '',
+                    pin: '',
                     department: '',
                     role: 'USER'
                 })
@@ -186,6 +189,24 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                            {user ? 'Reset PIN (optional)' : 'PIN (optional)'}
+                        </label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={6}
+                            name="pin"
+                            value={formData.pin}
+                            onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })}
+                            placeholder={user ? 'Leave blank to keep current' : '4-6 digit'}
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
+                        />
+                        <p className="text-xs text-muted-foreground">PIN untuk login cepat sebagai alternatif password</p>
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3">

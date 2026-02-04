@@ -34,16 +34,15 @@ export default async function HistoryPage({
     }
 
     // Search Filter
+    // Search Filter
     if (search) {
         whereClause.OR = [
             { description: { contains: search } },
-            { product: { name: { contains: search } } },
-            { user: { name: { contains: search } } },
-            { user: { username: { contains: search } } }
+            { product: { name: { contains: search } } }
         ]
     }
 
-    const [transactions, totalCount] = await Promise.all([
+    const [rawTransactions, totalCount] = await Promise.all([
         prisma.transaction.findMany({
             where: whereClause,
             include: {
@@ -59,6 +58,17 @@ export default async function HistoryPage({
         }),
         prisma.transaction.count({ where: whereClause })
     ])
+
+    const { decrypt } = require('@/lib/crypto')
+
+    const transactions = rawTransactions.map(tx => ({
+        ...tx,
+        user: tx.user ? {
+            ...tx.user,
+            name: decrypt(tx.user.nameEnc),
+            username: decrypt(tx.user.usernameEnc)
+        } : null
+    }))
 
     const totalPages = Math.ceil(totalCount / limit)
 

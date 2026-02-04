@@ -1,8 +1,8 @@
 import GenericDocManager from '@/components/administrasi/generic-doc-manager'
-import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
+import { getDocs } from '@/app/actions/administrasi'
 
 export default async function SuratUndanganPage() {
     const session: any = await getServerSession(authOptions)
@@ -11,9 +11,7 @@ export default async function SuratUndanganPage() {
         redirect('/dashboard')
     }
 
-    const data = await (prisma as any).invitationLetter.findMany({
-        orderBy: { createdAt: 'desc' }
-    })
+    const data = await getDocs('surat-undangan')
 
     return (
         <div className="max-w-7xl mx-auto space-y-6">

@@ -45,23 +45,23 @@ export default async function AttendancePage({
     // Get users - all for admin/HRD, only self for regular users
     const users = isAdmin
         ? await prisma.user.findMany({
-            orderBy: { name: 'asc' },
+            orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
-                name: true,
-                username: true,
-                department: true,
-                role: true
+                nameEnc: true,
+                usernameEnc: true,
+                departmentEnc: true,
+                roleEnc: true
             }
         })
         : await prisma.user.findMany({
             where: { id: currentUserId },
             select: {
                 id: true,
-                name: true,
-                username: true,
-                department: true,
-                role: true
+                nameEnc: true,
+                usernameEnc: true,
+                departmentEnc: true,
+                roleEnc: true
             }
         })
 
@@ -97,7 +97,14 @@ export default async function AttendancePage({
     const workScheduleMap = new Map<number, typeof workSchedules[0]>(workSchedules.map(s => [s.dayOfWeek, s]))
 
     // Build monthly data structure
-    const monthlyData = users.map(user => {
+    const monthlyData = users.map(userItem => {
+        const user = {
+            ...userItem,
+            name: decrypt(userItem.nameEnc),
+            username: decrypt(userItem.usernameEnc) || 'Unknown',
+            department: decrypt(userItem.departmentEnc),
+            role: decrypt(userItem.roleEnc) || 'USER'
+        }
         const userAttendances: { [day: number]: any } = {}
         let totalLateMinutes = 0
         let totalEarlyDepartureMinutes = 0

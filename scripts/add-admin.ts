@@ -1,29 +1,42 @@
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
-import { randomUUID } from 'crypto'
+import { hash as hashPassword } from 'bcryptjs'
+import { encrypt, hash } from '../src/lib/crypto'
 
 const prisma = new PrismaClient()
 
 async function main() {
-    const hashedPassword = await bcrypt.hash('admin123', 10)
+    const email = 'admin@ichibot.id'
+    const username = 'admin'
 
-    const admin = await prisma.user.create({
-        data: {
-            id: randomUUID(),
-            email: 'admin@ichibot.id',
-            username: 'admin',
-            name: 'Administrator',
-            password: hashedPassword,
-            role: 'ADMIN',
-            department: 'Management',
-            updatedAt: new Date(),
+    // Check if admin exists
+    const existingAdmin = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { emailHash: hash(email)! },
+                { usernameHash: hash(username)! }
+            ]
         }
     })
 
-    console.log('✅ Admin user created successfully!')
-    console.log('Email:', admin.email)
-    console.log('Username:', admin.username)
-    console.log('Role:', admin.role)
+    if (existingAdmin) {
+        console.log('Admin already exists')
+        return
+    }
+
+    const admin = await prisma.user.create({
+        data: {
+            emailEnc: encrypt(email),
+            emailHash: hash(email)!,
+            usernameEnc: encrypt(username),
+            usernameHash: hash(username)!,
+            nameEnc: encrypt('Admin Local'),
+            password: await hashPassword('admin123', 12),
+            roleEnc: encrypt('ADMIN'),
+            departmentEnc: encrypt('IT'),
+        },
+    })
+
+    console.log('Admin created:', admin)
 }
 
 main()

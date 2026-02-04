@@ -6,7 +6,7 @@ import { writeFile, unlink } from 'fs/promises'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import fs from 'fs'
-import { encrypt, decrypt } from '@/lib/crypto'
+import { encrypt, decrypt, hash } from '@/lib/crypto'
 
 // Helper to encrypt a number value
 function encryptNumber(value: number): string {
@@ -83,13 +83,14 @@ export async function upsertPayroll(formData: FormData) {
         const rawItems = formData.get('items') as string
         const items = JSON.parse(rawItems) as { componentId: string, amount: number }[]
 
+        const monthYearHash = hash(`${month}-${year}`) || ''
+
         // Check if payroll exists
-        const existingPayroll = await prisma.payroll.findUnique({
+        const existingPayroll = await (prisma.payroll as any).findUnique({
             where: {
-                userId_month_year: {
+                userId_monthYearHash: {
                     userId,
-                    month,
-                    year
+                    monthYearHash
                 }
             }
         })
@@ -145,7 +146,7 @@ export async function upsertPayroll(formData: FormData) {
             }
         })
 
-        const componentMap = new Map(components.map(c => [c.id, c.type]))
+        const componentMap = new Map(components.map((c: any) => [c.id, decrypt(c.typeEnc)]))
 
         for (const item of items) {
             const type = componentMap.get(item.componentId)
@@ -159,18 +160,16 @@ export async function upsertPayroll(formData: FormData) {
         // Transaction to update payroll and items
         await prisma.$transaction(async (tx) => {
             // Upsert Payroll with encrypted values
-            const payroll = await tx.payroll.upsert({
+            const payroll = await (tx.payroll as any).upsert({
                 where: {
-                    userId_month_year: {
+                    userId_monthYearHash: {
                         userId,
-                        month,
-                        year
+                        monthYearHash
                     }
                 },
                 create: {
                     userId,
-                    month,
-                    year,
+                    monthYearHash,
                     monthEnc: encryptNumber(month),
                     yearEnc: encryptNumber(year),
                     basicSalaryEnc: encryptNumber(basicSalary),
@@ -187,14 +186,14 @@ export async function upsertPayroll(formData: FormData) {
             })
 
             // Update Items: Delete all and recreate
-            await tx.payrollItem.deleteMany({
+            await (tx.payrollitem as any).deleteMany({
                 where: {
                     payrollId: payroll.id
                 }
             })
 
             if (items.length > 0) {
-                await tx.payrollItem.createMany({
+                await (tx.payrollitem as any).createMany({
                     data: items.map(item => ({
                         payrollId: payroll.id,
                         componentId: item.componentId,
@@ -215,22 +214,22 @@ export async function upsertPayroll(formData: FormData) {
 
 export async function getPayroll(userId: string, month: number, year: number) {
     try {
-        const payroll = await prisma.payroll.findUnique({
+        const monthYearHash = hash(`${month}-${year}`) || ''
+        const payroll = await (prisma.payroll as any).findUnique({
             where: {
-                userId_month_year: {
+                userId_monthYearHash: {
                     userId,
-                    month,
-                    year
+                    monthYearHash
                 }
             },
             include: {
-                items: {
+                payrollitem: {
                     include: {
-                        component: true
+                        salarycomponent: true
                     }
                 }
             }
-        })
+        }) as any
 
         if (!payroll) {
             return { success: true, data: null }
@@ -239,11 +238,14 @@ export async function getPayroll(userId: string, month: number, year: number) {
         // Decrypt salary data for frontend consumption
         const decryptedPayroll = {
             ...payroll,
+            month: decryptNumber(payroll.monthEnc),
+            year: decryptNumber(payroll.yearEnc),
             basicSalary: decryptNumber(payroll.basicSalaryEnc),
             netSalary: decryptNumber(payroll.netSalaryEnc),
             salarySlip: decrypt(payroll.salarySlipEnc),
-            items: payroll.items.map(item => ({
+            items: payroll.payrollitem.map((item: any) => ({
                 ...item,
+                component: item.salarycomponent,
                 amount: decryptNumber(item.amountEnc)
             }))
         }
@@ -312,29 +314,24 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
         // but for now let's get all active users or filter by role if required)
         // We want ALL users, and attach their payroll if it exists for this month/year.
 
-        const users = await prisma.user.findMany({
-            where: {
-                role: {
-                    in: ['USER', 'HRD', 'TEKNISI', 'ADMIN', 'ADMINISTRASI'] // All roles
-                }
-            },
+        const users = await (prisma.user as any).findMany({
+            where: {},
             orderBy: {
-                name: 'asc'
+                id: 'asc'
             },
             select: {
                 id: true,
-                name: true,
-                role: true,
-                department: true,
+                nameEnc: true,
+                roleEnc: true,
+                departmentEnc: true,
                 payrolls: {
                     where: {
-                        month,
-                        year
+                        monthYearHash: hash(`${month}-${year}`) || ''
                     },
                     include: {
-                        items: {
+                        payrollitem: {
                             include: {
-                                component: true
+                                salarycomponent: true
                             }
                         }
                     }
@@ -343,14 +340,14 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
         })
 
         // Transform data with decryption
-        const data = users.map(userItem => {
+        const data = users.map((userItem: any) => {
             const user = userItem as any
             const payroll = user.payrolls[0] || null
             let totalDeductions = 0
             let totalAdditions = 0
 
             if (payroll) {
-                payroll.items.forEach((item: any) => {
+                payroll.payrollitem.forEach((item: any) => {
                     // Decrypt the amount
                     const decryptedAmount = decryptNumber(item.amountEnc)
                     if (item.component.type === 'DEDUCTION') {
@@ -364,9 +361,9 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
             return {
                 id: user.id,
                 payrollId: payroll?.id,
-                name: user.name,
-                role: user.role,
-                department: user.department,
+                name: decrypt(user.nameEnc),
+                role: decrypt(user.roleEnc) || 'USER',
+                department: decrypt(user.departmentEnc),
                 hasPayroll: !!payroll,
                 basicSalary: payroll ? decryptNumber(payroll.basicSalaryEnc) : 0,
                 totalDeductions,

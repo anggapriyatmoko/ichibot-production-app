@@ -2,18 +2,26 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { encrypt, decrypt, hash } from '@/lib/crypto'
 
 export async function getSalaryComponents(type: 'DEDUCTION' | 'ADDITION') {
     try {
         const components = await prisma.salaryComponent.findMany({
             where: {
-                type
+                typeHash: hash(type) || ''
             },
             orderBy: {
                 createdAt: 'asc'
             }
         })
-        return { success: true, data: components }
+        return {
+            success: true,
+            data: components.map(c => ({
+                ...c,
+                name: decrypt(c.nameEnc) || '',
+                type: decrypt(c.typeEnc) || ''
+            }))
+        }
     } catch (error) {
         console.error('Error fetching salary components:', error)
         return { success: false, error: 'Failed to fetch components' }
@@ -22,11 +30,12 @@ export async function getSalaryComponents(type: 'DEDUCTION' | 'ADDITION') {
 
 export async function createSalaryComponent(name: string, type: 'DEDUCTION' | 'ADDITION') {
     try {
-        // Check for duplicates
+        // Check for duplicates using nameEnc and typeHash
+        // Note: unique constraint is on [typeHash, nameEnc]
         const existing = await prisma.salaryComponent.findFirst({
             where: {
-                name,
-                type
+                nameEnc: encrypt(name) || '',
+                typeHash: hash(type) || ''
             }
         })
 
@@ -36,8 +45,9 @@ export async function createSalaryComponent(name: string, type: 'DEDUCTION' | 'A
 
         await prisma.salaryComponent.create({
             data: {
-                name,
-                type
+                nameEnc: encrypt(name) || '',
+                typeEnc: encrypt(type) || '',
+                typeHash: hash(type) || ''
             }
         })
 

@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createSparepartProject, deleteSparepartProject, addSparepartProjectStock, updateSparepartProject, reduceSparepartProjectStock, moveToProduction } from '@/app/actions/sparepart-project'
+import { createSparepartProject, deleteSparepartProject, addSparepartProjectStock, updateSparepartProject, reduceSparepartProjectStock, moveToProduction, getAllSparepartProjectsForExport } from '@/app/actions/sparepart-project'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera, Pencil, X } from 'lucide-react'
+import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera, Pencil, X, FileDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
+import * as XLSX from 'xlsx'
+import ImportSparepartModal from './import-sparepart-modal'
 
 // Helper to simplify error messages for users
 function simplifyErrorMessage(error: any): string {
@@ -363,6 +365,27 @@ export default function SparepartProjectList({
         router.refresh()
     }
 
+    async function handleExport() {
+        setIsLoading(true)
+        try {
+            const data = await getAllSparepartProjectsForExport(window.location.origin)
+            const ws = XLSX.utils.json_to_sheet(data.map(item => ({
+                'Name': item.name,
+                'SKU': item.sku || '-',
+                'Stock': item.stock,
+                'Notes': item.notes || '-',
+                'Image URL': item.image || '-'
+            })))
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Sparepart Project')
+            XLSX.writeFile(wb, `sparepart_project_${new Date().toISOString().split('T')[0]}.xlsx`)
+        } catch (error) {
+            showError('Export failed')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     // Filter items based on search
     const filteredItems = initialItems.filter(item => {
         if (!searchTerm) return true
@@ -389,6 +412,19 @@ export default function SparepartProjectList({
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0">
+                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                        <>
+                            <button
+                                onClick={handleExport}
+                                disabled={isLoading}
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                title="Export Excel"
+                            >
+                                <FileDown className="w-4 h-4" />
+                            </button>
+                            <ImportSparepartModal />
+                        </>
+                    )}
                     {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                         <button
                             onClick={() => setIsAdding(!isAdding)}
