@@ -7,28 +7,25 @@
 /* HARI LIBUR - BACKGROUND MERAH MUDA          */
 /* ============================================ */
 
-/* Override semua background event menjadi merah muda */
+/* Default background event style */
 .fullcalendar-container .fc .fc-bg-event,
 .fullcalendar-container .fc-bg-event,
 .fc .fc-bg-event,
 .fc-bg-event {
-  background-color: #fee2e2 !important;
-  opacity: 1 !important;
+  opacity: 0.15 !important;
   z-index: 1 !important;
 }
 
-/* Text libur - MERAH dan posisi di bawah tanggal */
+.fc-bg-event.libur-nasional { background-color: #ef4444 !important; }
+.fc-bg-event.cuti-bersama { background-color: #f59e0b !important; }
+.fc-bg-event.kegiatan { background-color: #10b981 !important; }
+
+/* Text libur - HIDDEN for background events, used only for cell coloring */
 .fullcalendar-container .fc .fc-bg-event .fc-event-title,
 .fullcalendar-container .fc-bg-event .fc-event-title,
 .fc .fc-bg-event .fc-event-title,
 .fc-bg-event .fc-event-title {
-  color: #dc2626 !important;
-  font-weight: 600 !important;
-  font-size: 0.65rem !important;
-  font-style: normal !important;
-  margin-top: 1.5rem !important;
-  display: block !important;
-  padding: 2px 4px !important;
+  display: none !important;
 }
 
 /* Tanggal selalu di atas */
@@ -36,14 +33,30 @@
 .fc .fc-daygrid-day-top {
   position: relative !important;
   z-index: 10 !important;
+  height: 2.5rem !important;
 }
 
-/* Tanggal di sel yang ada libur - MERAH (termasuk bulan lain) */
-.fullcalendar-container .fc .fc-daygrid-day:has(.fc-bg-event) .fc-daygrid-day-number,
-.fc .fc-daygrid-day:has(.fc-bg-event) .fc-daygrid-day-number,
-.fullcalendar-container .fc .fc-day-other:has(.fc-bg-event) .fc-daygrid-day-number,
-.fc .fc-day-other:has(.fc-bg-event) .fc-daygrid-day-number {
+.fc .fc-daygrid-day-events {
+  margin-top: 0 !important;
+  padding: 0 4px !important;
+}
+
+/* Tanggal di sel yang ada LIBUR NASIONAL - MERAH */
+.fullcalendar-container .fc .fc-daygrid-day:has(.fc-bg-event.libur-nasional) .fc-daygrid-day-number,
+.fc .fc-daygrid-day:has(.fc-bg-event.libur-nasional) .fc-daygrid-day-number {
   color: #dc2626 !important;
+}
+
+/* Tanggal di sel CUTI BERSAMA - AMBER */
+.fullcalendar-container .fc .fc-daygrid-day:has(.fc-bg-event.cuti-bersama) .fc-daygrid-day-number,
+.fc .fc-daygrid-day:has(.fc-bg-event.cuti-bersama) .fc-daygrid-day-number {
+  color: #d97706 !important;
+}
+
+/* Tanggal di sel KEGIATAN - HIJAU */
+.fullcalendar-container .fc .fc-daygrid-day:has(.fc-bg-event.kegiatan) .fc-daygrid-day-number,
+.fc .fc-daygrid-day:has(.fc-bg-event.kegiatan) .fc-daygrid-day-number {
+  color: #059669 !important;
 }
 
 /* ============================================ */
@@ -52,18 +65,14 @@
 
 /* Header Minggu */
 .fullcalendar-container .fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
-.fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
-.fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion,
-.fc-day-sun .fc-col-header-cell-cushion {
-  color: #dc2626 !important;
+.fc .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion {
+  color: #ef4444 !important;
 }
 
 /* Tanggal Minggu */
 .fullcalendar-container .fc .fc-day-sun .fc-daygrid-day-number,
-.fc .fc-day-sun .fc-daygrid-day-number,
-.fc-day-sun .fc-daygrid-day-number,
-.fc-day-sun a {
-  color: #dc2626 !important;
+.fc .fc-day-sun .fc-daygrid-day-number {
+  color: #ef4444 !important;
 }
 
 /* ============================================ */
@@ -180,9 +189,138 @@
   .fc .fc-daygrid-day {
     min-height: 70px;
   }
-  
-  .fullcalendar-container .fc .fc-bg-event .fc-event-title,
-  .fc .fc-bg-event .fc-event-title {
-    font-size: 0.6rem !important;
-  }
+}
+
+/* ============================================ */
+/* LIST ITEM DOT STYLING                        */
+/* ============================================ */
+
+.fc .fc-daygrid-event.fc-daygrid-dot-event {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  padding: 2px 4px !important;
+  margin: 1px 0 !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 0.6rem !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  line-height: 1.2 !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+
+.fc .event-kegiatan .fc-event-title {
+  color: #059669 !important;
+}
+
+.fc .event-kegiatan .fc-daygrid-event-dot {
+  border-color: #10b981 !important;
+  background-color: transparent !important;
+  margin-top: 3px !important;
+}
+
+.fc .fc-daygrid-event-dot {
+  width: 5px !important;
+  height: 5px !important;
+  border-radius: 50% !important;
+  border-width: 3px !important;
+  flex-shrink: 0 !important;
+}
+
+.fc .fc-daygrid-dot-event .fc-event-title,
+.fc .fc-daygrid-block-event .fc-event-title {
+  font-weight: 700 !important;
+  font-size: 0.6rem !important;
+  line-height: 1.2 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+.fc .fc-daygrid-block-event {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 2px 4px !important;
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.fc .fc-daygrid-block-event .fc-event-main {
+  text-align: center !important;
+  padding: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* ============================================ */
+/* TIMED EVENTS - WEEK & DAY VIEW              */
+/* ============================================ */
+
+/* Styling for timed kegiatan events in week/day view */
+.fc .fc-timegrid-event.timed-event,
+.fc-timegrid-event.event-kegiatan.timed-event {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-left: 3px solid #10b981 !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.fc .fc-timegrid-event.timed-event .fc-event-main,
+.fc-timegrid-event.event-kegiatan.timed-event .fc-event-main {
+  padding: 4px 8px !important;
+}
+
+.fc .fc-timegrid-event.timed-event .fc-event-title,
+.fc-timegrid-event.event-kegiatan.timed-event .fc-event-title {
+  color: #059669 !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+}
+
+.fc .fc-timegrid-event.timed-event .fc-event-time,
+.fc-timegrid-event.event-kegiatan.timed-event .fc-event-time {
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  font-size: 0.7rem !important;
+}
+
+/* Hover effect for timed events */
+.fc .fc-timegrid-event.timed-event:hover {
+  background-color: rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  cursor: pointer !important;
+}
+
+/* Dark mode support for timed events */
+.dark .fc .fc-timegrid-event.timed-event,
+.dark .fc-timegrid-event.event-kegiatan.timed-event {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.dark .fc .fc-timegrid-event.timed-event:hover {
+  background-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+/* TimeGrid slot styling */
+.fc .fc-timegrid-slot {
+  height: 2.5rem !important;
+}
+
+.fc .fc-timegrid-slot-label {
+  color: #6b7280 !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+.dark .fc .fc-timegrid-slot-label {
+  color: #9ca3af !important;
 }
