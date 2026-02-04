@@ -9,21 +9,21 @@ datasource db {
 }
 
 model announcement {
-  id                                String   @id
+  id                                String   @id @default(cuid())
   content                           String   @db.Text
   isActive                          Boolean  @default(true)
   speed                             Int      @default(12)
   creatorId                         String
   createdAt                         DateTime @default(now())
-  updatedAt                         DateTime
-  user_announcement_creatorIdTouser user     @relation("announcement_creatorIdTouser", fields: [creatorId], references: [id], map: "Announcement_creatorId_fkey")
-  user_targetedusers                user[]   @relation("targetedusers")
+  updatedAt                         DateTime @updatedAt
+  creator     user     @relation("announcement_creatorIdTouser", fields: [creatorId], references: [id], map: "Announcement_creatorId_fkey")
+  targetUsers user[]   @relation("targetedusers")
 
   @@index([creatorId], map: "Announcement_creatorId_fkey")
 }
 
 model attendance {
-  id          String   @id
+  id          String   @id @default(cuid())
   userId      String
   date        DateTime
   clockInEnc  String?  @db.Text
@@ -32,29 +32,29 @@ model attendance {
   statusEnc   String?  @db.Text
   notesEnc    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
   user        user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Attendance_userId_fkey")
 
   @@unique([userId, date], map: "Attendance_userId_date_key")
 }
 
 model category {
-  id        String   @id
+  id        String   @id @default(cuid())
   name      String   @unique(map: "Category_name_key")
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  recipe    recipe[]
+  updatedAt DateTime @updatedAt
+  recipes   recipe[]
 }
 
 model chatMessage {
   @@map("chatmessage")
-  id         String   @id
+  id         String   @id @default(cuid())
   chatRoomId String
   senderId   String
   content    String   @db.Text
   createdAt  DateTime @default(now())
-  chatroom   chatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade, map: "ChatMessage_chatRoomId_fkey")
-  user       user     @relation(fields: [senderId], references: [id], onDelete: Cascade, map: "ChatMessage_senderId_fkey")
+  room       chatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade, map: "ChatMessage_chatRoomId_fkey")
+  sender     user     @relation(fields: [senderId], references: [id], onDelete: Cascade, map: "ChatMessage_senderId_fkey")
 
   @@index([chatRoomId], map: "ChatMessage_chatRoomId_idx")
   @@index([senderId], map: "ChatMessage_senderId_idx")
@@ -62,7 +62,7 @@ model chatMessage {
 
 model chatParticipant {
   @@map("chatparticipant")
-  id         String   @id
+  id         String   @id @default(cuid())
   chatRoomId String
   userId     String
   lastSeenAt DateTime @default(now())
@@ -77,48 +77,48 @@ model chatParticipant {
 
 model chatRoom {
   @@map("chatroom")
-  id              String            @id
+  id              String            @id @default(cuid())
   name            String?
   isGroup         Boolean           @default(false)
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  chatmessage     chatMessage[]
-  chatparticipant chatParticipant[]
+  updatedAt       DateTime @updatedAt
+  messages        chatMessage[]
+  participants    chatParticipant[]
 }
 
 model customWorkSchedule {
   @@map("customworkschedule")
-  id        String   @id
+  id        String   @id @default(cuid())
   startDate DateTime
   endDate   DateTime
   startTime String
   endTime   String
   reason    String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model hRDocument {
   @@map("hrdocument")
-  id          String   @id
+  id          String   @id @default(cuid())
   name        String
   link        String?  @db.Text
   filePath    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
   description String?  @db.Text
 }
 
 model logActivity {
   @@map("logactivity")
-  id        String   @id
+  id        String   @id @default(cuid())
   userId    String
   date      DateTime
   activity  String   @db.Text
   problem   String?  @db.Text
   image     String?
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "LogActivity_userId_fkey")
 
   @@unique([userId, date], map: "LogActivity_userId_date_key")
@@ -126,7 +126,7 @@ model logActivity {
 
 model machineAsset {
   @@map("machineasset")
-  id            String    @id
+  id            String    @id @default(cuid())
   name          String
   code          String?
   specification String?   @db.Text
@@ -138,12 +138,12 @@ model machineAsset {
   usefulLife    Int?
   residualValue Float?
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
 }
 
 model mOU {
   @@map("mou")
-  id          String   @id
+  id          String   @id @default(cuid())
   date        DateTime @default(now())
   number      String
   name        String
@@ -152,12 +152,12 @@ model mOU {
   link        String?  @db.Text
   filePath    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 }
 
 model offerLetter {
   @@map("offerletter")
-  id          String   @id
+  id          String   @id @default(cuid())
   date        DateTime @default(now())
   number      String
   name        String
@@ -166,22 +166,23 @@ model offerLetter {
   link        String?  @db.Text
   filePath    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 }
 
 model order {
-  id          String      @id
+  id          String      @id @default(cuid())
   orderNumber String      @unique(map: "Order_orderNumber_key")
   userId      String?
   createdAt   DateTime    @default(now())
   user        user?       @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
-  orderitem   orderitem[]
+  items       orderItem[]
 
   @@index([userId], map: "Order_userId_fkey")
 }
 
-model orderitem {
-  id          String   @id
+model orderItem {
+  @@map("orderitem")
+  id          String   @id @default(cuid())
   orderId     String
   productId   String
   productName String
@@ -195,7 +196,7 @@ model orderitem {
 }
 
 model overtimeleave {
-  id            String  @id
+  id            String  @id @default(cuid())
   userId        String
   date          String
   type          String
@@ -214,7 +215,7 @@ model overtimeleave {
 }
 
 model payroll {
-  id             String        @id
+  id             String        @id @default(cuid())
   userId         String
   month          Int
   year           Int
@@ -224,19 +225,20 @@ model payroll {
   netSalaryEnc   String        @db.Text
   salarySlipEnc  String?       @db.Text
   createdAt      DateTime      @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime @updatedAt
   user           user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Payroll_userId_fkey")
-  payrollitem    payrollitem[]
+  items       payrollItem[]
 
   @@unique([userId, month, year], map: "Payroll_userId_month_year_key")
 }
 
-model payrollitem {
-  id              String          @id
+model payrollItem {
+  @@map("payrollitem")
+  id              String          @id @default(cuid())
   payrollId       String
   componentId     String
   amountEnc       String          @db.Text
-  salarycomponent salaryComponent @relation(fields: [componentId], references: [id], map: "PayrollItem_componentId_fkey")
+  component       salaryComponent @relation(fields: [componentId], references: [id], map: "PayrollItem_componentId_fkey")
   payroll         payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade, map: "PayrollItem_payrollId_fkey")
 
   @@index([componentId], map: "PayrollItem_componentId_fkey")
@@ -244,7 +246,7 @@ model payrollitem {
 }
 
 model product {
-  id                String             @id
+  id                String             @id @default(cuid())
   name              String
   sku               String?            @unique(map: "Product_sku_key")
   stock             Float              @default(0)
@@ -253,28 +255,28 @@ model product {
   notes             String?
   drawerLocation    String?
   createdAt         DateTime           @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   recipeingredient  recipeIngredient[]
   transaction       transaction[]
 }
 
 model productionIssue {
   @@map("productionissue")
-  id               String         @id
+  id               String         @id @default(cuid())
   productionUnitId String
   description      String
   resolution       String?
   isResolved       Boolean        @default(false)
   createdAt        DateTime       @default(now())
-  updatedAt        DateTime
-  productionunit   productionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade, map: "ProductionIssue_productionUnitId_fkey")
+  updatedAt        DateTime @updatedAt
+  productionUnit   productionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade, map: "ProductionIssue_productionUnitId_fkey")
 
   @@index([productionUnitId], map: "ProductionIssue_productionUnitId_fkey")
 }
 
 model productionPlan {
   @@map("productionplan")
-  id               String           @id
+  id               String           @id @default(cuid())
   recipeId         String
   quantity         Float
   month            Int
@@ -282,16 +284,16 @@ model productionPlan {
   status           String           @default("PENDING")
   sectionsSnapshot String?          @db.Text
   createdAt        DateTime         @default(now())
-  updatedAt        DateTime
+  updatedAt        DateTime @updatedAt
   recipe           recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "ProductionPlan_recipeId_fkey")
-  productionunit   productionUnit[]
+  units            productionUnit[]
 
   @@index([recipeId], map: "ProductionPlan_recipeId_fkey")
 }
 
 model productionUnit {
   @@map("productionunit")
-  id                String            @id
+  id                String            @id @default(cuid())
   productionPlanId  String
   unitNumber        Int
   productIdentifier String?
@@ -303,17 +305,17 @@ model productionUnit {
   customer          String?
   link              String?
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime @updatedAt
   assembledAt       DateTime?
   packedAt          DateTime?
-  productionissue   productionIssue[]
-  productionplan    productionPlan @relation(fields: [productionPlanId], references: [id], onDelete: Cascade, map: "ProductionUnit_productionPlanId_fkey")
+  issues            productionIssue[]
+  productionPlan    productionPlan @relation(fields: [productionPlanId], references: [id], onDelete: Cascade, map: "ProductionUnit_productionPlanId_fkey")
 
   @@index([productionPlanId], map: "ProductionUnit_productionPlanId_fkey")
 }
 
 model project {
-  id              String           @id
+  id              String           @id @default(cuid())
   name            String
   client          String?
   date            DateTime?
@@ -323,7 +325,7 @@ model project {
   startDate       DateTime?
   endDate         DateTime?
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime @updatedAt
   projectcategory projectcategory? @relation(fields: [categoryId], references: [id], map: "Project_categoryId_fkey")
   projectlink     projectlink[]
   user            user[]           @relation("projecttouser")
@@ -332,37 +334,37 @@ model project {
 }
 
 model projectcategory {
-  id        String    @id
+  id        String    @id @default(cuid())
   name      String    @unique(map: "ProjectCategory_name_key")
   createdAt DateTime  @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   project   project[]
 }
 
 model projectlink {
-  id        String   @id
+  id        String   @id @default(cuid())
   label     String
   url       String   @db.Text
   projectId String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   project   project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "ProjectLink_projectId_fkey")
 
   @@index([projectId], map: "ProjectLink_projectId_fkey")
 }
 
 model rack {
-  id            String   @id
+  id            String   @id @default(cuid())
   name          String   @unique(map: "Rack_name_key")
   drawerCount   Int      @default(0)
   unusedDrawers Int      @default(0)
   description   String?
   createdAt     DateTime @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime @updatedAt
 }
 
 model receipt {
-  id          String   @id
+  id          String   @id @default(cuid())
   date        DateTime @default(now())
   number      String
   name        String
@@ -371,21 +373,21 @@ model receipt {
   link        String?  @db.Text
   filePath    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 }
 
 model recipe {
-  id               String             @id
+  id               String             @id @default(cuid())
   name             String
   productionId     String             @default("-")
   description      String?
   categoryId       String?
   createdAt        DateTime           @default(now())
-  updatedAt        DateTime
-  productionplan   productionPlan[]
+  updatedAt        DateTime @updatedAt
+  productionplans  productionPlan[]
   category         category?          @relation(fields: [categoryId], references: [id], map: "Recipe_categoryId_fkey")
-  recipeingredient recipeIngredient[]
-  recipesection    recipeSection[]
+  ingredients      recipeIngredient[]
+  sections         recipeSection[]
   transaction      transaction[]
 
   @@index([categoryId], map: "Recipe_categoryId_fkey")
@@ -393,7 +395,7 @@ model recipe {
 
 model recipeIngredient {
   @@map("recipeingredient")
-  id            String         @id
+  id            String         @id @default(cuid())
   recipeId      String
   productId     String
   sectionId     String?
@@ -401,7 +403,7 @@ model recipeIngredient {
   notes         String?
   product       product        @relation(fields: [productId], references: [id], onDelete: Cascade, map: "RecipeIngredient_productId_fkey")
   recipe        recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "RecipeIngredient_recipeId_fkey")
-  recipesection recipeSection? @relation(fields: [sectionId], references: [id], map: "RecipeIngredient_sectionId_fkey")
+  section       recipeSection? @relation(fields: [sectionId], references: [id], map: "RecipeIngredient_sectionId_fkey")
 
   @@index([productId], map: "RecipeIngredient_productId_fkey")
   @@index([recipeId], map: "RecipeIngredient_recipeId_fkey")
@@ -410,7 +412,7 @@ model recipeIngredient {
 
 model recipeSection {
   @@map("recipesection")
-  id               String             @id
+  id               String             @id @default(cuid())
   name             String
   category         String?
   recipeId         String
@@ -424,7 +426,7 @@ model recipeSection {
 
 model replyLetter {
   @@map("replyletter")
-  id          String   @id
+  id          String   @id @default(cuid())
   date        DateTime @default(now())
   number      String
   name        String
@@ -433,31 +435,31 @@ model replyLetter {
   link        String?  @db.Text
   filePath    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
 }
 
 model salaryComponent {
   @@map("salarycomponent")
-  id          String        @id
+  id          String        @id @default(cuid())
   name        String
   type        String
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
-  payrollitem payrollitem[]
+  updatedAt   DateTime @updatedAt
+  payrollItems payrollItem[]
 
   @@unique([name, type], map: "SalaryComponent_name_type_key")
 }
 
 model sectioncategory {
-  id        String   @id
+  id        String   @id @default(cuid())
   name      String   @unique(map: "SectionCategory_name_key")
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model serviceRobot {
   @@map("servicerobot")
-  id              String   @id
+  id              String   @id @default(cuid())
   entryDate       DateTime @default(now())
   customerName    String
   customerAddress String   @db.Text
@@ -469,33 +471,33 @@ model serviceRobot {
   serviceStatus   String   @default("PENDING")
   serviceNotes    String?  @db.Text
   createdAt       DateTime @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime @updatedAt
   image           String?
 }
 
 model sparepartProject {
   @@map("sparepartproject")
-  id        String   @id
+  id        String   @id @default(cuid())
   name      String
   sku       String?
   stock     Float    @default(0)
   notes     String?  @db.Text
   image     String?
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model systemSetting {
   @@map("systemsetting")
-  id        String   @id
+  id        String   @id @default(cuid())
   key       String   @unique(map: "SystemSetting_key_key")
   value     String   @db.Text
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 }
 
 model transaction {
-  id          String   @id
+  id          String   @id @default(cuid())
   type        String
   quantity    Float
   productId   String?
@@ -513,7 +515,7 @@ model transaction {
 }
 
 model user {
-  id                                        String            @id
+  id                                        String            @id @default(cuid())
   email                                     String            @unique(map: "User_email_key")
   username                                  String            @unique(map: "User_username_key")
   name                                      String?
@@ -526,28 +528,28 @@ model user {
   ktpNumberEnc                              String?           @db.Text
   contractEndDateEnc                        String?           @db.Text
   createdAt                                 DateTime          @default(now())
-  updatedAt                                 DateTime
-  announcement_announcement_creatorIdTouser announcement[]    @relation("announcement_creatorIdTouser")
-  attendance                                attendance[]
-  chatmessage                               chatMessage[]
-  chatparticipant                           chatParticipant[]
-  logactivity                               logActivity[]
-  order                                     order[]
-  overtimeleave                             overtimeleave[]
-  payroll                                   payroll[]
-  transaction                               transaction[]
+  updatedAt                                 DateTime @updatedAt
+  createdAnnouncements announcement[]    @relation("announcement_creatorIdTouser")
+  attendances attendance[]
+  messages chatMessage[]
+  participants chatParticipant[]
+  activities logActivity[]
+  orders order[]
+  overtimeLeaves overtimeleave[]
+  payrolls payroll[]
+  transactions transaction[]
   project                                   project[]         @relation("projecttouser")
   announcement_targetedusers                announcement[]    @relation("targetedusers")
 }
 
 model workSchedule {
   @@map("workschedule")
-  id        String   @id
+  id        String   @id @default(cuid())
   dayOfWeek Int      @unique(map: "WorkSchedule_dayOfWeek_key")
   dayName   String
   startTime String?
   endTime   String?
   isWorkDay Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
 }
