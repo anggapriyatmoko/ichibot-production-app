@@ -8,36 +8,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                 String        @id @default(cuid())
-  email              String        @unique
-  username           String        @unique
-  name               String?
-  password           String
-  department         String?
-  role               String        @default("USER")
-  photoEnc           String?       @db.Text
-  phoneEnc           String?       @db.Text
-  addressEnc         String?       @db.Text
-  ktpNumberEnc       String?       @db.Text
-  contractEndDateEnc String?       @db.Text
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  attendances        Attendance[]
-  logs               LogActivity[]
-  orders             Order[]
-  payrolls           Payroll[]
-  transactions       Transaction[]
-  assignedProjects   Project[]
-  overtimeLeaves     OvertimeLeave[]
-  targetedAnnouncements Announcement[] @relation("TargetedUsers")
-  createdAnnouncements  Announcement[] @relation("CreatedAnnouncements")
-  chatParticipants      ChatParticipant[]
-  chatMessages          ChatMessage[]
+model announcement {
+  id                                String   @id
+  content                           String   @db.Text
+  isActive                          Boolean  @default(true)
+  speed                             Int      @default(12)
+  creatorId                         String
+  createdAt                         DateTime @default(now())
+  updatedAt                         DateTime
+  user_announcement_creatorIdTouser user     @relation("announcement_creatorIdTouser", fields: [creatorId], references: [id], map: "Announcement_creatorId_fkey")
+  user_targetedusers                user[]   @relation("targetedusers")
+
+  @@index([creatorId], map: "Announcement_creatorId_fkey")
 }
 
-model Attendance {
-  id          String   @id @default(cuid())
+model attendance {
+  id          String   @id
   userId      String
   date        DateTime
   clockInEnc  String?  @db.Text
@@ -46,108 +32,238 @@ model Attendance {
   statusEnc   String?  @db.Text
   notesEnc    String?  @db.Text
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime
+  user        user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Attendance_userId_fkey")
 
-  @@unique([userId, date])
+  @@unique([userId, date], map: "Attendance_userId_date_key")
 }
 
-model WorkSchedule {
-  id        String   @id @default(cuid())
-  dayOfWeek Int      @unique
-  dayName   String
-  startTime String?
-  endTime   String?
-  isWorkDay Boolean  @default(true)
+model category {
+  id        String   @id
+  name      String   @unique(map: "Category_name_key")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
+  recipe    recipe[]
 }
 
-model CustomWorkSchedule {
-  id        String   @id @default(cuid())
+model chatmessage {
+  id         String   @id
+  chatRoomId String
+  senderId   String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+  chatroom   chatroom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade, map: "ChatMessage_chatRoomId_fkey")
+  user       user     @relation(fields: [senderId], references: [id], onDelete: Cascade, map: "ChatMessage_senderId_fkey")
+
+  @@index([chatRoomId], map: "ChatMessage_chatRoomId_idx")
+  @@index([senderId], map: "ChatMessage_senderId_idx")
+}
+
+model chatparticipant {
+  id         String   @id
+  chatRoomId String
+  userId     String
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  chatroom   chatroom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade, map: "ChatParticipant_chatRoomId_fkey")
+  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "ChatParticipant_userId_fkey")
+
+  @@unique([chatRoomId, userId], map: "ChatParticipant_chatRoomId_userId_key")
+  @@index([chatRoomId], map: "ChatParticipant_chatRoomId_idx")
+  @@index([userId], map: "ChatParticipant_userId_idx")
+}
+
+model chatroom {
+  id              String            @id
+  name            String?
+  isGroup         Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  chatmessage     chatmessage[]
+  chatparticipant chatparticipant[]
+}
+
+model customworkschedule {
+  id        String   @id
   startDate DateTime
   endDate   DateTime
   startTime String
   endTime   String
   reason    String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
 }
 
-model LogActivity {
-  id        String   @id @default(cuid())
+model hrdocument {
+  id          String   @id
+  name        String
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  description String?  @db.Text
+}
+
+model logactivity {
+  id        String   @id
   userId    String
   date      DateTime
   activity  String   @db.Text
   problem   String?  @db.Text
   image     String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "LogActivity_userId_fkey")
 
-  @@unique([userId, date])
+  @@unique([userId, date], map: "LogActivity_userId_date_key")
 }
 
-model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  recipes   Recipe[]
+model machineasset {
+  id            String    @id
+  name          String
+  code          String?
+  specification String?   @db.Text
+  location      String
+  price         Float?
+  notes         String?   @db.Text
+  image         String?
+  purchaseDate  DateTime?
+  usefulLife    Int?
+  residualValue Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
 }
 
-model Product {
-  id                String             @id @default(cuid())
+model mou {
+  id          String   @id
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model offerletter {
+  id          String   @id
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+}
+
+model order {
+  id          String      @id
+  orderNumber String      @unique(map: "Order_orderNumber_key")
+  userId      String?
+  createdAt   DateTime    @default(now())
+  user        user?       @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
+  orderitem   orderitem[]
+
+  @@index([userId], map: "Order_userId_fkey")
+}
+
+model orderitem {
+  id          String   @id
+  orderId     String
+  productId   String
+  productName String
+  productSku  String?
+  productNote String?
+  quantity    Float
+  createdAt   DateTime @default(now())
+  order       order    @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "OrderItem_orderId_fkey")
+
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+}
+
+model overtimeleave {
+  id            String  @id
+  userId        String
+  date          String
+  type          String
+  reason        String  @db.Text
+  attachment    String? @db.Text
+  requesterName String?
+  job           String?
+  amount        String?
+  adminNote     String? @db.Text
+  status        String
+  createdAt     String
+  updatedAt     String
+  user          user    @relation(fields: [userId], references: [id], onDelete: Cascade, map: "OvertimeLeave_userId_fkey")
+
+  @@index([userId], map: "OvertimeLeave_userId_fkey")
+}
+
+model payroll {
+  id             String        @id
+  userId         String
+  month          Int
+  year           Int
+  monthEnc       String        @db.Text
+  yearEnc        String        @db.Text
+  basicSalaryEnc String        @db.Text
+  netSalaryEnc   String        @db.Text
+  salarySlipEnc  String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime
+  user           user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Payroll_userId_fkey")
+  payrollitem    payrollitem[]
+
+  @@unique([userId, month, year], map: "Payroll_userId_month_year_key")
+}
+
+model payrollitem {
+  id              String          @id
+  payrollId       String
+  componentId     String
+  amountEnc       String          @db.Text
+  salarycomponent salarycomponent @relation(fields: [componentId], references: [id], map: "PayrollItem_componentId_fkey")
+  payroll         payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade, map: "PayrollItem_payrollId_fkey")
+
+  @@index([componentId], map: "PayrollItem_componentId_fkey")
+  @@index([payrollId], map: "PayrollItem_payrollId_fkey")
+}
+
+model product {
+  id                String             @id
   name              String
-  sku               String?            @unique
+  sku               String?            @unique(map: "Product_sku_key")
   stock             Float              @default(0)
   lowStockThreshold Float              @default(5)
   image             String?
   notes             String?
   drawerLocation    String?
   createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  recipeIngredients RecipeIngredient[]
-  transactions      Transaction[]
+  updatedAt         DateTime
+  recipeingredient  recipeingredient[]
+  transaction       transaction[]
 }
 
-model Transaction {
-  id          String   @id @default(cuid())
-  type        String
-  quantity    Float
-  productId   String?
-  recipeId    String?
-  userId      String?
-  description String?
-  createdAt   DateTime @default(now())
-  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipe      Recipe?  @relation(fields: [recipeId], references: [id])
-  user        User?    @relation(fields: [userId], references: [id])
+model productionissue {
+  id               String         @id
+  productionUnitId String
+  description      String
+  resolution       String?
+  isResolved       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime
+  productionunit   productionunit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade, map: "ProductionIssue_productionUnitId_fkey")
 
-  @@index([productId], map: "Transaction_productId_fkey")
-  @@index([recipeId], map: "Transaction_recipeId_fkey")
-  @@index([userId], map: "Transaction_userId_fkey")
+  @@index([productionUnitId], map: "ProductionIssue_productionUnitId_fkey")
 }
 
-model Recipe {
-  id              String             @id @default(cuid())
-  name            String
-  productionId    String             @default("-")
-  description     String?
-  categoryId      String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  productionPlans ProductionPlan[]
-  category        Category?          @relation(fields: [categoryId], references: [id])
-  ingredients     RecipeIngredient[]
-  sections        RecipeSection[]
-  transactions    Transaction[]
-
-  @@index([categoryId], map: "Recipe_categoryId_fkey")
-}
-
-model ProductionPlan {
-  id               String           @id @default(cuid())
+model productionplan {
+  id               String           @id
   recipeId         String
   quantity         Float
   month            Int
@@ -155,15 +271,15 @@ model ProductionPlan {
   status           String           @default("PENDING")
   sectionsSnapshot String?          @db.Text
   createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  recipe           Recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  units            ProductionUnit[]
+  updatedAt        DateTime
+  recipe           recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "ProductionPlan_recipeId_fkey")
+  productionunit   productionunit[]
 
   @@index([recipeId], map: "ProductionPlan_recipeId_fkey")
 }
 
-model ProductionUnit {
-  id                String            @id @default(cuid())
+model productionunit {
+  id                String            @id
   productionPlanId  String
   unitNumber        Int
   productIdentifier String?
@@ -175,117 +291,156 @@ model ProductionUnit {
   customer          String?
   link              String?
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  updatedAt         DateTime
   assembledAt       DateTime?
   packedAt          DateTime?
-  issues            ProductionIssue[]
-  productionPlan    ProductionPlan    @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
+  productionissue   productionissue[]
+  productionplan    productionplan    @relation(fields: [productionPlanId], references: [id], onDelete: Cascade, map: "ProductionUnit_productionPlanId_fkey")
 
   @@index([productionPlanId], map: "ProductionUnit_productionPlanId_fkey")
 }
 
-model ProductionIssue {
-  id               String         @id @default(cuid())
-  productionUnitId String
-  description      String
-  resolution       String?
-  isResolved       Boolean        @default(false)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  productionUnit   ProductionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade)
+model project {
+  id              String           @id
+  name            String
+  client          String?
+  date            DateTime?
+  description     String?          @db.Text
+  status          String           @default("PENDING")
+  categoryId      String?
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  projectcategory projectcategory? @relation(fields: [categoryId], references: [id], map: "Project_categoryId_fkey")
+  projectlink     projectlink[]
+  user            user[]           @relation("projecttouser")
 
-  @@index([productionUnitId], map: "ProductionIssue_productionUnitId_fkey")
+  @@index([categoryId], map: "Project_categoryId_fkey")
 }
 
-model RecipeSection {
-  id          String             @id @default(cuid())
+model projectcategory {
+  id        String    @id
+  name      String    @unique(map: "ProjectCategory_name_key")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+  project   project[]
+}
+
+model projectlink {
+  id        String   @id
+  label     String
+  url       String   @db.Text
+  projectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  project   project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "ProjectLink_projectId_fkey")
+
+  @@index([projectId], map: "ProjectLink_projectId_fkey")
+}
+
+model rack {
+  id            String   @id
+  name          String   @unique(map: "Rack_name_key")
+  drawerCount   Int      @default(0)
+  unusedDrawers Int      @default(0)
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+}
+
+model receipt {
+  id          String   @id
+  date        DateTime @default(now())
+  number      String
   name        String
-  category    String?
-  recipeId    String
-  order       Int                @default(0)
-  createdAt   DateTime           @default(now())
-  ingredients RecipeIngredient[]
-  recipe      Recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-
-  @@index([recipeId], map: "RecipeSection_recipeId_fkey")
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
 }
 
-model RecipeIngredient {
-  id        String         @id @default(cuid())
-  recipeId  String
-  productId String
-  sectionId String?
-  quantity  Float
-  notes     String?
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipe    Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  section   RecipeSection? @relation(fields: [sectionId], references: [id])
+model recipe {
+  id               String             @id
+  name             String
+  productionId     String             @default("-")
+  description      String?
+  categoryId       String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  productionplan   productionplan[]
+  category         category?          @relation(fields: [categoryId], references: [id], map: "Recipe_categoryId_fkey")
+  recipeingredient recipeingredient[]
+  recipesection    recipesection[]
+  transaction      transaction[]
+
+  @@index([categoryId], map: "Recipe_categoryId_fkey")
+}
+
+model recipeingredient {
+  id            String         @id
+  recipeId      String
+  productId     String
+  sectionId     String?
+  quantity      Float
+  notes         String?
+  product       product        @relation(fields: [productId], references: [id], onDelete: Cascade, map: "RecipeIngredient_productId_fkey")
+  recipe        recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "RecipeIngredient_recipeId_fkey")
+  recipesection recipesection? @relation(fields: [sectionId], references: [id], map: "RecipeIngredient_sectionId_fkey")
 
   @@index([productId], map: "RecipeIngredient_productId_fkey")
   @@index([recipeId], map: "RecipeIngredient_recipeId_fkey")
   @@index([sectionId], map: "RecipeIngredient_sectionId_fkey")
 }
 
-model SectionCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model recipesection {
+  id               String             @id
+  name             String
+  category         String?
+  recipeId         String
+  order            Int                @default(0)
+  createdAt        DateTime           @default(now())
+  recipeingredient recipeingredient[]
+  recipe           recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "RecipeSection_recipeId_fkey")
+
+  @@index([recipeId], map: "RecipeSection_recipeId_fkey")
 }
 
-model Rack {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  drawerCount   Int      @default(0)
-  unusedDrawers Int      @default(0)
-  description   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Order {
-  id          String      @id @default(cuid())
-  orderNumber String      @unique
-  userId      String?
-  createdAt   DateTime    @default(now())
-  user        User?       @relation(fields: [userId], references: [id])
-  items       OrderItem[]
-
-  @@index([userId], map: "Order_userId_fkey")
-}
-
-model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  productId   String
-  productName String
-  productSku  String?
-  productNote String?
-  quantity    Float
+model replyletter {
+  id          String   @id
+  date        DateTime @default(now())
+  number      String
+  name        String
+  institution String
+  content     String   @db.Text
+  link        String?  @db.Text
+  filePath    String?  @db.Text
   createdAt   DateTime @default(now())
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId], map: "OrderItem_orderId_fkey")
+  updatedAt   DateTime
 }
 
-model MachineAsset {
-  id            String   @id @default(cuid())
-  name          String
-  code          String?
-  specification String?  @db.Text
-  location      String
-  price         Float?
-  notes         String?  @db.Text
-  image         String?
-  purchaseDate  DateTime?
-  usefulLife    Int?
-  residualValue Float?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model salarycomponent {
+  id          String        @id
+  name        String
+  type        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  payrollitem payrollitem[]
+
+  @@unique([name, type], map: "SalaryComponent_name_type_key")
 }
 
-model ServiceRobot {
-  id              String   @id @default(cuid())
+model sectioncategory {
+  id        String   @id
+  name      String   @unique(map: "SectionCategory_name_key")
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model servicerobot {
+  id              String   @id
   entryDate       DateTime @default(now())
   customerName    String
   customerAddress String   @db.Text
@@ -297,241 +452,82 @@ model ServiceRobot {
   serviceStatus   String   @default("PENDING")
   serviceNotes    String?  @db.Text
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime
   image           String?
 }
 
-model OfferLetter {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  number      String
-  name        String
-  institution String
-  content     String   @db.Text
-  link        String?  @db.Text
-  filePath    String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Receipt {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  number      String
-  name        String
-  institution String
-  content     String   @db.Text
-  link        String?  @db.Text
-  filePath    String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model ReplyLetter {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  number      String
-  name        String
-  institution String
-  content     String   @db.Text
-  link        String?  @db.Text
-  filePath    String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model InvitationLetter {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  number      String
-  name        String
-  institution String
-  content     String   @db.Text
-  link        String?  @db.Text
-  filePath    String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model MOU {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  number      String
-  name        String
-  institution String
-  content     String   @db.Text
-  link        String?  @db.Text
-  filePath    String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model SparepartProject {
-  id        String   @id @default(cuid())
+model sparepartproject {
+  id        String   @id
   name      String
   sku       String?
   stock     Float    @default(0)
   notes     String?  @db.Text
   image     String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
 }
 
-model SalaryComponent {
-  id           String        @id @default(cuid())
-  name         String
-  type         String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  payrollItems PayrollItem[]
-
-  @@unique([name, type])
-}
-
-model Payroll {
-  id             String        @id @default(cuid())
-  userId         String
-  month          Int
-  year           Int
-  monthEnc       String        @db.Text
-  yearEnc        String        @db.Text
-  basicSalaryEnc String        @db.Text
-  netSalaryEnc   String        @db.Text
-  salarySlipEnc  String?       @db.Text
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items          PayrollItem[]
-
-  @@unique([userId, month, year])
-}
-
-model PayrollItem {
-  id          String          @id @default(cuid())
-  payrollId   String
-  componentId String
-  amountEnc   String          @db.Text
-  component   SalaryComponent @relation(fields: [componentId], references: [id])
-  payroll     Payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade)
-
-  @@index([componentId], map: "PayrollItem_componentId_fkey")
-  @@index([payrollId], map: "PayrollItem_payrollId_fkey")
-}
-
-model HRDocument {
-  id          String   @id @default(cuid())
-  name        String
-  link        String?  @db.Text
-  filePath    String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  description String?  @db.Text
-}
-
-model SystemSetting {
-  id        String   @id @default(cuid())
-  key       String   @unique
+model systemsetting {
+  id        String   @id
+  key       String   @unique(map: "SystemSetting_key_key")
   value     String   @db.Text
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-model ProjectCategory {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  projects  Project[]
+  updatedAt DateTime
 }
 
-model Project {
-  id          String           @id @default(cuid())
-  name        String
-  client      String?
-  date        DateTime?
-  description String?          @db.Text
-  status      String           @default("PENDING")
-  categoryId  String?
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  category    ProjectCategory? @relation(fields: [categoryId], references: [id])
-  links       ProjectLink[]
-  assignedUsers User[]
-}
-
-model ProjectLink {
-  id        String   @id @default(cuid())
-  label     String
-  url       String   @db.Text
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model OvertimeLeave {
-  id          String   @id @default(cuid())
-  userId      String
-  date        String
+model transaction {
+  id          String   @id
   type        String
-  reason      String   @db.Text
-  attachment  String?  @db.Text
-  requesterName String?
-  job           String?  @db.Text
-  amount        String?
-  adminNote     String?  @db.Text
-  status      String
-  createdAt   String
-  updatedAt   String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Announcement {
-  id          String   @id @default(cuid())
-  content     String   @db.Text
-  isActive    Boolean  @default(true)
-  speed       Int      @default(12)
-  creatorId   String
+  quantity    Float
+  productId   String?
+  recipeId    String?
+  userId      String?
+  description String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  targetUsers User[]   @relation("TargetedUsers")
-  creator     User     @relation("CreatedAnnouncements", fields: [creatorId], references: [id])
+  product     product? @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Transaction_productId_fkey")
+  recipe      recipe?  @relation(fields: [recipeId], references: [id], map: "Transaction_recipeId_fkey")
+  user        user?    @relation(fields: [userId], references: [id], map: "Transaction_userId_fkey")
+
+  @@index([productId], map: "Transaction_productId_fkey")
+  @@index([recipeId], map: "Transaction_recipeId_fkey")
+  @@index([userId], map: "Transaction_userId_fkey")
 }
 
-model ChatRoom {
-  id           String            @id @default(cuid())
-  name         String?
-  isGroup      Boolean           @default(false)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  messages     ChatMessage[]
-  participants ChatParticipant[]
+model user {
+  id                                        String            @id
+  email                                     String            @unique(map: "User_email_key")
+  username                                  String            @unique(map: "User_username_key")
+  name                                      String?
+  password                                  String
+  department                                String?
+  role                                      String            @default("USER")
+  photoEnc                                  String?           @db.Text
+  phoneEnc                                  String?           @db.Text
+  addressEnc                                String?           @db.Text
+  ktpNumberEnc                              String?           @db.Text
+  contractEndDateEnc                        String?           @db.Text
+  createdAt                                 DateTime          @default(now())
+  updatedAt                                 DateTime
+  announcement_announcement_creatorIdTouser announcement[]    @relation("announcement_creatorIdTouser")
+  attendance                                attendance[]
+  chatmessage                               chatmessage[]
+  chatparticipant                           chatparticipant[]
+  logactivity                               logactivity[]
+  order                                     order[]
+  overtimeleave                             overtimeleave[]
+  payroll                                   payroll[]
+  transaction                               transaction[]
+  project                                   project[]         @relation("projecttouser")
+  announcement_targetedusers                announcement[]    @relation("targetedusers")
 }
 
-model ChatParticipant {
-  id         String   @id @default(cuid())
-  chatRoomId String
-  userId     String
-  lastSeenAt DateTime @default(now())
-  createdAt  DateTime @default(now())
-  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([chatRoomId, userId])
-  @@index([chatRoomId])
-  @@index([userId])
-}
-
-model ChatMessage {
-  id         String   @id @default(cuid())
-  chatRoomId String
-  senderId   String
-  content    String   @db.Text
-  createdAt  DateTime @default(now())
-  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
-  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@index([chatRoomId])
-  @@index([senderId])
+model workschedule {
+  id        String   @id
+  dayOfWeek Int      @unique(map: "WorkSchedule_dayOfWeek_key")
+  dayName   String
+  startTime String?
+  endTime   String?
+  isWorkDay Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
 }
