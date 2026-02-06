@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatNumber, formatCurrency } from '@/utils/format'
+import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
 import { syncStoreProducts, toggleStoreProductPurchased } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
@@ -13,12 +13,14 @@ export default function StoreProductList({
     initialProducts,
     showPurchasedStyles = true,
     showSupplierColumn = true,
-    showPurchasedColumn = true
+    showPurchasedColumn = true,
+    showPurchasedAt = false
 }: {
     initialProducts: any[],
     showPurchasedStyles?: boolean,
     showSupplierColumn?: boolean,
-    showPurchasedColumn?: boolean
+    showPurchasedColumn?: boolean,
+    showPurchasedAt?: boolean
 }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
@@ -219,6 +221,12 @@ export default function StoreProductList({
                                                         </a>
                                                     )}
                                                 </div>
+                                                {showPurchasedAt && product.purchasedAt && (
+                                                    <div className="mt-1 text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                                        <span className="opacity-70">Dibeli pada:</span>
+                                                        <span>{formatDateTime(product.purchasedAt)}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         {showSupplierColumn && (

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, Circle } from 'lucide-react'
+import { Search, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, Circle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased } from '@/app/actions/store-product'
@@ -9,14 +9,17 @@ import { useAlert } from '@/hooks/use-alert'
 import SupplierPicker from './supplier-picker'
 
 export default function StoreLowStockList({
-    initialProducts
+    initialProducts,
+    suppliers = []
 }: {
-    initialProducts: any[]
+    initialProducts: any[],
+    suppliers?: any[]
 }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(20)
     const [localProducts, setLocalProducts] = useState(initialProducts)
+    const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([])
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
     const { showError } = useAlert()
@@ -26,10 +29,10 @@ export default function StoreLowStockList({
         setLocalProducts(initialProducts)
     }, [initialProducts])
 
-    // Reset page to 1 when search term changes
+    // Reset page to 1 when search term or filter changes
     useEffect(() => {
         setCurrentPage(1)
-    }, [searchTerm])
+    }, [searchTerm, selectedSuppliers])
 
     const handleTogglePurchased = async (wcId: number, currentStatus: boolean) => {
         const newStatus = !currentStatus
@@ -55,14 +58,36 @@ export default function StoreLowStockList({
         }
     }
 
+    const toggleSupplierFilter = (name: string) => {
+        if (name === 'All') {
+            setSelectedSuppliers([])
+            return
+        }
+
+        setSelectedSuppliers(prev =>
+            prev.includes(name)
+                ? prev.filter(n => n !== name)
+                : [...prev, name]
+        )
+    }
 
     const filteredProducts = useMemo(() => {
-        return localProducts.filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.storeName && p.storeName.toLowerCase().includes(searchTerm.toLowerCase()))
-        )
-    }, [localProducts, searchTerm])
+        return localProducts.filter(p => {
+            // Search term match
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (p.storeName && p.storeName.toLowerCase().includes(searchTerm.toLowerCase()))
+
+            if (!matchesSearch) return false
+
+            // Supplier filter match
+            if (selectedSuppliers.length === 0) return true
+
+            if (!p.storeName) return false
+            const productSuppliers = p.storeName.split(',').map((n: string) => n.trim()).filter(Boolean)
+            return selectedSuppliers.some(s => productSuppliers.includes(s))
+        })
+    }, [localProducts, searchTerm, selectedSuppliers])
 
     // Pagination calculation
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -90,6 +115,38 @@ export default function StoreLowStockList({
                     <AlertTriangle className="w-4 h-4 text-orange-600" />
                     <span className="text-xs font-medium text-orange-700">Urut berdasarkan stok terkecil</span>
                 </div>
+            </div>
+
+            {/* Supplier Filter Bar */}
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+                <button
+                    onClick={() => toggleSupplierFilter('All')}
+                    className={cn(
+                        "px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border",
+                        selectedSuppliers.length === 0
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+                    )}
+                >
+                    All
+                </button>
+                {suppliers.map((s) => (
+                    <button
+                        key={s.id}
+                        onClick={() => toggleSupplierFilter(s.name)}
+                        className={cn(
+                            "px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border flex items-center gap-2",
+                            selectedSuppliers.includes(s.name)
+                                ? "bg-primary/10 text-primary border-primary/20 shadow-sm"
+                                : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
+                        )}
+                    >
+                        {s.name}
+                        {selectedSuppliers.includes(s.name) && (
+                            <X className="w-3 h-3" onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleSupplierFilter(s.name); }} />
+                        )}
+                    </button>
+                ))}
             </div>
 
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">

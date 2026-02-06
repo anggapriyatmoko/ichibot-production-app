@@ -621,6 +621,7 @@ model StoreProduct {
   sku           String?
   storeName     String?
   purchased     Boolean  @default(false)
+  purchasedAt   DateTime?
 
   type          String?
   status        String?

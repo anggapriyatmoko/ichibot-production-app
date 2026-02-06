@@ -25,3 +25,21 @@ export function formatCurrency(value: number | string | null | undefined): strin
 
     return new Intl.NumberFormat('id-ID').format(num)
 }
+
+/**
+ * Formats a date to a string with date and time in Indonesian locale.
+ * Example: 6 Feb 2026, 23:40
+ */
+export function formatDateTime(date: Date | string | null | undefined): string {
+    if (!date) return '-'
+    const d = typeof date === 'string' ? new Date(date) : date
+    if (isNaN(d.getTime())) return '-'
+
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(d)
+}

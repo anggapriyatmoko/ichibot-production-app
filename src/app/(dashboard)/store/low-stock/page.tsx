@@ -1,10 +1,14 @@
 import StoreLowStockList from '@/components/store/store-low-stock-list';
 import { getStoreLowStockProducts } from '@/app/actions/store-product';
+import { getStoreSuppliers } from '@/app/actions/store-supplier';
 
 export const dynamic = 'force-dynamic';
 
 export default async function StoreLowStockPage() {
-    const products = await getStoreLowStockProducts();
+    const [products, suppliers] = await Promise.all([
+        getStoreLowStockProducts(),
+        getStoreSuppliers()
+    ]);
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -13,7 +17,7 @@ export default async function StoreLowStockPage() {
                 <p className="text-muted-foreground">Monitoring stok produk WooCommerce yang menipis.</p>
             </div>
 
-            <StoreLowStockList initialProducts={products} />
+            <StoreLowStockList initialProducts={products} suppliers={suppliers} />
         </div>
     );
 }

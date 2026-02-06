@@ -225,10 +225,14 @@ export async function toggleStoreProductPurchased(wcId: number, purchased: boole
     try {
         await prisma.storeProduct.update({
             where: { wcId },
-            data: { purchased }
+            data: {
+                purchased,
+                purchasedAt: purchased ? new Date() : null
+            }
         })
         revalidatePath('/store/product')
         revalidatePath('/store/low-stock')
+        revalidatePath('/store/purchased')
         return { success: true }
     } catch (error: any) {
         console.error('Error toggling purchased state:', error)
