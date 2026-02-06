@@ -34,6 +34,9 @@ import {
   Award,
   Truck,
   X,
+  Store,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TimeDisplay from "./time-display";
@@ -158,6 +161,15 @@ const adminNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const storeNavigation = [
+  { name: "Product", href: "/store/product", icon: Package },
+  { name: "POS Store", href: "/store/pos", icon: Store },
+  { name: "Low Stock", href: "/store/low-stock", icon: AlertTriangle },
+  { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
+  { name: "Setting", href: "/store/settings", icon: Settings },
+];
+
+
 interface SidebarProps {
   userRole?: string;
 }
@@ -177,6 +189,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
       ...barangNavigation,
       ...teknisiNavigation,
       ...administrasiNavigation,
+      ...storeNavigation,
       ...hrdNavigation,
       ...adminNavigation,
     ];
@@ -340,6 +353,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
       ...barangNavigation,
       ...teknisiNavigation,
       ...administrasiNavigation,
+      ...storeNavigation,
       ...hrdNavigation,
       ...adminNavigation,
     ]);
@@ -436,6 +450,21 @@ export default function Sidebar({ userRole }: SidebarProps) {
               </p>
             </div>
             {barangNavigation.map((item) => (
+              <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
+            ))}
+
+            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+              <div className="border-t border-border" />
+              <p
+                className={cn(
+                  "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                  isOpen ? "px-3" : "text-center",
+                )}
+              >
+                {isOpen ? "STORE" : "..."}
+              </p>
+            </div>
+            {storeNavigation.map((item) => (
               <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
             ))}
           </nav>
