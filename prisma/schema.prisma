@@ -622,6 +622,7 @@ model StoreProduct {
   storeName     String?
   purchased     Boolean  @default(false)
   purchasedAt   DateTime?
+  isMissingFromWoo Boolean @default(false)
 
   type          String?
   status        String?

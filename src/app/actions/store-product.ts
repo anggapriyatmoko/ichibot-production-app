@@ -85,8 +85,10 @@ export async function syncStoreProducts() {
         // Process each product
         let syncedCount = 0;
         let errorCount = 0;
+        const fetchedWcIds: number[] = [];
 
         for (const product of wcProducts) {
+            fetchedWcIds.push(product.id);
             try {
                 await prisma.storeProduct.upsert({
                     where: { wcId: product.id },
@@ -106,6 +108,7 @@ export async function syncStoreProducts() {
                         images: JSON.stringify(product.images),
                         categories: JSON.stringify(product.categories),
                         updatedAt: new Date(),
+                        isMissingFromWoo: false, // Reset if found
                         // DO NOT update 'purchased' or 'storeName' during sync to preserve local edits
                     },
                     create: {
@@ -125,6 +128,7 @@ export async function syncStoreProducts() {
                         images: JSON.stringify(product.images),
                         categories: JSON.stringify(product.categories),
                         purchased: false,
+                        isMissingFromWoo: false,
                     }
                 });
                 syncedCount++;
@@ -134,11 +138,25 @@ export async function syncStoreProducts() {
             }
         }
 
+        // Mark products as missing if they were not in the fetched list
+        if (fetchedWcIds.length > 0) {
+            await prisma.storeProduct.updateMany({
+                where: {
+                    wcId: { notIn: fetchedWcIds },
+                    isMissingFromWoo: false
+                },
+                data: {
+                    isMissingFromWoo: true
+                }
+            });
+        }
+
         console.log(`Sync complete. Success: ${syncedCount}, Errors: ${errorCount}`);
 
         try {
             revalidatePath('/store/product')
             revalidatePath('/store/low-stock')
+            revalidatePath('/store/purchased')
         } catch (e) {
             console.log('revalidatePath skipped (non-next context)');
         }

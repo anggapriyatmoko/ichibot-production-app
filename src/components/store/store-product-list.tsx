@@ -14,13 +14,15 @@ export default function StoreProductList({
     showPurchasedStyles = true,
     showSupplierColumn = true,
     showPurchasedColumn = true,
-    showPurchasedAt = false
+    showPurchasedAt = false,
+    showSyncButton = true
 }: {
     initialProducts: any[],
     showPurchasedStyles?: boolean,
     showSupplierColumn?: boolean,
     showPurchasedColumn?: boolean,
-    showPurchasedAt?: boolean
+    showPurchasedAt?: boolean,
+    showSyncButton?: boolean
 }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
@@ -121,17 +123,19 @@ export default function StoreProductList({
                         className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                     />
                 </div>
-                <button
-                    onClick={handleSync}
-                    disabled={isSyncing}
-                    className={cn(
-                        "w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 disabled:opacity-50 shadow-sm",
-                        isSyncing && "animate-pulse"
-                    )}
-                >
-                    <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
-                    {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
-                </button>
+                {showSyncButton && (
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className={cn(
+                            "w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 disabled:opacity-50 shadow-sm",
+                            isSyncing && "animate-pulse"
+                        )}
+                    >
+                        <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
+                        {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
+                    </button>
+                )}
             </div>
 
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
@@ -209,6 +213,11 @@ export default function StoreProductList({
                                                     )}>
                                                         {product.status}
                                                     </span>
+                                                    {product.isMissingFromWoo && (
+                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
+                                                            Tidak ditemukan di woocomerce
+                                                        </span>
+                                                    )}
                                                     {product.slug && (
                                                         <a
                                                             href={`${process.env.NEXT_PUBLIC_WC_URL}/shop/${product.slug}`}

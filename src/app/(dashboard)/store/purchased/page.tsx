@@ -15,7 +15,12 @@ export default async function StorePurchasedPage() {
                 </p>
             </div>
 
-            <StoreProductList initialProducts={products} showPurchasedStyles={false} showPurchasedAt={true} />
+            <StoreProductList
+                initialProducts={products}
+                showPurchasedStyles={false}
+                showPurchasedAt={true}
+                showSyncButton={false}
+            />
         </div>
     )
 }
