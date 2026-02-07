@@ -25,7 +25,7 @@ function LoginContent() {
 
     // Auto-submit when PIN reaches 6 digits
     useEffect(() => {
-        if (authType === 'pin' && pin.length === 6 && email) {
+        if (authType === 'pin' && pin.length === 6) {
             handlePinSubmit()
         }
     }, [pin])

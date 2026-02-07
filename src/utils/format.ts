@@ -13,3 +13,33 @@ export function formatNumber(value: number | string | null | undefined): string 
     // Math.round(1.005 * 100) / 100 = 1.01
     return (Math.round((num + Number.EPSILON) * 100) / 100).toString()
 }
+
+/**
+ * Formats a number/string to IDR currency format (without Rp symbol by default).
+ * Adds dots for thousands separators.
+ */
+export function formatCurrency(value: number | string | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '0'
+    const num = typeof value === 'string' ? parseFloat(value) : value
+    if (isNaN(num)) return '0'
+
+    return new Intl.NumberFormat('id-ID').format(num)
+}
+
+/**
+ * Formats a date to a string with date and time in Indonesian locale.
+ * Example: 6 Feb 2026, 23:40
+ */
+export function formatDateTime(date: Date | string | null | undefined): string {
+    if (!date) return '-'
+    const d = typeof date === 'string' ? new Date(date) : date
+    if (isNaN(d.getTime())) return '-'
+
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(d)
+}

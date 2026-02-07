@@ -361,7 +361,7 @@ export default function IngredientManager({
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
                 </div>
                 <div className="flex gap-3">
-                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                    {userRole === 'ADMIN' && (
                         <>
                             <ImportRecipeModal targetRecipeName={recipeName} />
                             <button
@@ -372,15 +372,17 @@ export default function IngredientManager({
                             >
                                 <Download className="w-4 h-4" />
                             </button>
-
-                            <button
-                                onClick={() => setIsEditing(!isEditing)}
-                                className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
-                                title={isEditing ? 'Done' : 'Edit'}
-                            >
-                                {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                            </button>
                         </>
+                    )}
+
+                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                        <button
+                            onClick={() => setIsEditing(!isEditing)}
+                            className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
+                            title={isEditing ? 'Done' : 'Edit'}
+                        >
+                            {isEditing ? <Check className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                        </button>
                     )}
 
                     <button
