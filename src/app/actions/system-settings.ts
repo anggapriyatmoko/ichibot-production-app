@@ -162,10 +162,12 @@ export async function testApiConnection(): Promise<{ success: boolean, message: 
             return { success: false, message: 'API Endpoint belum dikonfigurasi' }
         }
 
-        const response = await fetch(apiEndpoint, {
+        // Append /ping for health check
+        const testUrl = apiEndpoint.replace(/\/$/, '') + '/ping'
+
+        const response = await fetch(testUrl, {
             method: 'GET',
             headers: {
-                //'Authorization': apiKey ? `Bearer ${apiKey}` : '', // Changed to X-API-Key based on latest requirement
                 'X-API-Key': apiKey || '',
                 'Content-Type': 'application/json'
             },
