@@ -1,14 +1,18 @@
 'use server'
 
+import { product } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
 import { requireAdmin, requireAuth } from '@/lib/auth'
-import { getServerSession } from 'next-auth'
+import { getServerSession, Session } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { downloadExternalImage } from '@/lib/upload'
+import { apiClient } from '@/lib/api-client'
+
+type AppSession = (Session & { user?: { id?: string } }) | null
 
 // Helper function to delete old image file from storage
 async function deleteOldImage(imagePath: string | null) {
@@ -31,7 +35,7 @@ async function deleteOldImage(imagePath: string | null) {
         const filePath = path.join(uploadDir, filename)
         await unlink(filePath)
         console.log('Deleted old product image:', filePath)
-    } catch (error) {
+    } catch {
         // File might not exist, ignore error
         console.log('Could not delete old product image (may not exist):', imagePath)
     }
@@ -64,7 +68,7 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
 
 export async function createProduct(formData: FormData) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as AppSession
 
     const name = formData.get('name') as string
     const rawSku = formData.get('sku') as string
@@ -112,7 +116,7 @@ export async function createProduct(formData: FormData) {
         // Ensure directory exists
         try {
             await mkdir(uploadDir, { recursive: true })
-        } catch (e) { }
+        } catch { }
 
         await writeFile(path.join(uploadDir, filename), resizedBuffer)
 
@@ -120,11 +124,12 @@ export async function createProduct(formData: FormData) {
         imagePath = '/api/uploads/' + filename
     }
 
+    let createdProduct: product | null = null;
     try {
         const product = await prisma.product.create({
             data: {
                 name,
-                sku: sku as any,
+                sku,
                 stock,
                 lowStockThreshold,
                 notes,
@@ -132,6 +137,7 @@ export async function createProduct(formData: FormData) {
                 image: imagePath
             }
         })
+        createdProduct = product;
 
         // Create transaction record if initial stock > 0
         if (stock > 0) {
@@ -146,15 +152,35 @@ export async function createProduct(formData: FormData) {
             })
             console.log('Transaction created with userId:', session?.user?.id || 'system')
         }
-    } catch (error: any) {
-        if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+    } catch (error: unknown) {
+        const err = error as { code?: string; meta?: { target?: string[] } };
+        if (err && typeof err === 'object' && err.code === 'P2002' && err.meta?.target?.includes('sku')) {
             return { error: `SKU '${sku}' already exists.` }
         }
-        return { error: error.message }
+        return { error: error instanceof Error ? error.message : 'Unknown error' }
     }
 
     revalidatePath('/inventory')
     revalidatePath('/history')
+
+    // Sync to Laravel
+    if (createdProduct) {
+        try {
+            await apiClient.post('/productions/sync', {
+                sku: createdProduct.sku,
+                name: createdProduct.name,
+                stock: createdProduct.stock,
+                low_stock_threshold: createdProduct.lowStockThreshold,
+                notes: createdProduct.notes,
+                drawer_location: createdProduct.drawerLocation,
+                external_id: createdProduct.id,
+                image: createdProduct.image ? (createdProduct.image.startsWith('http') ? createdProduct.image : `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${createdProduct.image}`) : null,
+            })
+        } catch {
+            console.error('Failed to sync to Laravel after creation:')
+        }
+    }
+
     return { success: true }
 }
 
@@ -176,7 +202,14 @@ export async function updateProduct(formData: FormData) {
         select: { image: true }
     })
 
-    const data: any = {
+    const data: {
+        name: string
+        sku: string | null
+        lowStockThreshold: number
+        notes: string | null
+        drawerLocation: string | null
+        image?: string | null
+    } = {
         name,
         sku,
         lowStockThreshold,
@@ -216,7 +249,7 @@ export async function updateProduct(formData: FormData) {
             }
         }
 
-        try { await mkdir(uploadDir, { recursive: true }) } catch (e) { }
+        try { await mkdir(uploadDir, { recursive: true }) } catch { }
 
         await writeFile(path.join(uploadDir, filename), resizedBuffer)
         data.image = '/api/uploads/' + filename
@@ -237,24 +270,42 @@ export async function updateProduct(formData: FormData) {
     }
 
     try {
-        await prisma.product.update({
+        const updatedProduct = await prisma.product.update({
             where: { id },
             data
         })
-    } catch (error: any) {
-        if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+
+        revalidatePath('/inventory')
+
+        // Sync to Laravel
+        try {
+            await apiClient.post('/productions/sync', {
+                sku: updatedProduct.sku,
+                name: updatedProduct.name,
+                stock: updatedProduct.stock,
+                low_stock_threshold: updatedProduct.lowStockThreshold,
+                notes: updatedProduct.notes,
+                drawer_location: updatedProduct.drawerLocation,
+                external_id: updatedProduct.id,
+                image: updatedProduct.image ? (updatedProduct.image.startsWith('http') ? updatedProduct.image : `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${updatedProduct.image}`) : null,
+            })
+        } catch (error) {
+            console.error('Failed to sync to Laravel after update:', error)
+        }
+
+        return { success: true }
+    } catch (error: unknown) {
+        const err = error as { code?: string; meta?: { target?: string[] } };
+        if (err && typeof err === 'object' && err.code === 'P2002' && err.meta?.target?.includes('sku')) {
             return { error: `SKU '${sku}' already exists.` }
         }
-        return { error: error.message }
+        return { error: error instanceof Error ? error.message : 'Unknown error' }
     }
-
-    revalidatePath('/inventory')
-    return { success: true }
 }
 
 
 export async function addStock(productId: string, quantity: number) {
-    const session: any = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as AppSession
 
     console.log('=== ADD STOCK DEBUG ===')
     console.log('Session:', JSON.stringify(session, null, 2))
@@ -277,38 +328,79 @@ export async function addStock(productId: string, quantity: number) {
         })
     ])
 
-    console.log('Transaction created with userId:', session?.user?.id)
-
     revalidatePath('/inventory')
     revalidatePath('/history')
+
+    // Sync to Laravel
+    try {
+        const product = await prisma.product.findUnique({ where: { id: productId } })
+        if (product) {
+            await apiClient.post('/productions/sync', {
+                sku: product.sku,
+                name: product.name,
+                stock: product.stock,
+                low_stock_threshold: product.lowStockThreshold,
+                notes: product.notes,
+                drawer_location: product.drawerLocation,
+                external_id: product.id,
+            })
+        }
+    } catch {
+        console.error('Failed to sync to Laravel after addStock:')
+    }
 }
 
 export async function deleteProduct(id: string) {
     await requireAdmin()
 
-    // Fetch product to get image path before deleting
-    const product = await prisma.product.findUnique({
-        where: { id },
-        select: { image: true }
-    })
+    try {
+        // Fetch product to get image path before deleting
+        const product = await prisma.product.findUnique({
+            where: { id },
+            select: { image: true }
+        })
 
-    await prisma.product.delete({
-        where: { id }
-    })
+        await prisma.product.delete({
+            where: { id }
+        })
 
-    // Delete image from storage after successful DB deletion
-    if (product?.image) {
-        await deleteOldImage(product.image)
+        // Delete image from storage after successful DB deletion
+        if (product?.image) {
+            await deleteOldImage(product.image)
+        }
+
+        revalidatePath('/inventory')
+
+        // Sync to Laravel (Delete)
+        try {
+            await apiClient.post('/productions/sync', {
+                action: 'delete',
+                external_id: id
+            })
+        } catch {
+            console.error('Failed to delete from Laravel:')
+        }
+
+        return { success: true }
+    } catch (error: unknown) {
+        console.error('Error deleting product:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        return { error: 'Gagal menghapus produk: ' + errorMessage }
     }
-
-    revalidatePath('/inventory')
 }
 
 // Helper removed, using shared version in @/lib/upload
 
-export async function importProducts(products: any[]) {
+export async function importProducts(products: {
+    name: string
+    sku?: string | number
+    stock?: string | number
+    lowStockThreshold?: string | number
+    notes?: string | null
+    image?: string | null
+}[]) {
     await requireAdmin()
-    const session: any = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions) as AppSession
 
     let successCount = 0
     let errorCount = 0
@@ -326,8 +418,8 @@ export async function importProducts(products: any[]) {
             const itemSku = item.sku ? String(item.sku).trim() : null
             const sku = itemSku === '' ? null : itemSku
             const name = String(item.name).trim()
-            const stock = item.stock ? parseFloat(item.stock) : 0
-            const lowStockThreshold = item.lowStockThreshold ? parseFloat(item.lowStockThreshold) : 10
+            const stock = item.stock ? parseFloat(String(item.stock)) : 0
+            const lowStockThreshold = item.lowStockThreshold ? parseFloat(String(item.lowStockThreshold)) : 10
             const notes = item.notes ? String(item.notes).trim() : null
 
             // Image handling: Check if it's a URL and download if needed
@@ -364,7 +456,14 @@ export async function importProducts(products: any[]) {
 
             if (existing) {
                 // Update
-                const updateData: any = {
+                const updateData: {
+                    name: string
+                    stock: number
+                    lowStockThreshold: number
+                    notes: string | null
+                    image: string | null
+                    sku?: string | null
+                } = {
                     name,
                     stock: stock,
                     lowStockThreshold,
@@ -378,7 +477,7 @@ export async function importProducts(products: any[]) {
                 }
                 // If excel SKU is empty, we DO NOT clear the existing SKU. Preserve it.
 
-                await prisma.product.update({
+                const updatedProduct = await prisma.product.update({
                     where: { id: existing.id },
                     data: updateData
                 })
@@ -396,12 +495,28 @@ export async function importProducts(products: any[]) {
                     })
                 }
 
+                // Sync to Laravel
+                try {
+                    await apiClient.post('/productions/sync', {
+                        sku: updatedProduct.sku,
+                        name: updatedProduct.name,
+                        stock: updatedProduct.stock,
+                        low_stock_threshold: updatedProduct.lowStockThreshold,
+                        notes: updatedProduct.notes,
+                        drawer_location: updatedProduct.drawerLocation,
+                        external_id: updatedProduct.id,
+                        image: updatedProduct.image ? (updatedProduct.image.startsWith('http') ? updatedProduct.image : `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${updatedProduct.image}`) : null,
+                    })
+                } catch {
+                    console.error('Failed to sync to Laravel during import update:')
+                }
+
             } else {
                 // Create
                 const newProduct = await prisma.product.create({
                     data: {
                         name,
-                        sku: sku as any, // can be null
+                        sku, // removed as any
                         stock,
                         lowStockThreshold,
                         notes,
@@ -420,19 +535,36 @@ export async function importProducts(products: any[]) {
                         }
                     })
                 }
+
+                // Sync to Laravel
+                try {
+                    await apiClient.post('/productions/sync', {
+                        sku: newProduct.sku,
+                        name: newProduct.name,
+                        stock: newProduct.stock,
+                        low_stock_threshold: newProduct.lowStockThreshold,
+                        notes: newProduct.notes,
+                        drawer_location: newProduct.drawerLocation,
+                        external_id: newProduct.id,
+                        image: newProduct.image ? (newProduct.image.startsWith('http') ? newProduct.image : `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}${newProduct.image}`) : null,
+                    })
+                } catch {
+                    console.error('Failed to sync to Laravel during import create:')
+                }
             }
             successCount++
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             errorCount++
-            errors.push(`Failed to import item ${item.name}: ${error.message}`)
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            errors.push(`Failed to import item ${item.name}: ${errorMessage}`)
         }
     }
 
     revalidatePath('/inventory')
     revalidatePath('/history')
 
-    return { success: successCount, errors }
+    return { success: successCount, failed: errorCount, errors }
 }
 
 export async function getAllProductsForExport(baseUrl: string) {
@@ -502,8 +634,9 @@ export async function moveToSparepartProject(id: string) {
         revalidatePath('/sparepart-project')
 
         return { success: true, merged: !!existingSparepart }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error moving product:', error)
-        return { error: 'Gagal memindah produk: ' + error.message }
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        return { error: 'Gagal memindah produk: ' + errorMessage }
     }
 }
