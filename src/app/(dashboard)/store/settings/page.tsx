@@ -1,10 +1,17 @@
 import { getStoreSuppliers } from '@/app/actions/store-supplier'
 import StoreSupplierManager from '@/components/store/store-supplier-manager'
 import { Settings } from 'lucide-react'
+import { redirect } from 'next/navigation'
+import { getUserRole } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function StoreSettingsPage() {
+    const role = await getUserRole()
+    if (role !== 'ADMIN') {
+        redirect('/dashboard')
+    }
+
     const suppliers = await getStoreSuppliers()
 
     return (

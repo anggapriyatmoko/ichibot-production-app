@@ -8,6 +8,7 @@ import { syncStoreProducts, toggleStoreProductPurchased } from '@/app/actions/st
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
+import { useConfirmation } from '@/components/providers/modal-provider'
 
 export default function StoreProductList({
     initialProducts,
@@ -31,6 +32,7 @@ export default function StoreProductList({
     const [localProducts, setLocalProducts] = useState(initialProducts)
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+    const { showConfirmation } = useConfirmation()
     const { showAlert, showError } = useAlert()
     const router = useRouter()
 
@@ -68,27 +70,46 @@ export default function StoreProductList({
     }
 
     const handleTogglePurchased = async (wcId: number, currentStatus: boolean) => {
-        const newStatus = !currentStatus
+        const executeToggle = async () => {
+            const newStatus = !currentStatus
 
-        // Optimistic UI update
-        setLocalProducts(prev => prev.map(p =>
-            p.wcId === wcId ? { ...p, purchased: newStatus } : p
-        ))
+            // Optimistic UI update
+            setLocalProducts(prev => prev.map(p =>
+                p.wcId === wcId ? { ...p, purchased: newStatus } : p
+            ))
 
-        try {
-            const result = await toggleStoreProductPurchased(wcId, newStatus)
-            if (!result.success) {
-                // Revert on error
+            try {
+                const result = await toggleStoreProductPurchased(wcId, newStatus)
+                if (!result.success) {
+                    // Revert on error
+                    setLocalProducts(prev => prev.map(p =>
+                        p.wcId === wcId ? { ...p, purchased: currentStatus } : p
+                    ))
+                    showError('Gagal memperbarui status pembelian.')
+                } else {
+                    router.refresh()
+                }
+            } catch (error) {
                 setLocalProducts(prev => prev.map(p =>
                     p.wcId === wcId ? { ...p, purchased: currentStatus } : p
                 ))
-                showError('Gagal memperbarui status pembelian.')
+                showError('Terjadi kesalahan sistem.')
             }
-        } catch (error) {
-            setLocalProducts(prev => prev.map(p =>
-                p.wcId === wcId ? { ...p, purchased: currentStatus } : p
-            ))
-            showError('Terjadi kesalahan sistem.')
+        }
+
+        // Only show confirmation when UNCHECKING (currentStatus is true)
+        if (currentStatus) {
+            showConfirmation({
+                title: 'Konfirmasi',
+                message: 'Apakah barang sudah datang?',
+                confirmLabel: 'Ya',
+                cancelLabel: 'Tidak',
+                type: 'confirm',
+                action: executeToggle
+            })
+        } else {
+            // Check immediately for checking
+            executeToggle()
         }
     }
 

@@ -164,9 +164,9 @@ const adminNavigation = [
 const storeNavigation = [
   { name: "Product", href: "/store/product", icon: Package },
   { name: "POS Store", href: "/store/pos", icon: Store },
-  { name: "Low Stock", href: "/store/low-stock", icon: AlertTriangle },
+  { name: "Low Stock", href: "/store/low-stock", icon: AlertTriangle, adminOnly: true },
   { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
-  { name: "Setting", href: "/store/settings", icon: Settings },
+  { name: "Setting", href: "/store/settings", icon: Settings, adminOnly: true },
 ];
 
 
@@ -464,9 +464,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
                 {isOpen ? "STORE" : "..."}
               </p>
             </div>
-            {storeNavigation.map((item) => (
-              <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
-            ))}
+            {storeNavigation.map((item) => {
+              if (item.adminOnly && userRole !== "ADMIN") {
+                return null;
+              }
+              return <NavItem key={item.name} item={item} isCollapsed={!isOpen} />;
+            })}
           </nav>
 
           {/* Administrasi menu - visible for ADMIN, HRD, and ADMINISTRASI */}

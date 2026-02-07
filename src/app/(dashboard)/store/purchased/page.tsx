@@ -20,6 +20,7 @@ export default async function StorePurchasedPage() {
                 showPurchasedStyles={false}
                 showPurchasedAt={true}
                 showSyncButton={false}
+                showSupplierColumn={false}
             />
         </div>
     )

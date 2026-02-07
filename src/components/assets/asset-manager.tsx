@@ -331,7 +331,7 @@ export default function AssetManager({
                     />
                 </div>
                 <div className="flex gap-2">
-                    {isAdmin && (
+                    {userRole === 'ADMIN' && (
                         <>
                             <button
                                 onClick={handleExport}

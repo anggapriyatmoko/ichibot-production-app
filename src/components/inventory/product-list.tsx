@@ -370,7 +370,7 @@ export default function ProductList({
 
                 <div className="flex gap-2 flex-shrink-0">
                     <div className="flex gap-2 flex-shrink-0">
-                        {['ADMIN', 'HRD', 'TEKNISI', 'USER'].includes(userRole || '') && (
+                        {userRole === 'ADMIN' && (
                             <>
                                 <button
                                     onClick={handleExport}

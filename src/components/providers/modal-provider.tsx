@@ -10,6 +10,8 @@ type ConfirmationOptions = {
     message: string
     type?: ConfirmationType
     action?: () => Promise<void> | void
+    confirmLabel?: string
+    cancelLabel?: string
 }
 
 type ConfirmationContextType = {
@@ -34,21 +36,27 @@ export function ModalProvider({ children }: { children: ReactNode }) {
         title: string
         message: string
         action: () => Promise<void> | void
+        confirmLabel: string
+        cancelLabel: string
     }>({
         isOpen: false,
         type: 'confirm',
         title: '',
         message: '',
-        action: () => { }
+        action: () => { },
+        confirmLabel: 'Confirm',
+        cancelLabel: 'Cancel'
     })
 
-    const showConfirmation = ({ title, message, type = 'confirm', action }: ConfirmationOptions) => {
+    const showConfirmation = ({ title, message, type = 'confirm', action, confirmLabel, cancelLabel }: ConfirmationOptions) => {
         setConfirmation({
             isOpen: true,
             title,
             message,
             type,
-            action: action || (() => { })
+            action: action || (() => { }),
+            confirmLabel: confirmLabel || (type === 'alert' ? 'OK' : 'Confirm'),
+            cancelLabel: cancelLabel || 'Cancel'
         })
     }
 
@@ -82,14 +90,14 @@ export function ModalProvider({ children }: { children: ReactNode }) {
                                     onClick={closeConfirmation}
                                     className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                 >
-                                    Cancel
+                                    {confirmation.cancelLabel}
                                 </button>
                             )}
                             <button
                                 onClick={handleConfirm}
                                 className={`px-4 py-2 ${confirmation.type === 'alert' ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'} rounded-lg text-sm font-medium shadow-sm transition-colors`}
                             >
-                                {confirmation.type === 'alert' ? 'OK' : 'Confirm'}
+                                {confirmation.confirmLabel}
                             </button>
                         </div>
                     </div>

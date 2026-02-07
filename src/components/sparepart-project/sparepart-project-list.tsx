@@ -412,7 +412,7 @@ export default function SparepartProjectList({
                 </div>
 
                 <div className="flex gap-2 flex-shrink-0">
-                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                    {userRole === 'ADMIN' && (
                         <>
                             <button
                                 onClick={handleExport}
