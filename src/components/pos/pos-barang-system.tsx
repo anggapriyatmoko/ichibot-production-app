@@ -571,7 +571,7 @@ export default function POSBarangSystem({
                     )}
                 >
                     <Package className="w-5 h-5" />
-                    <span className="text-[10px] font-bold">PRODUCTS</span>
+                    <span className="text-[10px] font-medium">PRODUCTS</span>
                 </button>
                 <div className="w-[1px] bg-gray-200 h-full"></div>
                 <button
@@ -589,7 +589,7 @@ export default function POSBarangSystem({
                             </span>
                         )}
                     </div>
-                    <span className="text-[10px] font-bold">CART</span>
+                    <span className="text-[10px] font-medium">CART</span>
                 </button>
             </div>
 

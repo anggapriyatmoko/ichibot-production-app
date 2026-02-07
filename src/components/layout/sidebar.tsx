@@ -74,6 +74,7 @@ const barangNavigation = [
 // Menu visible to ADMIN and TEKNISI only
 const teknisiNavigation = [
   { name: "Service Robot", href: "/service-robot", icon: Bot },
+  { name: "POS Service", href: "/pos-service", icon: ShoppingCart },
 ];
 
 const administrasiNavigation = [

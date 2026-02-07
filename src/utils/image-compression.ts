@@ -5,7 +5,7 @@
  * Compresses images to target size by reducing dimensions and quality
  */
 
-export async function compressImage(file: File, maxSizeKB: number = 700): Promise<File> {
+export async function compressImage(file: File, maxSizeKB: number = 700, maxDimension: number = 1200): Promise<File> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = (event) => {
@@ -15,15 +15,14 @@ export async function compressImage(file: File, maxSizeKB: number = 700): Promis
                 let width = img.width
                 let height = img.height
 
-                // Max dimension 1200px
-                const MAX_DIMENSION = 1200
-                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                // Custom max dimension
+                if (width > maxDimension || height > maxDimension) {
                     if (width > height) {
-                        height = (height / width) * MAX_DIMENSION
-                        width = MAX_DIMENSION
+                        height = (height / width) * maxDimension
+                        width = maxDimension
                     } else {
-                        width = (width / height) * MAX_DIMENSION
-                        height = MAX_DIMENSION
+                        width = (width / height) * maxDimension
+                        height = maxDimension
                     }
                 }
 
@@ -60,7 +59,7 @@ export async function compressImage(file: File, maxSizeKB: number = 700): Promis
                                     type: 'image/jpeg',
                                     lastModified: Date.now()
                                 })
-                                console.log(`Compressed from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB (quality: ${quality.toFixed(1)})`)
+                                console.log(`Compressed from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB (dim: ${width}x${height}, quality: ${quality.toFixed(1)})`)
                                 resolve(compressedFile)
                             }
                         },
@@ -86,21 +85,21 @@ export async function compressImage(file: File, maxSizeKB: number = 700): Promis
 export async function processImageFile(
     file: File,
     showError: (msg: string) => void,
-    targetSizeKB: number = 700
+    targetSizeKB: number = 700,
+    maxDimension: number = 1200
 ): Promise<File | null> {
     const MAX_SIZE = targetSizeKB * 1024
 
     let processedFile = file
 
-    // If file is larger than target size, compress it
-    if (file.size > MAX_SIZE) {
-        try {
-            processedFile = await compressImage(file, targetSizeKB)
-        } catch (error) {
-            console.error('Compression failed:', error)
-            showError('Gagal mengkompresi gambar')
-            return null
-        }
+    // If file is larger than target size or we just want to ensure dimensions, compress/resize it
+    // Actually, we should always run compressImage if maxDimension is provided to ensure resizing
+    try {
+        processedFile = await compressImage(file, targetSizeKB, maxDimension)
+    } catch (error) {
+        console.error('Compression failed:', error)
+        showError('Gagal mengkompresi gambar')
+        return null
     }
 
     // Final check - if still over 1MB after compression, reject

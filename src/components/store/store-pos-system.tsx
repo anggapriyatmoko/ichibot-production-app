@@ -472,7 +472,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                     <button
                                         onClick={() => setActiveTab('cart')}
                                         className={cn(
-                                            "px-3 py-1 rounded-full text-sm font-bold transition-all",
+                                            "px-3 py-1 rounded-full text-sm font-medium transition-all",
                                             activeTab === 'cart' ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
                                         )}
                                     >
@@ -481,7 +481,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                     <button
                                         onClick={() => setActiveTab('orders')}
                                         className={cn(
-                                            "px-3 py-1 rounded-full text-sm font-bold transition-all",
+                                            "px-3 py-1 rounded-full text-sm font-medium transition-all",
                                             activeTab === 'orders' ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
                                         )}
                                     >
