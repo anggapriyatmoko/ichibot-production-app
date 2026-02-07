@@ -284,10 +284,10 @@ export default function StoreProductList({
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-sm">
-                                            <div className="text-foreground">Rp {formatCurrency(product.price || 0)}</div>
+                                            <div className="text-foreground">{formatCurrency(product.price || 0)}</div>
                                             {product.salePrice > 0 && product.salePrice < product.regularPrice && (
                                                 <div className="text-[10px] text-muted-foreground line-through">
-                                                    Rp {formatCurrency(product.regularPrice)}
+                                                    {formatCurrency(product.regularPrice)}
                                                 </div>
                                             )}
                                         </td>

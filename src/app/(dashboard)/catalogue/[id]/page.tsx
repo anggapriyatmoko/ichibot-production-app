@@ -44,15 +44,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
     })
     const existingSectionNames = existingSections.map(s => s.name)
 
-    const existingCategoriesRaw = await prisma.recipeSection.findMany({
-        distinct: ['category'],
-        select: { category: true },
-        where: { category: { not: null } },
-        orderBy: { category: 'asc' }
+    const sectionCategories = await prisma.sectioncategory.findMany({
+        orderBy: { name: 'asc' }
     })
-    const existingCategories = existingCategoriesRaw
-        .map(s => s.category)
-        .filter((c): c is string => c !== null)
 
     const session: any = await getServerSession(authOptions)
 
@@ -77,7 +71,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                     allProducts={allProducts}
                     userRole={session?.user?.role}
                     existingSectionNames={existingSectionNames}
-                    existingCategoryNames={existingCategories}
+                    sectionCategories={sectionCategories.map(c => c.name)}
                 />
             </div>
         </div>

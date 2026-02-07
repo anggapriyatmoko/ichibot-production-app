@@ -56,27 +56,19 @@ const barangNavigation = [
     icon: Package,
     children: [
       { name: "Sparepart Production", href: "/inventory", icon: Package },
-      { name: "POS Production", href: "/pos", icon: ShoppingCart },
       {
         name: "Sparepart Project",
         href: "/sparepart-project",
         icon: FolderKanban,
       },
-      { name: "POS Project", href: "/pos-project", icon: ShoppingCart },
+      { name: "POS Barang", href: "/pos-barang", icon: ShoppingCart },
       { name: "Rack Management", href: "/rack-management", icon: Warehouse },
     ],
   },
   { name: "Product Ichibot", href: "/catalogue", icon: BookOpen },
   { name: "Production Plan", href: "/production-plan", icon: Calendar },
-  {
-    name: "Activity",
-    icon: ClipboardList,
-    children: [
-      { name: "History", href: "/history", icon: LayoutDashboard },
-      { name: "Log Activity", href: "/log-activity", icon: ClipboardList },
-    ],
-  },
   { name: "Aset Mesin/Alat", href: "/assets", icon: Wrench },
+  { name: "Setting", href: "/catalogue/settings", icon: Settings, adminOnly: true },
 ];
 
 // Menu visible to ADMIN and TEKNISI only
@@ -153,6 +145,7 @@ const hrdNavigation = [
       { name: "Kalender", href: "/calendar", icon: Calendar },
     ],
   },
+  { name: "Log Activity", href: "/log-activity", icon: ClipboardList },
   { name: "Setting", href: "/hr-settings", icon: Settings, adminOnly: true },
 ];
 
@@ -449,9 +442,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
                 {isOpen ? "Barang" : "..."}
               </p>
             </div>
-            {barangNavigation.map((item) => (
-              <NavItem key={item.name} item={item} isCollapsed={!isOpen} />
-            ))}
+            {barangNavigation.map((item) => {
+              if ((item as any).adminOnly && userRole !== "ADMIN") {
+                return null;
+              }
+              return <NavItem key={item.name} item={item} isCollapsed={!isOpen} />;
+            })}
 
             <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
               <div className="border-t border-border" />

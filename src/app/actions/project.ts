@@ -61,9 +61,9 @@ export async function getProjects() {
 
     // If user is not ADMIN or HRD, only show projects assigned to them
     if (!['ADMIN', 'HRD'].includes(session.user.role || '')) {
-        where.assignedUsers = {
+        where.projecttouser = {
             some: {
-                id: session.user.id
+                B: session.user.id
             }
         }
     }

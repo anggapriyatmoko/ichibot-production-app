@@ -65,10 +65,10 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     }
 
     const handleConfirm = async () => {
+        closeConfirmation()
         if (confirmation.action) {
             await confirmation.action()
         }
-        closeConfirmation()
     }
 
     return (

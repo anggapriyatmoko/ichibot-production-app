@@ -238,7 +238,12 @@ export async function updateProductionPlanQuantity(id: string, newQuantity: numb
 
     const plan = await prisma.productionPlan.findUnique({
         where: { id },
-        include: { units: { orderBy: { unitNumber: 'asc' } } }
+        include: {
+            units: {
+                include: { issues: true },
+                orderBy: { unitNumber: 'asc' }
+            }
+        }
     })
 
     if (!plan) return
@@ -267,39 +272,41 @@ export async function updateProductionPlanQuantity(id: string, newQuantity: numb
         const countToRemove = Math.abs(diff)
 
         // Find all units that are safe to delete (no progress)
-        // Check if units to be removed are safe to delete (no progress)
         const safeUnits = plan.units.filter(u => {
             const unit = u as any
             const isCompletedEmpty = unit.completed === '[]'
             const isNotSold = !unit.isSold
-            const isNotPacked = !unit.isPacked
-            const hasNoIdentifier = !unit.productIdentifier
+            const isNotPacked = !unit.isPacked && !unit.packedAt
+            const isNotAssembled = !unit.assembledAt
             const hasNoCustomId = !unit.customId
+            const hasNoIssues = (unit.issues?.length || 0) === 0
 
-            // console.log(`Unit ${unit.unitNumber}: completed=${unit.completed}, isSold=${unit.isSold}, isPacked=${unit.isPacked}, id=${unit.productIdentifier}, customId=${unit.customId}`)
+            // We NOW allow units WITH productIdentifier to be deleted 
+            // because serials are auto-generated upon plan creation.
+            // As long as there is no ACTUAL content/progress/sales data, it's safe.
 
-            return isCompletedEmpty && isNotSold && isNotPacked && hasNoIdentifier && hasNoCustomId
+            return isCompletedEmpty && isNotSold && isNotPacked && isNotAssembled && hasNoCustomId && hasNoIssues
         })
 
         if (safeUnits.length < countToRemove) {
             // Debug why:
-            const exampleBadUnit = plan.units.reverse().find(u => !safeUnits.includes(u)) // Check from end
+            const exampleBadUnit = plan.units.slice().reverse().find(u => !safeUnits.includes(u))
             let reason = 'Unknown'
             if (exampleBadUnit) {
                 const u = exampleBadUnit as any
-                if (u.completed !== '[]') reason = `Progress detected`
+                if (u.completed !== '[]') reason = `Progress detected (Steps: ${JSON.parse(u.completed).length})`
                 else if (u.isSold) reason = 'Marked as Sold'
-                else if (u.isPacked) reason = 'Marked as Packed'
-                else if (u.productIdentifier) reason = `Serial set (${u.productIdentifier})`
-                else if (u.customId) reason = `ID set (${u.customId})`
+                else if (u.isPacked || u.packedAt) reason = 'Marked as Packed'
+                else if (u.assembledAt) reason = 'Marked as Assembled'
+                else if (u.customId) reason = `Custom ID set (${u.customId})`
+                else if (u.issues?.length > 0) reason = `Has reported issues (${u.issues.length})`
             }
 
             throw new Error(`Cannot reduce target. Only ${safeUnits.length} empty units found. Blocking unit #${exampleBadUnit?.unitNumber}: ${reason}`)
         }
 
         // Prioritize deleting from the end (highest unitNumber)
-        // safeUnits is already ordered by unitNumber asc from the query, so reverse it
-        const unitsToDelete = safeUnits.reverse().slice(0, countToRemove)
+        const unitsToDelete = safeUnits.slice().reverse().slice(0, countToRemove)
         const idsToDelete = unitsToDelete.map(u => u.id)
 
         await prisma.$transaction([

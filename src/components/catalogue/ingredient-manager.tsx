@@ -49,7 +49,7 @@ export default function IngredientManager({
     allProducts,
     userRole,
     existingSectionNames,
-    existingCategoryNames
+    sectionCategories
 }: {
     recipeId: string,
     recipeName: string,
@@ -58,10 +58,11 @@ export default function IngredientManager({
     allProducts: Product[]
     userRole?: string
     existingSectionNames?: string[]
-    existingCategoryNames?: string[]
+    sectionCategories?: string[]
 }) {
     // Default to empty array if not provided
     const suggestions = existingSectionNames || []
+    const categorySuggestions = sectionCategories || []
 
     // Grouping Logic
     const sections = initialSections
@@ -142,11 +143,6 @@ export default function IngredientManager({
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [isEditing, setIsEditing] = useState(false) // Edit Mode State
-    const [showNewCategoryInput, setShowNewCategoryInput] = useState(false) // Toggle for new category input
-    const [localCategoryUsage, setLocalCategoryUsage] = useState<string[]>([]) // Store locally added categories for immediate use
-
-    // Calculate suggestions AFTER state is declared
-    const categorySuggestions = [...new Set([...(existingCategoryNames || []), ...localCategoryUsage])]
 
     const filteredProducts = allProducts.filter(p => {
         const searchWords = searchQuery.toLowerCase().split(/\s+/).filter(w => w.length > 0)
@@ -227,7 +223,6 @@ export default function IngredientManager({
         await createSection(recipeId, formData)
         setIsLoading(false)
         setIsAddingSection(false)
-        setShowNewCategoryInput(false)
     }
 
     async function handleUpdateSection(formData: FormData) {
@@ -778,61 +773,18 @@ export default function IngredientManager({
                                     </p>
                                 </div>
                                 <div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
-                                        <div className="flex gap-2 mb-2">
-                                            <select
-                                                name="category_select"
-                                                required
-                                                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none h-10"
-                                                defaultValue=""
-                                                key={localCategoryUsage.length} // Force re-render when local categories change
-                                            >
-                                                <option value="" disabled>Select a category...</option>
-                                                {categorySuggestions.map((cat: string) => (
-                                                    <option key={cat} value={cat}>{cat}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
-                                                className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg border border-border"
-                                                title="Add New Category"
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                            </button>
-                                        </div>
-
-                                        {showNewCategoryInput && (
-                                            <div className="flex gap-2 animate-in slide-in-from-top-2 duration-200">
-                                                <input
-                                                    id="new-cat-input"
-                                                    className="flex-1 bg-background border border-primary rounded-lg px-3 py-2 text-foreground focus:outline-none h-10 input-focus-ring"
-                                                    placeholder="New Category Name"
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const input = document.getElementById('new-cat-input') as HTMLInputElement
-                                                        const val = input.value.trim()
-                                                        if (val) {
-                                                            setLocalCategoryUsage(prev => [...prev, val])
-                                                            setShowNewCategoryInput(false)
-                                                            // Auto select the new category
-                                                            setTimeout(() => {
-                                                                const select = document.querySelector('select[name="category_select"]') as HTMLSelectElement
-                                                                if (select) select.value = val
-                                                            }, 50)
-                                                        }
-                                                    }}
-                                                    className="px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg h-10 transition-colors"
-                                                >
-                                                    Add
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
+                                    <select
+                                        name="category_select"
+                                        required
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none h-10"
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled>Select a category...</option>
+                                        {categorySuggestions.map((cat: string) => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="flex justify-end gap-3 pt-2">
                                     <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
