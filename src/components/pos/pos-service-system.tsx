@@ -633,13 +633,14 @@ export default function POSServiceSystem({
                 result = await createServiceProduct(formData)
             }
 
-            if (result.success) {
+            if (result.success && result.product) {
                 // Update local products state
+                const newProduct = result.product
                 setProducts(prev => {
                     if (currentProduct.id) {
-                        return prev.map(p => p.id === currentProduct.id ? result.product : p)
+                        return prev.map(p => p.id === currentProduct.id ? newProduct : p)
                     } else {
-                        return [...prev, result.product].sort((a, b) => a.name.localeCompare(b.name))
+                        return [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name))
                     }
                 })
                 setIsEditingProduct(false)
