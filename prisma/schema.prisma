@@ -663,8 +663,6 @@ model serviceProduct {
   image        String?  @db.LongText
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
-  @@map("ServiceProduct")
 }
 
 model serviceOrder {
@@ -674,8 +672,6 @@ model serviceOrder {
   createdAt   DateTime           @default(now())
   user        user?              @relation(fields: [userId], references: [id])
   items       serviceOrderItem[]
-
-  @@map("ServiceOrder")
 }
 
 model serviceOrderItem {
@@ -689,7 +685,5 @@ model serviceOrderItem {
   quantity     Float
   createdAt    DateTime     @default(now())
   order        serviceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@map("ServiceOrderItem")
 }
 

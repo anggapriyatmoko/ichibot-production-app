@@ -33,7 +33,7 @@ export async function checkoutServiceOrder(items: {
         const orderNumber = `SO-${dateStr}-${(count + 1).toString().padStart(4, '0')}`
 
         // Create transaction: Update stocks and create order
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             const order = await tx.serviceOrder.create({
                 data: {
                     orderNumber,
