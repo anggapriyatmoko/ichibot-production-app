@@ -3,7 +3,14 @@ import StoreProductList from '@/components/store/store-product-list'
 
 export const dynamic = 'force-dynamic'
 
+import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
 export default async function StorePurchasedPage() {
+    const session = await requireAuth();
+    if (session.user.role === 'EXTERNAL') {
+        redirect('/dashboard');
+    }
     const products = await getStorePurchasedProducts()
 
     return (
@@ -20,7 +27,7 @@ export default async function StorePurchasedPage() {
                 showPurchasedStyles={false}
                 showPurchasedAt={true}
                 showSyncButton={false}
-                showSupplierColumn={false}
+                showSupplierColumn={session.user.role === 'ADMIN'}
             />
         </div>
     )

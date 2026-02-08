@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { requireAuth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
     title: 'Aset Mesin/Alat | Ichibot Production',
@@ -16,7 +17,10 @@ export default async function AssetsPage({
 }: {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-    await requireAuth()
+    const sessionSession: any = await requireAuth()
+    if (sessionSession.user.role === 'EXTERNAL') {
+        redirect('/dashboard');
+    }
     const params = await searchParams
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1

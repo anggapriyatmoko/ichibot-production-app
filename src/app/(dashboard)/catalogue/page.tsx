@@ -8,8 +8,14 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
+import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
 export default async function CataloguePage() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await requireAuth()
+    if (session.user.role === 'EXTERNAL') {
+        redirect('/dashboard');
+    }
 
     const [recipes, categories] = await prisma.$transaction([
         prisma.recipe.findMany({

@@ -84,11 +84,15 @@ export default function SupplierPicker({
                 className="w-full text-left transition-all hover:opacity-80 flex items-center gap-2 min-h-[32px] group"
                 title="Pilih Supplier"
             >
-                <div className="flex flex-wrap gap-1 items-center overflow-hidden">
+                <div className="flex flex-col gap-1 items-start overflow-hidden">
                     {selectedNames.length > 0 ? (
                         selectedNames.map(name => (
-                            <span key={name} className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-semibold flex items-center gap-1 whitespace-nowrap">
-                                {name}
+                            <span
+                                key={name}
+                                className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-semibold flex items-center gap-1 whitespace-nowrap"
+                                title={name.length > 15 ? name : undefined}
+                            >
+                                {name.length > 15 ? name.substring(0, 15) + '...' : name}
                             </span>
                         ))
                     ) : (

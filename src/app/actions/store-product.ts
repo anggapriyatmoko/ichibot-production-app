@@ -273,6 +273,21 @@ export async function updateStoreProductName(wcId: number, storeName: string) {
     }
 }
 
+export async function updateStoreProductKeterangan(wcId: number, keterangan: string) {
+    try {
+        await prisma.storeProduct.update({
+            where: { wcId },
+            data: { keterangan }
+        })
+        revalidatePath('/store/product')
+        revalidatePath('/store/low-stock')
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error updating keterangan:', error)
+        return { success: false, error: error.message }
+    }
+}
+
 export async function getStorePurchasedProducts() {
     try {
         const products = await prisma.storeProduct.findMany({

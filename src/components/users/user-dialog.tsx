@@ -134,6 +134,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                                 className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer"
                             >
                                 <option value="USER">User</option>
+                                <option value="EXTERNAL">External</option>
                                 <option value="TEKNISI">Teknisi</option>
                                 <option value="HRD">HRD</option>
                                 <option value="ADMINISTRASI">Administrasi</option>

@@ -272,6 +272,10 @@ export default function Sidebar({ userRole }: SidebarProps) {
                 if (child.adminOnly && userRole !== "ADMIN") {
                   return null;
                 }
+                // Hide HR Other Data for EXTERNAL role
+                if (userRole === "EXTERNAL" && child.href === "/hr-other-data") {
+                  return null;
+                }
                 return (
                   <NavItem
                     key={child.name}
@@ -447,26 +451,34 @@ export default function Sidebar({ userRole }: SidebarProps) {
               if ((item as any).adminOnly && userRole !== "ADMIN") {
                 return null;
               }
-              return <NavItem key={item.name} item={item} isCollapsed={!isOpen} />;
-            })}
-
-            <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
-              <div className="border-t border-border" />
-              <p
-                className={cn(
-                  "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
-                  isOpen ? "px-3" : "text-center",
-                )}
-              >
-                {isOpen ? "STORE" : "..."}
-              </p>
-            </div>
-            {storeNavigation.map((item) => {
-              if (item.adminOnly && userRole !== "ADMIN") {
+              // Hide Catalogue and Assets for EXTERNAL role
+              if (userRole === "EXTERNAL" && (item.href === "/catalogue" || item.href === "/assets")) {
                 return null;
               }
               return <NavItem key={item.name} item={item} isCollapsed={!isOpen} />;
             })}
+
+            {userRole !== "EXTERNAL" && (
+              <>
+                <div className={cn("pt-4 pb-2", !isOpen && "hidden md:block")}>
+                  <div className="border-t border-border" />
+                  <p
+                    className={cn(
+                      "pt-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+                      isOpen ? "px-3" : "text-center",
+                    )}
+                  >
+                    {isOpen ? "STORE" : "..."}
+                  </p>
+                </div>
+                {storeNavigation.map((item) => {
+                  if (item.adminOnly && userRole !== "ADMIN") {
+                    return null;
+                  }
+                  return <NavItem key={item.name} item={item} isCollapsed={!isOpen} />;
+                })}
+              </>
+            )}
           </nav>
 
           {/* Administrasi menu - visible for ADMIN, HRD, and ADMINISTRASI */}
@@ -491,8 +503,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
             </>
           )}
 
-          {/* Project menu - visible for ADMIN, HRD, ADMINISTRASI, and USER */}
-          {["ADMIN", "HRD", "ADMINISTRASI", "USER", "TEKNISI"].includes(
+          {/* Project menu - visible for ADMIN, HRD, ADMINISTRASI, USER, and EXTERNAL */}
+          {["ADMIN", "HRD", "ADMINISTRASI", "USER", "EXTERNAL", "TEKNISI"].includes(
             userRole || "",
           ) && (
               <>

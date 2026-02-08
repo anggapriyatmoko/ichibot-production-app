@@ -638,6 +638,7 @@ model StoreProduct {
   categories    String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  keterangan    String?  @db.Text
 
   @@map("StoreProduct")
 }

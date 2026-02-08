@@ -4,7 +4,14 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
+import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
 export default async function StorePOSPage() {
+    const authSession = await requireAuth();
+    if (authSession.user.role === 'EXTERNAL') {
+        redirect('/dashboard');
+    }
     const session = await getServerSession(authOptions)
     const userName = session?.user?.name || "Unknown User"
 

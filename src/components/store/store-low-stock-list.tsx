@@ -7,6 +7,7 @@ import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import SupplierPicker from './supplier-picker'
+import KeteranganEdit from './keterangan-edit'
 
 export default function StoreLowStockList({
     initialProducts,
@@ -159,6 +160,7 @@ export default function StoreLowStockList({
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Info Produk</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">SKU</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Keterangan</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Stok</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Harga</th>
                             </tr>
@@ -208,10 +210,13 @@ export default function StoreLowStockList({
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col text-left">
-                                                <span className={cn(
-                                                    "font-medium text-foreground text-sm line-clamp-1",
-                                                    product.purchased && "line-through text-muted-foreground"
-                                                )}>
+                                                <span
+                                                    className={cn(
+                                                        "font-medium text-foreground text-sm line-clamp-2",
+                                                        product.purchased && "line-through text-muted-foreground"
+                                                    )}
+                                                    title={product.name}
+                                                >
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
@@ -247,10 +252,17 @@ export default function StoreLowStockList({
                                                 initialValue={product.storeName || ''}
                                             />
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
+                                        <td className="px-4 py-3 whitespace-nowrap text-center">
                                             <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">
                                                 {product.sku || '-'}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3 min-w-[200px]">
+                                            <KeteranganEdit
+                                                wcId={product.wcId}
+                                                initialValue={product.keterangan}
+                                                productName={product.name}
+                                            />
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap">
                                             <span className={cn(
@@ -275,7 +287,7 @@ export default function StoreLowStockList({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-24 text-center">
+                                    <td colSpan={8} className="px-4 py-24 text-center">
                                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                             <Package className="w-12 h-12 opacity-10" />
                                             <p className="text-sm font-medium">Tidak ada produk low stock ditemukan.</p>

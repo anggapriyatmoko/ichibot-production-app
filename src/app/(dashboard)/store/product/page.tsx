@@ -3,7 +3,14 @@ import { getStoreProducts } from '@/app/actions/store-product';
 
 export const dynamic = 'force-dynamic';
 
+import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
 export default async function StoreProductPage() {
+    const session = await requireAuth();
+    if (session.user.role === 'EXTERNAL') {
+        redirect('/dashboard');
+    }
     const products = await getStoreProducts();
 
     return (

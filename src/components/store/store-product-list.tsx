@@ -8,6 +8,7 @@ import { syncStoreProducts, toggleStoreProductPurchased } from '@/app/actions/st
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
+import KeteranganEdit from './keterangan-edit'
 import { useConfirmation } from '@/components/providers/modal-provider'
 
 export default function StoreProductList({
@@ -169,6 +170,7 @@ export default function StoreProductList({
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Info Produk</th>
                                 {showSupplierColumn && <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</th>}
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">SKU</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Keterangan</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Stok</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Harga</th>
                             </tr>
@@ -220,10 +222,13 @@ export default function StoreProductList({
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col text-left">
-                                                <span className={cn(
-                                                    "font-medium text-foreground text-sm line-clamp-1",
-                                                    showPurchasedStyles && product.purchased && "line-through text-muted-foreground"
-                                                )}>
+                                                <span
+                                                    className={cn(
+                                                        "font-medium text-foreground text-sm line-clamp-2",
+                                                        showPurchasedStyles && product.purchased && "line-through text-muted-foreground"
+                                                    )}
+                                                    title={product.name}
+                                                >
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
@@ -267,10 +272,17 @@ export default function StoreProductList({
                                                 />
                                             </td>
                                         )}
-                                        <td className="px-4 py-3 whitespace-nowrap">
+                                        <td className="px-4 py-3 whitespace-nowrap text-center">
                                             <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">
                                                 {product.sku || '-'}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3 min-w-[200px]">
+                                            <KeteranganEdit
+                                                wcId={product.wcId}
+                                                initialValue={product.keterangan}
+                                                productName={product.name}
+                                            />
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap">
                                             <span className={cn(
@@ -295,7 +307,7 @@ export default function StoreProductList({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + 5} className="px-4 py-24 text-center">
+                                    <td colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + 6} className="px-4 py-24 text-center">
                                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                             <Package className="w-12 h-12 opacity-10" />
                                             <p className="text-sm font-medium">Tidak ada produk ditemukan.</p>
