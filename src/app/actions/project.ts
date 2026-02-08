@@ -16,7 +16,7 @@ export async function getProjectCategories() {
 export async function createProjectCategory(name: string) {
     await requireAdmin()
     try {
-        const category = await (prisma as any).projectCategory.create({
+        const category = await (prisma as any).projectcategory.create({
             data: { name: name.trim() }
         })
         revalidatePath('/projects/settings')
