@@ -116,10 +116,14 @@ export default function StoreProductList({
 
 
     const filteredProducts = useMemo(() => {
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
+
         return localProducts.filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (p.storeName && p.storeName.toLowerCase().includes(searchTerm.toLowerCase()))
+            searchWords.length === 0 || searchWords.every(word =>
+                p.name.toLowerCase().includes(word) ||
+                (p.sku && p.sku.toLowerCase().includes(word)) ||
+                (p.storeName && p.storeName.toLowerCase().includes(word))
+            )
         )
     }, [localProducts, searchTerm])
 

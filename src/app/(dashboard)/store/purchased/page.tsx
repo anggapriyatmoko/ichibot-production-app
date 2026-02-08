@@ -1,17 +1,30 @@
 import { getStorePurchasedProducts } from '@/app/actions/store-product'
 import StoreProductList from '@/components/store/store-product-list'
+import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import StoreSkeleton from '@/components/store/store-skeleton';
 
 export const dynamic = 'force-dynamic'
 
-import { requireAuth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+async function StorePurchasedContent({ userRole }: { userRole: string }) {
+    const products = await getStorePurchasedProducts();
+    return (
+        <StoreProductList
+            initialProducts={products}
+            showPurchasedStyles={false}
+            showPurchasedAt={true}
+            showSyncButton={false}
+            showSupplierColumn={userRole === 'ADMIN'}
+        />
+    );
+}
 
 export default async function StorePurchasedPage() {
     const session = await requireAuth();
     if (session.user.role === 'EXTERNAL') {
         redirect('/dashboard');
     }
-    const products = await getStorePurchasedProducts()
 
     return (
         <div className="p-6 space-y-6">
@@ -22,13 +35,9 @@ export default async function StorePurchasedPage() {
                 </p>
             </div>
 
-            <StoreProductList
-                initialProducts={products}
-                showPurchasedStyles={false}
-                showPurchasedAt={true}
-                showSyncButton={false}
-                showSupplierColumn={session.user.role === 'ADMIN'}
-            />
+            <Suspense fallback={<StoreSkeleton showSyncButton={false} showSupplierColumn={session.user.role === 'ADMIN'} />}>
+                <StorePurchasedContent userRole={session.user.role} />
+            </Suspense>
         </div>
     )
 }

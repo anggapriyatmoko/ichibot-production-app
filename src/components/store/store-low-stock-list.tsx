@@ -73,11 +73,15 @@ export default function StoreLowStockList({
     }
 
     const filteredProducts = useMemo(() => {
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
+
         return localProducts.filter(p => {
-            // Search term match
-            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (p.storeName && p.storeName.toLowerCase().includes(searchTerm.toLowerCase()))
+            // Search term match - all words must match
+            const matchesSearch = searchWords.length === 0 || searchWords.every(word =>
+                p.name.toLowerCase().includes(word) ||
+                (p.sku && p.sku.toLowerCase().includes(word)) ||
+                (p.storeName && p.storeName.toLowerCase().includes(word))
+            )
 
             if (!matchesSearch) return false
 

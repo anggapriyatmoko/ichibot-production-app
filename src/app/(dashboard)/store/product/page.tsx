@@ -1,17 +1,28 @@
 import StoreProductList from '@/components/store/store-product-list';
 import { getStoreProducts } from '@/app/actions/store-product';
+import { requireAuth } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import StoreSkeleton from '@/components/store/store-skeleton';
 
 export const dynamic = 'force-dynamic';
 
-import { requireAuth } from '@/lib/auth';
-import { redirect } from 'next/navigation';
+async function StoreProductContent() {
+    const products = await getStoreProducts();
+    return (
+        <StoreProductList
+            initialProducts={products}
+            showSupplierColumn={false}
+            showPurchasedColumn={false}
+        />
+    );
+}
 
 export default async function StoreProductPage() {
     const session = await requireAuth();
     if (session.user.role === 'EXTERNAL') {
         redirect('/dashboard');
     }
-    const products = await getStoreProducts();
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -20,11 +31,9 @@ export default async function StoreProductPage() {
                 <p className="text-muted-foreground">Kelola produk dari WooCommerce Ichibot Store.</p>
             </div>
 
-            <StoreProductList
-                initialProducts={products}
-                showSupplierColumn={false}
-                showPurchasedColumn={false}
-            />
+            <Suspense fallback={<StoreSkeleton showSupplierColumn={false} showSyncButton={true} />}>
+                <StoreProductContent />
+            </Suspense>
         </div>
     );
 }
