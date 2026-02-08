@@ -279,9 +279,13 @@ export default function POSServiceSystem({
     }
 
     const filteredProducts = useMemo(() => {
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
         return products.filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            searchWords.length === 0 || searchWords.every(word =>
+                p.name.toLowerCase().includes(word) ||
+                (p.sku && p.sku.toLowerCase().includes(word)) ||
+                (p.description && p.description.toLowerCase().includes(word))
+            )
         )
     }, [products, searchTerm])
 
@@ -782,18 +786,18 @@ export default function POSServiceSystem({
                                 key={product.id}
                                 className="group bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 flex flex-col relative"
                             >
-                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0 z-10">
                                     <button
                                         onClick={() => handleOpenEditProduct(product)}
-                                        className="p-1.5 bg-white/90 dark:bg-black/90 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                                        className="p-2 bg-white/70 dark:bg-white/10 backdrop-blur-md text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-lg border border-white/20 active:scale-90"
                                     >
-                                        <Edit2 className="w-3.5 h-3.5" />
+                                        <Edit2 className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDeleteProduct(product)}
-                                        className="p-1.5 bg-white/90 dark:bg-black/90 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                                        className="p-2 bg-white/70 dark:bg-white/10 backdrop-blur-md text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-lg border border-white/20 active:scale-90"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
 
@@ -815,7 +819,7 @@ export default function POSServiceSystem({
                                         )}
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold text-sm line-clamp-2 mb-1">{product.name}</h3>
+                                        <h3 className="font-bold text-sm line-clamp-3 mb-1">{product.name}</h3>
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-tighter">
                                                 {product.sku || 'No SKU'}
