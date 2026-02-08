@@ -320,20 +320,34 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
 
     const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
     const baseUrl = WC_URL.replace(/\/$/, '')
-    const url = `${baseUrl}/wp-json/wc/v3/products?search=${encodeURIComponent(query)}&per_page=100&page=${page}&status=publish`
 
-    console.log(`Searching WooCommerce API: ${url}`);
+    // Parallel search URLs
+    const searchUrl = `${baseUrl}/wp-json/wc/v3/products?search=${encodeURIComponent(query)}&per_page=100&page=${page}&status=publish`
+    const skuUrl = `${baseUrl}/wp-json/wc/v3/products?sku=${encodeURIComponent(query)}&per_page=100&page=1&status=publish`
+
+    console.log(`Searching WooCommerce API: ${searchUrl}`);
 
     try {
-        const response = await fetch(url, {
+        const fetchOptions = {
             headers: {
                 'Authorization': `Basic ${auth}`,
                 'User-Agent': 'Ichibot-Production-App/1.0',
                 'Accept': 'application/json'
             },
             next: { revalidate: 0 },
-            cache: 'no-store'
-        })
+            cache: 'no-store' as RequestCache
+        }
+
+        // Fetch search results and (if page 1) SKU results in parallel
+        const fetchPromises = [fetch(searchUrl, fetchOptions)]
+        const shouldSearchSku = page === 1 && query.trim().length > 0
+        if (shouldSearchSku) {
+            console.log(`Searching WooCommerce API by SKU: ${skuUrl}`);
+            fetchPromises.push(fetch(skuUrl, fetchOptions))
+        }
+
+        const responses = await Promise.all(fetchPromises)
+        const response = responses[0] // Main search response
 
         if (!response.ok) {
             const errorText = await response.text().catch(() => 'No error detail')
@@ -343,7 +357,20 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
 
         const totalItems = parseInt(response.headers.get('X-WP-Total') || '0')
         const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0')
-        const rawProducts = await response.json()
+        const searchProducts = await response.json()
+
+        let rawProducts = searchProducts
+
+        // Merge SKU results if available
+        if (responses[1] && responses[1].ok) {
+            const skuProducts = await responses[1].json()
+            if (Array.isArray(skuProducts) && skuProducts.length > 0) {
+                // Dedup and put SKU results at the top
+                const searchIds = new Set(searchProducts.map((p: any) => p.id))
+                const uniqueSkuProducts = skuProducts.filter((p: any) => !searchIds.has(p.id))
+                rawProducts = [...uniqueSkuProducts, ...searchProducts]
+            }
+        }
 
         const lowerQuery = query.toLowerCase()
 
@@ -364,21 +391,28 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
         })).sort((a: any, b: any) => {
             const aName = a.name.toLowerCase()
             const bName = b.name.toLowerCase()
+            const aSku = (a.sku || '').toLowerCase()
+            const bSku = (b.sku || '').toLowerCase()
 
+            // 1. Priority: Exact or Prefix SKU match
+            const aSkuMatch = aSku.startsWith(lowerQuery)
+            const bSkuMatch = bSku.startsWith(lowerQuery)
+            if (aSkuMatch && !bSkuMatch) return -1
+            if (!aSkuMatch && bSkuMatch) return 1
+
+            // 2. Priority: Starts with keyword in Name
             const aStarts = aName.startsWith(lowerQuery)
             const bStarts = bName.startsWith(lowerQuery)
-            const aContains = aName.includes(lowerQuery)
-            const bContains = bName.includes(lowerQuery)
-
-            // 1. Priority: Starts with keyword
             if (aStarts && !bStarts) return -1
             if (!aStarts && bStarts) return 1
 
-            // 2. Priority: Contains keyword (but doesn't start with it)
+            // 3. Priority: Contains keyword in Name
+            const aContains = aName.includes(lowerQuery)
+            const bContains = bName.includes(lowerQuery)
             if (aContains && !bContains) return -1
             if (!aContains && bContains) return 1
 
-            // 3. Alphabetical fallback
+            // 4. Alphabetical fallback
             return aName.localeCompare(bName)
         })
 
