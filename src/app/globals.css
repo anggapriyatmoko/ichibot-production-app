@@ -181,7 +181,11 @@ th {
 }
 
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
+  animation: shimmer 2.5s infinite linear;
+}
+
+.animate-shimmer-fast {
+  animation: shimmer 1s infinite linear;
 }
 
 /* FullCalendar CSS - di akhir untuk prioritas tinggi */
