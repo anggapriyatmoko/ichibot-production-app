@@ -412,7 +412,7 @@ export default function POSBarangSystem({
                                 onClick={() => addToCart(product)}
                                 className={cn(
                                     "flex flex-col text-left bg-card border border-border rounded-t-lg lg:rounded-xl p-2 lg:p-3 hover:bg-accent hover:border-primary/50 transition-all group relative overflow-hidden shadow-sm",
-                                    product.stock <= 0 && "opacity-50 cursor-not-allowed bg-muted"
+                                    product.stock <= 0 && "opacity-50 hover:opacity-100 cursor-not-allowed bg-muted hover:bg-accent"
                                 )}
                             >
                                 {/* Source Indicator Badge */}
@@ -432,7 +432,7 @@ export default function POSBarangSystem({
                                         </div>
                                     )}
                                     {product.stock <= 0 && (
-                                        <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300">
                                             <span className="text-white font-bold text-sm bg-destructive/90 px-2 py-1 rounded">Out of Stock</span>
                                         </div>
                                     )}
