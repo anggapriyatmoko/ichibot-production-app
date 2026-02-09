@@ -169,21 +169,20 @@ const navigationGroups = [
     ],
   },
   {
+    label: "PROJECT",
+    items: [
+      { name: "Daftar Project", href: "/projects", icon: ClipboardList },
+      {
+        name: "Setting Project",
+        href: "/projects/settings",
+        icon: Settings,
+        adminOnly: true,
+      },
+    ],
+  },
+  {
     label: "Resources",
     items: [
-      {
-        name: "Project",
-        icon: FolderKanban,
-        children: [
-          { name: "Daftar Project", href: "/projects", icon: ClipboardList },
-          {
-            name: "Setting",
-            href: "/projects/settings",
-            icon: Settings,
-            adminOnly: true,
-          },
-        ],
-      },
       {
         name: "Human Resource",
         icon: Users,
