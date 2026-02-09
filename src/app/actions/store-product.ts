@@ -73,6 +73,15 @@ async function fetchWooCommerceProducts() {
 
 export async function syncStoreProducts() {
     console.log('Starting syncStoreProducts...');
+    const WC_URL = process.env.NEXT_PUBLIC_WC_URL
+    const WC_KEY = process.env.WC_CONSUMER_KEY
+    const WC_SECRET = process.env.WC_CONSUMER_SECRET
+
+    if (!WC_URL || !WC_KEY || !WC_SECRET) {
+        console.error('WooCommerce API credentials are not configured')
+        return { success: false, error: 'WooCommerce API credentials are not configured' }
+    }
+
     try {
         const wcProducts = await fetchWooCommerceProducts();
         console.log(`Total items fetched from WooCommerce: ${wcProducts.length}`);
@@ -108,8 +117,7 @@ export async function syncStoreProducts() {
                         images: JSON.stringify(product.images),
                         categories: JSON.stringify(product.categories),
                         updatedAt: new Date(),
-                        isMissingFromWoo: false, // Reset if found
-                        // DO NOT update 'purchased' or 'storeName' during sync to preserve local edits
+                        isMissingFromWoo: false,
                     },
                     create: {
                         wcId: product.id,
@@ -132,6 +140,75 @@ export async function syncStoreProducts() {
                     }
                 });
                 syncedCount++;
+
+                // If variable product, fetch and sync variations
+                if (product.type === 'variable') {
+                    console.log(`Product ${product.id} is variable, fetching variations...`);
+                    const baseUrl = WC_URL.replace(/\/$/, '');
+                    const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64');
+                    const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=100`;
+                    console.log(`Fetching variations for ${product.name} (ID: ${product.id}) from ${varUrl}`);
+
+                    try {
+                        const varResponse = await fetch(varUrl, {
+                            headers: { 'Authorization': `Basic ${auth}` },
+                            next: { revalidate: 0 }
+                        });
+
+                        if (varResponse.ok) {
+                            const variations = await varResponse.json();
+                            console.log(`Found ${variations.length} variations for product ${product.id}`);
+                            if (variations.length === 0) {
+                                console.log(`Warning: Product ${product.id} is variable but returned 0 variations.`);
+                            }
+
+                            for (const variation of variations) {
+                                fetchedWcIds.push(variation.id);
+                                await prisma.storeProduct.upsert({
+                                    where: { wcId: variation.id },
+                                    update: {
+                                        name: product.name, // Parents name for base
+                                        slug: variation.slug,
+                                        sku: variation.sku,
+                                        type: 'variation',
+                                        status: variation.status,
+                                        price: parseFloat(variation.price) || 0,
+                                        regularPrice: parseFloat(variation.regular_price) || 0,
+                                        salePrice: parseFloat(variation.sale_price) || 0,
+                                        stockQuantity: variation.stock_quantity || 0,
+                                        stockStatus: variation.stock_status,
+                                        images: JSON.stringify(variation.image ? [variation.image] : []),
+                                        attributes: JSON.stringify(variation.attributes),
+                                        parentId: product.id,
+                                        updatedAt: new Date(),
+                                        isMissingFromWoo: false,
+                                    },
+                                    create: {
+                                        wcId: variation.id,
+                                        name: product.name,
+                                        slug: variation.slug,
+                                        sku: variation.sku,
+                                        type: 'variation',
+                                        status: variation.status,
+                                        price: parseFloat(variation.price) || 0,
+                                        regularPrice: parseFloat(variation.regular_price) || 0,
+                                        salePrice: parseFloat(variation.sale_price) || 0,
+                                        stockQuantity: variation.stock_quantity || 0,
+                                        stockStatus: variation.stock_status,
+                                        images: JSON.stringify(variation.image ? [variation.image] : []),
+                                        attributes: JSON.stringify(variation.attributes),
+                                        parentId: product.id,
+                                        purchased: false,
+                                        isMissingFromWoo: false,
+                                    }
+                                });
+                                syncedCount++;
+                            }
+                        }
+                    } catch (varError: any) {
+                        console.error(`Error syncing variations for product ${product.id}:`, varError.message);
+                    }
+                }
             } catch (upsertError: any) {
                 errorCount++;
                 console.error(`Failed to upsert product ID ${product.id} (${product.name}):`, upsertError.message);
@@ -194,10 +271,18 @@ export async function getStoreProducts() {
             } catch (e) {
                 console.error(`Invalid categories JSON for product ${p.wcId}:`, p.categories);
             }
+            let attributes = [];
+            try {
+                if (p.attributes) attributes = JSON.parse(p.attributes);
+            } catch (e) {
+                console.error(`Invalid attributes JSON for product ${p.wcId}:`, p.attributes);
+            }
+
             return {
                 ...p,
                 images,
-                categories
+                categories,
+                attributes
             };
         })
     } catch (error) {
@@ -227,10 +312,18 @@ export async function getStoreLowStockProducts() {
             } catch (e) {
                 console.error(`Invalid categories JSON for product ${p.wcId}:`, p.categories);
             }
+            let attributes = [];
+            try {
+                if (p.attributes) attributes = JSON.parse(p.attributes);
+            } catch (e) {
+                console.error(`Invalid attributes JSON for product ${p.wcId}:`, p.attributes);
+            }
+
             return {
                 ...p,
                 images,
-                categories
+                categories,
+                attributes
             };
         })
     } catch (error) {
@@ -309,10 +402,18 @@ export async function getStorePurchasedProducts() {
             } catch (e) {
                 console.error(`Invalid categories JSON for product ${p.wcId}:`, p.categories);
             }
+            let attributes = [];
+            try {
+                if (p.attributes) attributes = JSON.parse(p.attributes);
+            } catch (e) {
+                console.error(`Invalid attributes JSON for product ${p.wcId}:`, p.attributes);
+            }
+
             return {
                 ...p,
                 images,
-                categories
+                categories,
+                attributes
             };
         })
     } catch (error) {
@@ -394,6 +495,8 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
             id: p.id,
             name: p.name,
             sku: p.sku,
+            type: p.type,
+            attributes: p.attributes || [],
             price: parseFloat(p.price) || 0,
             regularPrice: parseFloat(p.regular_price) || 0,
             salePrice: parseFloat(p.sale_price) || 0,
@@ -442,5 +545,58 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
             console.error('Network error during WooCommerce API search. Check connection to store.ichibot.id')
         }
         return { products: [], totalPages: 0, totalItems: 0 }
+    }
+}
+
+export async function getProductVariations(productId: number) {
+    const WC_URL = process.env.NEXT_PUBLIC_WC_URL
+    const WC_KEY = process.env.WC_CONSUMER_KEY
+    const WC_SECRET = process.env.WC_CONSUMER_SECRET
+
+    if (!WC_URL || !WC_KEY || !WC_SECRET) {
+        console.error('WooCommerce API credentials are not configured')
+        return []
+    }
+
+    const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
+    const baseUrl = WC_URL.replace(/\/$/, '')
+    const url = `${baseUrl}/wp-json/wc/v3/products/${productId}/variations?per_page=100`
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Basic ${auth}`,
+                'User-Agent': 'Ichibot-Production-App/1.0',
+                'Accept': 'application/json'
+            },
+            next: { revalidate: 0 },
+            cache: 'no-store' as RequestCache
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch variations: ${response.statusText}`)
+        }
+
+        const variations = await response.json()
+        return variations.map((v: any) => ({
+            id: v.id,
+            name: v.name || `Variation #${v.id}`,
+            sku: v.sku,
+            type: 'variation',
+            parentId: productId, // Add parentId
+            attributes: v.attributes || [],
+            price: parseFloat(v.price) || 0,
+            regularPrice: parseFloat(v.regular_price) || 0,
+            salePrice: parseFloat(v.sale_price) || 0,
+            stockQuantity: v.stock_quantity || 0,
+            image: v.image?.src || null,
+            images: v.image ? [v.image.src] : [],
+            description: v.description || '',
+            barcode: v.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode' || m.key === '_barcode' || m.key === 'barcode')?.value || null,
+            slug: v.slug
+        }))
+    } catch (error) {
+        console.error(`Error fetching variations for product ${productId}:`, error)
+        return []
     }
 }

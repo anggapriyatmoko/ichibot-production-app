@@ -141,4 +141,3 @@ EasyPanel tidak otomatis update (kecuali disetting Webhook). Cara manual paling 
 
 **Tips Tambahan:**
 *   **Web Error?** Selalu cek tab **Logs** di EasyPanel untuk melihat penyebabnya.
-

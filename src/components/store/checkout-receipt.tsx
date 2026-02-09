@@ -12,6 +12,7 @@ type OrderItem = {
     total: number
     sku?: string
     barcode?: string
+    attributes?: any[]
 }
 
 type OrderDetails = {
@@ -22,6 +23,7 @@ type OrderDetails = {
     items: OrderItem[]
     total: number
     paymentMethod: string
+    cashierName?: string
 }
 
 const RANDOM_QUOTES = [
@@ -117,6 +119,11 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                         <li className="method">
                             Pembayaran: <strong>{order.paymentMethod}</strong>
                         </li>
+                        {order.cashierName && (
+                            <li className="cashier">
+                                Kasir: <strong>{order.cashierName}</strong>
+                            </li>
+                        )}
                     </ul>
 
                     <table>
@@ -134,9 +141,14 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                                     <td>
                                         <b>{item.quantity} x {formatCurrency(item.price)}</b><br />
                                         {item.name}
-                                        <br />
-                                        <b>{item.sku || '-'}</b>
-                                        {item.barcode && ` (${item.barcode})`}
+                                        {item.attributes && item.attributes.length > 0 && (
+                                            <div style={{ fontSize: '9px', fontStyle: 'italic', marginTop: '1px', color: '#666' }}>
+                                                {item.attributes.map((attr: any) => `${attr.name}: ${attr.option}`).join(', ')}
+                                            </div>
+                                        )}
+                                        <div style={{ fontSize: '8px', color: '#444', marginTop: '1px' }}>
+                                            SKU: {item.sku || '-'} {item.barcode ? `\u00A0\u00A0•\u00A0\u00A0 ${item.barcode}` : ''}
+                                        </div>
                                     </td>
                                     <td style={{ padding: 0 }}>&#9634;</td>
                                     <td style={{ padding: 0 }}></td>

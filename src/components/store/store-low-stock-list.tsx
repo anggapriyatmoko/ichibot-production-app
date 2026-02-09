@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, Circle, X } from 'lucide-react'
+import { Search, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased } from '@/app/actions/store-product'
@@ -23,6 +23,7 @@ export default function StoreLowStockList({
     const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([])
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+    const [expandedRows, setExpandedRows] = useState<number[]>([])
     const { showError } = useAlert()
 
     // Update local products when initialProducts change
@@ -72,27 +73,54 @@ export default function StoreLowStockList({
         )
     }
 
+    const toggleRow = (wcId: number) => {
+        setExpandedRows(prev =>
+            prev.includes(wcId)
+                ? prev.filter(id => id !== wcId)
+                : [...prev, wcId]
+        )
+    }
+
     const filteredProducts = useMemo(() => {
         const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
 
-        return localProducts.filter(p => {
-            // Search term match - all words must match
-            const matchesSearch = searchWords.length === 0 || searchWords.every(word =>
+        const matchesSearch = (p: any) => {
+            const searchMatch = searchWords.length === 0 || searchWords.every(word =>
                 p.name.toLowerCase().includes(word) ||
                 (p.sku && p.sku.toLowerCase().includes(word)) ||
                 (p.storeName && p.storeName.toLowerCase().includes(word))
             )
+            if (!searchMatch) return false
 
-            if (!matchesSearch) return false
-
-            // Supplier filter match
             if (selectedSuppliers.length === 0) return true
-
             if (!p.storeName) return false
             const productSuppliers = p.storeName.split(',').map((n: string) => n.trim()).filter(Boolean)
             return selectedSuppliers.some(s => productSuppliers.includes(s))
+        }
+
+        const parents = localProducts.filter(p => !p.parentId)
+        const variations = localProducts.filter(p => p.parentId)
+
+        let result: any[] = []
+        parents.forEach(parent => {
+            const children = variations.filter(v => v.parentId === parent.wcId)
+            const parentMatches = matchesSearch(parent)
+            const matchingChildren = children.filter(matchesSearch)
+
+            if (parentMatches || matchingChildren.length > 0) {
+                result.push({ ...parent, hasVariations: children.length > 0 })
+
+                if (expandedRows.includes(parent.wcId) || (searchWords.length > 0 && matchingChildren.length > 0)) {
+                    const childrenToShow = searchWords.length > 0 ? matchingChildren : children
+                    childrenToShow.forEach(child => {
+                        result.push({ ...child, isVariation: true })
+                    })
+                }
+            }
         })
-    }, [localProducts, searchTerm, selectedSuppliers])
+
+        return result
+    }, [localProducts, searchTerm, selectedSuppliers, expandedRows])
 
     // Pagination calculation
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -176,7 +204,8 @@ export default function StoreLowStockList({
                                         key={product.wcId}
                                         className={cn(
                                             "hover:bg-accent/50 transition-colors group",
-                                            product.purchased && "opacity-60 bg-muted/20"
+                                            product.purchased && "opacity-60 bg-muted/20",
+                                            product.isVariation && "bg-muted/10 border-l-4 border-l-primary/30"
                                         )}
                                     >
                                         <td className="px-4 py-3 text-center">
@@ -217,10 +246,12 @@ export default function StoreLowStockList({
                                                 <span
                                                     className={cn(
                                                         "font-medium text-foreground text-sm line-clamp-2",
-                                                        product.purchased && "line-through text-muted-foreground"
+                                                        product.purchased && "line-through text-muted-foreground",
+                                                        product.isVariation && "text-xs italic"
                                                     )}
                                                     title={product.name}
                                                 >
+                                                    {product.isVariation && <span className="text-primary font-bold mr-1">[Varian]</span>}
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
@@ -231,12 +262,17 @@ export default function StoreLowStockList({
                                                     )}>
                                                         {product.status}
                                                     </span>
+                                                    {product.type === 'variable' && (
+                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
+                                                            Variable
+                                                        </span>
+                                                    )}
                                                     {product.isMissingFromWoo && (
                                                         <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
                                                             Tidak ditemukan di woocomerce
                                                         </span>
                                                     )}
-                                                    {product.slug && (
+                                                    {product.slug && !product.isVariation && (
                                                         <a
                                                             href={`${process.env.NEXT_PUBLIC_WC_URL}/shop/${product.slug}`}
                                                             target="_blank"
@@ -248,6 +284,26 @@ export default function StoreLowStockList({
                                                         </a>
                                                     )}
                                                 </div>
+
+                                                {product.hasVariations && (
+                                                    <button
+                                                        onClick={() => toggleRow(product.wcId)}
+                                                        className="flex items-center gap-1 text-primary hover:underline text-[10px] mt-1 font-bold bg-primary/5 px-2 py-0.5 rounded"
+                                                    >
+                                                        {expandedRows.includes(product.wcId) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                                        {expandedRows.includes(product.wcId) ? 'Sembunyikan Varian' : 'Lihat Varian'}
+                                                    </button>
+                                                )}
+
+                                                {product.isVariation && product.attributes && Array.isArray(product.attributes) && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {product.attributes.map((attr: any) => (
+                                                            <span key={attr.name} className="px-1.5 py-0.5 rounded bg-muted text-[10px] border border-border text-muted-foreground">
+                                                                <span className="font-semibold">{attr.name}:</span> {attr.option}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 min-w-[180px]">

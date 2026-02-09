@@ -1330,9 +1330,21 @@ export default function POSServiceSystem({
                                     <span className="text-gray-500">Printed by:</span>
                                     <span className="font-bold text-gray-900">{userName}</span>
                                 </div>
-                                <div className="text-center space-y-1 mt-4">
-                                    <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Terima Kasih!</p>
-                                    <p className="text-[9px] text-gray-400">www.ichibot.id</p>
+                                <div className="text-center space-y-2 mt-6 pt-4 border-t border-gray-100">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] text-gray-600">Terimakasih sudah mempercayakan service robot di ICHIBOT ROBOTICS.</p>
+                                        <p className="text-[10px] text-gray-600">Cek katalog dan stock produk di <b>www.store.ichibot.id</b></p>
+                                    </div>
+                                    <hr className="border-gray-200" />
+                                    <p className="text-[10px] text-gray-800 font-medium">Semoga robot kakak bisa awet dan mendapatkan juara</p>
+                                    <hr className="border-gray-200" />
+                                    <div className="text-[9px] text-gray-500 space-y-0.5">
+                                        <p>Instagram : @team.ichibot</p>
+                                        <p>Tokopedia : ICHIBOT</p>
+                                        <p>Shopee : ichibot</p>
+                                        <p>Youtube : ICHIBOT</p>
+                                        <p>Tiktok : @team.ichibot</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

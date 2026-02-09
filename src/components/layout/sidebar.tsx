@@ -77,6 +77,26 @@ const navigationGroups = [
     ],
   },
   {
+    label: "Store",
+    items: [
+      { name: "Store Product", href: "/store/product", icon: Package },
+      { name: "POS Store", href: "/store/pos", icon: Store },
+      {
+        name: "Low Stock",
+        href: "/store/low-stock",
+        icon: AlertTriangle,
+        adminOnly: true,
+      },
+      { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
+      {
+        name: "Setting",
+        href: "/store/settings",
+        icon: Settings,
+        adminOnly: true,
+      },
+    ],
+  },
+  {
     label: "Administrasi",
     items: [
       {
@@ -178,23 +198,11 @@ const navigationGroups = [
     ],
   },
   {
-    label: "Store",
+    label: "Admin",
+    roles: ["ADMIN"],
     items: [
-      { name: "Store Product", href: "/store/product", icon: Package },
-      { name: "POS Store", href: "/store/pos", icon: Store },
-      {
-        name: "Low Stock",
-        href: "/store/low-stock",
-        icon: AlertTriangle,
-        adminOnly: true,
-      },
-      { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
-      {
-        name: "Setting",
-        href: "/store/settings",
-        icon: Settings,
-        adminOnly: true,
-      },
+      { name: "Users", href: "/users", icon: Users },
+      { name: "Settings", href: "/settings", icon: Settings },
     ],
   },
 ];
@@ -354,7 +362,7 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
                   </p>
                 )}
                 <div className="mt-1 space-y-1">
-                  {group.items.map((item) => {
+                  {group.items.map((item: any) => {
                     if (item.adminOnly && userRole !== "ADMIN") return null;
                     return (
                       <NavItem
@@ -370,9 +378,6 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
           })}
         </div>
 
-        <div className="p-3 border-t border-border">
-          {session?.user && <UserNav user={session.user} />}
-        </div>
       </aside>
     </>
   );

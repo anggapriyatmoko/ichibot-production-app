@@ -255,8 +255,8 @@ model payroll {
   user           user          @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Payroll_userId_fkey")
   payrollitem    payrollitem[]
 
-  @@index([userId], map: "Payroll_userId_idx")
   @@unique([userId, monthYearHash])
+  @@index([userId])
   @@map("Payroll")
 }
 
@@ -565,7 +565,6 @@ model user {
   usernameHash          String?           @unique
   nameEnc               String?           @db.Text
   password              String
-  pinEnc                String?           @db.Text
   departmentEnc         String?           @db.Text
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
@@ -575,6 +574,7 @@ model user {
   phoneEnc              String?           @db.Text
   photoEnc              String?           @db.Text
   roleEnc               String?           @db.Text
+  pinEnc                String?           @db.Text
   createdAnnouncements  announcement[]    @relation("announcement_creatorIdTouser")
   attendances           attendance[]
   messages              chatMessage[]
@@ -586,7 +586,6 @@ model user {
   projecttouser         projecttouser[]
   overtimeLeaves        overtimeleave[]
   targetedAnnouncements announcement[]    @relation("targetedusers")
-  serviceOrders         serviceOrder[]
 
   @@map("User")
 }
@@ -616,31 +615,28 @@ model projecttouser {
 }
 
 model StoreProduct {
-  wcId          Int      @id
-  name          String   @db.Text
-  slug          String?  @db.Text
-  sku           String?
-  storeName     String?
-  purchased     Boolean  @default(false)
-  purchasedAt   DateTime?
-  isMissingFromWoo Boolean @default(false)
-  parentId         Int?
-  attributes       String?  @db.Text
-
-  type          String?
-  status        String?
-  description   String?  @db.Text
-  shortDescription String? @db.Text
-  price         Float?
-  regularPrice  Float?
-  salePrice     Float?
-  stockQuantity Int?
-  stockStatus   String?
-  images        String?  @db.Text 
-  categories    String?  @db.Text
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  keterangan    String?  @db.Text
+  wcId             Int       @id
+  name             String    @db.Text
+  slug             String?   @db.Text
+  sku              String?
+  storeName        String?
+  purchased        Boolean   @default(false)
+  purchasedAt      DateTime?
+  isMissingFromWoo Boolean   @default(false)
+  type             String?
+  status           String?
+  description      String?   @db.Text
+  shortDescription String?   @db.Text
+  price            Float?
+  regularPrice     Float?
+  salePrice        Float?
+  stockQuantity    Int?
+  stockStatus      String?
+  images           String?   @db.Text
+  categories       String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  keterangan       String?   @db.Text
 
   @@map("StoreProduct")
 }
@@ -653,44 +649,43 @@ model StoreSupplier {
 
   @@map("StoreSupplier")
 }
+
 model serviceProduct {
-  id           String   @id @default(cuid())
-  name         String
-  sku          String?  @unique(map: "ServiceProduct_sku_key")
-  price        Float
-  salePrice    Float?
-  stock        Float    @default(0)
-  description  String?  @db.Text
-  image        String?  @db.LongText
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  sku         String?  @unique(map: "ServiceProduct_sku_key")
+  price       Float
+  salePrice   Float?
+  stock       Float    @default(0)
+  description String?  @db.Text
+  image       String?  @db.LongText
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("serviceProduct")
 }
 
 model serviceOrder {
-  id          String             @id @default(cuid())
-  orderNumber String             @unique(map: "ServiceOrder_orderNumber_key")
+  id          String   @id @default(cuid())
+  orderNumber String   @unique(map: "ServiceOrder_orderNumber_key")
   userId      String?
-  createdAt   DateTime           @default(now())
-  user        user?              @relation(fields: [userId], references: [id])
-  items       serviceOrderItem[]
+  createdAt   DateTime @default(now())
 
   @@map("serviceOrder")
 }
 
 model serviceOrderItem {
-  id           String       @id @default(cuid())
+  id           String   @id @default(cuid())
   orderId      String
   productId    String
   productName  String
   productPrice Float
-  productImage String?      @db.LongText
+  productImage String?  @db.LongText
   productSku   String?
   quantity     Float
-  createdAt    DateTime     @default(now())
-  order        serviceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
 
+  @@index([orderId], map: "ServiceOrderItem_orderId_fkey")
   @@map("serviceOrderItem")
 }
 
