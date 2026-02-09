@@ -195,6 +195,12 @@ const navigationGroups = [
         ],
       },
       { name: "Log Activity", href: "/log-activity", icon: ClipboardList },
+      {
+        name: "Setting HR",
+        href: "/hr-settings",
+        icon: Settings,
+        adminOnly: true,
+      },
     ],
   },
   {
