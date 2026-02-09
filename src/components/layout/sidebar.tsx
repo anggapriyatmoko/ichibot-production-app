@@ -130,14 +130,14 @@ const navigationGroups = [
             href: "/administrasi/certificate",
             icon: Award,
           },
-          {
-            name: "Permintaan Barang",
-            href: "/administrasi/permintaan-barang",
-            icon: ClipboardList,
-          },
         ],
       },
       { name: "Daftar Resi", href: "/administrasi/daftar-resi", icon: Package },
+      {
+        name: "Permintaan Barang",
+        href: "/administrasi/permintaan-barang",
+        icon: ClipboardList,
+      },
     ],
   },
   {
