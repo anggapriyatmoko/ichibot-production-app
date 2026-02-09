@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createRecipe, deleteRecipe, updateRecipe, getAllRecipesForExport } from '@/app/actions/recipe'
-import { createCategory, updateCategory } from '@/app/actions/category'
-import { Plus, BookOpen, Trash2, ChevronRight, Tag, Edit2, Download, Hash, Barcode, X, Check } from 'lucide-react'
+import { Plus, BookOpen, Trash2, Tag, Edit2, Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import ImportRecipeModal from './import-recipe-modal'
 import Link from 'next/link'
@@ -63,29 +62,6 @@ export default function RecipeList({
     })
     const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null)
 
-    // Inline Category Creation
-    const [isCreatingCategory, setIsCreatingCategory] = useState(false)
-    const [newCategoryName, setNewCategoryName] = useState('')
-
-    // Category Editing
-    const [editingCategory, setEditingCategory] = useState<{ id: string, name: string } | null>(null)
-
-    async function handleUpdateCategory() {
-        if (!editingCategory || !editingCategory.name.trim()) return
-        setIsLoading(true)
-        try {
-            const result = await updateCategory(editingCategory.id, editingCategory.name)
-            if (result?.error) {
-                showError(result.error)
-            } else {
-                setEditingCategory(null)
-            }
-        } catch (error) {
-            showError('Failed to update category')
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     async function handleAdd(e: React.FormEvent) {
         e.preventDefault()
@@ -119,26 +95,6 @@ export default function RecipeList({
         setIsAdding(true)
     }
 
-    async function handleCreateCategory() {
-        if (!newCategoryName.trim()) return
-        setIsLoading(true)
-        try {
-            const result = await createCategory(newCategoryName)
-            if (result?.error) {
-                showError(result.error)
-            } else {
-                setNewCategoryName('')
-                setIsCreatingCategory(false)
-                if (result.category) {
-                    setFormData(prev => ({ ...prev, categoryId: result.category.id }))
-                }
-            }
-        } catch (error: any) {
-            showError(error.message)
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     async function handleDelete(id: string) {
         showConfirmation({
@@ -253,35 +209,7 @@ export default function RecipeList({
                                             <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
                                     </select>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsCreatingCategory(!isCreatingCategory)}
-                                        className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors border border-border"
-                                        title="Create New Category"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
                                 </div>
-                                {isCreatingCategory && (
-                                    <div className="mt-2 flex gap-2 animate-in slide-in-from-top-1">
-                                        <input
-                                            type="text"
-                                            value={newCategoryName}
-                                            onChange={(e) => setNewCategoryName(e.target.value)}
-                                            placeholder="New Category Name"
-                                            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:border-primary outline-none"
-                                            autoFocus
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={handleCreateCategory}
-                                            disabled={isLoading || !newCategoryName.trim()}
-                                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors"
-                                        >
-                                            Add
-                                        </button>
-                                    </div>
-                                )}
                             </div>
 
                             <div>
@@ -310,53 +238,13 @@ export default function RecipeList({
                 const categoryRecipes = recipes.filter(r => r.categoryId === category.id)
                 if (categoryRecipes.length === 0) return null
 
-                const isCategoryEditing = editingCategory?.id === category.id
-
                 return (
                     <div key={category.id} className="mb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <div className="flex items-center gap-3 mb-4 group px-2">
                             <Tag className="w-5 h-5 text-primary" />
-                            {isCategoryEditing ? (
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        value={editingCategory.name}
-                                        onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                                        className="bg-background border border-border rounded-lg px-3 py-1 text-lg font-bold text-foreground focus:border-primary outline-none min-w-[200px]"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleUpdateCategory()
-                                            if (e.key === 'Escape') setEditingCategory(null)
-                                        }}
-                                    />
-                                    <button
-                                        onClick={handleUpdateCategory}
-                                        disabled={isLoading}
-                                        className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shadow-sm"
-                                    >
-                                        <Check className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setEditingCategory(null)}
-                                        disabled={isLoading}
-                                        className="p-1.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors border border-border"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <h2 className="text-xl font-bold text-foreground flex items-center gap-3">
-                                    {category.name}
-                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
-                                        <button
-                                            onClick={() => setEditingCategory({ id: category.id, name: category.name })}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground"
-                                            title="Rename Category"
-                                        >
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </h2>
-                            )}
+                            <h2 className="text-xl font-bold text-foreground">
+                                {category.name}
+                            </h2>
                         </div>
 
                         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
@@ -403,13 +291,6 @@ export default function RecipeList({
                                                 </td>
                                                 <td className="px-4 md:px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Link
-                                                            href={`/catalogue/${recipe.id}`}
-                                                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                                            title="View Detail"
-                                                        >
-                                                            <ChevronRight className="w-4 h-4" />
-                                                        </Link>
                                                         {['ADMIN', 'HRD'].includes(userRole || '') && (
                                                             <>
                                                                 <button
@@ -492,13 +373,6 @@ export default function RecipeList({
                                             </td>
                                             <td className="px-4 md:px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Link
-                                                        href={`/catalogue/${recipe.id}`}
-                                                        className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                                        title="View Detail"
-                                                    >
-                                                        <ChevronRight className="w-4 h-4" />
-                                                    </Link>
                                                     {['ADMIN', 'HRD'].includes(userRole || '') && (
                                                         <>
                                                             <button
@@ -536,4 +410,3 @@ export default function RecipeList({
         </div>
     )
 }
-

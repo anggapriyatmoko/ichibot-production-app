@@ -70,7 +70,11 @@ function calculateRemainingTime(dateString: string | null) {
     return <span className="text-sm text-emerald-600 font-medium"> ({parts.join(' ')})</span>
 }
 
+import { useSession } from 'next-auth/react'
+
 export default function HROtherDataPage() {
+    const { data: session } = useSession()
+    const userRole = (session?.user as any)?.role
     const [isUnlocked, setIsUnlocked] = useState(false)
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -146,6 +150,16 @@ export default function HROtherDataPage() {
 
     const getMonthName = (month: number) => {
         return new Date(2000, month - 1).toLocaleString('id-ID', { month: 'long' })
+    }
+
+    if (userRole === 'EXTERNAL') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
+                <Lock className="w-12 h-12 text-muted-foreground mb-4" />
+                <h1 className="text-xl font-bold">Akses Dibatasi</h1>
+                <p className="text-muted-foreground mt-2">Maaf, akun Anda tidak memiliki izin untuk mengakses halaman ini.</p>
+            </div>
+        )
     }
 
     if (!isUnlocked) {

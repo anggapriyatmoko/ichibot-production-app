@@ -260,7 +260,8 @@ export default function UserManagementTable({ userRole }: Props) {
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${user.role === 'ADMIN' ? 'bg-red-500/10 text-red-600' :
                                                         user.role === 'HRD' ? 'bg-purple-500/10 text-purple-600' :
                                                             user.role === 'TEKNISI' ? 'bg-blue-500/10 text-blue-600' :
-                                                                'bg-gray-500/10 text-gray-600'
+                                                                user.role === 'EXTERNAL' ? 'bg-emerald-500/10 text-emerald-600' :
+                                                                    'bg-gray-500/10 text-gray-600'
                                                         }`}>
                                                         {user.role}
                                                     </span>

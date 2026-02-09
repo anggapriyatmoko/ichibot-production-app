@@ -3,19 +3,24 @@ import { getStoreLowStockProducts } from '@/app/actions/store-product';
 import { getStoreSuppliers } from '@/app/actions/store-supplier';
 import { redirect } from 'next/navigation';
 import { getUserRole } from '@/lib/auth';
+import { Suspense } from 'react';
+import StoreSkeleton from '@/components/store/store-skeleton';
 
 export const dynamic = 'force-dynamic';
+
+async function StoreLowStockContent() {
+    const [products, suppliers] = await Promise.all([
+        getStoreLowStockProducts(),
+        getStoreSuppliers()
+    ]);
+    return <StoreLowStockList initialProducts={products} suppliers={suppliers} />;
+}
 
 export default async function StoreLowStockPage() {
     const role = await getUserRole();
     if (role !== 'ADMIN') {
         redirect('/dashboard');
     }
-
-    const [products, suppliers] = await Promise.all([
-        getStoreLowStockProducts(),
-        getStoreSuppliers()
-    ]);
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -24,7 +29,9 @@ export default async function StoreLowStockPage() {
                 <p className="text-muted-foreground">Monitoring stok produk WooCommerce yang menipis.</p>
             </div>
 
-            <StoreLowStockList initialProducts={products} suppliers={suppliers} />
+            <Suspense fallback={<StoreSkeleton showSyncButton={false} />}>
+                <StoreLowStockContent />
+            </Suspense>
         </div>
     );
 }

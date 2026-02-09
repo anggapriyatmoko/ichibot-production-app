@@ -7,6 +7,7 @@ import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import SupplierPicker from './supplier-picker'
+import KeteranganEdit from './keterangan-edit'
 
 export default function StoreLowStockList({
     initialProducts,
@@ -72,11 +73,15 @@ export default function StoreLowStockList({
     }
 
     const filteredProducts = useMemo(() => {
+        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
+
         return localProducts.filter(p => {
-            // Search term match
-            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (p.storeName && p.storeName.toLowerCase().includes(searchTerm.toLowerCase()))
+            // Search term match - all words must match
+            const matchesSearch = searchWords.length === 0 || searchWords.every(word =>
+                p.name.toLowerCase().includes(word) ||
+                (p.sku && p.sku.toLowerCase().includes(word)) ||
+                (p.storeName && p.storeName.toLowerCase().includes(word))
+            )
 
             if (!matchesSearch) return false
 
@@ -159,6 +164,7 @@ export default function StoreLowStockList({
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Info Produk</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">SKU</th>
+                                <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Keterangan</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Stok</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Harga</th>
                             </tr>
@@ -208,10 +214,13 @@ export default function StoreLowStockList({
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col text-left">
-                                                <span className={cn(
-                                                    "font-medium text-foreground text-sm line-clamp-1",
-                                                    product.purchased && "line-through text-muted-foreground"
-                                                )}>
+                                                <span
+                                                    className={cn(
+                                                        "font-medium text-foreground text-sm line-clamp-2",
+                                                        product.purchased && "line-through text-muted-foreground"
+                                                    )}
+                                                    title={product.name}
+                                                >
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
@@ -247,10 +256,17 @@ export default function StoreLowStockList({
                                                 initialValue={product.storeName || ''}
                                             />
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
+                                        <td className="px-4 py-3 whitespace-nowrap text-center">
                                             <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">
                                                 {product.sku || '-'}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3 min-w-[200px]">
+                                            <KeteranganEdit
+                                                wcId={product.wcId}
+                                                initialValue={product.keterangan}
+                                                productName={product.name}
+                                            />
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap">
                                             <span className={cn(
@@ -264,10 +280,10 @@ export default function StoreLowStockList({
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-sm">
-                                            <div className="text-foreground">Rp {formatCurrency(product.price || 0)}</div>
+                                            <div className="text-foreground">{formatCurrency(product.price || 0)}</div>
                                             {product.salePrice > 0 && product.salePrice < product.regularPrice && (
                                                 <div className="text-[10px] text-muted-foreground line-through">
-                                                    Rp {formatCurrency(product.regularPrice)}
+                                                    {formatCurrency(product.regularPrice)}
                                                 </div>
                                             )}
                                         </td>
@@ -275,7 +291,7 @@ export default function StoreLowStockList({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-24 text-center">
+                                    <td colSpan={8} className="px-4 py-24 text-center">
                                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
                                             <Package className="w-12 h-12 opacity-10" />
                                             <p className="text-sm font-medium">Tidak ada produk low stock ditemukan.</p>

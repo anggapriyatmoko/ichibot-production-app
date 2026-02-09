@@ -431,7 +431,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                             <Clock className="w-5 h-5 text-muted-foreground" />
                             Recent Activity
                         </h2>
-                        <Link href="/history" className="text-sm text-primary hover:text-blue-500">View All</Link>
+                        <Link href="/catalogue/settings" className="text-sm text-primary hover:text-blue-500">View All</Link>
                     </div>
                     <div className="divide-y divide-border">
                         {recentActivity.map((tx: any) => (
@@ -549,7 +549,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20">
                         <h3 className="font-bold text-lg mb-2">Process Order</h3>
                         <p className="text-emerald-100 text-sm mb-4">Checkout materials for production.</p>
-                        <Link href="/pos" className="block w-full py-3 bg-white text-emerald-600 font-bold text-center rounded-xl hover:bg-emerald-50 transition-colors">
+                        <Link href="/pos-barang" className="block w-full py-3 bg-white text-emerald-600 font-bold text-center rounded-xl hover:bg-emerald-50 transition-colors">
                             Go to POS
                         </Link>
                     </div>

@@ -586,6 +586,7 @@ model user {
   projecttouser         projecttouser[]
   overtimeLeaves        overtimeleave[]
   targetedAnnouncements announcement[]    @relation("targetedusers")
+  serviceOrders         serviceOrder[]
 
   @@map("User")
 }
@@ -637,6 +638,7 @@ model StoreProduct {
   categories    String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  keterangan    String?  @db.Text
 
   @@map("StoreProduct")
 }
@@ -648,5 +650,40 @@ model StoreSupplier {
   updatedAt DateTime @updatedAt
 
   @@map("StoreSupplier")
+}
+
+model serviceProduct {
+  id           String   @id @default(cuid())
+  name         String
+  sku          String?  @unique
+  price        Float
+  salePrice    Float?
+  stock        Float    @default(0)
+  description  String?  @db.Text
+  image        String?  @db.LongText
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model serviceOrder {
+  id          String             @id @default(cuid())
+  orderNumber String             @unique
+  userId      String?
+  createdAt   DateTime           @default(now())
+  user        user?              @relation(fields: [userId], references: [id])
+  items       serviceOrderItem[]
+}
+
+model serviceOrderItem {
+  id           String       @id @default(cuid())
+  orderId      String
+  productId    String
+  productName  String
+  productPrice Float
+  productImage String?      @db.LongText
+  productSku   String?
+  quantity     Float
+  createdAt    DateTime     @default(now())
+  order        serviceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
