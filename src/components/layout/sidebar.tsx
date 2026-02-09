@@ -183,6 +183,7 @@ const navigationGroups = [
   {
     label: "Resources",
     items: [
+      { name: "HR Dashboard", href: "/hrd-dashboard", icon: LayoutDashboard, adminOnly: true },
       {
         name: "Human Resource",
         icon: Users,

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown } from 'lucide-react'
+import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
 import { syncStoreProducts, toggleStoreProductPurchased } from '@/app/actions/store-product'
@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
 import KeteranganEdit from './keterangan-edit'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import EditProductModal from './edit-product-modal'
 
 export default function StoreProductList({
     initialProducts,
@@ -34,6 +35,8 @@ export default function StoreProductList({
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
     const [expandedRows, setExpandedRows] = useState<number[]>([])
+    const [editingProduct, setEditingProduct] = useState<any>(null)
+    const [isAddingProduct, setIsAddingProduct] = useState(false)
     const { showConfirmation } = useConfirmation()
     const { showAlert, showError } = useAlert()
     const router = useRouter()
@@ -186,6 +189,13 @@ export default function StoreProductList({
                         {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
                     </button>
                 )}
+                <button
+                    onClick={() => setIsAddingProduct(true)}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-700 shadow-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    Tambah Produk
+                </button>
             </div>
 
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
@@ -266,7 +276,17 @@ export default function StoreProductList({
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[10px] text-muted-foreground">ID: {product.wcId}</span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => setEditingProduct(product)}
+                                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5"
+                                                        title="Edit Produk"
+                                                    >
+                                                        <Edit2 className="w-2.5 h-2.5" />
+                                                        Edit
+                                                    </button>
                                                     <span className={cn(
                                                         "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
                                                         product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
@@ -321,10 +341,17 @@ export default function StoreProductList({
                                                 />
                                             </td>
                                         )}
-                                        <td className="px-4 py-3 whitespace-nowrap text-center">
-                                            <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">
-                                                {product.sku || '-'}
-                                            </span>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-mono">
+                                                    {product.sku || '-'}
+                                                </span>
+                                                {product.backupGudang && (
+                                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-[4px] text-[10px] font-bold border border-blue-100 uppercase tracking-tighter">
+                                                        {product.backupGudang}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 min-w-[200px]">
                                             <KeteranganEdit
@@ -462,6 +489,26 @@ export default function StoreProductList({
                         />
                     </div>
                 </div>
+            )}
+
+            {editingProduct && (
+                <EditProductModal
+                    product={editingProduct}
+                    onClose={() => setEditingProduct(null)}
+                    onSuccess={() => {
+                        router.refresh()
+                    }}
+                />
+            )}
+
+            {isAddingProduct && (
+                <EditProductModal
+                    product={null}
+                    onClose={() => setIsAddingProduct(false)}
+                    onSuccess={() => {
+                        router.refresh()
+                    }}
+                />
             )}
         </div>
     )

@@ -30,8 +30,8 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
         redirect('/login')
     }
 
-    // Only ADMIN, HRD, and ADMINISTRASI can access
-    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
+    // Only ADMIN can access
+    if (session?.user?.role !== 'ADMIN') {
         redirect('/dashboard')
     }
 

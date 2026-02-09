@@ -114,10 +114,12 @@ export async function syncStoreProducts() {
                         salePrice: parseFloat(product.sale_price) || 0,
                         stockQuantity: product.stock_quantity || 0,
                         stockStatus: product.stock_status,
+                        weight: parseFloat(product.weight) || 0,
                         images: JSON.stringify(product.images),
                         categories: JSON.stringify(product.categories),
                         updatedAt: new Date(),
                         isMissingFromWoo: false,
+                        backupGudang: product.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
                     },
                     create: {
                         wcId: product.id,
@@ -133,10 +135,12 @@ export async function syncStoreProducts() {
                         salePrice: parseFloat(product.sale_price) || 0,
                         stockQuantity: product.stock_quantity || 0,
                         stockStatus: product.stock_status,
+                        weight: parseFloat(product.weight) || 0,
                         images: JSON.stringify(product.images),
                         categories: JSON.stringify(product.categories),
                         purchased: false,
                         isMissingFromWoo: false,
+                        backupGudang: product.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
                     }
                 });
                 syncedCount++;
@@ -177,11 +181,13 @@ export async function syncStoreProducts() {
                                         salePrice: parseFloat(variation.sale_price) || 0,
                                         stockQuantity: variation.stock_quantity || 0,
                                         stockStatus: variation.stock_status,
+                                        weight: parseFloat(variation.weight) || 0,
                                         images: JSON.stringify(variation.image ? [variation.image] : []),
                                         attributes: JSON.stringify(variation.attributes),
                                         parentId: product.id,
                                         updatedAt: new Date(),
                                         isMissingFromWoo: false,
+                                        backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
                                     },
                                     create: {
                                         wcId: variation.id,
@@ -195,11 +201,13 @@ export async function syncStoreProducts() {
                                         salePrice: parseFloat(variation.sale_price) || 0,
                                         stockQuantity: variation.stock_quantity || 0,
                                         stockStatus: variation.stock_status,
+                                        weight: parseFloat(variation.weight) || 0,
                                         images: JSON.stringify(variation.image ? [variation.image] : []),
                                         attributes: JSON.stringify(variation.attributes),
                                         parentId: product.id,
                                         purchased: false,
                                         isMissingFromWoo: false,
+                                        backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
                                     }
                                 });
                                 syncedCount++;
@@ -505,6 +513,7 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
             images: p.images?.map((img: any) => img.src) || [],
             description: p.description || '',
             barcode: p.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode' || m.key === '_barcode' || m.key === 'barcode')?.value || null,
+            backupGudang: p.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
             slug: p.slug
         })).sort((a: any, b: any) => {
             const aName = a.name.toLowerCase()
@@ -593,10 +602,264 @@ export async function getProductVariations(productId: number) {
             images: v.image ? [v.image.src] : [],
             description: v.description || '',
             barcode: v.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode' || m.key === '_barcode' || m.key === 'barcode')?.value || null,
+            backupGudang: v.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
             slug: v.slug
         }))
     } catch (error) {
         console.error(`Error fetching variations for product ${productId}:`, error)
         return []
+    }
+}
+
+export async function updateWooCommerceProduct(wcId: number, data: {
+    name?: string
+    sku?: string
+    regularPrice?: number | null
+    salePrice?: number | null
+    stockQuantity?: number | null
+    status?: string
+    weight?: number | null
+    backupGudang?: string
+    parentId?: number
+}) {
+    const WC_URL = process.env.NEXT_PUBLIC_WC_URL
+    const WC_KEY = process.env.WC_CONSUMER_KEY
+    const WC_SECRET = process.env.WC_CONSUMER_SECRET
+
+    if (!WC_URL || !WC_KEY || !WC_SECRET) {
+        return { success: false, error: 'WooCommerce API credentials are not configured' }
+    }
+
+    try {
+        const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
+        const baseUrl = WC_URL.replace(/\/$/, '')
+
+        // Determine endpoint based on whether it is a variation or a main product
+        let url = `${baseUrl}/wp-json/wc/v3/products/${wcId}`
+        if (data.parentId) {
+            url = `${baseUrl}/wp-json/wc/v3/products/${data.parentId}/variations/${wcId}`
+        }
+
+        const wcPayload: any = {}
+        if (data.name) wcPayload.name = data.name
+        if (data.sku !== undefined) wcPayload.sku = data.sku
+        if (data.status !== undefined) wcPayload.status = data.status
+        if (data.regularPrice !== undefined) wcPayload.regular_price = data.regularPrice === null ? "" : data.regularPrice.toString()
+        if (data.salePrice !== undefined) wcPayload.sale_price = data.salePrice === null ? "" : data.salePrice.toString()
+        if (data.stockQuantity !== undefined) {
+            wcPayload.manage_stock = data.stockQuantity !== null
+            wcPayload.stock_quantity = data.stockQuantity
+        }
+
+        if (data.weight !== undefined) {
+            wcPayload.weight = data.weight === null ? "" : data.weight.toString()
+        }
+
+        if (data.backupGudang !== undefined) {
+            wcPayload.meta_data = [
+                {
+                    key: 'backup_gudang',
+                    value: data.backupGudang
+                }
+            ]
+        }
+
+        console.log(`Updating WooCommerce product ${wcId}...`, wcPayload)
+
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(wcPayload)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            console.error('WooCommerce API Update Error:', errorData)
+            return { success: false, error: errorData.message || `HTTP ${response.status}` }
+        }
+
+        const updatedWcProduct = await response.json()
+
+        // Sync to local database
+        await prisma.storeProduct.update({
+            where: { wcId },
+            data: {
+                name: data.name || undefined,
+                sku: data.sku !== undefined ? data.sku : undefined,
+                regularPrice: data.regularPrice !== undefined ? data.regularPrice : undefined,
+                salePrice: data.salePrice !== undefined ? data.salePrice : undefined,
+                stockQuantity: data.stockQuantity !== undefined ? data.stockQuantity : undefined,
+                status: data.status !== undefined ? data.status : undefined,
+                weight: data.weight !== undefined ? (data.weight === null ? null : parseFloat(data.weight.toString())) : undefined,
+                backupGudang: data.backupGudang !== undefined ? data.backupGudang : undefined,
+                price: parseFloat(updatedWcProduct.price) || 0, // Get calculated price from WC
+                updatedAt: new Date()
+            }
+        })
+
+        revalidatePath('/store/product')
+        revalidatePath('/store/low-stock')
+        revalidatePath('/store/purchased')
+
+        return { success: true, product: updatedWcProduct }
+    } catch (error: any) {
+        console.error('Error in updateWooCommerceProduct:', error)
+        return { success: false, error: error.message || 'Terjadi kesalahan sistem' }
+    }
+}
+export async function deleteWooCommerceProduct(wcId: number, parentId?: number) {
+    const WC_URL = process.env.NEXT_PUBLIC_WC_URL
+    const WC_KEY = process.env.WC_CONSUMER_KEY
+    const WC_SECRET = process.env.WC_CONSUMER_SECRET
+
+    if (!WC_URL || !WC_KEY || !WC_SECRET) {
+        return { success: false, error: 'WooCommerce API credentials are not configured' }
+    }
+
+    try {
+        const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
+        const baseUrl = WC_URL.replace(/\/$/, '')
+
+        let url = `${baseUrl}/wp-json/wc/v3/products/${wcId}?force=true`
+        if (parentId) {
+            url = `${baseUrl}/wp-json/wc/v3/products/${parentId}/variations/${wcId}?force=true`
+        }
+
+        console.log(`Deleting WooCommerce product ${wcId}...`)
+
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            console.error('WooCommerce API Delete Error:', errorData)
+            return { success: false, error: errorData.message || `HTTP ${response.status}` }
+        }
+
+        await prisma.storeProduct.deleteMany({
+            where: { wcId }
+        })
+
+        revalidatePath('/store/product')
+        revalidatePath('/store/low-stock')
+        revalidatePath('/store/purchased')
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error in deleteWooCommerceProduct:', error)
+        return { success: false, error: error.message || 'Terjadi kesalahan sistem' }
+    }
+}
+
+export async function createWooCommerceProduct(data: {
+    name: string
+    sku?: string
+    regularPrice?: number | null
+    salePrice?: number | null
+    stockQuantity?: number | null
+    status?: string
+    weight?: number | null
+    backupGudang?: string
+}) {
+    const WC_URL = process.env.NEXT_PUBLIC_WC_URL
+    const WC_KEY = process.env.WC_CONSUMER_KEY
+    const WC_SECRET = process.env.WC_CONSUMER_SECRET
+
+    if (!WC_URL || !WC_KEY || !WC_SECRET) {
+        return { success: false, error: 'WooCommerce API credentials are not configured' }
+    }
+
+    try {
+        const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
+        const baseUrl = WC_URL.replace(/\/$/, '')
+        const url = `${baseUrl}/wp-json/wc/v3/products`
+
+        const wcPayload: any = {
+            name: data.name,
+            type: 'simple' // Default for new products through our app
+        }
+
+        if (data.sku !== undefined) wcPayload.sku = data.sku
+        if (data.status !== undefined) wcPayload.status = data.status
+        if (data.regularPrice !== undefined) wcPayload.regular_price = data.regularPrice?.toString() || ""
+        if (data.salePrice !== undefined) wcPayload.sale_price = data.salePrice?.toString() || ""
+
+        if (data.stockQuantity !== undefined && data.stockQuantity !== null) {
+            wcPayload.manage_stock = true
+            wcPayload.stock_quantity = data.stockQuantity
+        } else {
+            wcPayload.manage_stock = false
+        }
+
+        if (data.weight !== undefined) {
+            wcPayload.weight = data.weight?.toString() || ""
+        }
+
+        if (data.backupGudang !== undefined && data.backupGudang) {
+            wcPayload.meta_data = [
+                {
+                    key: 'backup_gudang',
+                    value: data.backupGudang
+                }
+            ]
+        }
+
+        console.log('Creating WooCommerce product...', wcPayload)
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(wcPayload)
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            console.error('WooCommerce API Create Error:', errorData)
+            return { success: false, error: errorData.message || `HTTP ${response.status}` }
+        }
+
+        const newWcProduct = await response.json()
+
+        // Sync to local database
+        await prisma.storeProduct.create({
+            data: {
+                wcId: newWcProduct.id,
+                name: newWcProduct.name,
+                slug: newWcProduct.slug,
+                sku: newWcProduct.sku || null,
+                type: newWcProduct.type,
+                status: newWcProduct.status,
+                regularPrice: parseFloat(newWcProduct.regular_price) || null,
+                salePrice: parseFloat(newWcProduct.sale_price) || null,
+                price: parseFloat(newWcProduct.price) || 0,
+                stockQuantity: newWcProduct.stock_quantity || 0,
+                stockStatus: newWcProduct.stock_status,
+                weight: parseFloat(newWcProduct.weight) || null,
+                images: JSON.stringify(newWcProduct.images || []),
+                categories: JSON.stringify(newWcProduct.categories || []),
+                backupGudang: data.backupGudang || null,
+                isMissingFromWoo: false,
+                purchased: false
+            }
+        })
+
+        revalidatePath('/store/product')
+        revalidatePath('/store/low-stock')
+
+        return { success: true, product: newWcProduct }
+    } catch (error: any) {
+        console.error('Error in createWooCommerceProduct:', error)
+        return { success: false, error: error.message || 'Terjadi kesalahan sistem' }
     }
 }
