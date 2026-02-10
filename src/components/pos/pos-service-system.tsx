@@ -207,28 +207,28 @@ export default function POSServiceSystem({
                             width: 70mm;
                             margin: 0;
                             padding: 5mm;
-                            font-family: 'Courier New', monospace;
-                            font-size: 10px;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                            font-size: 12px;
                             line-height: 1.4;
                             color: #000;
                             background: #fff;
                         }
                         .header { text-align: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px dashed #000; }
-                        .header h1 { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
-                        .header p { font-size: 8px; margin: 2px 0; }
+                        .header h1 { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+                        .header p { font-size: 12px; margin: 2px 0; }
                         .item { margin-bottom: 8px; display: flex; gap: 8px; }
-                        .item-name { font-weight: bold; font-size: 10px; }
-                        .item-details { display: flex; justify-content: space-between; font-size: 9px; color: #333; }
-                        .total { margin-top: 10px; padding-top: 10px; border-top: 2px dashed #000; display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; }
-                        .footer { text-align: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #000; font-size: 8px; }
+                        .item-name { font-weight: bold; font-size: 12px; }
+                        .item-details { display: flex; justify-content: space-between; font-size: 12px; color: #333; }
+                        .total { margin-top: 10px; padding-top: 10px; border-top: 2px dashed #000; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; }
+                        .footer { text-align: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #000; font-size: 10px; }
                     </style>
             </head>
             <body>
                 <div class="header">
                     <h1>ICHIBOT SERVICE</h1>
-                    <p>POS Service Checkout</p>
-                    <p style="font-size: 11px; font-weight: bold; color: #2563eb; margin: 5px 0;">${receiptData.orderNumber}</p>
-                    <p>${new Date(receiptData.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false })}</p>
+                    <p>Bukti pembayaran service robot ichibot</p>
+                    <p style="font-size: 12px; font-weight: bold; color: #000; margin: 5px 0;">${receiptData.orderNumber}</p>
+                    <p>${new Date(receiptData.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false }).replace(/\./g, ':')}</p>
                 </div>
                 <div class="items">
                     ${receiptData.items.map((item: any) => `
@@ -248,9 +248,17 @@ export default function POSServiceSystem({
                     <span>Rp ${formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
                 </div>
                 <div class="footer">
-                    <p>Printed by: ${userName}</p>
-                    <p>Thank you!</p>
-                    <p>Powered by Ichibot</p>
+                    <p style="font-weight: bold; margin-bottom: 5px;">Printed by: ${userName}</p>
+                    <p>Terimakasih sudah mempercayakan service robot di ICHIBOT ROBOTICS.</p>
+                    <p>Cek katalog dan stock produk di <b>www.store.ichibot.id</b></p>
+                    <div style="margin: 10px 0; border-top: 1px dashed #000;"></div>
+                    <p>Semoga robot kakak bisa awet dan mendapatkan juara</p>
+                    <div style="margin: 10px 0; border-top: 1px dashed #000;"></div>
+                    <p>Instagram : @team.ichibot</p>
+                    <p>Tokopedia : ICHIBOT</p>
+                    <p>Shopee : ichibot</p>
+                    <p>Youtube : ICHIBOT</p>
+                    <p>Tiktok : @team.ichibot</p>
                 </div>
                 <script>window.onload = function() {window.print(); }</script>
             </body>
@@ -1290,55 +1298,54 @@ export default function POSServiceSystem({
 
                         {/* Thermal Preview Section */}
                         <div id="service-receipt" className="p-6 bg-white overflow-y-auto max-h-[60vh]">
-                            <div className="text-center font-mono space-y-1">
-                                <h2 className="text-2xl font-black text-gray-900">ICHIBOT SERVICE</h2>
-                                <p className="text-[10px] text-gray-600 uppercase tracking-widest">Bukti pembayaran service robot ichibot</p>
-                                <p className="text-sm font-bold mt-2 text-blue-600">{receiptData.orderNumber}</p>
-                                <p className="text-[10px] text-gray-500">
+                            <div className="text-center space-y-1">
+                                <h2 className="text-2xl font-black text-black">ICHIBOT SERVICE</h2>
+                                <p className="text-[12px] text-black uppercase tracking-widest">Bukti pembayaran service robot ichibot</p>
+                                <p className="text-[12px] font-bold mt-2 text-black">{receiptData.orderNumber}</p>
+                                <p className="text-[12px] text-black">
                                     {new Date(receiptData.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false }).replace(/\./g, ':')}
                                 </p>
                             </div>
 
-                            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3 font-mono">
+                            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
                                 {receiptData.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex flex-col font-mono py-1 border-b border-gray-50 last:border-0">
-                                        <div className="text-[11px] font-bold text-gray-900 leading-tight uppercase">
+                                    <div key={idx} className="flex flex-col py-1 border-b border-gray-50 last:border-0">
+                                        <div className="text-[12px] font-bold text-black leading-tight uppercase">
                                             {item.productName}
                                         </div>
                                         <div className="flex justify-between items-center mt-1">
-                                            <span className="text-[10px] text-gray-500">{item.productSku || '-'}</span>
-                                            <div className="text-[10px] text-gray-900 font-bold shrink-0">
+                                            <div className="text-[12px] text-black font-bold shrink-0">
                                                 {item.quantity} x Rp {formatNumber(item.productPrice)}
                                             </div>
-                                        </div>
-                                        <div className="text-right text-[10px] font-bold text-gray-900">
-                                            Rp {formatNumber(item.productPrice * item.quantity)}
+                                            <div className="text-right text-[12px] font-bold text-black">
+                                                Rp {formatNumber(item.productPrice * item.quantity)}
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
                             <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-3">
-                                <div className="flex justify-between items-center font-mono font-bold text-sm text-gray-900">
+                                <div className="flex justify-between items-center font-bold text-[12px] text-black">
                                     <span className="uppercase tracking-tighter">TOTAL:</span>
                                     <span>Rp {formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
                                 </div>
                             </div>
 
-                            <div className="mt-4 pt-3 border-t border-gray-100 space-y-4 font-mono">
-                                <div className="flex justify-between text-[11px]">
-                                    <span className="text-gray-500">Printed by:</span>
-                                    <span className="font-bold text-gray-900">{userName}</span>
+                            <div className="mt-4 pt-3 border-t border-gray-100 space-y-4">
+                                <div className="flex justify-between text-[12px]">
+                                    <span className="text-black">Printed by:</span>
+                                    <span className="font-bold text-black">{userName}</span>
                                 </div>
                                 <div className="text-center space-y-2 mt-6 pt-4 border-t border-gray-100">
                                     <div className="space-y-1">
-                                        <p className="text-[10px] text-gray-600">Terimakasih sudah mempercayakan service robot di ICHIBOT ROBOTICS.</p>
-                                        <p className="text-[10px] text-gray-600">Cek katalog dan stock produk di <b>www.store.ichibot.id</b></p>
+                                        <p className="text-[12px] text-black">Terimakasih sudah mempercayakan service robot di ICHIBOT ROBOTICS.</p>
+                                        <p className="text-[12px] text-black">Cek katalog dan stock produk di <b>www.store.ichibot.id</b></p>
                                     </div>
                                     <hr className="border-gray-200" />
-                                    <p className="text-[10px] text-gray-800 font-medium">Semoga robot kakak bisa awet dan mendapatkan juara</p>
+                                    <p className="text-[12px] text-black font-medium">Semoga robot kakak bisa awet dan mendapatkan juara</p>
                                     <hr className="border-gray-200" />
-                                    <div className="text-[9px] text-gray-500 space-y-0.5">
+                                    <div className="text-[12px] text-black space-y-0.5">
                                         <p>Instagram : @team.ichibot</p>
                                         <p>Tokopedia : ICHIBOT</p>
                                         <p>Shopee : ichibot</p>
