@@ -1,4 +1,7 @@
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import SuratJalanManager from "@/components/administrasi/surat-jalan-manager";
 import { getSuratJalan } from "@/app/actions/surat-jalan";
 
@@ -8,6 +11,15 @@ export const metadata: Metadata = {
 };
 
 export default async function SuratJalanPage() {
+  const session: any = await getServerSession(authOptions);
+
+  if (
+    !session ||
+    !["ADMIN", "HRD", "ADMINISTRASI"].includes(session.user.role)
+  ) {
+    redirect("/dashboard");
+  }
+
   const initialData = await getSuratJalan(1);
 
   return (

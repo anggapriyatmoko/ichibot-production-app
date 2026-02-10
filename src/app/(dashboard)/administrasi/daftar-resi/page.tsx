@@ -16,7 +16,9 @@ export default async function DaftarResiPage() {
 
   if (
     !session?.user?.role ||
-    !["ADMIN", "HRD", "ADMINISTRASI"].includes(session.user.role)
+    !["ADMIN", "HRD", "ADMINISTRASI", "USER", "TEKNISI"].includes(
+      session.user.role
+    )
   ) {
     redirect("/dashboard");
   }

@@ -65,9 +65,9 @@ const navigationGroups = [
           },
         ],
       },
-      { name: "Product Ichibot", href: "/catalogue", icon: BookOpen },
+      { name: "Product Ichibot", href: "/catalogue", icon: BookOpen, excludeRoles: ["EXTERNAL"] },
       { name: "Production Plan", href: "/production-plan", icon: Calendar },
-      { name: "Aset Mesin/Alat", href: "/assets", icon: Wrench },
+      { name: "Aset Mesin/Alat", href: "/assets", icon: Wrench, excludeRoles: ["EXTERNAL"] },
       {
         name: "Setting",
         href: "/catalogue/settings",
@@ -78,6 +78,7 @@ const navigationGroups = [
   },
   {
     label: "Store",
+    excludeRoles: ["EXTERNAL"],
     items: [
       { name: "Store Product", href: "/store/product", icon: Package },
       { name: "POS Store", href: "/store/pos", icon: Store },
@@ -98,10 +99,12 @@ const navigationGroups = [
   },
   {
     label: "Administrasi",
+    excludeRoles: ["EXTERNAL"],
     items: [
       {
         name: "Administrasi",
         icon: FileText,
+        excludeRoles: ["USER", "TEKNISI"],
         children: [
           {
             name: "Surat Penawaran",
@@ -201,7 +204,7 @@ const navigationGroups = [
         children: [
           { name: "Absensi", href: "/attendance", icon: Clock },
           { name: "Izin/Lembur", href: "/overtime-leave", icon: ClipboardList },
-          { name: "Data Lainnya", href: "/hr-other-data", icon: FolderKanban },
+          { name: "Data Lainnya", href: "/hr-other-data", icon: FolderKanban, excludeRoles: ["EXTERNAL"] },
           { name: "Kalender", href: "/calendar", icon: Calendar },
         ],
       },
@@ -274,6 +277,7 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
             <div className="ml-4 space-y-1 border-l border-border pl-2">
               {item.children.map((child: any) => {
                 if (child.adminOnly && userRole !== "ADMIN") return null;
+                if (child.excludeRoles && child.excludeRoles.includes(userRole)) return null;
                 return (
                   <NavItem
                     key={child.name}
@@ -368,6 +372,8 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
 
           {navigationGroups.map((group) => {
             if (group.roles && !group.roles.includes(userRole || ""))
+              return null;
+            if (group.excludeRoles && group.excludeRoles.includes(userRole || ""))
               return null;
 
             return (
