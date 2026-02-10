@@ -201,7 +201,7 @@ export async function getItemStats() {
 
 export async function markAsDone(id: number, quantityOrdered: number): Promise<ItemActionResponse> {
     try {
-        const response = await apiClient.post<any>(`/items/${id}/mark-done`, {
+        const response = await apiClient.post<any>(`/items/${id}/done`, {
             quantity_ordered: quantityOrdered,
         });
         if (response.success) {
@@ -228,7 +228,7 @@ export async function markAsDone(id: number, quantityOrdered: number): Promise<I
 
 export async function markAsUndone(id: number): Promise<ItemActionResponse> {
     try {
-        const response = await apiClient.post<any>(`/items/${id}/mark-undone`);
+        const response = await apiClient.post<any>(`/items/${id}/undone`);
         if (response.success) {
             revalidatePath("/administrasi/permintaan-barang");
             return {
