@@ -102,8 +102,8 @@ export async function getDefaultSender(): Promise<{
 
     return {
         name: name || 'ICHIBOT',
-        phone: phone || '',
-        address: address || ''
+        phone: phone || '6287763484384',
+        address: address || '(Ichibot) Jl. Dworowati No.11, RT.05/RW.35, Nglarang, Malangrejo, Kec. Ngemplak, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55584'
     }
 }
 
