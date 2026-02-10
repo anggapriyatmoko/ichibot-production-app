@@ -302,6 +302,8 @@ export default function ItemManager({
 
   // Helper untuk cek apakah user adalah admin
   const isAdmin = userRole === "ADMIN";
+  // Cek apakah user boleh menandai order (admin dan administrasi)
+  const canMarkOrder = userRole === "ADMIN" || userRole === "ADMINISTRASI";
 
   return (
     <div className="space-y-6">
@@ -412,8 +414,8 @@ export default function ItemManager({
                     </TableCell>
                     <TableCell align="right">
                       <div className="flex items-center justify-end gap-1">
-                        {/* Admin Only: Mark as Done / Undone */}
-                        {isAdmin && (
+                        {/* Admin & Administrasi: Mark as Done / Undone */}
+                        {canMarkOrder && (
                           <>
                             {item.status_order === "Belum Diorder" ? (
                               <button
@@ -524,8 +526,8 @@ export default function ItemManager({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {/* Admin Only: Mark as Done / Undone */}
-                    {isAdmin && (
+                    {/* Admin & Administrasi: Mark as Done / Undone */}
+                    {canMarkOrder && (
                       <>
                         {item.status_order === "Belum Diorder" ? (
                           <button
