@@ -152,11 +152,17 @@ const navigationGroups = [
           },
         ],
       },
-      { name: "Daftar Resi", href: "/administrasi/daftar-resi", icon: Package },
+      {
+        name: "Daftar Resi",
+        href: "/administrasi/daftar-resi",
+        icon: Package,
+        excludeRoles: ["EXTERNAL"],
+      },
       {
         name: "Permintaan Barang",
         href: "/administrasi/permintaan-barang",
         icon: ClipboardList,
+        excludeRoles: ["EXTERNAL"],
       },
     ],
   },
@@ -183,7 +189,12 @@ const navigationGroups = [
   {
     label: "Resources",
     items: [
-      { name: "HR Dashboard", href: "/hrd-dashboard", icon: LayoutDashboard, adminOnly: true },
+      {
+        name: "HR Dashboard",
+        href: "/hrd-dashboard",
+        icon: LayoutDashboard,
+        adminOnly: true,
+      },
       {
         name: "Human Resource",
         icon: Users,
@@ -370,6 +381,11 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
                 <div className="mt-1 space-y-1">
                   {group.items.map((item: any) => {
                     if (item.adminOnly && userRole !== "ADMIN") return null;
+                    if (
+                      item.excludeRoles &&
+                      item.excludeRoles.includes(userRole)
+                    )
+                      return null;
                     return (
                       <NavItem
                         key={item.name}
@@ -383,7 +399,6 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
             );
           })}
         </div>
-
       </aside>
     </>
   );
