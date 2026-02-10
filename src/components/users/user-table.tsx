@@ -15,6 +15,7 @@ import {
     TableCell,
     TableEmpty,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 
 interface UserTableProps {
     users: any[]
@@ -96,6 +97,34 @@ export default function UserTable({ users }: UserTableProps) {
                     <UserPlus className="w-4 h-4" />
                     Add User
                 </button>
+            </div>
+
+            {/* User Statistics Summary */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border/50">
+                <div className="flex items-center gap-1.5 border-r border-border pr-4 mr-1">
+                    <UserIcon className="w-3.5 h-3.5" />
+                    <span className="font-bold text-foreground">Total User: {users.length}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                    {Object.entries(
+                        users.reduce((acc, u) => {
+                            acc[u.role] = (acc[u.role] || 0) + 1;
+                            return acc;
+                        }, {} as Record<string, number>)
+                    ).map(([role, count]) => (
+                        <div key={role} className="flex items-center gap-1.5 group">
+                            <span className={cn(
+                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                role === 'ADMIN' ? "bg-purple-500" :
+                                    role === 'HRD' ? "bg-indigo-500" :
+                                        role === 'TEKNISI' ? "bg-orange-500" :
+                                            role === 'ADMINISTRASI' ? "bg-blue-500" : "bg-teal-500"
+                            )} />
+                            <span className="font-semibold text-foreground/80">{role}:</span>
+                            <span className="font-mono bg-background px-1.5 rounded border border-border/50 text-[10px]">{count as number}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Mobile Card View */}
