@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, Circle, X } from 'lucide-react'
+import { Search, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
+import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
 import KeteranganEdit from './keterangan-edit'
+import EditProductModal from './edit-product-modal'
 
 export default function StoreLowStockList({
     initialProducts,
@@ -23,7 +25,10 @@ export default function StoreLowStockList({
     const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([])
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-    const { showError } = useAlert()
+    const [expandedRows, setExpandedRows] = useState<number[]>([])
+    const [editingProduct, setEditingProduct] = useState<any>(null)
+    const { showError, showAlert } = useAlert()
+    const router = useRouter()
 
     // Update local products when initialProducts change
     useEffect(() => {
@@ -72,27 +77,54 @@ export default function StoreLowStockList({
         )
     }
 
+    const toggleRow = (wcId: number) => {
+        setExpandedRows(prev =>
+            prev.includes(wcId)
+                ? prev.filter(id => id !== wcId)
+                : [...prev, wcId]
+        )
+    }
+
     const filteredProducts = useMemo(() => {
         const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
 
-        return localProducts.filter(p => {
-            // Search term match - all words must match
-            const matchesSearch = searchWords.length === 0 || searchWords.every(word =>
+        const matchesSearch = (p: any) => {
+            const searchMatch = searchWords.length === 0 || searchWords.every(word =>
                 p.name.toLowerCase().includes(word) ||
                 (p.sku && p.sku.toLowerCase().includes(word)) ||
                 (p.storeName && p.storeName.toLowerCase().includes(word))
             )
+            if (!searchMatch) return false
 
-            if (!matchesSearch) return false
-
-            // Supplier filter match
             if (selectedSuppliers.length === 0) return true
-
             if (!p.storeName) return false
             const productSuppliers = p.storeName.split(',').map((n: string) => n.trim()).filter(Boolean)
             return selectedSuppliers.some(s => productSuppliers.includes(s))
+        }
+
+        const parents = localProducts.filter(p => !p.parentId)
+        const variations = localProducts.filter(p => p.parentId)
+
+        let result: any[] = []
+        parents.forEach(parent => {
+            const children = variations.filter(v => v.parentId === parent.wcId)
+            const parentMatches = matchesSearch(parent)
+            const matchingChildren = children.filter(matchesSearch)
+
+            if (parentMatches || matchingChildren.length > 0) {
+                result.push({ ...parent, hasVariations: children.length > 0 })
+
+                if (expandedRows.includes(parent.wcId) || (searchWords.length > 0 && matchingChildren.length > 0)) {
+                    const childrenToShow = searchWords.length > 0 ? matchingChildren : children
+                    childrenToShow.forEach(child => {
+                        result.push({ ...child, isVariation: true })
+                    })
+                }
+            }
         })
-    }, [localProducts, searchTerm, selectedSuppliers])
+
+        return result
+    }, [localProducts, searchTerm, selectedSuppliers, expandedRows])
 
     // Pagination calculation
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -176,7 +208,8 @@ export default function StoreLowStockList({
                                         key={product.wcId}
                                         className={cn(
                                             "hover:bg-accent/50 transition-colors group",
-                                            product.purchased && "opacity-60 bg-muted/20"
+                                            product.purchased && "opacity-60 bg-muted/20",
+                                            product.isVariation && "bg-muted/10 border-l-4 border-l-primary/30"
                                         )}
                                     >
                                         <td className="px-4 py-3 text-center">
@@ -217,26 +250,43 @@ export default function StoreLowStockList({
                                                 <span
                                                     className={cn(
                                                         "font-medium text-foreground text-sm line-clamp-2",
-                                                        product.purchased && "line-through text-muted-foreground"
+                                                        product.purchased && "line-through text-muted-foreground",
+                                                        product.isVariation && "text-xs italic"
                                                     )}
                                                     title={product.name}
                                                 >
+                                                    {product.isVariation && <span className="text-primary font-bold mr-1">[Varian]</span>}
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-xs text-muted-foreground">ID: {product.wcId}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => setEditingProduct(product)}
+                                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5"
+                                                        title="Edit Produk"
+                                                    >
+                                                        <Edit2 className="w-2.5 h-2.5" />
+                                                        Edit
+                                                    </button>
                                                     <span className={cn(
                                                         "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
                                                         product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
                                                     )}>
                                                         {product.status}
                                                     </span>
+                                                    {product.type === 'variable' && (
+                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
+                                                            Variable
+                                                        </span>
+                                                    )}
                                                     {product.isMissingFromWoo && (
                                                         <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
                                                             Tidak ditemukan di woocomerce
                                                         </span>
                                                     )}
-                                                    {product.slug && (
+                                                    {product.slug && !product.isVariation && (
                                                         <a
                                                             href={`${process.env.NEXT_PUBLIC_WC_URL}/shop/${product.slug}`}
                                                             target="_blank"
@@ -248,6 +298,26 @@ export default function StoreLowStockList({
                                                         </a>
                                                     )}
                                                 </div>
+
+                                                {product.hasVariations && (
+                                                    <button
+                                                        onClick={() => toggleRow(product.wcId)}
+                                                        className="flex items-center gap-1 text-primary hover:underline text-[10px] mt-1 font-bold bg-primary/5 px-2 py-0.5 rounded"
+                                                    >
+                                                        {expandedRows.includes(product.wcId) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                                        {expandedRows.includes(product.wcId) ? 'Sembunyikan Varian' : 'Lihat Varian'}
+                                                    </button>
+                                                )}
+
+                                                {product.isVariation && product.attributes && Array.isArray(product.attributes) && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {product.attributes.map((attr: any) => (
+                                                            <span key={attr.name} className="px-1.5 py-0.5 rounded bg-muted text-[10px] border border-border text-muted-foreground">
+                                                                <span className="font-semibold">{attr.name}:</span> {attr.option}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 min-w-[180px]">
@@ -256,10 +326,17 @@ export default function StoreLowStockList({
                                                 initialValue={product.storeName || ''}
                                             />
                                         </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center">
-                                            <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">
-                                                {product.sku || '-'}
-                                            </span>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-mono">
+                                                    {product.sku || '-'}
+                                                </span>
+                                                {product.backupGudang && (
+                                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-[4px] text-[10px] font-bold border border-blue-100 uppercase tracking-tighter">
+                                                        {product.backupGudang}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 min-w-[200px]">
                                             <KeteranganEdit
@@ -394,6 +471,16 @@ export default function StoreLowStockList({
                         />
                     </div>
                 </div>
+            )}
+
+            {editingProduct && (
+                <EditProductModal
+                    product={editingProduct}
+                    onClose={() => setEditingProduct(null)}
+                    onSuccess={() => {
+                        router.refresh()
+                    }}
+                />
             )}
         </div>
     )

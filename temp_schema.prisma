@@ -16,10 +16,10 @@ model announcement {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   contentEnc  String   @db.Text
-  creator     user     @relation("announcement_creatorIdTouser", fields: [creatorId], references: [id])
+  creator     user     @relation("announcement_creatorIdTouser", fields: [creatorId], references: [id], map: "Announcement_creatorId_fkey")
   targetUsers user[]   @relation("targetedusers")
 
-  @@index([creatorId])
+  @@index([creatorId], map: "Announcement_creatorId_fkey")
   @@map("Announcement")
 }
 
@@ -199,10 +199,10 @@ model order {
   orderNumber String      @unique
   userId      String?
   createdAt   DateTime    @default(now())
-  user        user?       @relation(fields: [userId], references: [id])
+  user        user?       @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
   items       orderitem[]
 
-  @@index([userId])
+  @@index([userId], map: "Order_userId_fkey")
   @@map("Order")
 }
 
@@ -215,9 +215,9 @@ model orderitem {
   productNote String?
   quantity    Float
   createdAt   DateTime @default(now())
-  order       order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order       order    @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "OrderItem_orderId_fkey")
 
-  @@index([orderId])
+  @@index([orderId], map: "OrderItem_orderId_fkey")
   @@map("OrderItem")
 }
 
@@ -235,9 +235,9 @@ model overtimeleave {
   statusEnc        String  @db.Text
   createdAtEnc     String  @db.Text
   updatedAtEnc     String  @db.Text
-  user             user    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             user    @relation(fields: [userId], references: [id], onDelete: Cascade, map: "OvertimeLeave_userId_fkey")
 
-  @@index([userId])
+  @@index([userId], map: "OvertimeLeave_userId_fkey")
   @@map("overtimeleave")
 }
 
@@ -265,11 +265,11 @@ model payrollitem {
   payrollId       String
   componentId     String
   amountEnc       String          @db.Text
-  salarycomponent salaryComponent @relation(fields: [componentId], references: [id])
-  payroll         payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  salarycomponent salaryComponent @relation(fields: [componentId], references: [id], map: "PayrollItem_componentId_fkey")
+  payroll         payroll         @relation(fields: [payrollId], references: [id], onDelete: Cascade, map: "PayrollItem_payrollId_fkey")
 
-  @@index([componentId])
-  @@index([payrollId])
+  @@index([componentId], map: "PayrollItem_componentId_fkey")
+  @@index([payrollId], map: "PayrollItem_payrollId_fkey")
   @@map("PayrollItem")
 }
 
@@ -298,9 +298,9 @@ model productionIssue {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   resolution       String?
-  productionUnit   productionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade)
+  productionUnit   productionUnit @relation(fields: [productionUnitId], references: [id], onDelete: Cascade, map: "ProductionIssue_productionUnitId_fkey")
 
-  @@index([productionUnitId])
+  @@index([productionUnitId], map: "ProductionIssue_productionUnitId_fkey")
   @@map("ProductionIssue")
 }
 
@@ -314,10 +314,10 @@ model productionPlan {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   sectionsSnapshot String?          @db.Text
-  recipe           recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipe           recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "ProductionPlan_recipeId_fkey")
   units            productionUnit[]
 
-  @@index([recipeId])
+  @@index([recipeId], map: "ProductionPlan_recipeId_fkey")
   @@map("ProductionPlan")
 }
 
@@ -338,9 +338,9 @@ model productionUnit {
   packedAt          DateTime?
   link              String?
   issues            productionIssue[]
-  productionPlan    productionPlan    @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
+  productionPlan    productionPlan    @relation(fields: [productionPlanId], references: [id], onDelete: Cascade, map: "ProductionUnit_productionPlanId_fkey")
 
-  @@index([productionPlanId])
+  @@index([productionPlanId], map: "ProductionUnit_productionPlanId_fkey")
   @@map("ProductionUnit")
 }
 
@@ -357,10 +357,10 @@ model project {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   projecttouser   projecttouser[]
-  projectcategory projectcategory? @relation(fields: [categoryId], references: [id])
+  projectcategory projectcategory? @relation(fields: [categoryId], references: [id], map: "Project_categoryId_fkey")
   projectlink     projectlink[]
 
-  @@index([categoryId])
+  @@index([categoryId], map: "Project_categoryId_fkey")
 }
 
 model projectcategory {
@@ -378,9 +378,9 @@ model projectlink {
   projectId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  project   project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   project  @relation(fields: [projectId], references: [id], onDelete: Cascade, map: "ProjectLink_projectId_fkey")
 
-  @@index([projectId])
+  @@index([projectId], map: "ProjectLink_projectId_fkey")
 }
 
 model rack {
@@ -419,12 +419,12 @@ model recipe {
   updatedAt       DateTime           @updatedAt
   productionId    String             @default("-")
   productionPlans productionPlan[]
-  category        category?          @relation(fields: [categoryId], references: [id])
+  category        category?          @relation(fields: [categoryId], references: [id], map: "Recipe_categoryId_fkey")
   ingredients     recipeIngredient[]
   sections        recipeSection[]
   transaction     transaction[]
 
-  @@index([categoryId])
+  @@index([categoryId], map: "Recipe_categoryId_fkey")
   @@map("Recipe")
 }
 
@@ -435,13 +435,13 @@ model recipeIngredient {
   sectionId String?
   quantity  Float
   notes     String?
-  product   product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipe    recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  section   recipeSection? @relation(fields: [sectionId], references: [id])
+  product   product        @relation(fields: [productId], references: [id], onDelete: Cascade, map: "RecipeIngredient_productId_fkey")
+  recipe    recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "RecipeIngredient_recipeId_fkey")
+  section   recipeSection? @relation(fields: [sectionId], references: [id], map: "RecipeIngredient_sectionId_fkey")
 
-  @@index([productId])
-  @@index([recipeId])
-  @@index([sectionId])
+  @@index([productId], map: "RecipeIngredient_productId_fkey")
+  @@index([recipeId], map: "RecipeIngredient_recipeId_fkey")
+  @@index([sectionId], map: "RecipeIngredient_sectionId_fkey")
   @@map("RecipeIngredient")
 }
 
@@ -453,9 +453,9 @@ model recipeSection {
   createdAt   DateTime           @default(now())
   category    String?
   ingredients recipeIngredient[]
-  recipe      recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipe      recipe             @relation(fields: [recipeId], references: [id], onDelete: Cascade, map: "RecipeSection_recipeId_fkey")
 
-  @@index([recipeId])
+  @@index([recipeId], map: "RecipeSection_recipeId_fkey")
   @@map("RecipeSection")
 }
 
@@ -547,13 +547,13 @@ model transaction {
   userId      String?
   description String?
   createdAt   DateTime @default(now())
-  product     product? @relation(fields: [productId], references: [id], onDelete: Cascade)
-  recipe      recipe?  @relation(fields: [recipeId], references: [id])
-  user        user?    @relation(fields: [userId], references: [id])
+  product     product? @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Transaction_productId_fkey")
+  recipe      recipe?  @relation(fields: [recipeId], references: [id], map: "Transaction_recipeId_fkey")
+  user        user?    @relation(fields: [userId], references: [id], map: "Transaction_userId_fkey")
 
-  @@index([productId])
-  @@index([recipeId])
-  @@index([userId])
+  @@index([productId], map: "Transaction_productId_fkey")
+  @@index([recipeId], map: "Transaction_recipeId_fkey")
+  @@index([userId], map: "Transaction_userId_fkey")
   @@map("Transaction")
 }
 
@@ -585,7 +585,6 @@ model user {
   transactions          transaction[]
   projecttouser         projecttouser[]
   overtimeLeaves        overtimeleave[]
-  serviceOrders         serviceOrder[]
   targetedAnnouncements announcement[]    @relation("targetedusers")
 
   @@map("User")
@@ -633,15 +632,11 @@ model StoreProduct {
   salePrice        Float?
   stockQuantity    Int?
   stockStatus      String?
-  weight           Float?
   images           String?   @db.Text
   categories       String?   @db.Text
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   keterangan       String?   @db.Text
-  attributes       String?   @db.Text
-  parentId         Int?
-  backupGudang     String?   @db.Text
 
   @@map("StoreProduct")
 }
@@ -671,29 +666,27 @@ model serviceProduct {
 }
 
 model serviceOrder {
-  id          String             @id @default(cuid())
-  orderNumber String             @unique(map: "ServiceOrder_orderNumber_key")
+  id          String   @id @default(cuid())
+  orderNumber String   @unique(map: "ServiceOrder_orderNumber_key")
   userId      String?
-  createdAt   DateTime           @default(now())
-  user        user?              @relation(fields: [userId], references: [id])
-  items       serviceOrderItem[]
+  createdAt   DateTime @default(now())
 
-  @@index([userId])
   @@map("serviceOrder")
 }
 
 model serviceOrderItem {
-  id           String       @id @default(cuid())
+  id           String   @id @default(cuid())
   orderId      String
   productId    String
   productName  String
   productPrice Float
-  productImage String?      @db.LongText
+  productImage String?  @db.LongText
   productSku   String?
   quantity     Float
-  createdAt    DateTime     @default(now())
-  order        serviceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
 
-  @@index([orderId])
+  @@index([orderId], map: "ServiceOrderItem_orderId_fkey")
   @@map("serviceOrderItem")
 }
+
+

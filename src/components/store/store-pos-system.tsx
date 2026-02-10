@@ -1,12 +1,12 @@
 'use client'
 
-import { Search, ShoppingCart, Minus, Plus, Trash2, Package, Eye, X, ChevronLeft, ChevronRight, User, Check, Edit2, Home, Store } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, Package, Eye, X, ChevronLeft, ChevronRight, User, Check, Edit2, Home, Store, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/utils/format'
+import { formatCurrency, formatNumber } from '@/utils/format'
 import Image from 'next/image'
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { searchWooCommerceProducts } from '@/app/actions/store-product'
+import { searchWooCommerceProducts, getProductVariations } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { createWooCommerceOrder } from '@/app/actions/store-order'
@@ -18,6 +18,8 @@ type WooCommerceProduct = {
     id: number
     name: string
     sku: string
+    type: string
+    attributes: any[]
     price: number
     regularPrice: number
     salePrice: number
@@ -27,6 +29,7 @@ type WooCommerceProduct = {
     description: string
     barcode: string | null
     slug: string
+    parentId?: number
 }
 
 type CartItem = WooCommerceProduct & {
@@ -47,6 +50,10 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const [customerName, setCustomerName] = useState('Guest')
     const [isEditingCustomer, setIsEditingCustomer] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState<WooCommerceProduct | null>(null)
+    const [variationPickerProduct, setVariationPickerProduct] = useState<WooCommerceProduct | null>(null)
+    const [variations, setVariations] = useState<WooCommerceProduct[]>([])
+    const [loadingVariations, setLoadingVariations] = useState(false)
+    const [loadingIds, setLoadingIds] = useState<number[]>([])
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const { showError } = useAlert()
     const { showConfirmation } = useConfirmation()
@@ -127,6 +134,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         }
     }, [debouncedTerm, page, handleSearch])
 
+
     const addToCart = (product: WooCommerceProduct) => {
         const existing = cart.find(item => item.id === product.id)
         if (existing) {
@@ -146,6 +154,25 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
             if (item.id === id) {
                 const newQty = item.quantity + delta
                 return newQty > 0 ? { ...item, quantity: newQty } : item
+            }
+            return item
+        }))
+    }
+
+    const setQuantity = (id: number, value: number) => {
+        setCart(cart.map(item => {
+            if (item.id === id) {
+                // Allow intermediate 0 or smaller for flexibility while typing
+                return { ...item, quantity: value }
+            }
+            return item
+        }))
+    }
+
+    const setPrice = (id: number, value: number) => {
+        setCart(cart.map(item => {
+            if (item.id === id) {
+                return { ...item, price: value }
             }
             return item
         }))
@@ -180,8 +207,10 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                 try {
                     const { success, order, error } = await createWooCommerceOrder({
                         items: cart.map(item => ({
-                            product_id: item.id,
-                            quantity: item.quantity
+                            product_id: item.parentId || item.id,
+                            variation_id: item.parentId ? item.id : undefined,
+                            quantity: item.quantity,
+                            price: item.price
                         })),
                         customerNote: `POS Order by ${userName}`,
                         paymentMethod: 'bacs',
@@ -206,10 +235,14 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                 name: item.name,
                                 quantity: item.quantity,
                                 price: item.price,
-                                total: item.price * item.quantity
+                                total: item.price * item.quantity,
+                                attributes: item.attributes,
+                                sku: item.sku,
+                                barcode: item.barcode
                             })),
                             total: total,
-                            paymentMethod: 'Cash'
+                            paymentMethod: 'Cash',
+                            cashierName: userName
                         })
                         setCart([]) // Clear cart
                         setCustomerName('Guest') // Reset customer
@@ -241,9 +274,30 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         }
     }
 
+    // Load variations when a variable product is selected (Detail Modal or Small Popup)
+    useEffect(() => {
+        const product = selectedProduct || variationPickerProduct;
+        if (product && product.type === 'variable') {
+            const fetchVariations = async () => {
+                setLoadingVariations(true)
+                try {
+                    const data = await getProductVariations(product.id)
+                    setVariations(data)
+                } catch (error) {
+                    showError('Gagal mengambil variasi produk.')
+                } finally {
+                    setLoadingVariations(false)
+                }
+            }
+            fetchVariations()
+        } else if (!selectedProduct && !variationPickerProduct) {
+            setVariations([])
+        }
+    }, [selectedProduct?.id, variationPickerProduct?.id, showError])
+
     // Modal scroll lock
     useEffect(() => {
-        if (selectedProduct) {
+        if (selectedProduct || variationPickerProduct) {
             document.body.style.overflow = 'hidden'
         } else {
             document.body.style.overflow = ''
@@ -251,7 +305,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         return () => {
             document.body.style.overflow = ''
         }
-    }, [selectedProduct])
+    }, [selectedProduct, variationPickerProduct])
 
     return (
         <div className="flex-1 flex overflow-hidden min-h-0 bg-background w-full h-full relative">
@@ -311,9 +365,9 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                         <div className="flex-1">
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-1 h-fit">
                                 {[...Array(10)].map((_, i) => (
-                                    <div key={i} className="flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in fade-in duration-500">
+                                    <div key={i} className="flex flex-col bg-card border border-border shadow-sm animate-in fade-in duration-500 rounded-xl overflow-hidden">
                                         {/* Image Skeleton */}
-                                        <div className="aspect-square bg-muted relative overflow-hidden">
+                                        <div className="aspect-square bg-muted relative overflow-hidden rounded-t-xl">
                                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer" />
                                         </div>
 
@@ -364,10 +418,16 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                 {products.map((product) => (
                                     <button
                                         key={product.id}
-                                        onClick={() => addToCart(product)}
-                                        className="flex flex-col bg-card border border-border rounded-2xl overflow-hidden hover:border-primary hover:shadow-lg transition-all text-left animate-in fade-in slide-in-from-bottom-2 group"
+                                        onClick={() => {
+                                            if (product.type === 'variable') {
+                                                setVariationPickerProduct(product)
+                                            } else {
+                                                addToCart(product)
+                                            }
+                                        }}
+                                        className="flex flex-col bg-card border border-border hover:border-primary hover:shadow-lg transition-all text-left animate-in fade-in slide-in-from-bottom-2 group rounded-xl overflow-hidden"
                                     >
-                                        <div className="aspect-square relative bg-muted">
+                                        <div className="aspect-square relative bg-muted rounded-t-xl overflow-hidden">
                                             {product.image ? (
                                                 <Image src={product.image} alt={product.name} fill className="object-cover" />
                                             ) : (
@@ -400,9 +460,9 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                         <div className="p-3 flex-1 flex flex-col">
                                             <h3 className="font-semibold text-sm line-clamp-3 min-h-[3.75rem]">{product.name}</h3>
                                             <div className="flex flex-col gap-0.5 mt-1">
-                                                <p className="text-[10px] text-muted-foreground leading-none">SKU: {product.sku || '-'}</p>
+                                                <p className="text-[12px] text-primary font-medium leading-none">SKU : {product.sku || '-'}</p>
                                                 {product.barcode && (
-                                                    <p className="text-[10px] text-primary font-medium leading-none">Gudang: {product.barcode}</p>
+                                                    <p className="text-[12px] text-muted-foreground leading-none">Backup : {product.barcode}</p>
                                                 )}
                                             </div>
                                             <div className="mt-auto pt-2 space-y-1">
@@ -419,9 +479,32 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                             ? "bg-destructive/10 text-destructive"
                                                             : "bg-emerald-500/10 text-emerald-600"
                                                     )}>
-                                                        Stok: {product.stockQuantity}
+                                                        {product.type === 'variable' ? 'Variable' : `Stok: ${product.stockQuantity}`}
                                                     </span>
                                                 </div>
+                                                {product.attributes && product.attributes.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {product.attributes.map((attr: any) => (
+                                                            <span key={attr.name} className="px-1.5 py-0.5 rounded bg-muted text-[10px] border border-border text-muted-foreground">
+                                                                <span className="font-semibold">{attr.name}:</span> {attr.option || (Array.isArray(attr.options) ? attr.options.join(', ') : '-')}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {product.type === 'variable' && (
+                                                    <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+                                                        <span className="text-[10px] font-black text-muted-foreground uppercase">Variable</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setVariationPickerProduct(product);
+                                                            }}
+                                                            className="text-xs text-primary font-black hover:bg-primary/5 px-2 py-1 rounded-lg border border-primary/20 transition-all"
+                                                        >
+                                                            Lihat Varian
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </button>
@@ -461,73 +544,73 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
 
             {/* Right side: Basket */}
             <div className="w-96 bg-card border-l border-border flex flex-col shadow-xl z-20">
-                <div className="p-6 border-b border-border bg-muted/30">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-xl">
-                                <ShoppingCart className="w-6 h-6 text-primary" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <button
-                                        onClick={() => setActiveTab('cart')}
-                                        className={cn(
-                                            "px-3 py-1 rounded-full text-sm font-medium transition-all",
-                                            activeTab === 'cart' ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                                        )}
-                                    >
-                                        Keranjang
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('orders')}
-                                        className={cn(
-                                            "px-3 py-1 rounded-full text-sm font-medium transition-all",
-                                            activeTab === 'orders' ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                                        )}
-                                    >
-                                        Order
-                                    </button>
-                                </div>
-                                <div className="space-y-0.5 mt-0.5">
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">User: {userName}</p>
-                                    <div className="flex items-center gap-1.5 group/customer">
-                                        <User className="w-3 h-3 text-primary/70" />
-                                        {isEditingCustomer ? (
-                                            <div className="flex items-center gap-1">
-                                                <input
-                                                    type="text"
-                                                    value={customerName}
-                                                    onChange={(e) => setCustomerName(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') setIsEditingCustomer(false)
-                                                        if (e.key === 'Escape') setIsEditingCustomer(false)
-                                                    }}
-                                                    className="text-xs font-medium bg-background border border-primary/30 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary w-24 h-5"
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    onClick={() => setIsEditingCustomer(false)}
-                                                    className="p-0.5 hover:bg-emerald-100 text-emerald-600 rounded transition-colors"
-                                                >
-                                                    <Check className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-xs font-medium text-foreground/80 truncate max-w-[120px]">
-                                                    {customerName}
-                                                </p>
-                                                <button
-                                                    onClick={() => setIsEditingCustomer(true)}
-                                                    className="p-1 hover:bg-primary/10 text-primary/50 hover:text-primary rounded opacity-0 group-hover/customer:opacity-100 transition-all"
-                                                    title="Ubah Customer"
-                                                >
-                                                    <Edit2 className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        )}
+                <div className="flex flex-col border-b border-border bg-muted/10">
+                    <div className="flex w-full">
+                        <button
+                            onClick={() => setActiveTab('cart')}
+                            className={cn(
+                                "flex-1 px-4 py-4 text-sm font-black transition-all flex items-center justify-center gap-2 border-b-2",
+                                activeTab === 'cart'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md hover:bg-primary"
+                                    : "bg-muted/10 border-transparent text-muted-foreground hover:bg-muted/50"
+                            )}
+                        >
+                            <ShoppingCart className="w-4 h-4" />
+                            KERANJANG
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('orders')}
+                            className={cn(
+                                "flex-1 px-4 py-4 text-sm font-black transition-all flex items-center justify-center gap-2 border-b-2 border-l border-border",
+                                activeTab === 'orders'
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md hover:bg-primary"
+                                    : "bg-muted/10 border-transparent text-muted-foreground hover:bg-muted/50"
+                            )}
+                        >
+                            <History className="w-4 h-4" />
+                            ORDER
+                        </button>
+                    </div>
+
+                    <div className="p-4 border-t border-border/50 flex items-center justify-between">
+                        <div className="space-y-0.5 mt-0.5">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">User: {userName}</p>
+                            <div className="flex items-center gap-1.5 group/customer">
+                                <User className="w-3 h-3 text-primary/70" />
+                                {isEditingCustomer ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            value={customerName}
+                                            onChange={(e) => setCustomerName(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') setIsEditingCustomer(false)
+                                                if (e.key === 'Escape') setIsEditingCustomer(false)
+                                            }}
+                                            className="text-xs font-medium bg-background border border-primary/30 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary w-24 h-5"
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={() => setIsEditingCustomer(false)}
+                                            className="p-0.5 hover:bg-emerald-100 text-emerald-600 rounded transition-colors"
+                                        >
+                                            <Check className="w-3 h-3" />
+                                        </button>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs font-medium text-foreground/80 truncate max-w-[120px]">
+                                            {customerName}
+                                        </p>
+                                        <button
+                                            onClick={() => setIsEditingCustomer(true)}
+                                            className="p-1 hover:bg-primary/10 text-primary/50 hover:text-primary rounded opacity-0 group-hover/customer:opacity-100 transition-all"
+                                            title="Ubah Customer"
+                                        >
+                                            <Edit2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         {cart.length > 0 && (
@@ -551,23 +634,23 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                             </div>
                         ) : (
                             cart.map((item) => (
-                                <div key={item.id} className="bg-background border border-border rounded-xl p-3 flex gap-3 animate-in slide-in-from-right-4 fade-in relative group/item">
-                                    <div className="w-16 h-16 rounded-lg bg-muted relative overflow-hidden shrink-0">
-                                        {item.image && <Image src={item.image} alt={item.name} fill className="object-cover" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 pr-6">
-                                        <div className="space-y-0.5">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <h4 className="font-medium text-sm truncate">{item.name}</h4>
-                                                <button
-                                                    onClick={() => removeFromCart(item.id)}
-                                                    className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover/item:opacity-100"
-                                                    title="Hapus dari keranjang"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            <div className="flex flex-col gap-0.5">
+                                <div key={item.id} className="bg-background border border-border rounded-xl p-3 flex flex-col animate-in slide-in-from-right-4 fade-in relative group/item">
+                                    <div className="flex gap-3">
+                                        <div className="w-16 h-16 bg-muted relative shrink-0 border border-border/50">
+                                            {item.image && <Image src={item.image} alt={item.name} fill className="object-cover" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center pr-6">
+                                            <div className="space-y-0.5">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <h4 className="font-bold text-sm line-clamp-2 leading-tight h-[2.5em]">{item.name}</h4>
+                                                    <button
+                                                        onClick={() => removeFromCart(item.id)}
+                                                        className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover/item:opacity-100"
+                                                        title="Hapus dari keranjang"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[10px] text-muted-foreground">SKU: {item.sku || '-'}</span>
                                                     <span className={cn(
@@ -577,40 +660,87 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                         Stok: {item.stockQuantity}
                                                     </span>
                                                 </div>
-                                                {item.barcode && (
-                                                    <p className="text-[10px] text-primary font-medium leading-none">Gudang: {item.barcode}</p>
+                                                {item.attributes && item.attributes.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {item.attributes.map((attr: any) => (
+                                                            <span key={attr.name} className="px-1 py-0.5 rounded bg-muted text-[8px] border border-border">
+                                                                {attr.name}: {attr.option}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between mt-2">
+                                    </div>
+
+                                    <div className="mt-2 space-y-2">
+                                        <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <div className="flex items-baseline gap-1.5">
-                                                    <span className="text-primary font-bold text-sm tracking-tight">{formatCurrency(item.price)}</span>
-                                                    <span className="text-[10px] text-muted-foreground font-medium">x {item.quantity}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="relative group/price">
+                                                        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs font-bold text-primary pointer-events-none">Rp</span>
+                                                        <input
+                                                            type="text"
+                                                            value={item.price === 0 ? '' : formatNumber(item.price)}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/[^0-9]/g, '');
+                                                                const num = parseInt(val) || 0;
+                                                                setPrice(item.id, num);
+                                                            }}
+                                                            onFocus={(e) => e.target.select()}
+                                                            className="pl-7 pr-1 h-8 text-sm font-black bg-transparent border border-transparent focus:border-primary/20 focus:bg-background rounded-md outline-none transition-all text-primary"
+                                                            style={{
+                                                                width: `${(formatNumber(item.price).length || 1) + 3.5}ch`,
+                                                                minWidth: '5rem'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 bg-background border border-border rounded-lg p-[2px] transition-all">
+                                                        <button
+                                                            onClick={() => item.quantity > 1 ? updateQuantity(item.id, -1) : removeFromCart(item.id)}
+                                                            className="p-1 hover:bg-muted rounded-md text-primary hover:text-destructive transition-all active:scale-95"
+                                                        >
+                                                            {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-destructive" /> : <Minus className="w-3.5 h-3.5" />}
+                                                        </button>
+                                                        <input
+                                                            type="text"
+                                                            inputMode="numeric"
+                                                            value={item.quantity === 0 ? '' : item.quantity}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/[^0-9]/g, '');
+                                                                const num = parseInt(val) || 0;
+                                                                setQuantity(item.id, num);
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                const val = parseInt(e.target.value.replace(/[^0-9]/g, ''));
+                                                                if (isNaN(val) || val <= 0) setQuantity(item.id, 1);
+                                                            }}
+                                                            onFocus={(e) => e.target.select()}
+                                                            className="text-center text-xs font-black bg-transparent border border-transparent rounded outline-none h-6 px-1"
+                                                            style={{
+                                                                width: `${(item.quantity.toString().length || 1) + 1}ch`,
+                                                                minWidth: '2rem'
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={() => updateQuantity(item.id, 1)}
+                                                            className="p-1 hover:bg-muted rounded-md text-primary transition-all active:scale-95"
+                                                        >
+                                                            <Plus className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 {item.regularPrice > item.price && (
-                                                    <span className="text-[10px] text-muted-foreground line-through leading-none">
+                                                    <span className="text-[10px] text-muted-foreground line-through ml-7 leading-none">
                                                         {formatCurrency(item.regularPrice)}
                                                     </span>
                                                 )}
-                                                <div className="text-[11px] font-bold text-foreground mt-0.5">
-                                                    Subtotal: {formatCurrency(item.price * item.quantity)}
-                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 bg-muted rounded-lg p-1 scale-90 -mr-1">
-                                                <button
-                                                    onClick={() => item.quantity > 1 ? updateQuantity(item.id, -1) : removeFromCart(item.id)}
-                                                    className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground transition-all"
-                                                >
-                                                    {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-destructive" /> : <Minus className="w-3.5 h-3.5" />}
-                                                </button>
-                                                <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
-                                                <button
-                                                    onClick={() => updateQuantity(item.id, 1)}
-                                                    className="p-1 hover:bg-background rounded text-muted-foreground hover:text-foreground transition-all"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                </button>
+                                            <div className="text-right">
+                                                <div className="text-[10px] uppercase font-bold text-muted-foreground leading-none mb-0.5">Total</div>
+                                                <div className="text-sm font-black text-foreground">
+                                                    {formatCurrency(item.price * item.quantity)}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -621,13 +751,12 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                         <div className="h-full animate-in slide-in-from-right-4 fade-in duration-300">
                             <POSOrderHistory
                                 onPrintOrder={(order: any) => {
-                                    // Map WooCommerce order to OrderDetails for CheckoutReceipt
                                     const mappedOrder = {
                                         id: order.id,
                                         number: order.number,
                                         customerName: order.billing?.first_name
                                             ? `${order.billing.first_name} ${order.billing.last_name}`.trim()
-                                            : customerName, // Fallback to current customer name if billing is empty
+                                            : customerName,
                                         date: new Date(order.date_created).toLocaleDateString('id-ID', {
                                             day: 'numeric',
                                             month: 'short',
@@ -641,10 +770,14 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                             price: parseFloat(item.price),
                                             total: parseFloat(item.total),
                                             sku: item.sku,
-                                            barcode: item.meta_data?.find((m: any) => m.key === 'backup_gudang')?.value
+                                            barcode: item.meta_data?.find((m: any) => m.key === 'backup_gudang')?.value,
+                                            attributes: item.meta_data
+                                                ?.filter((m: any) => !m.key.startsWith('_'))
+                                                .map((m: any) => ({ name: m.key, option: m.value }))
                                         })),
                                         total: parseFloat(order.total),
-                                        paymentMethod: order.payment_method_title || 'Cash'
+                                        paymentMethod: order.payment_method_title || 'Cash',
+                                        cashierName: order.meta_data?.find((m: any) => m.key === '_pos_cashier_name')?.value
                                     };
                                     setLastOrder(mappedOrder);
                                 }}
@@ -700,10 +833,14 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                             <div className="grid grid-cols-1 md:grid-cols-2">
                                 {/* Left side: Image Gallery */}
                                 <div className="bg-muted/50 aspect-square relative group">
-                                    {selectedProduct.images.length > 0 ? (
+                                    {selectedProduct.images && selectedProduct.images.length > 0 ? (
                                         <>
                                             <Image
-                                                src={selectedProduct.images[currentImageIndex]}
+                                                src={
+                                                    typeof selectedProduct.images[currentImageIndex] === 'string'
+                                                        ? selectedProduct.images[currentImageIndex] as string
+                                                        : (selectedProduct.images[currentImageIndex] as any)?.src || '/placeholder.png'
+                                                }
                                                 alt={selectedProduct.name}
                                                 fill
                                                 className="object-contain p-4"
@@ -778,37 +915,152 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                         )}
                                     </div>
 
-                                    <div className="space-y-3 flex-1 overflow-hidden">
-                                        <h4 className="font-bold border-b border-border pb-2">Deskripsi Produk</h4>
-                                        <div
-                                            className="text-sm text-muted-foreground prose prose-sm max-w-none prose-invert overflow-y-auto max-h-[300px] scrollbar-thin"
-                                            dangerouslySetInnerHTML={{ __html: selectedProduct.description }}
-                                        />
+                                    <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+                                        {selectedProduct.type === 'variable' ? (
+                                            <>
+                                                <h4 className="font-bold border-b border-border pb-2 shrink-0">Pilih Variasi</h4>
+                                                <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
+                                                    {loadingVariations ? (
+                                                        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                                                            <Loader2 className="w-8 h-8 animate-spin mb-2 outline-none" />
+                                                            <p className="text-xs">Mengambil variasi...</p>
+                                                        </div>
+                                                    ) : variations.length > 0 ? (
+                                                        variations.map((v) => (
+                                                            <button
+                                                                key={v.id}
+                                                                onClick={() => {
+                                                                    if (selectedProduct) {
+                                                                        addToCart({ ...v, name: selectedProduct.name })
+                                                                        setSelectedProduct(null)
+                                                                    }
+                                                                }}
+                                                                className="w-full p-3 bg-muted/50 border border-border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center justify-between group/variant"
+                                                            >
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {v.attributes.map((attr: any) => (
+                                                                            <span key={attr.name} className="px-1.5 py-0.5 rounded bg-background text-[10px] font-bold border border-border">
+                                                                                {attr.name}: {attr.option}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">SKU: {v.sku || '-'} • Stok: {v.stockQuantity}</span>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <div className="font-bold text-primary group-hover/variant:scale-105 transition-transform">{formatCurrency(v.price)}</div>
+                                                                    {v.regularPrice > v.price && (
+                                                                        <div className="text-[10px] text-muted-foreground line-through">{formatCurrency(v.regularPrice)}</div>
+                                                                    )}
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    ) : (
+                                                        <p className="text-center py-8 text-muted-foreground text-sm italic">Produk ini tidak memiliki variasi aktif.</p>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <h4 className="font-bold border-b border-border pb-2">Deskripsi Produk</h4>
+                                                <div
+                                                    className="text-sm text-muted-foreground prose prose-sm max-w-none prose-invert overflow-y-auto max-h-[300px] scrollbar-thin"
+                                                    dangerouslySetInnerHTML={{ __html: selectedProduct.description }}
+                                                />
+                                            </>
+                                        )}
                                     </div>
 
-                                    <div className="pt-6 mt-auto shrink-0">
-                                        <button
-                                            onClick={() => {
-                                                addToCart(selectedProduct)
-                                                setSelectedProduct(null)
-                                            }}
-                                            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <ShoppingCart className="w-5 h-5" />
-                                            Tambah ke Keranjang
-                                        </button>
-                                    </div>
+                                    {selectedProduct.type !== 'variable' && (
+                                        <div className="pt-6 mt-auto shrink-0">
+                                            <button
+                                                onClick={() => {
+                                                    if (selectedProduct) {
+                                                        addToCart(selectedProduct)
+                                                        setSelectedProduct(null)
+                                                    }
+                                                }}
+                                                className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <ShoppingCart className="w-5 h-5" />
+                                                Tambah ke Keranjang
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
             {lastOrder && (
                 <CheckoutReceipt
                     order={lastOrder}
                     onClose={() => setLastOrder(null)}
                 />
+            )}
+
+            {/* Small Variation Picker Popup */}
+            {variationPickerProduct && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setVariationPickerProduct(null)}>
+                    <div
+                        className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
+                            <h4 className="font-bold text-sm truncate pr-4">{variationPickerProduct.name}</h4>
+                            <button onClick={() => setVariationPickerProduct(null)} className="p-1 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2 scrollbar-thin">
+                            {loadingVariations ? (
+                                <div className="flex flex-col items-center justify-center p-8 space-y-3">
+                                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase animate-pulse">Memuat Variasi...</p>
+                                </div>
+                            ) : variations.length > 0 ? (
+                                variations.map(v => (
+                                    <button
+                                        key={v.id}
+                                        onClick={() => {
+                                            if (variationPickerProduct) {
+                                                addToCart({ ...v, name: variationPickerProduct.name });
+                                                setVariationPickerProduct(null);
+                                            }
+                                        }}
+                                        className="w-full p-3 bg-muted/30 border border-border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center justify-between group"
+                                    >
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex flex-wrap gap-1">
+                                                {v.attributes.map((attr: any) => (
+                                                    <span key={attr.name} className="px-1.5 py-0.5 rounded bg-background text-[9px] font-bold border border-border text-primary uppercase">
+                                                        {attr.option}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <span className="text-[9px] font-medium text-muted-foreground">Stok: {v.stockQuantity}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-black text-primary group-hover:scale-105 transition-transform">{formatCurrency(v.price)}</div>
+                                        </div>
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="text-center py-8 space-y-2">
+                                    <p className="text-xs text-muted-foreground italic">Variasi tidak tersedia.</p>
+                                    <button
+                                        onClick={() => setVariationPickerProduct(null)}
+                                        className="text-[10px] font-black text-primary uppercase hover:underline"
+                                    >
+                                        Tutup
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Checkout Loading Overlay */}

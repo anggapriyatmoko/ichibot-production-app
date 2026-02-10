@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache'
 
 type OrderItem = {
     product_id: number
+    variation_id?: number
     quantity: number
+    price?: number // Force price override
 }
 
 type CreateOrderParams = {
@@ -38,7 +40,12 @@ export async function createWooCommerceOrder(params: CreateOrderParams) {
             billing: params.billing,
             line_items: params.items.map(item => ({
                 product_id: item.product_id,
-                quantity: item.quantity
+                variation_id: item.variation_id,
+                quantity: item.quantity,
+                ...(item.price !== undefined && {
+                    subtotal: (item.price * item.quantity).toString(),
+                    total: (item.price * item.quantity).toString()
+                })
             })),
             status: 'processing',
             meta_data: params.cashierName ? [

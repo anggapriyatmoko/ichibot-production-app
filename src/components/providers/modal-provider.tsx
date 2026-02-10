@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 type ConfirmationType = "confirm" | "alert";
 
@@ -45,10 +45,14 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     type: "confirm",
     title: "",
     message: "",
-    action: () => {},
+    action: () => { },
     confirmLabel: "Confirm",
     cancelLabel: "Cancel",
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [modalId, setModalId] = useState(0);
 
   const showConfirmation = ({
     title,
@@ -58,25 +62,42 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     confirmLabel,
     cancelLabel,
   }: ConfirmationOptions) => {
+    setModalId((prev) => prev + 1);
     setConfirmation({
       isOpen: true,
       title,
       message,
       type,
-      action: action || (() => {}),
+      action: action || (() => { }),
       confirmLabel: confirmLabel || (type === "alert" ? "OK" : "Confirm"),
       cancelLabel: cancelLabel || "Cancel",
     });
+    setIsSubmitting(false);
   };
 
   const closeConfirmation = () => {
+    if (isSubmitting) return;
     setConfirmation((prev) => ({ ...prev, isOpen: false }));
   };
 
   const handleConfirm = async () => {
-    closeConfirmation();
     if (confirmation.action) {
-      await confirmation.action();
+      const currentId = modalId;
+      setIsSubmitting(true);
+      try {
+        await confirmation.action();
+      } finally {
+        setIsSubmitting(false);
+        // Only close if we are still on the same modal that started the action
+        setModalId((latestId) => {
+          if (latestId === currentId) {
+            setConfirmation((prev) => ({ ...prev, isOpen: false }));
+          }
+          return latestId;
+        });
+      }
+    } else {
+      setConfirmation((prev) => ({ ...prev, isOpen: false }));
     }
   };
 
@@ -88,12 +109,16 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
       {/* Global Modal Overlay */}
       {confirmation.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
             <div
               className={`flex items-center gap-3 mb-4 ${confirmation.type === "alert" ? "text-blue-500" : "text-destructive"}`}
             >
-              <AlertCircle className="w-6 h-6" />
+              {isSubmitting ? (
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              ) : (
+                <AlertCircle className="w-6 h-6" />
+              )}
               <h3 className="text-lg font-bold text-foreground">
                 {confirmation.title}
               </h3>
@@ -105,16 +130,19 @@ export function ModalProvider({ children }: { children: ReactNode }) {
               {confirmation.type === "confirm" && (
                 <button
                   onClick={closeConfirmation}
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                 >
                   {confirmation.cancelLabel}
                 </button>
               )}
               <button
                 onClick={handleConfirm}
-                className={`px-4 py-2 ${confirmation.type === "alert" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"} rounded-lg text-sm font-medium shadow-sm transition-colors`}
+                disabled={isSubmitting}
+                className={`flex items-center gap-2 px-4 py-2 ${confirmation.type === "alert" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"} rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-70`}
               >
-                {confirmation.confirmLabel}
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? "Memproses..." : confirmation.confirmLabel}
               </button>
             </div>
           </div>

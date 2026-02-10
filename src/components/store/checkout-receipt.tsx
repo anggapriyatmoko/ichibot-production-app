@@ -12,6 +12,7 @@ type OrderItem = {
     total: number
     sku?: string
     barcode?: string
+    attributes?: any[]
 }
 
 type OrderDetails = {
@@ -22,6 +23,7 @@ type OrderDetails = {
     items: OrderItem[]
     total: number
     paymentMethod: string
+    cashierName?: string
 }
 
 const RANDOM_QUOTES = [
@@ -98,10 +100,12 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                                 <Image src="/uploads/ichibot-text-logo.png" alt="ICHIBOT Store" width={200} height={80} className="object-contain" />
                             </div>
                         </center>
-                        <center><small>Electronics and Robotic Store</small></center>
-                        <center>Jln. Dworowati no.11 Sleman, Yogyakarta</center>
-                        <center><b>www.store.ichibot.id</b></center>
-                        <center>0877-6348-4384</center>
+                        <div style={{ fontWeight: 'bold' }}>
+                            <center><b>Electronics and Robotic Store</b></center>
+                            <center>Jln. Dworowati no.11 Sleman, Yogyakarta</center>
+                            <center><b>www.store.ichibot.id</b></center>
+                            <center>0877-6348-4384</center>
+                        </div>
                     </div>
 
                     <ul className="order-details">
@@ -117,6 +121,11 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                         <li className="method">
                             Pembayaran: <strong>{order.paymentMethod}</strong>
                         </li>
+                        {order.cashierName && (
+                            <li className="cashier">
+                                Kasir: <strong>{order.cashierName}</strong>
+                            </li>
+                        )}
                     </ul>
 
                     <table>
@@ -132,11 +141,20 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                             {order.items.map((item, index) => (
                                 <tr key={index}>
                                     <td>
-                                        <b>{item.quantity} x {formatCurrency(item.price)}</b><br />
-                                        {item.name}
-                                        <br />
-                                        <b>{item.sku || '-'}</b>
-                                        {item.barcode && ` (${item.barcode})`}
+                                        <div style={{ fontWeight: 'bold' }}>
+                                            {item.quantity} x {formatCurrency(item.price)}
+                                        </div>
+                                        <div>
+                                            {item.name}
+                                        </div>
+                                        {item.attributes && item.attributes.length > 0 && (
+                                            <div style={{ fontStyle: 'italic', marginTop: '1px', color: '#000000ff' }}>
+                                                {item.attributes.map((attr: any) => `${attr.name}: ${attr.option}`).join(', ')}
+                                            </div>
+                                        )}
+                                        <div style={{ fontWeight: 'bold', color: '#000000', marginTop: '1px' }}>
+                                            SKU: {item.sku || '-'} {item.barcode ? `\u00A0\u00A0•\u00A0\u00A0 ${item.barcode}` : ''}
+                                        </div>
                                     </td>
                                     <td style={{ padding: 0 }}>&#9634;</td>
                                     <td style={{ padding: 0 }}></td>
@@ -167,19 +185,21 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
 
                     <br />
                     <hr />
-                    <center>
-                        Terimakasih sudah berbelanja di ICHIBOT Store.<br />
-                        Cek katalog dan stock produk di <b><em>www.store.ichibot.id</em></b>
-                        <hr />
-                        Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan
-                        <hr />
-                        Instagram : @team.ichibot<br />
-                        Tokopedia : ICHIBOT<br />
-                        Shopee : ichibot<br />
-                        Youtube : ICHIBOT<br />
-                        Tiktok : @team.ichibot
-                        <hr />
-                    </center>
+                    <div>
+                        <center>
+                            Terimakasih sudah berbelanja di ICHIBOT Store.<br />
+                            Cek katalog dan stock produk di <b><em>www.store.ichibot.id</em></b>
+                            <hr />
+                            Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan
+                            <hr />
+                            Instagram : @team.ichibot<br />
+                            Tokopedia : ICHIBOT<br />
+                            Shopee : ichibot<br />
+                            Youtube : ICHIBOT<br />
+                            Tiktok : @team.ichibot
+                            <hr />
+                        </center>
+                    </div>
                 </div>
 
                 {/* Actions (Not printed) */}
@@ -198,7 +218,8 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                 /* Base Styles imitating the 10px sans-serif requirement */
                 .receipt-content {
                     font-family: sans-serif;
-                    font-size: 10px;
+                    font-size: 12px;
+                    color: #000;
                     padding: 20px;
                     width: 100%;
                     max-width: 400px; /* Viewport constraint for modal */
@@ -292,7 +313,7 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                         width: 68mm; /* Configured for thermal printer */
                         margin: 0;
                         padding: 0;
-                        font-size: 10px;
+                        font-size: 12px;
                         background: white;
                         color: black;
                         overflow: visible;

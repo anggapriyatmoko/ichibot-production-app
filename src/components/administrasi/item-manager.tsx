@@ -153,7 +153,7 @@ export default function ItemManager({
           setReorderingItem(null);
           fetchItems(1, search);
         } else {
-          showError((result as any).message || "Gagal membuat order baru");
+          showError(result.message || "Gagal membuat order baru");
         }
       } else if (editingItem) {
         const updateData = {
@@ -169,7 +169,7 @@ export default function ItemManager({
           setIsModalOpen(false);
           fetchItems(currentPage, search);
         } else {
-          showError((result as any).message || "Gagal memperbarui");
+          showError(result.message || "Gagal memperbarui");
         }
       } else {
         const result = await createItem(formData);
@@ -178,7 +178,7 @@ export default function ItemManager({
           setIsModalOpen(false);
           fetchItems(1, search);
         } else {
-          showError((result as any).message || "Gagal membuat permintaan");
+          showError(result.message || "Gagal membuat permintaan");
         }
       }
     } catch {

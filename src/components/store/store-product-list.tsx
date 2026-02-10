@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle } from 'lucide-react'
+import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
 import { syncStoreProducts, toggleStoreProductPurchased } from '@/app/actions/store-product'
@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
 import KeteranganEdit from './keterangan-edit'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import EditProductModal from './edit-product-modal'
 
 export default function StoreProductList({
     initialProducts,
@@ -33,6 +34,9 @@ export default function StoreProductList({
     const [localProducts, setLocalProducts] = useState(initialProducts)
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+    const [expandedRows, setExpandedRows] = useState<number[]>([])
+    const [editingProduct, setEditingProduct] = useState<any>(null)
+    const [isAddingProduct, setIsAddingProduct] = useState(false)
     const { showConfirmation } = useConfirmation()
     const { showAlert, showError } = useAlert()
     const router = useRouter()
@@ -115,17 +119,40 @@ export default function StoreProductList({
     }
 
 
+
     const filteredProducts = useMemo(() => {
         const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
 
-        return localProducts.filter(p =>
+        const matchesSearch = (p: any) =>
             searchWords.length === 0 || searchWords.every(word =>
                 p.name.toLowerCase().includes(word) ||
                 (p.sku && p.sku.toLowerCase().includes(word)) ||
                 (p.storeName && p.storeName.toLowerCase().includes(word))
             )
-        )
-    }, [localProducts, searchTerm])
+
+        const parents = localProducts.filter(p => !p.parentId)
+        const variations = localProducts.filter(p => p.parentId)
+
+        let result: any[] = []
+        parents.forEach(parent => {
+            const children = variations.filter(v => v.parentId === parent.wcId)
+            const parentMatches = matchesSearch(parent)
+            const matchingChildren = children.filter(matchesSearch)
+
+            if (parentMatches || matchingChildren.length > 0) {
+                result.push({ ...parent, hasVariations: children.length > 0 })
+
+                if (expandedRows.includes(parent.wcId) || (searchWords.length > 0 && matchingChildren.length > 0)) {
+                    const childrenToShow = searchWords.length > 0 ? matchingChildren : children
+                    childrenToShow.forEach(child => {
+                        result.push({ ...child, isVariation: true })
+                    })
+                }
+            }
+        })
+
+        return result
+    }, [localProducts, searchTerm, expandedRows])
 
     // Pagination calculation
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -162,6 +189,13 @@ export default function StoreProductList({
                         {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
                     </button>
                 )}
+                <button
+                    onClick={() => setIsAddingProduct(true)}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-700 shadow-sm"
+                >
+                    <Plus className="w-4 h-4" />
+                    Tambah Produk
+                </button>
             </div>
 
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
@@ -183,10 +217,11 @@ export default function StoreProductList({
                             {paginatedProducts.length > 0 ? (
                                 paginatedProducts.map((product) => (
                                     <tr
-                                        key={product.wcId}
+                                        key={product.isVariation ? `var-${product.wcId}` : `parent-${product.wcId}`}
                                         className={cn(
                                             "hover:bg-accent/50 transition-colors group",
-                                            showPurchasedStyles && product.purchased && "opacity-60 bg-muted/20"
+                                            showPurchasedStyles && product.purchased && "opacity-60 bg-muted/20",
+                                            product.isVariation && "bg-muted/5 border-l-4 border-l-primary/20"
                                         )}
                                     >
                                         {showPurchasedColumn && (
@@ -208,7 +243,10 @@ export default function StoreProductList({
                                         )}
                                         <td className="px-4 py-3">
                                             <div
-                                                className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border cursor-zoom-in"
+                                                className={cn(
+                                                    "rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border cursor-zoom-in transition-all",
+                                                    product.isVariation ? "w-8 h-8 ml-auto mr-0" : "w-12 h-12"
+                                                )}
                                                 onMouseEnter={() => product.images?.[0]?.src && setHoveredImage(product.images[0].src)}
                                                 onMouseLeave={() => setHoveredImage(null)}
                                                 onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
@@ -220,7 +258,7 @@ export default function StoreProductList({
                                                         className="w-full h-full object-cover"
                                                     />
                                                 ) : (
-                                                    <Package className="w-6 h-6 text-muted-foreground" />
+                                                    <Package className={product.isVariation ? "w-4 h-4 text-muted-foreground" : "w-6 h-6 text-muted-foreground"} />
                                                 )}
                                             </div>
                                         </td>
@@ -229,41 +267,67 @@ export default function StoreProductList({
                                                 <span
                                                     className={cn(
                                                         "font-medium text-foreground text-sm line-clamp-2",
-                                                        showPurchasedStyles && product.purchased && "line-through text-muted-foreground"
+                                                        showPurchasedStyles && product.purchased && "line-through text-muted-foreground",
+                                                        product.isVariation && "text-xs italic text-muted-foreground"
                                                     )}
                                                     title={product.name}
                                                 >
+                                                    {product.isVariation && <span className="text-primary font-bold mr-1">↳ [Varian]</span>}
                                                     {product.name}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-xs text-muted-foreground">ID: {product.wcId}</span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => setEditingProduct(product)}
+                                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5"
+                                                        title="Edit Produk"
+                                                    >
+                                                        <Edit2 className="w-2.5 h-2.5" />
+                                                        Edit
+                                                    </button>
                                                     <span className={cn(
                                                         "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
                                                         product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
                                                     )}>
                                                         {product.status}
                                                     </span>
-                                                    {product.isMissingFromWoo && (
-                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
-                                                            Tidak ditemukan di woocomerce
+                                                    {!product.isVariation && product.type === 'variable' && (
+                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
+                                                            Variable
                                                         </span>
                                                     )}
-                                                    {product.slug && (
-                                                        <a
-                                                            href={`${process.env.NEXT_PUBLIC_WC_URL}/shop/${product.slug}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
-                                                        >
-                                                            <ExternalLink className="w-3 h-3" />
-                                                            <span className="text-[10px]">Shop</span>
-                                                        </a>
+                                                    {product.isMissingFromWoo && (
+                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
+                                                            Tidak ditemukan
+                                                        </span>
                                                     )}
                                                 </div>
-                                                {showPurchasedAt && product.purchasedAt && (
-                                                    <div className="mt-1 text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                                                        <span className="opacity-70">Dibeli pada:</span>
-                                                        <span>{formatDateTime(product.purchasedAt)}</span>
+
+                                                {product.hasVariations && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setExpandedRows(prev =>
+                                                                prev.includes(product.wcId)
+                                                                    ? prev.filter(id => id !== product.wcId)
+                                                                    : [...prev, product.wcId]
+                                                            )
+                                                        }}
+                                                        className="flex items-center gap-1 text-primary hover:underline text-[10px] mt-1 font-bold bg-primary/5 px-2 py-0.5 rounded w-fit"
+                                                    >
+                                                        {expandedRows.includes(product.wcId) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                                        {expandedRows.includes(product.wcId) ? 'Sembunyikan Varian' : 'Lihat Varian'}
+                                                    </button>
+                                                )}
+
+                                                {product.isVariation && product.attributes && Array.isArray(product.attributes) && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {product.attributes.map((attr: any) => (
+                                                            <span key={attr.name} className="px-1.5 py-0.5 rounded bg-muted text-[10px] border border-border text-muted-foreground font-medium">
+                                                                {attr.name}: {attr.option}
+                                                            </span>
+                                                        ))}
                                                     </div>
                                                 )}
                                             </div>
@@ -271,18 +335,27 @@ export default function StoreProductList({
                                         {showSupplierColumn && (
                                             <td className="px-4 py-3 min-w-[180px]">
                                                 <SupplierPicker
+                                                    key={product.wcId}
                                                     wcId={product.wcId}
                                                     initialValue={product.storeName || ''}
                                                 />
                                             </td>
                                         )}
-                                        <td className="px-4 py-3 whitespace-nowrap text-center">
-                                            <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-mono">
-                                                {product.sku || '-'}
-                                            </span>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-mono">
+                                                    {product.sku || '-'}
+                                                </span>
+                                                {product.backupGudang && (
+                                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-[4px] text-[10px] font-bold border border-blue-100 uppercase tracking-tighter">
+                                                        {product.backupGudang}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 min-w-[200px]">
                                             <KeteranganEdit
+                                                key={product.wcId}
                                                 wcId={product.wcId}
                                                 initialValue={product.keterangan}
                                                 productName={product.name}
@@ -295,7 +368,7 @@ export default function StoreProductList({
                                             )}>
                                                 {formatNumber(product.stockQuantity || 0)}
                                             </span>
-                                            <span className="text-[10px] block text-muted-foreground uppercase">
+                                            <span className="text-[10px] block text-muted-foreground uppercase leading-none mt-0.5">
                                                 {product.stockStatus || 'outofstock'}
                                             </span>
                                         </td>
@@ -416,6 +489,26 @@ export default function StoreProductList({
                         />
                     </div>
                 </div>
+            )}
+
+            {editingProduct && (
+                <EditProductModal
+                    product={editingProduct}
+                    onClose={() => setEditingProduct(null)}
+                    onSuccess={() => {
+                        router.refresh()
+                    }}
+                />
+            )}
+
+            {isAddingProduct && (
+                <EditProductModal
+                    product={null}
+                    onClose={() => setIsAddingProduct(false)}
+                    onSuccess={() => {
+                        router.refresh()
+                    }}
+                />
             )}
         </div>
     )
