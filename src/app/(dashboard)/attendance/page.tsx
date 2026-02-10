@@ -120,6 +120,8 @@ export default async function AttendancePage({
             )
 
             // Calculation Logic
+            let isLate = false
+            let isEarlyDeparture = false
             if (attendance && !attendance.isHoliday && attendance.clockIn) {
                 const dayOfWeek = dateToCheck.getDay()
                 const schedule = workScheduleMap.get(dayOfWeek)
@@ -133,6 +135,7 @@ export default async function AttendancePage({
                     const clockInTotalMinutes = clockIn.getHours() * 60 + clockIn.getMinutes()
 
                     if (clockInTotalMinutes > scheduleTotalMinutes) {
+                        isLate = true
                         totalLateMinutes += (clockInTotalMinutes - scheduleTotalMinutes)
                     }
 
@@ -145,6 +148,7 @@ export default async function AttendancePage({
                         const clockOutTotalMinutes = clockOut.getHours() * 60 + clockOut.getMinutes()
 
                         if (clockOutTotalMinutes < scheduleTotalMinutes) {
+                            isEarlyDeparture = true
                             totalEarlyDepartureMinutes += (scheduleTotalMinutes - clockOutTotalMinutes)
                         }
                     }
@@ -162,7 +166,7 @@ export default async function AttendancePage({
                 }
             }
 
-            userAttendances[day] = attendance || null
+            userAttendances[day] = attendance ? { ...attendance, isLate, isEarlyDeparture } : null
         }
 
         return {

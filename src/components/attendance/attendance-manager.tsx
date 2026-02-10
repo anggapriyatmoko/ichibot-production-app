@@ -23,6 +23,8 @@ interface Attendance {
     isHoliday: boolean
     status?: string | null
     notes: string | null
+    isLate?: boolean
+    isEarlyDeparture?: boolean
 }
 
 interface UserMonthlyData {
@@ -251,6 +253,11 @@ export default function AttendanceManager({
                                         <div className="font-medium text-foreground">
                                             {user.name || user.username}
                                         </div>
+                                        {isAdmin && (
+                                            <div className="text-[10px] text-muted-foreground font-mono leading-none mt-0.5">
+                                                {user.id}
+                                            </div>
+                                        )}
                                         <div className="text-xs text-muted-foreground">
                                             {user.department || '-'}
                                         </div>
@@ -308,7 +315,9 @@ export default function AttendanceManager({
                                                                             ? attendance?.clockOut
                                                                                 ? "bg-green-500/10 border-green-500/30"
                                                                                 : "bg-blue-500/10 border-blue-500/30"
-                                                                            : "border-border"
+                                                                            : attendance?.clockOut
+                                                                                ? "bg-slate-500/10 border-slate-500/30"
+                                                                                : "border-border"
                                                     )}
                                                 >
                                                     <div className={cn(
@@ -337,12 +346,24 @@ export default function AttendanceManager({
                                                         </div>
                                                     ) : attendance?.clockIn ? (
                                                         <div className="text-[8px] leading-none text-center">
-                                                            <span className={attendance.clockOut ? "text-green-600" : "text-blue-600"}>
+                                                            <span className={cn(
+                                                                attendance.isLate ? "text-rose-500 font-bold" : (attendance.clockOut ? "text-green-600" : "text-blue-600")
+                                                            )}>
                                                                 {formatTimeDisplay(attendance.clockIn)}
                                                             </span>
                                                             {attendance.clockOut && (
-                                                                <span className="text-green-600"> - {formatTimeDisplay(attendance.clockOut)}</span>
+                                                                <span className={cn(
+                                                                    attendance.isEarlyDeparture ? "text-red-500 font-bold" : "text-green-600"
+                                                                )}>
+                                                                    {" "} - {formatTimeDisplay(attendance.clockOut)}
+                                                                </span>
                                                             )}
+                                                        </div>
+                                                    ) : attendance?.clockOut ? (
+                                                        <div className="text-[8px] leading-none text-center">
+                                                            <span className="text-slate-500">
+                                                                - {formatTimeDisplay(attendance.clockOut)}
+                                                            </span>
                                                         </div>
                                                     ) : (
                                                         <X className="w-2.5 h-2.5 text-muted-foreground/30" />
@@ -380,6 +401,10 @@ export default function AttendanceManager({
                 <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded bg-blue-500/10 border border-blue-500/30"></div>
                     <span>Hadir (Belum Pulang)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-slate-500/10 border border-slate-500/30"></div>
+                    <span>Hanya Absen Pulang</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded bg-red-500/20 border border-red-500/40"></div>
@@ -493,7 +518,7 @@ export default function AttendanceManager({
 
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && editModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-card w-full max-w-sm rounded-2xl border border-border shadow-lg">
                         <div className="p-6 text-center">
                             {/* Warning Icon */}

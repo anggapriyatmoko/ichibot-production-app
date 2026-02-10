@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileSpreadsheet, AlertTriangle, Check, Loader2, Download, X, Table } from 'lucide-react'
+import { Upload, AlertTriangle, Check, Loader2, X } from 'lucide-react'
 import * as XLSX from 'xlsx'
-import { importAttendance, getAttendanceTemplate } from '@/app/actions/attendance-io'
+import { importRawAttendance, getValidUserIds, getAttendanceTemplate } from '@/app/actions/attendance-io'
 import { useAlert } from '@/hooks/use-alert'
+import { useEffect } from 'react'
 
 type ImportPreview = {
     userId: string
@@ -29,34 +30,14 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
     const [fileStats, setFileStats] = useState<{ total: number, valid: number } | null>(null)
     const [importResult, setImportResult] = useState<{ success: boolean, count?: number } | null>(null)
     const [fileToUpload, setFileToUpload] = useState<File | null>(null)
+    const [validUserIds, setValidUserIds] = useState<string[]>([])
 
-    const downloadTemplate = async () => {
-        setIsLoading(true)
-        try {
-            const base64 = await getAttendanceTemplate(currentMonth, currentYear)
-
-            // Convert to blob
-            const binaryString = window.atob(base64)
-            const len = binaryString.length
-            const bytes = new Uint8Array(len)
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i)
-            }
-            const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-
-            // Download
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `attendance_template_${currentMonth}-${currentYear}.xlsx`
-            a.click()
-            window.URL.revokeObjectURL(url)
-        } catch (error) {
-            showError('Gagal download template')
-        } finally {
-            setIsLoading(false)
+    // Load valid users on open
+    useEffect(() => {
+        if (isOpen) {
+            getValidUserIds().then(setValidUserIds).catch(console.error)
         }
-    }
+    }, [isOpen])
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -81,42 +62,47 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                     return
                 }
 
-                // Basic validation of headers
-                const hasMonthCol = data[0]?.[0]?.toString().toLowerCase().includes('month')
-                const daysStartIndex = hasMonthCol ? 6 : 4
-                const userIdIndex = hasMonthCol ? 2 : 0
-                const nameIndex = hasMonthCol ? 4 : 2
-                const usernameIndex = hasMonthCol ? 3 : 1
+                // Raw Log Mode
+                const headers = data[0].map(h => h?.toString().toLowerCase())
+                const idIdx = headers.indexOf('id')
+                const nameIdx = headers.indexOf('nama')
+                const dateIdx = headers.indexOf('date')
+                const timeIdx = headers.indexOf('time')
+
+                if (idIdx === -1 || dateIdx === -1 || timeIdx === -1) {
+                    showError('Required columns (ID, Date, Time) not found in header')
+                    setIsLoading(false)
+                    return
+                }
 
                 const rows = data.slice(1)
+                const usersMap: Record<string, { name: string, count: number }> = {}
 
-                const parsed: ImportPreview[] = rows.map(row => {
-                    const userId = row[userIdIndex]
-                    const username = row[usernameIndex]
-                    const name = row[nameIndex]
-
-                    if (!userId) return null
-
-                    // Count "valid" looking days (simple check)
-                    let validDays = 0
-                    for (let i = daysStartIndex; i < row.length; i++) {
-                        if (row[i]) validDays++
+                rows.forEach(row => {
+                    const id = row[idIdx]?.toString().trim()
+                    const name = row[nameIdx]?.toString() || '-'
+                    if (id) {
+                        if (!usersMap[id]) usersMap[id] = { name, count: 0 }
+                        usersMap[id].count++
                     }
+                })
 
+                const parsed: ImportPreview[] = Object.entries(usersMap).map(([id, info]) => {
+                    const isIdValid = validUserIds.includes(id)
                     return {
-                        userId,
-                        username: username || '-',
-                        name: name || '-',
-                        validDays,
-                        isValid: true, // Assuming if ID exists, it's valid attempt
-                        errors: []
+                        userId: id,
+                        username: '-',
+                        name: info.name,
+                        validDays: info.count,
+                        isValid: isIdValid,
+                        errors: isIdValid ? [] : ['User ID not found in database']
                     }
-                }).filter(Boolean) as ImportPreview[]
+                })
 
                 setPreviewData(parsed)
                 setFileStats({
                     total: parsed.length,
-                    valid: parsed.length
+                    valid: parsed.filter(p => p.isValid).length
                 })
 
             } catch (error) {
@@ -129,6 +115,43 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
         reader.readAsBinaryString(file)
     }
 
+    const resetState = () => {
+        setPreviewData([])
+        setFileStats(null)
+        setImportResult(null)
+        setFileToUpload(null)
+    }
+
+    const handleClose = () => {
+        setIsOpen(false)
+        resetState()
+    }
+
+    const handleDownloadTemplate = async () => {
+        setIsLoading(true)
+        try {
+            const base64 = await getAttendanceTemplate()
+            const binaryString = window.atob(base64)
+            const len = binaryString.length
+            const bytes = new Uint8Array(len)
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i)
+            }
+            const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'template-import-absensi.xlsx'
+            a.click()
+            window.URL.revokeObjectURL(url)
+        } catch (error) {
+            showError('Failed to download template')
+            console.error(error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     const handleImport = async () => {
         if (!fileToUpload) return
 
@@ -139,7 +162,7 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
             formData.append('month', currentMonth.toString())
             formData.append('year', currentYear.toString())
 
-            const res = await importAttendance(formData)
+            const res = await importRawAttendance(formData)
 
             if (res.success) {
                 setImportResult({ success: true, count: res.count })
@@ -158,10 +181,11 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors shadow-sm"
                 title="Import Excel"
             >
-                <FileSpreadsheet className="w-4 h-4" />
+                <Upload className="w-4 h-4" />
+                <span className="text-sm font-medium">Import</span>
             </button>
 
             {isOpen && (
@@ -173,7 +197,7 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                                 <h2 className="text-xl font-bold text-foreground">Import Attendance</h2>
                                 <p className="text-sm text-muted-foreground mt-1">Upload Excel (.xlsx) file to update attendance.</p>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
+                            <button onClick={handleClose} className="text-muted-foreground hover:text-foreground">
                                 <span className="sr-only">Close</span>
                                 <X className="w-6 h-6" />
                             </button>
@@ -201,35 +225,26 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                                     </div>
 
                                     {/* Instructions */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
-                                            <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                Data Format
-                                            </h3>
-                                            <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
-                                                <li><strong>08:00 - 17:00</strong> : Hadir (Jam Masuk - Pulang)</li>
-                                                <li><strong>14:21</strong> : Hadir (Jam Masuk saja)</li>
-                                                <li><strong>HADIR</strong> : Hadir (Jam default)</li>
-                                                <li><strong>LIBUR / L</strong> : Libur</li>
-                                                <li><strong>SAKIT / S</strong> : Sakit</li>
-                                                <li><strong>IZIN / I</strong> : Izin</li>
-                                                <li><strong>CUTI / C</strong> : Cuti</li>
-                                                <li><strong>Cell kosong</strong> : Diabaikan (data lama tetap)</li>
-                                            </ul>
-                                        </div>
-
-                                        <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
-                                            <h3 className="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-2 mb-3">
-                                                <Download className="w-4 h-4" />
-                                                Download Template
-                                            </h3>
-                                            <p className="text-sm text-blue-900/80 dark:text-blue-400/80 mb-4">
-                                                Use our predefined template to ensure correct formatting.
-                                            </p>
-                                            <button onClick={downloadTemplate} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-blue-500 text-blue-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
-                                                <FileSpreadsheet className="w-3 h-3" />
-                                                Excel Template (.xlsx)
+                                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
+                                        <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
+                                            <AlertTriangle className="w-4 h-4" />
+                                            Data Format (Vertical Raw Log)
+                                        </h3>
+                                        <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
+                                            <li>Required columns: <strong>ID</strong>, <strong>Date</strong>, <strong>Time</strong></li>
+                                            <li><strong>Time &lt; 12:00</strong> : Treated as Clock In</li>
+                                            <li><strong>Time &gt;= 12:00</strong> : Treated as Clock Out</li>
+                                            <li>Multiple entries for the same day are aggregated (earliest In, latest Out).</li>
+                                            <li>Invalid User IDs will be highlighted and skipped during import.</li>
+                                        </ul>
+                                        <div className="mt-4">
+                                            <button
+                                                onClick={handleDownloadTemplate}
+                                                disabled={isLoading}
+                                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
+                                            >
+                                                {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 rotate-180" />}
+                                                Download Template (.xlsx)
                                             </button>
                                         </div>
                                     </div>
@@ -244,8 +259,11 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                                             <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
                                                 Users Found: <span className="text-foreground">{fileStats?.total}</span>
                                             </div>
+                                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${(fileStats?.valid || 0) < (fileStats?.total || 0) ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
+                                                Existing Users: <span className="font-bold">{fileStats?.valid}</span>
+                                            </div>
                                         </div>
-                                        <button onClick={() => { setPreviewData([]); setFileStats(null); setFileToUpload(null) }} className="text-sm text-red-600 hover:underline">
+                                        <button onClick={resetState} className="text-sm text-red-600 hover:underline">
                                             Clear / Re-upload
                                         </button>
                                     </div>
@@ -263,9 +281,12 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                                                 </thead>
                                                 <tbody className="divide-y divide-border bg-card">
                                                     {previewData.map((row, i) => (
-                                                        <tr key={i} className="hover:bg-muted/50 transition-colors">
+                                                        <tr key={i} className={`hover:bg-muted/50 transition-colors ${!row.isValid ? 'bg-red-500/5 text-red-600' : ''}`}>
                                                             <td className="p-3 text-muted-foreground text-xs">{i + 1}</td>
-                                                            <td className="p-3 font-mono text-xs">{row.userId}</td>
+                                                            <td className="p-3 font-mono text-xs flex items-center gap-2">
+                                                                {row.userId}
+                                                                {!row.isValid && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                                                            </td>
                                                             <td className="p-3 font-medium">{row.name}</td>
                                                             <td className="p-3 text-right tabular-nums">{row.validDays}</td>
                                                         </tr>
@@ -291,7 +312,7 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                                     </div>
 
                                     <div className="pt-4">
-                                        <button onClick={() => { setIsOpen(false); setPreviewData([]); setImportResult(null); setFileToUpload(null); }} className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
+                                        <button onClick={handleClose} className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
                                             Done
                                         </button>
                                     </div>
@@ -303,7 +324,7 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                         {/* Footer */}
                         {!importResult && (
                             <div className="p-4 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-xl flex-shrink-0">
-                                <button onClick={() => setIsOpen(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium">Cancel</button>
+                                <button onClick={handleClose} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium">Cancel</button>
                                 {previewData.length > 0 && (
                                     <button
                                         onClick={handleImport}
