@@ -640,3 +640,57 @@ export async function moveToSparepartProject(id: string) {
         return { error: 'Gagal memindah produk: ' + errorMessage }
     }
 }
+
+/**
+ * Sync all existing products to Laravel CI-Generate (administration.ichibot.id).
+ * Uses updateOrCreate so data will never duplicate — only update.
+ */
+export async function syncAllToLaravel() {
+    await requireAdmin()
+
+    const products = await prisma.product.findMany({
+        orderBy: { name: 'asc' }
+    })
+
+    let successCount = 0
+    let errorCount = 0
+    const errors: string[] = []
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://production.ichibot.id'
+
+    for (const product of products) {
+        try {
+            const result = await apiClient.post('/productions/sync', {
+                sku: product.sku || null,
+                name: product.name,
+                stock: product.stock,
+                low_stock_threshold: product.lowStockThreshold,
+                notes: product.notes,
+                drawer_location: product.drawerLocation,
+                external_id: product.id,
+                image: product.image
+                    ? (product.image.startsWith('http')
+                        ? product.image
+                        : `${baseUrl}${product.image}`)
+                    : null,
+            })
+
+            if (result.success) {
+                successCount++
+            } else {
+                errorCount++
+                errors.push(`"${product.name}": ${result.error || 'Unknown error'}`)
+            }
+        } catch (error) {
+            errorCount++
+            const msg = error instanceof Error ? error.message : 'Unknown error'
+            errors.push(`"${product.name}": ${msg}`)
+        }
+    }
+
+    return {
+        total: products.length,
+        success: successCount,
+        failed: errorCount,
+        errors
+    }
+}
