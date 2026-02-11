@@ -14,6 +14,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 interface HRDocument {
@@ -144,15 +145,11 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
 
     return (
         <TableWrapper className="mb-8" loading={isPending}>
-            <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" />
-                    <div>
-                        <h2 className="font-semibold text-foreground">Data HRD (Dokumen)</h2>
-                        <p className="text-xs text-muted-foreground">Kumpulan dokumen dan link penting HR, SOP, dll.</p>
-                    </div>
-                </div>
-                {!readOnly && (
+            <TableHeaderContent
+                title="Data HRD (Dokumen)"
+                description="Kumpulan dokumen dan link penting HR, SOP, dll."
+                icon={<FileText className="w-5 h-5 font-bold text-primary" />}
+                actions={!readOnly && (
                     <button
                         onClick={() => handleOpenModal()}
                         className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors"
@@ -162,7 +159,7 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                         <span className="hidden md:inline">Tambah Dokumen</span>
                     </button>
                 )}
-            </div>
+            />
 
             <TableScrollArea>
                 <Table>

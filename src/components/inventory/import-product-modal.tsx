@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileSpreadsheet, AlertTriangle, Check, Loader2, Download, Table, FileText } from 'lucide-react'
+import { Upload, FileSpreadsheet, AlertTriangle, Check, Loader2, Download, Table as TableIcon, FileText } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { importProducts } from '@/app/actions/product'
 
@@ -17,6 +17,18 @@ type ImportPreview = {
 }
 
 import { useAlert } from '@/hooks/use-alert'
+import { cn } from '@/lib/utils'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty
+} from '@/components/ui/table'
 
 export default function ImportProductModal() {
     const { showError } = useAlert()
@@ -288,52 +300,54 @@ export default function ImportProductModal() {
                                         </button>
                                     </div>
 
-                                    <div className="border border-border rounded-lg overflow-hidden flex-1 relative flex flex-col min-h-0 bg-background/50">
-                                        <div className="overflow-auto flex-1 hover:pr-1 w-full">
-                                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                                <thead className="bg-muted text-muted-foreground font-normal sticky top-0 z-10 shadow-sm">
-                                                    <tr>
-                                                        <th className="p-3 border-b border-border w-10 bg-muted">#</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Status</th>
-                                                        <th className="p-3 border-b border-border bg-muted">SKU</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Name</th>
-                                                        <th className="p-3 border-b border-border text-right bg-muted">Stock</th>
-                                                        <th className="p-3 border-b border-border text-right bg-muted">Threshold</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Image</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-border bg-card">
+                                    <TableWrapper className="border border-border rounded-lg overflow-hidden flex-1 flex flex-col min-h-0 bg-background/50">
+                                        <TableScrollArea>
+                                            <Table>
+                                                <TableHeader className="sticky top-0 z-10 bg-muted">
+                                                    <TableRow>
+                                                        <TableHead className="w-10">#</TableHead>
+                                                        <TableHead>Status</TableHead>
+                                                        <TableHead>SKU</TableHead>
+                                                        <TableHead>Name</TableHead>
+                                                        <TableHead align="right">Stock</TableHead>
+                                                        <TableHead align="right">Threshold</TableHead>
+                                                        <TableHead>Image</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
                                                     {previewData.map((row, i) => (
-                                                        <tr key={i} className={row.isValid ? 'hover:bg-muted/50 transition-colors' : 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100/50 transition-colors'}>
-                                                            <td className="p-3 text-muted-foreground text-xs">{i + 1}</td>
-                                                            <td className="p-3">
+                                                        <TableRow key={i} className={cn(
+                                                            !row.isValid && "bg-destructive/5 hover:bg-destructive/10"
+                                                        )}>
+                                                            <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
+                                                            <TableCell>
                                                                 {row.isValid ? (
-                                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-medium px-2.5 py-0.5 bg-emerald-500/15 rounded-full">
+                                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-[10px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                                                                         <Check className="w-3 h-3" /> Ready
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="inline-flex items-center gap-1 text-red-600 text-xs font-medium px-2.5 py-0.5 bg-red-500/15 rounded-full" title={row.errors.join(', ')}>
+                                                                    <span className="inline-flex items-center gap-1 text-destructive text-[10px] font-bold uppercase px-2 py-0.5 bg-destructive/10 rounded-full border border-destructive/20" title={row.errors.join(', ')}>
                                                                         <AlertTriangle className="w-3 h-3" /> {row.errors[0]}
                                                                     </span>
                                                                 )}
-                                                            </td>
-                                                            <td className="p-3 font-mono text-xs">{row.sku}</td>
-                                                            <td className="p-3 font-medium">{row.name}</td>
-                                                            <td className="p-3 text-right tabular-nums">{row.stock}</td>
-                                                            <td className="p-3 text-right text-muted-foreground tabular-nums">{row.lowStockThreshold}</td>
-                                                            <td className="p-3">
+                                                            </TableCell>
+                                                            <TableCell className="font-mono text-xs">{row.sku}</TableCell>
+                                                            <TableCell className="font-medium">{row.name}</TableCell>
+                                                            <TableCell align="right" className="tabular-nums font-semibold">{row.stock}</TableCell>
+                                                            <TableCell align="right" className="text-muted-foreground tabular-nums text-xs">{row.lowStockThreshold}</TableCell>
+                                                            <TableCell>
                                                                 {row.image ? (
-                                                                    <div className="relative w-8 h-8 rounded overflow-hidden border border-border">
+                                                                    <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-border bg-muted">
                                                                         <img src={row.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                                                                     </div>
                                                                 ) : <span className="text-xs text-muted-foreground">-</span>}
-                                                            </td>
-                                                        </tr>
+                                                            </TableCell>
+                                                        </TableRow>
                                                     ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                                                </TableBody>
+                                            </Table>
+                                        </TableScrollArea>
+                                    </TableWrapper>
                                 </div>
                             )}
 

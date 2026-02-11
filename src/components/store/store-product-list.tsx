@@ -11,6 +11,19 @@ import SupplierPicker from './supplier-picker'
 import KeteranganEdit from './keterangan-edit'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import EditProductModal from './edit-product-modal'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+    TablePagination,
+    TableHeaderContent
+} from '@/components/ui/table'
 
 function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { key: string, direction: 'asc' | 'desc' | null } }) {
     if (sortConfig.key !== columnKey || !sortConfig.direction) {
@@ -298,298 +311,293 @@ export default function StoreProductList({
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder={showSupplierColumn ? "Cari produk, SKU, atau supplier..." : "Cari produk atau SKU..."}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
-                    />
-                </div>
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={cn(
-                            "flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all border shadow-sm",
-                            showFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"
-                        )}
-                    >
-                        <Filter className="w-4 h-4" />
-                        Filters
-                        {Object.values(filters).some(v => v !== 'all' && v !== '') && (
-                            <span className="flex items-center justify-center w-5 h-5 bg-white text-primary rounded-full text-[10px]">
-                                {Object.values(filters).filter(v => v !== 'all' && v !== '').length}
-                            </span>
-                        )}
-                    </button>
-                    {showSyncButton && (
-                        <button
-                            onClick={handleSync}
-                            disabled={isSyncing}
-                            className={cn(
-                                "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 disabled:opacity-50 shadow-sm",
-                                isSyncing && "animate-pulse"
+            <TableWrapper>
+                <TableHeaderContent
+                    title="Store Products"
+                    description="Manajemen inventaris produk dari WooCommerce."
+                    icon={<Package className="w-5 h-5 font-bold" />}
+                    actions={
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder={showSupplierColumn ? "Cari produk, SKU, atau supplier..." : "Cari produk atau SKU..."}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all border shadow-sm",
+                                    showFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                <Filter className="w-4 h-4" />
+                                Filters
+                                {Object.values(filters).some(v => v !== 'all' && v !== '') && (
+                                    <span className="flex items-center justify-center w-5 h-5 bg-white text-primary rounded-full text-[10px]">
+                                        {Object.values(filters).filter(v => v !== 'all' && v !== '').length}
+                                    </span>
+                                )}
+                            </button>
+                            {showSyncButton && (
+                                <button
+                                    onClick={handleSync}
+                                    disabled={isSyncing}
+                                    className={cn(
+                                        "flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 disabled:opacity-50 shadow-sm",
+                                        isSyncing && "animate-pulse"
+                                    )}
+                                >
+                                    <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
+                                    {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
+                                </button>
                             )}
-                        >
-                            <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
-                            {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
-                        </button>
-                    )}
-                    <button
-                        onClick={() => setIsAddingProduct(true)}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-700 shadow-sm"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Tambah
-                    </button>
-                </div>
-            </div>
-
-            {showFilters && (
-                <div className="bg-card border border-border rounded-xl p-6 shadow-md animate-in slide-in-from-top-4 duration-200">
-                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-border">
-                        <div className="flex items-center gap-2">
-                            <Filter className="w-5 h-5 text-primary" />
-                            <h3 className="font-bold text-lg">Advanced Filters</h3>
-                        </div>
-                        <button
-                            onClick={() => {
-                                setFilters({
-                                    sku: 'all',
-                                    type: 'all',
-                                    discount: 'all',
-                                    photo: 'all',
-                                    price: 'all',
-                                    weight: 'all',
-                                    backup: 'all',
-                                    minPrice: '',
-                                    maxPrice: ''
-                                })
-                            }}
-                            className="text-xs text-muted-foreground hover:text-primary font-medium underline flex items-center gap-1"
-                        >
-                            <X className="w-3 h-3" />
-                            Reset All Filters
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* SKU Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <Tag className="w-3 h-3" /> SKU Status
-                            </label>
-                            <select
-                                value={filters.sku}
-                                onChange={(e) => setFilters(prev => ({ ...prev, sku: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
+                            <button
+                                onClick={() => setIsAddingProduct(true)}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-700 shadow-sm"
                             >
-                                <option value="all">Semua</option>
-                                <option value="with">Dengan SKU</option>
-                                <option value="without">Tanpa SKU</option>
-                            </select>
+                                <Plus className="w-4 h-4" />
+                                Tambah
+                            </button>
                         </div>
+                    }
+                />
 
-                        {/* Type Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <Info className="w-3 h-3" /> Tipe Produk
-                            </label>
-                            <select
-                                value={filters.type}
-                                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
-                            >
-                                <option value="all">Semua Tipe</option>
-                                <option value="variable">Hanya Varian</option>
-                            </select>
-                        </div>
-
-                        {/* Discount Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <DollarSign className="w-3 h-3" /> Status Diskon
-                            </label>
-                            <select
-                                value={filters.discount}
-                                onChange={(e) => setFilters(prev => ({ ...prev, discount: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
-                            >
-                                <option value="all">Semua</option>
-                                <option value="with">Dengan Diskon</option>
-                                <option value="without">Tanpa Diskon</option>
-                            </select>
-                        </div>
-
-                        {/* Photo Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <ImageIcon className="w-3 h-3" /> Foto Produk
-                            </label>
-                            <select
-                                value={filters.photo}
-                                onChange={(e) => setFilters(prev => ({ ...prev, photo: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
-                            >
-                                <option value="all">Semua</option>
-                                <option value="with">Dengan Foto</option>
-                                <option value="without">Tanpa Foto</option>
-                            </select>
-                        </div>
-
-                        {/* Price Existence */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <DollarSign className="w-3 h-3" /> Status Harga
-                            </label>
-                            <select
-                                value={filters.price}
-                                onChange={(e) => setFilters(prev => ({ ...prev, price: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
-                            >
-                                <option value="all">Semua</option>
-                                <option value="with">Dengan Harga</option>
-                                <option value="without">Tanpa Harga</option>
-                            </select>
-                        </div>
-
-                        {/* Weight Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <Weight className="w-3 h-3" /> Status Berat
-                            </label>
-                            <select
-                                value={filters.weight}
-                                onChange={(e) => setFilters(prev => ({ ...prev, weight: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
-                            >
-                                <option value="all">Semua</option>
-                                <option value="with">Dengan Berat</option>
-                                <option value="without">Tanpa Berat</option>
-                            </select>
-                        </div>
-
-                        {/* Backup Filter */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <Package className="w-3 h-3" /> Backup Gudang
-                            </label>
-                            <select
-                                value={filters.backup}
-                                onChange={(e) => setFilters(prev => ({ ...prev, backup: e.target.value }))}
-                                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all"
-                            >
-                                <option value="all">Semua</option>
-                                <option value="with">Ada Backup</option>
-                                <option value="without">Tidak Ada</option>
-                            </select>
-                        </div>
-
-                        {/* Range Harga */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
-                                <DollarSign className="w-3 h-3" /> Range Harga
-                            </label>
+                {showFilters && (
+                    <div className="bg-muted/10 border-b border-border p-6 animate-in slide-in-from-top-4 duration-200">
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-border/50">
                             <div className="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    placeholder="Min"
-                                    value={filters.minPrice}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '')
-                                        setFilters(prev => ({ ...prev, minPrice: val ? formatNumber(parseInt(val)) : '' }))
-                                    }}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-primary transition-all"
-                                />
-                                <span className="text-muted-foreground">-</span>
-                                <input
-                                    type="text"
-                                    placeholder="Max"
-                                    value={filters.maxPrice}
-                                    onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '')
-                                        setFilters(prev => ({ ...prev, maxPrice: val ? formatNumber(parseInt(val)) : '' }))
-                                    }}
-                                    className="w-full bg-muted/50 border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-primary transition-all"
-                                />
+                                <Filter className="w-5 h-5 text-primary" />
+                                <h3 className="font-bold text-lg">Advanced Filters</h3>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setFilters({
+                                        sku: 'all',
+                                        type: 'all',
+                                        discount: 'all',
+                                        photo: 'all',
+                                        price: 'all',
+                                        weight: 'all',
+                                        backup: 'all',
+                                        minPrice: '',
+                                        maxPrice: ''
+                                    })
+                                }}
+                                className="text-xs text-muted-foreground hover:text-primary font-medium underline flex items-center gap-1"
+                            >
+                                <X className="w-3 h-3" />
+                                Reset All Filters
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {/* SKU Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <Tag className="w-3 h-3" /> SKU Status
+                                </label>
+                                <select
+                                    value={filters.sku}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, sku: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua</option>
+                                    <option value="with">Dengan SKU</option>
+                                    <option value="without">Tanpa SKU</option>
+                                </select>
+                            </div>
+
+                            {/* Type Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <Info className="w-3 h-3" /> Tipe Produk
+                                </label>
+                                <select
+                                    value={filters.type}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua Tipe</option>
+                                    <option value="variable">Hanya Varian</option>
+                                </select>
+                            </div>
+
+                            {/* Discount Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <DollarSign className="w-3 h-3" /> Status Diskon
+                                </label>
+                                <select
+                                    value={filters.discount}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, discount: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua</option>
+                                    <option value="with">Dengan Diskon</option>
+                                    <option value="without">Tanpa Diskon</option>
+                                </select>
+                            </div>
+
+                            {/* Photo Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <ImageIcon className="w-3 h-3" /> Foto Produk
+                                </label>
+                                <select
+                                    value={filters.photo}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, photo: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua</option>
+                                    <option value="with">Dengan Foto</option>
+                                    <option value="without">Tanpa Foto</option>
+                                </select>
+                            </div>
+
+                            {/* Price Existence */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <DollarSign className="w-3 h-3" /> Status Harga
+                                </label>
+                                <select
+                                    value={filters.price}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, price: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua</option>
+                                    <option value="with">Dengan Harga</option>
+                                    <option value="without">Tanpa Harga</option>
+                                </select>
+                            </div>
+
+                            {/* Weight Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <Weight className="w-3 h-3" /> Status Berat
+                                </label>
+                                <select
+                                    value={filters.weight}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, weight: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua</option>
+                                    <option value="with">Dengan Berat</option>
+                                    <option value="without">Tanpa Berat</option>
+                                </select>
+                            </div>
+
+                            {/* Backup Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <Package className="w-3 h-3" /> Backup Gudang
+                                </label>
+                                <select
+                                    value={filters.backup}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, backup: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua</option>
+                                    <option value="with">Ada Backup</option>
+                                    <option value="without">Tidak Ada</option>
+                                </select>
+                            </div>
+
+                            {/* Range Harga */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <DollarSign className="w-3 h-3" /> Range Harga
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Min"
+                                        value={filters.minPrice}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '')
+                                            setFilters(prev => ({ ...prev, minPrice: val ? formatNumber(parseInt(val)) : '' }))
+                                        }}
+                                        className="w-full bg-background border border-border rounded-lg px-2 py-2 text-xs outline-none focus:border-primary transition-all shadow-sm"
+                                    />
+                                    <span className="text-muted-foreground">-</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Max"
+                                        value={filters.maxPrice}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '')
+                                            setFilters(prev => ({ ...prev, maxPrice: val ? formatNumber(parseInt(val)) : '' }))
+                                        }}
+                                        className="w-full bg-background border border-border rounded-lg px-2 py-2 text-xs outline-none focus:border-primary transition-all shadow-sm"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-
-            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
-                <div className="overflow-x-auto min-h-[400px]">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-muted/50 border-b border-border">
-                                {showPurchasedColumn && <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-10 text-center">Beli</th>}
-                                <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16 text-center">Gambar</th>
-                                <th
-                                    className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/80 transition-colors"
+                )}
+                <TableScrollArea>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {showPurchasedColumn && <TableHead align="center" className="w-10">Beli</TableHead>}
+                                <TableHead align="center" className="w-16">Gambar</TableHead>
+                                <TableHead
+                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
                                     onClick={() => handleSort('name')}
                                 >
-                                    <div className="flex items-center gap-1">
-                                        Info Produk
-                                        <SortIcon columnKey="name" sortConfig={sortConfig} />
-                                    </div>
-                                </th>
+                                    Info Produk
+                                    <SortIcon columnKey="name" sortConfig={sortConfig} />
+                                </TableHead>
                                 {showSupplierColumn && (
-                                    <th
-                                        className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/80 transition-colors"
+                                    <TableHead
+                                        className="cursor-pointer hover:bg-muted/80 transition-colors"
                                         onClick={() => handleSort('storeName')}
                                     >
-                                        <div className="flex items-center gap-1">
-                                            Supplier
-                                            <SortIcon columnKey="storeName" sortConfig={sortConfig} />
-                                        </div>
-                                    </th>
+                                        Supplier
+                                        <SortIcon columnKey="storeName" sortConfig={sortConfig} />
+                                    </TableHead>
                                 )}
-                                <th
-                                    className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/80 transition-colors"
+                                <TableHead
+                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
                                     onClick={() => handleSort('sku')}
                                 >
-                                    <div className="flex items-center gap-1">
-                                        SKU
-                                        <SortIcon columnKey="sku" sortConfig={sortConfig} />
-                                    </div>
-                                </th>
-                                <th className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Keterangan</th>
-                                <th
-                                    className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right cursor-pointer hover:bg-muted/80 transition-colors"
+                                    SKU
+                                    <SortIcon columnKey="sku" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead>Keterangan</TableHead>
+                                <TableHead
+                                    align="right"
+                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
                                     onClick={() => handleSort('stok')}
                                 >
-                                    <div className="flex items-center justify-end gap-1">
-                                        Stok
-                                        <SortIcon columnKey="stok" sortConfig={sortConfig} />
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right cursor-pointer hover:bg-muted/80 transition-colors"
+                                    Stok
+                                    <SortIcon columnKey="stok" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead
+                                    align="right"
+                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
                                     onClick={() => handleSort('price')}
                                 >
-                                    <div className="flex items-center justify-end gap-1">
-                                        Harga
-                                        <SortIcon columnKey="price" sortConfig={sortConfig} />
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
+                                    Harga
+                                    <SortIcon columnKey="price" sortConfig={sortConfig} />
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {paginatedProducts.length > 0 ? (
                                 paginatedProducts.map((product) => (
-                                    <tr
+                                    <TableRow
                                         key={product.isVariation ? `var-${product.wcId}` : `parent-${product.wcId}`}
                                         className={cn(
-                                            "hover:bg-accent/50 transition-colors group",
                                             product.isVariation && "bg-muted/5 border-l-4 border-l-primary/20"
                                         )}
                                     >
                                         {showPurchasedColumn && (
-                                            <td className="px-4 py-3 text-center">
+                                            <TableCell align="center">
                                                 <button
                                                     onClick={() => handleTogglePurchased(product.wcId, product.purchased)}
                                                     className={cn(
@@ -603,9 +611,9 @@ export default function StoreProductList({
                                                         <Circle className="w-5 h-5" />
                                                     )}
                                                 </button>
-                                            </td>
+                                            </TableCell>
                                         )}
-                                        <td className="px-4 py-3">
+                                        <TableCell>
                                             <div
                                                 className={cn(
                                                     "rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border cursor-zoom-in transition-all",
@@ -625,8 +633,8 @@ export default function StoreProductList({
                                                     <Package className={product.isVariation ? "w-4 h-4 text-muted-foreground" : "w-6 h-6 text-muted-foreground"} />
                                                 )}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3">
+                                        </TableCell>
+                                        <TableCell>
                                             <div className="flex flex-col text-left">
                                                 <span
                                                     className={cn(
@@ -699,17 +707,17 @@ export default function StoreProductList({
                                                     </div>
                                                 )}
                                             </div>
-                                        </td>
+                                        </TableCell>
                                         {showSupplierColumn && (
-                                            <td className="px-4 py-3 min-w-[180px]">
+                                            <TableCell className="min-w-[180px]">
                                                 <SupplierPicker
                                                     key={product.wcId}
                                                     wcId={product.wcId}
                                                     initialValue={product.storeName || ''}
                                                 />
-                                            </td>
+                                            </TableCell>
                                         )}
-                                        <td className="px-4 py-3 text-center">
+                                        <TableCell align="center">
                                             <div className="flex flex-col items-center gap-1">
                                                 <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-mono">
                                                     {product.sku || '-'}
@@ -720,16 +728,16 @@ export default function StoreProductList({
                                                     </span>
                                                 )}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 min-w-[200px]">
+                                        </TableCell>
+                                        <TableCell className="min-w-[200px]">
                                             <KeteranganEdit
                                                 key={product.wcId}
                                                 wcId={product.wcId}
                                                 initialValue={product.keterangan}
                                                 productName={product.name}
                                             />
-                                        </td>
-                                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                                        </TableCell>
+                                        <TableCell align="right" className="whitespace-nowrap">
                                             <span className={cn(
                                                 "text-sm font-semibold",
                                                 (product.stockQuantity || 0) <= 0 ? "text-destructive" : "text-green-600"
@@ -739,105 +747,47 @@ export default function StoreProductList({
                                             <span className="text-[10px] block text-muted-foreground uppercase leading-none mt-0.5">
                                                 {product.stockStatus || 'outofstock'}
                                             </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-sm">
+                                        </TableCell>
+                                        <TableCell align="right" className="whitespace-nowrap font-medium">
                                             <div className="text-foreground">{formatCurrency(product.price || 0)}</div>
                                             {product.salePrice > 0 && product.salePrice < product.regularPrice && (
                                                 <div className="text-[10px] text-muted-foreground line-through">
                                                     {formatCurrency(product.regularPrice)}
                                                 </div>
                                             )}
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ))
                             ) : (
-                                <tr>
-                                    <td colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + 6} className="px-4 py-24 text-center">
-                                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                            <Package className="w-12 h-12 opacity-10" />
-                                            <p className="text-sm font-medium">Tidak ada produk ditemukan.</p>
-                                            {searchTerm ? (
-                                                <button onClick={() => setSearchTerm('')} className="text-primary text-xs hover:underline mt-1 font-medium">
-                                                    Hapus filter pencarian
-                                                </button>
-                                            ) : (
-                                                <p className="text-xs">Klik "Sync Now" untuk mengambil data dari WooCommerce.</p>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
+                                <TableEmpty
+                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + 6}
+                                    icon={<Package className="w-12 h-12 opacity-10" />}
+                                    message="Tidak ada produk ditemukan."
+                                    description={searchTerm ? (
+                                        <button onClick={() => setSearchTerm('')} className="text-primary text-xs hover:underline mt-1 font-medium">
+                                            Hapus filter pencarian
+                                        </button>
+                                    ) : (
+                                        <p>Klik "Sync Now" untuk mengambil data dari WooCommerce.</p>
+                                    )}
+                                />
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                        </TableBody>
+                    </Table>
+                </TableScrollArea>
 
-                {/* Pagination Footer */}
-                {filteredProducts.length > 0 && (
-                    <div className="px-4 py-4 border-t border-border bg-muted/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">Baris per halaman:</span>
-                                <select
-                                    value={itemsPerPage}
-                                    onChange={(e) => {
-                                        setItemsPerPage(Number(e.target.value))
-                                        setCurrentPage(1)
-                                    }}
-                                    className="bg-background border border-border rounded px-2 py-1 text-xs outline-none focus:border-primary"
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                    <option value={100}>100</option>
-                                </select>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                                Menampilkan <span className="font-medium text-foreground">{startIndex + 1}</span> - <span className="font-medium text-foreground">{Math.min(startIndex + itemsPerPage, filteredProducts.length)}</span> dari <span className="font-medium text-foreground">{filteredProducts.length}</span> produk
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => handlePageChange(1)}
-                                disabled={currentPage === 1}
-                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors"
-                                title="First Page"
-                            >
-                                <ChevronsLeft className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors"
-                                title="Previous Page"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-
-                            <div className="flex items-center gap-1 px-2">
-                                <span className="text-xs font-medium">Halaman {currentPage} dari {totalPages}</span>
-                            </div>
-
-                            <button
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors"
-                                title="Next Page"
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => handlePageChange(totalPages)}
-                                disabled={currentPage === totalPages}
-                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent rounded-lg transition-colors"
-                                title="Last Page"
-                            >
-                                <ChevronsRight className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(count) => {
+                        setItemsPerPage(count)
+                        setCurrentPage(1)
+                    }}
+                    totalCount={filteredProducts.length}
+                />
+            </TableWrapper>
 
             {/* Product Analysis Section */}
             <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
@@ -900,44 +850,50 @@ export default function StoreProductList({
             </div>
 
             {/* Floating Image Preview */}
-            {hoveredImage && (
-                <div
-                    className="fixed z-[100] pointer-events-none animate-in fade-in zoom-in duration-200 hidden md:block"
-                    style={{
-                        left: mousePos.x + 20,
-                        top: mousePos.y - 150,
-                        transform: 'translateY(0)'
-                    }}
-                >
-                    <div className="bg-background border-2 border-primary/20 rounded-2xl p-2 shadow-2xl overflow-hidden">
-                        <img
-                            src={hoveredImage}
-                            alt="Preview"
-                            className="w-[300px] h-[300px] object-cover rounded-xl"
-                        />
+            {
+                hoveredImage && (
+                    <div
+                        className="fixed z-[100] pointer-events-none animate-in fade-in zoom-in duration-200 hidden md:block"
+                        style={{
+                            left: mousePos.x + 20,
+                            top: mousePos.y - 150,
+                            transform: 'translateY(0)'
+                        }}
+                    >
+                        <div className="bg-background border-2 border-primary/20 rounded-2xl p-2 shadow-2xl overflow-hidden">
+                            <img
+                                src={hoveredImage || undefined}
+                                alt="Preview"
+                                className="w-[300px] h-[300px] object-cover rounded-xl"
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {editingProduct && (
-                <EditProductModal
-                    product={editingProduct}
-                    onClose={() => setEditingProduct(null)}
-                    onSuccess={() => {
-                        router.refresh()
-                    }}
-                />
-            )}
+            {
+                editingProduct && (
+                    <EditProductModal
+                        product={editingProduct}
+                        onClose={() => setEditingProduct(null)}
+                        onSuccess={() => {
+                            router.refresh()
+                        }}
+                    />
+                )
+            }
 
-            {isAddingProduct && (
-                <EditProductModal
-                    product={null}
-                    onClose={() => setIsAddingProduct(false)}
-                    onSuccess={() => {
-                        router.refresh()
-                    }}
-                />
-            )}
-        </div>
+            {
+                isAddingProduct && (
+                    <EditProductModal
+                        product={null}
+                        onClose={() => setIsAddingProduct(false)}
+                        onSuccess={() => {
+                            router.refresh()
+                        }}
+                    />
+                )
+            }
+        </div >
     )
 }

@@ -15,6 +15,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 export interface PayrollRecapItem {
@@ -86,36 +87,45 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
 
     return (
         <TableWrapper className="mt-8" loading={isPending}>
-            <div className="p-4 border-b border-border bg-muted/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="font-semibold text-foreground">Rekapitulasi Gaji</h2>
-                    <p className="text-sm text-muted-foreground">Data penggajian seluruh karyawan</p>
-                </div>
-
-                <div className="flex gap-2 items-center">
-                    {isPending && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-2" />}
-                    <select
-                        value={currentMonth}
-                        onChange={handleMonthChange}
-                        className="px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                        disabled={isPending}
-                    >
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                            <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={currentYear}
-                        onChange={handleYearChange}
-                        className="px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                        disabled={isPending}
-                    >
-                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
-                            <option key={y} value={y}>{y}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
+            <TableHeaderContent
+                title="Rekapitulasi Gaji"
+                description={
+                    <div className="flex flex-col gap-1">
+                        <p>Data penggajian seluruh karyawan.</p>
+                        {employeesWithPayroll > 0 && (
+                            <p className="text-xs font-bold text-primary">
+                                Total Pengeluaran: {formatCurrency(totalNetSalary)}
+                            </p>
+                        )}
+                    </div>
+                }
+                icon={<FileText className="w-5 h-5 font-bold text-primary" />}
+                actions={
+                    <div className="flex items-center gap-2">
+                        {isPending && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                        <select
+                            value={currentMonth}
+                            onChange={handleMonthChange}
+                            className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            disabled={isPending}
+                        >
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={currentYear}
+                            onChange={handleYearChange}
+                            className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            disabled={isPending}
+                        >
+                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+                }
+            />
 
             <TableScrollArea>
                 <Table>

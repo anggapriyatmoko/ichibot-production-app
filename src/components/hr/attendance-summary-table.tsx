@@ -15,6 +15,7 @@ import {
     TableCell,
     TableEmpty,
     TableLoading,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 interface AttendanceSummaryItem {
@@ -281,23 +282,16 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
 
     return (
         <TableWrapper ref={tableRef} className="mt-8" loading={loading || isPending}>
-            <div className="p-4 border-b border-border bg-muted/30">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <ClipboardList className="w-5 h-5 text-primary" />
-                        <h2 className="font-semibold text-foreground">Rekap Absensi Periode Gaji</h2>
-                        {period && (
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded ml-2 border border-border">
-                                {formatDate(period.startDate)} - {formatDate(period.endDate)}
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
+            <TableHeaderContent
+                title="Rekap Absensi Periode Gaji"
+                description={period ? `${formatDate(period.startDate)} - ${formatDate(period.endDate)}` : "Rekap data absensi karyawan."}
+                icon={<ClipboardList className="w-5 h-5 font-bold text-primary" />}
+                actions={
+                    <div className="flex flex-wrap items-center gap-2">
                         <select
                             value={currentMonth}
                             onChange={handleMonthChange}
-                            className="bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                             disabled={isPending}
                         >
                             {months.map((m, i) => (
@@ -307,7 +301,7 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                         <select
                             value={currentYear}
                             onChange={handleYearChange}
-                            className="bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                             disabled={isPending}
                         >
                             {years.map(y => (
@@ -317,7 +311,7 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                         <button
                             onClick={handleDownloadPDF}
                             disabled={downloading || loading}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
                             title="Download sebagai PDF"
                         >
                             {downloading ? (
@@ -328,8 +322,8 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                             <span className="hidden sm:inline">PDF</span>
                         </button>
                     </div>
-                </div>
-            </div>
+                }
+            />
 
             <TableScrollArea>
                 <Table>

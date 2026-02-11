@@ -37,6 +37,8 @@ import {
   TableHead,
   TableCell,
   TableEmpty,
+  TablePagination,
+  TableHeaderContent,
 } from "@/components/ui/table";
 import PdfSignatureModal, {
   SignatureType,
@@ -346,248 +348,238 @@ export default function InvoiceManager({
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Cari invoice..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-          />
-        </div>
-        <button
-          onClick={openAddModal}
-          className="shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Tambah Invoice</span>
-        </button>
-      </div>
+      {/* Table Section */}
+      <TableWrapper>
+        <TableHeaderContent
+          title="Kelola Invoice"
+          description="Manajemen data invoice dan pembuatan PDF."
+          icon={<Receipt className="w-5 h-5 font-bold text-primary" />}
+          actions={
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Cari invoice..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={openAddModal}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Tambah Invoice
+              </button>
+            </div>
+          }
+        />
 
-      {/* Table */}
-      {/* Table Desktop View */}
-      <TableWrapper className="hidden md:block">
-        <TableScrollArea>
+        {/* Desktop View Table */}
+        <div className="hidden md:block">
+          <TableScrollArea>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No. Invoice</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Catatan Order</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead align="right">Total</TableHead>
+                    <TableHead>PDF</TableHead>
+                    <TableHead align="right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell>
+                        <span className="font-mono text-sm font-medium text-primary">
+                          {invoice.invoice_number}
+                        </span>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(invoice.invoice_date).toLocaleDateString(
+                          "id-ID",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{invoice.customer_name}</p>
+                          {invoice.customer_address && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {invoice.customer_address}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {invoice.order_notes ? (
+                          <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
+                            {invoice.order_notes}
+                          </p>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/50">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <span className="px-2 py-1 bg-muted rounded-full text-xs">
+                          {invoice.items?.length || 0} item
+                        </span>
+                      </TableCell>
+                      <TableCell align="right">
+                        <span className="font-semibold text-green-600">
+                          {formatCurrency(invoice.grand_total)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => {
+                            setSelectedInvoiceForPdf(invoice);
+                            setIsPdfModalOpen(true);
+                          }}
+                          className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors inline-flex"
+                          title="Unduh PDF"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
+                      </TableCell>
+                      <TableCell align="right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(invoice)}
+                            className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(invoice)}
+                            className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {invoices.length === 0 && (
+                    <TableEmpty
+                      colSpan={7}
+                      icon={<Receipt className="w-12 h-12 opacity-20" />}
+                    />
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </TableScrollArea>
+        </div>
+
+        {/* Mobile/Tablet Card View - Premium List */}
+        <div className="md:hidden space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No. Invoice</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Catatan Order</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead align="right">Total</TableHead>
-                  <TableHead>PDF</TableHead>
-                  <TableHead align="right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>
-                      <span className="font-mono text-sm font-medium text-primary">
+            <>
+              {invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <span className="font-mono text-sm font-bold text-primary">
                         {invoice.invoice_number}
                       </span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {new Date(invoice.invoice_date).toLocaleDateString(
-                        "id-ID",
-                        {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        },
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{invoice.customer_name}</p>
-                        {invoice.customer_address && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            {invoice.customer_address}
-                          </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(invoice.invoice_date).toLocaleDateString(
+                          "id-ID",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          },
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {invoice.order_notes ? (
-                        <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
-                          {invoice.order_notes}
-                        </p>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/50">
-                          -
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <span className="px-2 py-1 bg-muted rounded-full text-xs">
-                        {invoice.items?.length || 0} item
-                      </span>
-                    </TableCell>
-                    <TableCell align="right">
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(invoice.grand_total)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
                       <button
                         onClick={() => {
                           setSelectedInvoiceForPdf(invoice);
                           setIsPdfModalOpen(true);
                         }}
-                        className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors inline-flex"
-                        title="Unduh PDF"
+                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </button>
-                    </TableCell>
-                    <TableCell align="right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(invoice)}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(invoice)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {invoices.length === 0 && (
-                  <TableEmpty
-                    colSpan={7}
-                    icon={<Receipt className="w-12 h-12 opacity-20" />}
-                  />
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </TableScrollArea>
-      </TableWrapper>
+                      <button
+                        onClick={() => openEditModal(invoice)}
+                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(invoice)}
+                        className="p-2 bg-red-500/10 text-red-600 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
-      {/* Mobile/Tablet Card View - Premium List */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <>
-            {invoices.map((invoice) => (
-              <div
-                key={invoice.id}
-                className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span className="font-mono text-sm font-bold text-primary">
-                      {invoice.invoice_number}
+                  <div>
+                    <h4 className="font-bold text-sm">{invoice.customer_name}</h4>
+                    {invoice.customer_address && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {invoice.customer_address}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-border flex justify-between items-center">
+                    <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
+                      {invoice.items?.length || 0} item
                     </span>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(invoice.invoice_date).toLocaleDateString(
-                        "id-ID",
-                        {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        },
-                      )}
+                    <p className="font-bold text-green-600">
+                      {formatCurrency(invoice.grand_total)}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedInvoiceForPdf(invoice);
-                        setIsPdfModalOpen(true);
-                      }}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openEditModal(invoice)}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(invoice)}
-                      className="p-2 bg-red-500/10 text-red-600 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
-
-                <div>
-                  <h4 className="font-bold text-sm">{invoice.customer_name}</h4>
-                  {invoice.customer_address && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                      {invoice.customer_address}
-                    </p>
-                  )}
+              ))}
+              {invoices.length === 0 && (
+                <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                  No invoices found
                 </div>
-
-                <div className="pt-3 border-t border-border flex justify-between items-center">
-                  <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
-                    {invoice.items?.length || 0} item
-                  </span>
-                  <p className="font-bold text-green-600">
-                    {formatCurrency(invoice.grand_total)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {invoices.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                No invoices found
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Halaman {currentPage} dari {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => fetchInvoices(currentPage - 1, search)}
-              disabled={currentPage <= 1 || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => fetchInvoices(currentPage + 1, search)}
-              disabled={currentPage >= totalPages || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => fetchInvoices(page, search)}
+          totalCount={total}
+        />
+      </TableWrapper>
 
       {/* Modal - Full Page on Mobile, Modal on Desktop */}
       {isModalOpen && (

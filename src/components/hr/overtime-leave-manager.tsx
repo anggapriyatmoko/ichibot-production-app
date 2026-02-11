@@ -15,6 +15,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 export default function OvertimeLeaveManager({ userRole }: { userRole: string }) {
@@ -236,22 +237,20 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
 
             {/* Table View */}
             <TableWrapper loading={isLoading}>
-                <div className="p-4 border-b border-border bg-muted/30 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-primary" />
-                        <div>
-                            <h2 className="font-semibold text-foreground">Riwayat Pengajuan</h2>
-                            <p className="text-xs text-muted-foreground">Kelola data izin dan lembur Anda.</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => setIsAdding(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all shadow-sm"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Ajukan Baru
-                    </button>
-                </div>
+                <TableHeaderContent
+                    title="Riwayat Pengajuan"
+                    description="Kelola data izin dan lembur Anda."
+                    icon={<Clock className="w-5 h-5 font-bold text-primary" />}
+                    actions={
+                        <button
+                            onClick={() => setIsAdding(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Ajukan Baru
+                        </button>
+                    }
+                />
 
                 <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
                     <span className="text-xs font-bold text-foreground">Filter :</span>

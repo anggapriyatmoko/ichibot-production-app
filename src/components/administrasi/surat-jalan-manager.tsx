@@ -494,7 +494,6 @@ export default function SuratJalanManager({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={(page) => fetchSJ(page, search)}
-        currentCount={suratJalanList.length}
         totalCount={total}
       />
 

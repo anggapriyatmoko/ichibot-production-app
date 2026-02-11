@@ -17,6 +17,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 export default function OvertimeLeaveApproval() {
@@ -247,48 +248,45 @@ export default function OvertimeLeaveApproval() {
 
     return (
         <TableWrapper className="mb-10" loading={isLoading}>
-            <div className="p-4 border-b border-border bg-muted/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    <div>
-                        <h2 className="font-semibold text-foreground flex items-center gap-2">
-                            Rekap Izin & Lembur
-                        </h2>
-                        <p className="text-xs text-muted-foreground">Monitoring pengajuan izin dan lembur karyawan.</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <label className="text-[10px] font-bold text-muted-foreground">Dari:</label>
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-background border border-border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                        <label className="text-[10px] font-bold text-muted-foreground">Sampai:</label>
-                        <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-background border border-border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-
-                    {pendingCount > 0 && (
-                        <div className="px-3 py-1 bg-amber-500 text-white rounded-full text-[10px] font-bold animate-bounce shadow-lg shadow-amber-500/20">
-                            {pendingCount} Pending
+            <TableHeaderContent
+                title="Rekap Izin & Lembur"
+                description="Monitoring pengajuan izin dan lembur karyawan."
+                icon={<Clock className="w-5 h-5 font-bold text-primary" />}
+                actions={
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                            <label className="text-[10px] font-bold text-muted-foreground">Dari:</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                            <label className="text-[10px] font-bold text-muted-foreground">Sampai:</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
                         </div>
-                    )}
-                    <button
-                        onClick={() => setIsAddingOrder(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all shadow-sm"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">Perintah Lembur</span>
-                    </button>
-                </div>
-            </div>
+
+                        {pendingCount > 0 && (
+                            <div className="px-3 py-1 bg-amber-500 text-white rounded-full text-[10px] font-bold animate-bounce shadow-lg shadow-amber-500/20">
+                                {pendingCount} Pending
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setIsAddingOrder(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all shadow-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">Perintah Lembur</span>
+                            <span className="sm:hidden">Tambah</span>
+                        </button>
+                    </div>
+                }
+            />
 
             <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
                 <span className="text-xs font-bold text-foreground">Filter :</span>

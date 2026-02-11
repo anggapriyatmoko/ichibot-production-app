@@ -16,6 +16,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 interface User {
@@ -213,10 +214,11 @@ export default function UserManagementTable({ userRole }: Props) {
     return (
         <>
             <TableWrapper loading={loading}>
-                <div className="p-4 border-b border-border bg-muted/30 flex items-center gap-3">
-                    <Users className="w-5 h-5 text-primary" />
-                    <h2 className="font-semibold text-foreground">Data Karyawan & Gaji</h2>
-                </div>
+                <TableHeaderContent
+                    title="Data Karyawan & Gaji"
+                    description="Kelola informasi karyawan, kontrak, dan input gaji."
+                    icon={<Users className="w-5 h-5 font-bold text-primary" />}
+                />
 
                 <TableScrollArea>
                     <Table>

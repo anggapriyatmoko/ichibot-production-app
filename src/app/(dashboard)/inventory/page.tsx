@@ -13,8 +13,8 @@ export default async function InventoryPage({
     const params = await searchParams
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
+    const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 20
     const search = typeof params.search === 'string' ? params.search : ''
-    const limit = 10
     const skip = (page - 1) * limit
 
     const where: any = search ? {
@@ -49,6 +49,8 @@ export default async function InventoryPage({
                 initialProducts={products}
                 totalPages={totalPages}
                 currentPage={page}
+                itemsPerPage={limit}
+                totalItems={totalCount}
                 userRole={session?.user?.role}
             />
         </div>

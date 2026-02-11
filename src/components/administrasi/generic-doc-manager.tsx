@@ -17,6 +17,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TableHeaderContent,
 } from '@/components/ui/table'
 
 type DocData = {
@@ -174,151 +175,165 @@ export default function GenericDocManager({ type, title, initialData, labels = {
 
     return (
         <div className="space-y-6">
-            {/* Controls */}
-            <div className="flex flex-row gap-4 justify-between items-center">
-                <div className="relative w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Cari data..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-                    />
-                </div>
-                <button
-                    onClick={openAddModal}
-                    className="shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                >
-                    <Plus className="w-5 h-5" />
-                    <span className="hidden md:inline">Tambah {title}</span>
-                </button>
-            </div>
+            <TableWrapper>
+                <TableHeaderContent
+                    title={title}
+                    description={`Kelola data ${title.toLowerCase()} perusahaan.`}
+                    icon={<FileText className="w-5 h-5 font-bold text-primary" />}
+                    actions={
+                        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                            <div className="relative flex-1 sm:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder="Cari data..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                                />
+                            </div>
+                            <button
+                                onClick={openAddModal}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                <span className="hidden sm:inline">Tambah {title}</span>
+                                <span className="sm:hidden">Tambah</span>
+                            </button>
+                        </div>
+                    }
+                />
 
-            {/* Desktop Table View */}
-            <TableWrapper className="hidden md:block">
-                <TableScrollArea>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Tanggal</TableHead>
-                                <TableHead>{fieldLabels.number}</TableHead>
-                                <TableHead>{fieldLabels.name}</TableHead>
-                                <TableHead>{fieldLabels.institution}</TableHead>
-                                <TableHead>{fieldLabels.content}</TableHead>
-                                <TableHead>Lampiran</TableHead>
-                                <TableHead align="right">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredData.map((item) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="whitespace-nowrap">
-                                        <div className="font-medium text-foreground">
-                                            {new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="font-mono text-xs">{item.number}</TableCell>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{item.institution}</TableCell>
-                                    <TableCell className="max-w-xs">
-                                        <p className="line-clamp-2 text-xs text-muted-foreground">{item.content}</p>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            {item.link && (
-                                                <a
-                                                    href={item.link}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors"
-                                                    title="Link"
-                                                >
-                                                    <LinkIcon className="w-4 h-4" />
-                                                </a>
-                                            )}
-                                            {item.filePath && (
-                                                <a
-                                                    href={item.filePath}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                                                    title="Download File"
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                </a>
-                                            )}
-                                            {!item.link && !item.filePath && <span className="text-muted-foreground text-xs">-</span>}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button
-                                                onClick={() => openEditModal(item)}
-                                                className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(item.id)}
-                                                className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                                                title="Hapus"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </TableCell>
+                {/* Desktop View Table */}
+                <div className="hidden md:block">
+                    <TableScrollArea>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>{fieldLabels.number}</TableHead>
+                                    <TableHead>{fieldLabels.name}</TableHead>
+                                    <TableHead>{fieldLabels.institution}</TableHead>
+                                    <TableHead>{fieldLabels.content}</TableHead>
+                                    <TableHead>Lampiran</TableHead>
+                                    <TableHead align="right">Aksi</TableHead>
                                 </TableRow>
-                            ))}
-                            {filteredData.length === 0 && (
-                                <TableEmpty colSpan={7} icon={<FileText className="w-12 h-12 opacity-20" />} />
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableScrollArea>
-            </TableWrapper>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredData.map((item) => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="whitespace-nowrap">
+                                            <div className="font-medium text-foreground">
+                                                {new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs">{item.number}</TableCell>
+                                        <TableCell className="font-medium">{item.name}</TableCell>
+                                        <TableCell>{item.institution}</TableCell>
+                                        <TableCell className="max-w-xs">
+                                            <p className="line-clamp-2 text-xs text-muted-foreground">{item.content}</p>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                {item.link && (
+                                                    <a
+                                                        href={item.link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors"
+                                                        title="Link"
+                                                    >
+                                                        <LinkIcon className="w-4 h-4" />
+                                                    </a>
+                                                )}
+                                                {item.filePath && (
+                                                    <a
+                                                        href={item.filePath}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg hover:bg-emerald-500/20 transition-colors"
+                                                        title="Download File"
+                                                    >
+                                                        <Download className="w-4 h-4" />
+                                                    </a>
+                                                )}
+                                                {!item.link && !item.filePath && <span className="text-muted-foreground text-xs">-</span>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => openEditModal(item)}
+                                                    className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {filteredData.length === 0 && (
+                                    <TableEmpty colSpan={7} icon={<FileText className="w-12 h-12 opacity-20" />} />
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableScrollArea>
+                </div>
 
-            {/* Mobile View */}
-            <div className="md:hidden space-y-4">
-                {filteredData.map((item) => (
-                    <div key={item.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
-                        <div className="flex justify-between items-start">
-                            <div className="min-w-0">
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold">{new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                                <p className="font-bold text-foreground truncate">{item.name}</p>
-                                <p className="text-xs text-muted-foreground truncate">{item.institution}</p>
+                {/* Mobile View */}
+                <div className="md:hidden space-y-4 p-4">
+                    {filteredData.map((item) => (
+                        <div key={item.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
+                            <div className="flex justify-between items-start">
+                                <div className="min-w-0">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold">{new Date(item.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                    <p className="font-bold text-foreground truncate">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{item.institution}</p>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => openEditModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => handleDelete(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                                <button onClick={() => openEditModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                                    <Pencil className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => handleDelete(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                            <div className="py-2 border-y border-border/50 border-dashed space-y-2">
+                                <div className="text-xs font-mono bg-muted/50 p-2 rounded truncate">{item.number}</div>
+                                <p className="text-xs text-muted-foreground line-clamp-3">{item.content}</p>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex gap-4">
+                                    {item.link && (
+                                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
+                                            <ExternalLink className="w-3 h-3" /> Link
+                                        </a>
+                                    )}
+                                    {item.filePath && (
+                                        <a href={item.filePath} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                                            <Download className="w-3 h-3" /> File
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                        <div className="py-2 border-y border-border/50 border-dashed space-y-2">
-                            <div className="text-xs font-mono bg-muted/50 p-2 rounded truncate">{item.number}</div>
-                            <p className="text-xs text-muted-foreground line-clamp-3">{item.content}</p>
+                    ))}
+                    {filteredData.length === 0 && (
+                        <div className="py-12 text-center text-muted-foreground">
+                            Belum ada data.
                         </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex gap-4">
-                                {item.link && (
-                                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-                                        <ExternalLink className="w-3 h-3" /> Link
-                                    </a>
-                                )}
-                                {item.filePath && (
-                                    <a href={item.filePath} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                                        <Download className="w-3 h-3" /> File
-                                    </a>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                    )}
+                </div>
+            </TableWrapper>
 
             {/* Form Modal */}
             {isModalOpen && (
@@ -474,7 +489,8 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                         </form>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     )
 }

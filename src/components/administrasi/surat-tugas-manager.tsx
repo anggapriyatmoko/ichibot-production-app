@@ -498,7 +498,6 @@ export default function SuratTugasManager({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={(page) => fetchST(page, search)}
-        currentCount={suratTugasList.length}
         totalCount={total}
       />
 
