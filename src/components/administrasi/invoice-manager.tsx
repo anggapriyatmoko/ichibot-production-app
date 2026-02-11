@@ -355,8 +355,8 @@ export default function InvoiceManager({
           description="Manajemen data invoice dan pembuatan PDF."
           icon={<Receipt className="w-5 h-5 font-bold text-primary" />}
           actions={
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
@@ -366,13 +366,15 @@ export default function InvoiceManager({
                   className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                 />
               </div>
-              <button
-                onClick={openAddModal}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Tambah Invoice
-              </button>
+              <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide w-full sm:w-auto">
+                <button
+                  onClick={openAddModal}
+                  className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Tambah Invoice
+                </button>
+              </div>
             </div>
           }
         />

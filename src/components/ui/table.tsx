@@ -1,8 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, ChevronDown, Search, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, ChevronDown, Search, X, MoreHorizontal } from 'lucide-react'
 
 // ============================================================================
 // TABLE WRAPPER - Container with overflow handling
@@ -115,52 +116,68 @@ export const TableHeaderContent = ({
     icon,
     actions,
     className
-}: TableHeaderContentProps) => (
-    <div className={cn(
-        "px-6 py-5 flex flex-col gap-5 border-b border-border bg-muted/20 transition-all duration-300",
-        className
-    )}>
-        {/* Top Row: Icon + Title + Mobile Search Button */}
-        <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-                {icon && (
-                    <div className="p-2.5 bg-background border border-border rounded-xl text-primary shadow-sm mt-0.5 transition-transform hover:scale-105">
-                        {icon}
+}: TableHeaderContentProps) => {
+    const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false)
+
+    return (
+        <div className={cn(
+            "px-6 py-5 flex flex-col gap-5 border-b border-border bg-muted/20 transition-all duration-300",
+            className
+        )}>
+            {/* Top Row: Icon + Title + Mobile Search Button */}
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                    {icon && (
+                        <div className="p-2.5 bg-background border border-border rounded-xl text-primary shadow-sm mt-0.5 transition-transform hover:scale-105">
+                            {icon}
+                        </div>
+                    )}
+                    <div>
+                        <h3 className="text-lg font-bold text-foreground leading-tight tracking-tight">{title}</h3>
+                        {description && (
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
+                                {description}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Mobile Actions Toggle */}
+                {actions && (
+                    <div className="sm:hidden">
+                        <button
+                            onClick={() => setIsMobileActionsOpen(!isMobileActionsOpen)}
+                            className={cn(
+                                "p-2 rounded-lg border transition-all shadow-sm",
+                                isMobileActionsOpen
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                            )}
+                        >
+                            {isMobileActionsOpen ? <X className="w-5 h-5" /> : <MoreHorizontal className="w-5 h-5" />}
+                        </button>
                     </div>
                 )}
-                <div>
-                    <h3 className="text-lg font-bold text-foreground leading-tight tracking-tight">{title}</h3>
-                    {description && (
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
-                            {description}
-                        </p>
-                    )}
-                </div>
+
+                {/* Desktop Actions (Right-aligned) */}
+                {actions && (
+                    <div className="hidden sm:flex items-center gap-3">
+                        {actions}
+                    </div>
+                )}
             </div>
 
-            {/* Mobile-only Search Button (Decorative/Functional focal point) */}
-            <div className="sm:hidden">
-                <button className="p-2.5 rounded-xl border bg-background text-primary border-border shadow-sm hover:border-primary/50 active:scale-95 transition-all">
-                    <Search className="w-5 h-5" />
-                </button>
-            </div>
-
-            {/* Desktop Actions (Right-aligned) */}
-            {actions && (
-                <div className="hidden sm:flex items-center gap-3">
+            {/* Mobile Actions: Always visible, stacked vertically below title section */}
+            {/* Mobile Actions: Always visible, stacked vertically below title section */}
+            {/* Mobile Actions: Hidden by default, toggled via button */}
+            {actions && isMobileActionsOpen && (
+                <div className="sm:hidden flex flex-row items-center gap-3 overflow-x-auto pb-1 scrollbar-hide animate-in slide-in-from-top-2 duration-200">
                     {actions}
                 </div>
             )}
         </div>
-
-        {/* Mobile Actions: Always visible, stacked vertically below title section */}
-        {actions && (
-            <div className="sm:hidden flex flex-col gap-3">
-                {actions}
-            </div>
-        )}
-    </div>
-)
+    )
+}
 TableHeaderContent.displayName = 'TableHeaderContent'
 
 // ============================================================================

@@ -14,7 +14,7 @@ export default async function SparepartProjectPage({
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const search = typeof params.search === 'string' ? params.search : ''
-    const limit = 20
+    const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 20
     const skip = (page - 1) * limit
 
     const where: any = search ? {
@@ -50,6 +50,8 @@ export default async function SparepartProjectPage({
                 userRole={session?.user?.role}
                 totalPages={totalPages}
                 currentPage={page}
+                totalCount={totalCount}
+                itemsPerPage={limit}
             />
         </div>
     )

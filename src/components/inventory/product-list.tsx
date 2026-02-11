@@ -389,7 +389,7 @@ export default function ProductList({
                     description="Kelola stok dan data produk di gudang utama."
                     icon={<Package className="w-5 h-5 font-bold text-primary" />}
                     actions={
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                             <div className="relative w-full sm:w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <input
@@ -400,30 +400,34 @@ export default function ProductList({
                                     className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
-                                {userRole === 'ADMIN' && (
-                                    <>
+                            <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide w-full sm:w-auto">
+                                <div className="flex items-center gap-2">
+                                    {userRole === 'ADMIN' && (
+                                        <>
+                                            <button
+                                                onClick={handleExport}
+                                                disabled={isLoading}
+                                                className="h-9 w-9 flex items-center justify-center border border-border hover:bg-muted text-foreground rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                                title="Export"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
+                                            <div className="h-9 flex items-center">
+                                                <ImportProductModal />
+                                            </div>
+                                        </>
+                                    )}
+                                    {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
                                         <button
-                                            onClick={handleExport}
-                                            disabled={isLoading}
-                                            className="p-2 border border-border hover:bg-muted text-foreground rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                                            title="Export"
+                                            onClick={() => setIsAdding(!isAdding)}
+                                            className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                            title="Add Product"
                                         >
-                                            <Download className="w-4 h-4" />
+                                            <Plus className="w-4 h-4" />
+                                            Tambah
                                         </button>
-                                        <ImportProductModal />
-                                    </>
-                                )}
-                                {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
-                                    <button
-                                        onClick={() => setIsAdding(!isAdding)}
-                                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2"
-                                        title="Add Product"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Tambah
-                                    </button>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
                     }

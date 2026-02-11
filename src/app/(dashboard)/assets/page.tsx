@@ -25,7 +25,7 @@ export default async function AssetsPage({
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const search = typeof params.search === 'string' ? params.search : ''
-    const limit = 10
+    const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 10
     const skip = (page - 1) * limit
 
     // Search logic: split by whitespace and match ALL words (AND)
@@ -68,6 +68,8 @@ export default async function AssetsPage({
                 allAssets={allAssets as any}
                 totalPages={totalPages}
                 currentPage={page}
+                totalCount={totalCount}
+                itemsPerPage={limit}
                 userRole={session?.user?.role}
             />
         </div>
