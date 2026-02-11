@@ -2,6 +2,50 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { writeFile, mkdir, unlink } from 'fs/promises'
+import path from 'path'
+
+/**
+ * Helper to get the upload directory
+ */
+function getUploadDir() {
+    let uploadDir = process.env.UPLOAD_DIR
+    if (!uploadDir) {
+        if (process.env.NODE_ENV === 'production') {
+            uploadDir = path.join(process.cwd(), 'uploads')
+        } else {
+            uploadDir = path.join(process.cwd(), 'public', 'uploads')
+        }
+    }
+    return uploadDir
+}
+
+/**
+ * Upload images temporarily to VPS for WooCommerce to fetch
+ */
+export async function uploadStoreProductImages(files: File[]) {
+    const tempUrls: string[] = []
+    const uploadDir = getUploadDir()
+
+    try {
+        await mkdir(uploadDir, { recursive: true })
+    } catch (e) { }
+
+    for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer())
+        const filename = 'temp-prod-' + Date.now() + '-' + Math.random().toString(36).substring(7) + '-' + file.name.replace(/\s/g, '-')
+        const filePath = path.join(uploadDir, filename)
+
+        await writeFile(filePath, buffer)
+
+        // Generate public URL relative to current domain
+        // Since we have /api/uploads/[filename] route, we use that
+        const publicUrl = `${process.env.NEXTAUTH_URL || ''}/api/uploads/${filename}`
+        tempUrls.push(publicUrl)
+    }
+
+    return { success: true, urls: tempUrls }
+}
 
 /**
  * Fetch products from WooCommerce API
@@ -69,6 +113,44 @@ async function fetchWooCommerceProducts() {
     }
 
     return allProducts
+}
+
+/**
+ * Fetch all product categories from WooCommerce
+ */
+export async function getWooCommerceCategories() {
+    const WC_URL = process.env.NEXT_PUBLIC_WC_URL
+    const WC_KEY = process.env.WC_CONSUMER_KEY
+    const WC_SECRET = process.env.WC_CONSUMER_SECRET
+
+    if (!WC_URL || !WC_KEY || !WC_SECRET) {
+        return { success: false, error: 'WooCommerce API credentials are not configured' }
+    }
+
+    try {
+        const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
+        const baseUrl = WC_URL.replace(/\/$/, '')
+
+        // Fetch all categories
+        const url = `${baseUrl}/wp-json/wc/v3/products/categories?per_page=100`
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Basic ${auth}`
+            },
+            next: { revalidate: 3600 } // Cache for 1 hour
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch categories: ${response.status}`)
+        }
+
+        const categories = await response.json()
+        return { success: true, categories }
+    } catch (error: any) {
+        console.error('Error fetching categories:', error)
+        return { success: false, error: error.message || 'Gagal mengambil kategori' }
+    }
 }
 
 export async function syncStoreProducts() {
@@ -620,6 +702,8 @@ export async function updateWooCommerceProduct(wcId: number, data: {
     status?: string
     weight?: number | null
     backupGudang?: string
+    description?: string
+    categoryId?: number | null
     parentId?: number
 }) {
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
@@ -653,6 +737,14 @@ export async function updateWooCommerceProduct(wcId: number, data: {
 
         if (data.weight !== undefined) {
             wcPayload.weight = data.weight === null ? "" : data.weight.toString()
+        }
+
+        if (data.description !== undefined) {
+            wcPayload.description = data.description
+        }
+
+        if (data.categoryId !== undefined) {
+            wcPayload.categories = data.categoryId ? [{ id: data.categoryId }] : []
         }
 
         if (data.backupGudang !== undefined) {
@@ -695,6 +787,8 @@ export async function updateWooCommerceProduct(wcId: number, data: {
                 status: data.status !== undefined ? data.status : undefined,
                 weight: data.weight !== undefined ? (data.weight === null ? null : parseFloat(data.weight.toString())) : undefined,
                 backupGudang: data.backupGudang !== undefined ? data.backupGudang : undefined,
+                description: data.description !== undefined ? data.description : undefined,
+                categories: updatedWcProduct.categories ? JSON.stringify(updatedWcProduct.categories) : undefined,
                 price: parseFloat(updatedWcProduct.price) || 0, // Get calculated price from WC
                 updatedAt: new Date()
             }
@@ -768,6 +862,9 @@ export async function createWooCommerceProduct(data: {
     status?: string
     weight?: number | null
     backupGudang?: string
+    description?: string
+    categoryId?: number | null
+    imageUrls?: string[]
 }) {
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
     const WC_KEY = process.env.WC_CONSUMER_KEY
@@ -791,6 +888,11 @@ export async function createWooCommerceProduct(data: {
         if (data.status !== undefined) wcPayload.status = data.status
         if (data.regularPrice !== undefined) wcPayload.regular_price = data.regularPrice?.toString() || ""
         if (data.salePrice !== undefined) wcPayload.sale_price = data.salePrice?.toString() || ""
+        if (data.description !== undefined) wcPayload.description = data.description
+
+        if (data.categoryId !== undefined) {
+            wcPayload.categories = data.categoryId ? [{ id: data.categoryId }] : []
+        }
 
         if (data.stockQuantity !== undefined && data.stockQuantity !== null) {
             wcPayload.manage_stock = true
@@ -803,7 +905,7 @@ export async function createWooCommerceProduct(data: {
             wcPayload.weight = data.weight?.toString() || ""
         }
 
-        if (data.backupGudang !== undefined && data.backupGudang) {
+        if (data.backupGudang !== undefined) {
             wcPayload.meta_data = [
                 {
                     key: 'backup_gudang',
@@ -812,7 +914,12 @@ export async function createWooCommerceProduct(data: {
             ]
         }
 
-        console.log('Creating WooCommerce product...', wcPayload)
+        // Add images to payload
+        if (data.imageUrls && data.imageUrls.length > 0) {
+            wcPayload.images = data.imageUrls.map(url => ({ src: url }))
+        }
+
+        console.log('Creating product in WooCommerce...', wcPayload)
 
         const response = await fetch(url, {
             method: 'POST',
@@ -826,7 +933,7 @@ export async function createWooCommerceProduct(data: {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
             console.error('WooCommerce API Create Error:', errorData)
-            return { success: false, error: errorData.message || `HTTP ${response.status}` }
+            throw new Error(errorData.message || `HTTP ${response.status}`)
         }
 
         const newWcProduct = await response.json()
@@ -837,29 +944,64 @@ export async function createWooCommerceProduct(data: {
                 wcId: newWcProduct.id,
                 name: newWcProduct.name,
                 slug: newWcProduct.slug,
-                sku: newWcProduct.sku || null,
+                sku: newWcProduct.sku,
                 type: newWcProduct.type,
                 status: newWcProduct.status,
-                regularPrice: parseFloat(newWcProduct.regular_price) || null,
-                salePrice: parseFloat(newWcProduct.sale_price) || null,
+                description: newWcProduct.description,
+                shortDescription: newWcProduct.short_description,
                 price: parseFloat(newWcProduct.price) || 0,
+                regularPrice: parseFloat(newWcProduct.regular_price) || 0,
+                salePrice: parseFloat(newWcProduct.sale_price) || 0,
                 stockQuantity: newWcProduct.stock_quantity || 0,
                 stockStatus: newWcProduct.stock_status,
-                weight: parseFloat(newWcProduct.weight) || null,
-                images: JSON.stringify(newWcProduct.images || []),
-                categories: JSON.stringify(newWcProduct.categories || []),
-                backupGudang: data.backupGudang || null,
+                weight: parseFloat(newWcProduct.weight) || 0,
+                images: JSON.stringify(newWcProduct.images),
+                categories: JSON.stringify(newWcProduct.categories),
+                purchased: false,
                 isMissingFromWoo: false,
-                purchased: false
+                backupGudang: data.backupGudang || null,
+                updatedAt: new Date()
             }
         })
 
+        // Cleanup temporary images after WooCommerce has downloaded them
+        if (data.imageUrls && data.imageUrls.length > 0) {
+            const uploadDir = getUploadDir()
+            for (const url of data.imageUrls) {
+                try {
+                    const filename = url.split('/').pop()
+                    if (filename) {
+                        const filePath = path.join(uploadDir, filename)
+                        await unlink(filePath)
+                        console.log('Deleted temporary image after sync:', filePath)
+                    }
+                } catch (cleanupError) {
+                    console.error('Failed to cleanup temporary image:', url, cleanupError)
+                }
+            }
+        }
+
         revalidatePath('/store/product')
         revalidatePath('/store/low-stock')
-
+        revalidatePath('/store/purchased')
         return { success: true, product: newWcProduct }
     } catch (error: any) {
         console.error('Error in createWooCommerceProduct:', error)
+
+        // Cleanup even on error if we have URLs
+        if (data.imageUrls && data.imageUrls.length > 0) {
+            const uploadDir = getUploadDir()
+            for (const url of data.imageUrls) {
+                try {
+                    const filename = url.split('/').pop()
+                    if (filename) {
+                        const filePath = path.join(uploadDir, filename)
+                        await unlink(filePath).catch(() => { })
+                    }
+                } catch (e) { }
+            }
+        }
+
         return { success: false, error: error.message || 'Terjadi kesalahan sistem' }
     }
 }

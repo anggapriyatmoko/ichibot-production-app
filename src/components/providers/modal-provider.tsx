@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
+import Portal from "@/components/ui/portal";
 
 type ConfirmationType = "confirm" | "alert";
 
@@ -109,44 +110,46 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
       {/* Global Modal Overlay */}
       {confirmation.isOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-            <div
-              className={`flex items-center gap-3 mb-4 ${confirmation.type === "alert" ? "text-blue-500" : "text-destructive"}`}
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              ) : (
-                <AlertCircle className="w-6 h-6" />
-              )}
-              <h3 className="text-lg font-bold text-foreground">
-                {confirmation.title}
-              </h3>
-            </div>
-            <p className="text-muted-foreground text-sm mb-6">
-              {confirmation.message}
-            </p>
-            <div className="flex justify-end gap-3">
-              {confirmation.type === "confirm" && (
-                <button
-                  onClick={closeConfirmation}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {confirmation.cancelLabel}
-                </button>
-              )}
-              <button
-                onClick={handleConfirm}
-                disabled={isSubmitting}
-                className={`flex items-center gap-2 px-4 py-2 ${confirmation.type === "alert" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"} rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-70`}
+        <Portal>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+              <div
+                className={`flex items-center gap-3 mb-4 ${confirmation.type === "alert" ? "text-blue-500" : "text-destructive"}`}
               >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? "Memproses..." : confirmation.confirmLabel}
-              </button>
+                {isSubmitting ? (
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                ) : (
+                  <AlertCircle className="w-6 h-6" />
+                )}
+                <h3 className="text-lg font-bold text-foreground">
+                  {confirmation.title}
+                </h3>
+              </div>
+              <p className="text-muted-foreground text-sm mb-6">
+                {confirmation.message}
+              </p>
+              <div className="flex justify-end gap-3">
+                {confirmation.type === "confirm" && (
+                  <button
+                    onClick={closeConfirmation}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {confirmation.cancelLabel}
+                  </button>
+                )}
+                <button
+                  onClick={handleConfirm}
+                  disabled={isSubmitting}
+                  className={`flex items-center gap-2 px-4 py-2 ${confirmation.type === "alert" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"} rounded-lg text-sm font-medium shadow-sm transition-colors disabled:opacity-70`}
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSubmitting ? "Memproses..." : confirmation.confirmLabel}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </ConfirmationContext.Provider>
   );
