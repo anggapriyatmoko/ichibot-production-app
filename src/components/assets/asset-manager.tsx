@@ -804,293 +804,294 @@ export default function AssetManager({
                 )}
 
                 {/* Assets Display */}
-                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                    {/* Mobile Card View */}
-                    <div className="md:hidden divide-y divide-border">
-                        {initialAssets.map((asset) => (
-                            <div key={asset.id} className="p-4 transition-colors">
-                                <div className="flex gap-3 mb-3">
-                                    <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
-                                        {asset.image ? (
-                                            <Image src={asset.image} alt={asset.name} fill className="object-cover" />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                                <Wrench className="w-6 h-6" />
+                {/* Assets Display */}
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-border">
+                    {initialAssets.map((asset) => (
+                        <div key={asset.id} className="p-4 transition-colors">
+                            <div className="flex gap-3 mb-3">
+                                <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
+                                    {asset.image ? (
+                                        <Image src={asset.image} alt={asset.name} fill className="object-cover" />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                                            <Wrench className="w-6 h-6" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-foreground text-sm mb-1 truncate">{asset.name}</h3>
+                                    {asset.code && <p className="text-xs text-muted-foreground font-mono">{asset.code}</p>}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 mb-3 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Lokasi:</span>
+                                    <span className="font-medium text-foreground">{asset.location}</span>
+                                </div>
+                                {asset.specification && (
+                                    <div>
+                                        <span className="text-muted-foreground text-xs">Spesifikasi:</span>
+                                        <p className="text-xs text-foreground mt-1 whitespace-pre-wrap">{asset.specification}</p>
+                                    </div>
+                                )}
+                                {asset.notes && (
+                                    <div>
+                                        <span className="text-muted-foreground text-xs">Keterangan:</span>
+                                        <p className="text-xs text-foreground mt-1 whitespace-pre-wrap">{asset.notes}</p>
+                                    </div>
+                                )}
+                                {isAdmin && asset.price && (
+                                    <div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Harga Beli:</span>
+                                            <span className="font-medium text-foreground">{formatPrice(asset.price)}</span>
+                                        </div>
+                                        {asset.purchaseDate && asset.usefulLife && (
+                                            <div className="flex justify-between mt-1">
+                                                <span className="text-muted-foreground text-xs">Nilai Saat Ini:</span>
+                                                <span className="text-xs text-orange-500 font-medium">
+                                                    {formatPrice(calculateCurrentValue(asset))}
+                                                    <span className="text-muted-foreground ml-1">({new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()} thn)</span>
+                                                </span>
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-foreground text-sm mb-1 truncate">{asset.name}</h3>
-                                        {asset.code && <p className="text-xs text-muted-foreground font-mono">{asset.code}</p>}
-                                    </div>
-                                </div>
+                                )}
+                            </div>
 
-                                <div className="space-y-2 mb-3 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Lokasi:</span>
-                                        <span className="font-medium text-foreground">{asset.location}</span>
-                                    </div>
-                                    {asset.specification && (
-                                        <div>
-                                            <span className="text-muted-foreground text-xs">Spesifikasi:</span>
-                                            <p className="text-xs text-foreground mt-1 whitespace-pre-wrap">{asset.specification}</p>
-                                        </div>
-                                    )}
-                                    {asset.notes && (
-                                        <div>
-                                            <span className="text-muted-foreground text-xs">Keterangan:</span>
-                                            <p className="text-xs text-foreground mt-1 whitespace-pre-wrap">{asset.notes}</p>
-                                        </div>
-                                    )}
-                                    {isAdmin && asset.price && (
-                                        <div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Harga Beli:</span>
-                                                <span className="font-medium text-foreground">{formatPrice(asset.price)}</span>
-                                            </div>
-                                            {asset.purchaseDate && asset.usefulLife && (
-                                                <div className="flex justify-between mt-1">
-                                                    <span className="text-muted-foreground text-xs">Nilai Saat Ini:</span>
-                                                    <span className="text-xs text-orange-500 font-medium">
-                                                        {formatPrice(calculateCurrentValue(asset))}
-                                                        <span className="text-muted-foreground ml-1">({new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()} thn)</span>
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex gap-2 justify-end mt-2">
+                            <div className="flex gap-2 justify-end mt-2">
+                                <button
+                                    onClick={() => startEdit(asset)}
+                                    className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
+                                    title="Edit"
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                </button>
+                                {isAdmin && (
                                     <button
-                                        onClick={() => startEdit(asset)}
-                                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
-                                        title="Edit"
+                                        onClick={() => handleDelete(asset.id, asset.name)}
+                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-border"
+                                        title="Hapus"
                                     >
-                                        <Pencil className="w-4 h-4" />
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
-                                    {isAdmin && (
-                                        <button
-                                            onClick={() => handleDelete(asset.id, asset.name)}
-                                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-border"
-                                            title="Hapus"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
+                                )}
                             </div>
-                        ))}
-                        {initialAssets.length === 0 && (
-                            <div className="px-6 py-12 text-center text-muted-foreground">
-                                <Wrench className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p>{searchTerm ? 'Tidak ada aset yang cocok dengan pencarian.' : 'Belum ada aset terdaftar.'}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block">
-                        <TableScrollArea>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Gambar</TableHead>
-                                        <TableHead>Nama</TableHead>
-                                        <TableHead>Kode</TableHead>
-                                        <TableHead>Spesifikasi</TableHead>
-                                        <TableHead>Lokasi</TableHead>
-                                        {isAdmin && <TableHead>Harga</TableHead>}
-                                        <TableHead>Keterangan</TableHead>
-                                        <TableHead className="text-right">Aksi</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {initialAssets.map((asset) => (
-                                        <TableRow key={asset.id} className="group">
-                                            <TableCell>
-                                                <div className="relative group/image w-10 h-10">
-                                                    <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
-                                                        {asset.image ? (
-                                                            <Image src={asset.image} alt={asset.name} fill className="object-cover" />
-                                                        ) : (
-                                                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                                                <Wrench className="w-4 h-4" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    {/* Hover Preview */}
-                                                    {asset.image && (
-                                                        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover/image:opacity-100 group-hover/image:visible transition-all duration-200 pointer-events-none">
-                                                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
-                                                                <div className="relative w-full h-full rounded-lg overflow-hidden">
-                                                                    <Image src={asset.image} alt={asset.name} fill className="object-contain" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-medium">{asset.name}</TableCell>
-                                            <TableCell className="font-mono text-xs">{asset.code || '-'}</TableCell>
-                                            <TableCell className="max-w-[200px] truncate" title={asset.specification || undefined}>
-                                                {asset.specification || '-'}
-                                            </TableCell>
-                                            <TableCell>{asset.location}</TableCell>
-                                            {isAdmin && (
-                                                <TableCell>
-                                                    <div>{formatPrice(asset.price)}</div>
-                                                    {asset.price && asset.purchaseDate && asset.usefulLife && (
-                                                        <div className="text-xs text-orange-500 mt-1">
-                                                            {formatPrice(calculateCurrentValue(asset))}
-                                                            <span className="text-muted-foreground ml-1">
-                                                                ({new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()}/{asset.usefulLife} thn)
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                            )}
-                                            <TableCell className="max-w-[200px] truncate" title={asset.notes || undefined}>
-                                                {asset.notes || '-'}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => startEdit(asset)}
-                                                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
-                                                        title="Edit"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </button>
-                                                    {isAdmin && (
-                                                        <button
-                                                            onClick={() => handleDelete(asset.id, asset.name)}
-                                                            className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-destructive/20"
-                                                            title="Hapus"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {initialAssets.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={isAdmin ? 8 : 7} className="h-32 text-center text-muted-foreground">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <Wrench className="h-8 w-8 mb-2 opacity-50" />
-                                                    <p>{searchTerm ? 'Tidak ada aset yang cocok dengan pencarian.' : 'Belum ada aset terdaftar.'}</p>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableScrollArea>
-                    </div>
-
-                    <TablePagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={handlePageChange}
-                        itemsPerPage={itemsPerPage}
-                        totalCount={totalCount}
-                        onItemsPerPageChange={handleItemsPerPageChange}
-                    />
+                        </div>
+                    ))}
+                    {initialAssets.length === 0 && (
+                        <div className="px-6 py-12 text-center text-muted-foreground">
+                            <Wrench className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>{searchTerm ? 'Tidak ada aset yang cocok dengan pencarian.' : 'Belum ada aset terdaftar.'}</p>
+                        </div>
+                    )}
                 </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                    <TableScrollArea>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Gambar</TableHead>
+                                    <TableHead>Nama</TableHead>
+                                    <TableHead>Kode</TableHead>
+                                    <TableHead>Spesifikasi</TableHead>
+                                    <TableHead>Lokasi</TableHead>
+                                    {isAdmin && <TableHead>Harga</TableHead>}
+                                    <TableHead>Keterangan</TableHead>
+                                    <TableHead className="text-right">Aksi</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {initialAssets.map((asset) => (
+                                    <TableRow key={asset.id} className="group">
+                                        <TableCell>
+                                            <div className="relative group/image w-10 h-10">
+                                                <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
+                                                    {asset.image ? (
+                                                        <Image src={asset.image} alt={asset.name} fill className="object-cover" />
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                                                            <Wrench className="w-4 h-4" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {/* Hover Preview */}
+                                                {asset.image && (
+                                                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 opacity-0 invisible group-hover/image:opacity-100 group-hover/image:visible transition-all duration-200 pointer-events-none">
+                                                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-border p-2 w-52 h-52">
+                                                            <div className="relative w-full h-full rounded-lg overflow-hidden">
+                                                                <Image src={asset.image} alt={asset.name} fill className="object-contain" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="font-medium">{asset.name}</TableCell>
+                                        <TableCell className="font-mono text-xs">{asset.code || '-'}</TableCell>
+                                        <TableCell className="max-w-[200px] truncate" title={asset.specification || undefined}>
+                                            {asset.specification || '-'}
+                                        </TableCell>
+                                        <TableCell>{asset.location}</TableCell>
+                                        {isAdmin && (
+                                            <TableCell>
+                                                <div>{formatPrice(asset.price)}</div>
+                                                {asset.price && asset.purchaseDate && asset.usefulLife && (
+                                                    <div className="text-xs text-orange-500 mt-1">
+                                                        {formatPrice(calculateCurrentValue(asset))}
+                                                        <span className="text-muted-foreground ml-1">
+                                                            ({new Date().getFullYear() - new Date(asset.purchaseDate).getFullYear()}/{asset.usefulLife} thn)
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                        )}
+                                        <TableCell className="max-w-[200px] truncate" title={asset.notes || undefined}>
+                                            {asset.notes || '-'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => startEdit(asset)}
+                                                    className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </button>
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={() => handleDelete(asset.id, asset.name)}
+                                                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-destructive/20"
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {initialAssets.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={isAdmin ? 8 : 7} className="h-32 text-center text-muted-foreground">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <Wrench className="h-8 w-8 mb-2 opacity-50" />
+                                                <p>{searchTerm ? 'Tidak ada aset yang cocok dengan pencarian.' : 'Belum ada aset terdaftar.'}</p>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableScrollArea>
+                </div>
+
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    totalCount={totalCount}
+                    onItemsPerPageChange={handleItemsPerPageChange}
+                />
             </TableWrapper>
 
             {/* Analytics / Summary Section - Admin Only */}
-            {isAdmin && allAssets.length > 0 && (
-                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                    <h3 className="text-lg font-medium text-foreground mb-4">Ringkasan Aset</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* Total Assets */}
-                        <div className="bg-background rounded-lg p-4 border border-border">
-                            <p className="text-xs text-muted-foreground mb-1">Total Aset</p>
-                            <p className="text-2xl font-bold text-foreground">{allAssets.length}</p>
-                            <p className="text-xs text-muted-foreground mt-1">unit</p>
+            {
+                isAdmin && allAssets.length > 0 && (
+                    <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                        <h3 className="text-lg font-medium text-foreground mb-4">Ringkasan Aset</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Total Assets */}
+                            <div className="bg-background rounded-lg p-4 border border-border">
+                                <p className="text-xs text-muted-foreground mb-1">Total Aset</p>
+                                <p className="text-2xl font-bold text-foreground">{allAssets.length}</p>
+                                <p className="text-xs text-muted-foreground mt-1">unit</p>
+                            </div>
+
+                            {/* Total Purchase Price */}
+                            <div className="bg-background rounded-lg p-4 border border-border overflow-hidden">
+                                <p className="text-xs text-muted-foreground mb-1">Total Harga Beli</p>
+                                <p className="text-sm md:text-xl font-bold text-foreground break-words">
+                                    {formatPrice(allAssets.reduce((sum, a) => sum + (a.price || 0), 0))}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {allAssets.filter(a => a.price).length} aset dengan harga
+                                </p>
+                            </div>
+
+                            {/* Total Current Value */}
+                            <div className="bg-background rounded-lg p-4 border border-border overflow-hidden">
+                                <p className="text-xs text-muted-foreground mb-1">Total Nilai Saat Ini</p>
+                                <p className="text-sm md:text-xl font-bold text-emerald-500 break-words">
+                                    {formatPrice(allAssets.reduce((sum, a) => {
+                                        const currentValue = calculateCurrentValue(a)
+                                        return sum + (currentValue !== null ? currentValue : (a.price || 0))
+                                    }, 0))}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {allAssets.filter(a => a.price && a.purchaseDate && a.usefulLife).length} aset dengan penyusutan
+                                </p>
+                            </div>
+
+                            {/* Total Depreciation */}
+                            <div className="bg-background rounded-lg p-4 border border-border overflow-hidden">
+                                <p className="text-xs text-muted-foreground mb-1">Total Penyusutan</p>
+                                <p className="text-sm md:text-xl font-bold text-orange-500 break-words">
+                                    {formatPrice(allAssets.reduce((sum, a) => {
+                                        if (!a.price) return sum
+                                        const currentValue = calculateCurrentValue(a)
+                                        if (currentValue === null) return sum
+                                        return sum + (a.price - currentValue)
+                                    }, 0))}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">akumulasi penyusutan</p>
+                            </div>
                         </div>
 
-                        {/* Total Purchase Price */}
-                        <div className="bg-background rounded-lg p-4 border border-border overflow-hidden">
-                            <p className="text-xs text-muted-foreground mb-1">Total Harga Beli</p>
-                            <p className="text-sm md:text-xl font-bold text-foreground break-words">
-                                {formatPrice(allAssets.reduce((sum, a) => sum + (a.price || 0), 0))}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {allAssets.filter(a => a.price).length} aset dengan harga
-                            </p>
-                        </div>
-
-                        {/* Total Current Value */}
-                        <div className="bg-background rounded-lg p-4 border border-border overflow-hidden">
-                            <p className="text-xs text-muted-foreground mb-1">Total Nilai Saat Ini</p>
-                            <p className="text-sm md:text-xl font-bold text-emerald-500 break-words">
-                                {formatPrice(allAssets.reduce((sum, a) => {
-                                    const currentValue = calculateCurrentValue(a)
-                                    return sum + (currentValue !== null ? currentValue : (a.price || 0))
-                                }, 0))}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {allAssets.filter(a => a.price && a.purchaseDate && a.usefulLife).length} aset dengan penyusutan
-                            </p>
-                        </div>
-
-                        {/* Total Depreciation */}
-                        <div className="bg-background rounded-lg p-4 border border-border overflow-hidden">
-                            <p className="text-xs text-muted-foreground mb-1">Total Penyusutan</p>
-                            <p className="text-sm md:text-xl font-bold text-orange-500 break-words">
-                                {formatPrice(allAssets.reduce((sum, a) => {
-                                    if (!a.price) return sum
-                                    const currentValue = calculateCurrentValue(a)
-                                    if (currentValue === null) return sum
-                                    return sum + (a.price - currentValue)
-                                }, 0))}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">akumulasi penyusutan</p>
+                        {/* Additional Stats */}
+                        <div className="mt-4 pt-4 border-t border-border">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <span className="text-muted-foreground">Rata-rata Harga:</span>
+                                    <span className="ml-2 font-medium text-foreground">
+                                        {formatPrice(allAssets.filter(a => a.price).length > 0
+                                            ? allAssets.reduce((sum, a) => sum + (a.price || 0), 0) / allAssets.filter(a => a.price).length
+                                            : 0)}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Dengan Gambar:</span>
+                                    <span className="ml-2 font-medium text-foreground">
+                                        {allAssets.filter(a => a.image).length} aset
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Rasio Penyusutan:</span>
+                                    <span className="ml-2 font-medium text-orange-500">
+                                        {(() => {
+                                            const totalPurchase = allAssets.reduce((sum, a) => sum + (a.price || 0), 0)
+                                            const totalDepreciation = allAssets.reduce((sum, a) => {
+                                                if (!a.price) return sum
+                                                const currentValue = calculateCurrentValue(a)
+                                                if (currentValue === null) return sum
+                                                return sum + (a.price - currentValue)
+                                            }, 0)
+                                            return totalPurchase > 0
+                                                ? ((totalDepreciation / totalPurchase) * 100).toFixed(1) + '%'
+                                                : '0%'
+                                        })()}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    {/* Additional Stats */}
-                    <div className="mt-4 pt-4 border-t border-border">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div>
-                                <span className="text-muted-foreground">Rata-rata Harga:</span>
-                                <span className="ml-2 font-medium text-foreground">
-                                    {formatPrice(allAssets.filter(a => a.price).length > 0
-                                        ? allAssets.reduce((sum, a) => sum + (a.price || 0), 0) / allAssets.filter(a => a.price).length
-                                        : 0)}
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground">Dengan Gambar:</span>
-                                <span className="ml-2 font-medium text-foreground">
-                                    {allAssets.filter(a => a.image).length} aset
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground">Rasio Penyusutan:</span>
-                                <span className="ml-2 font-medium text-orange-500">
-                                    {(() => {
-                                        const totalPurchase = allAssets.reduce((sum, a) => sum + (a.price || 0), 0)
-                                        const totalDepreciation = allAssets.reduce((sum, a) => {
-                                            if (!a.price) return sum
-                                            const currentValue = calculateCurrentValue(a)
-                                            if (currentValue === null) return sum
-                                            return sum + (a.price - currentValue)
-                                        }, 0)
-                                        return totalPurchase > 0
-                                            ? ((totalDepreciation / totalPurchase) * 100).toFixed(1) + '%'
-                                            : '0%'
-                                    })()}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }

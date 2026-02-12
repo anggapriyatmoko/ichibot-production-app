@@ -1,13 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Calendar as CalendarIcon, User, Search, Loader2, Trash, ChevronLeft, ChevronRight, FileText, Image, X, Camera } from 'lucide-react'
+import { Plus, Pencil, Calendar as CalendarIcon, User, Search, Loader2, Trash, ChevronLeft, ChevronRight, FileText, Image, X, Camera, MoreHorizontal } from 'lucide-react'
 import { processImageFile } from '@/utils/image-compression'
 import { format, isSameDay } from 'date-fns'
 import { id } from 'date-fns/locale' // Indonesian locale
 import { upsertLogActivity, getLogActivities, deleteLogActivity, getDailyActivityRecap } from '@/app/actions/log-activity'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+    TablePagination,
+    TableHeaderContent
+} from '@/components/ui/table'
 
 interface LogActivity {
     id: string
@@ -45,12 +58,22 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
     const [isLoading, setIsLoading] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 7
+    const [pageSize, setPageSize] = useState(10)
 
     // Recap State
     const [viewMode, setViewMode] = useState<'history' | 'recap'>('history')
     const [recapDate, setRecapDate] = useState(new Date().toISOString().split('T')[0])
     const [recapData, setRecapData] = useState<any[]>([])
+
+    // Pagination for history
+    const totalPagesHistory = Math.ceil(logs.length / pageSize)
+    const paginatedLogs = logs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+    // Pagination for recap
+    const [recapPage, setRecapPage] = useState(1)
+    const [recapPageSize, setRecapPageSize] = useState(10)
+    const totalPagesRecap = Math.ceil(recapData.length / recapPageSize)
+    const paginatedRecap = recapData.slice((recapPage - 1) * recapPageSize, recapPage * recapPageSize)
 
     useEffect(() => {
         if (viewMode === 'recap' && isAdmin) {
@@ -244,8 +267,6 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
         setIsModalOpen(true)
     }
 
-    const totalPages = Math.ceil(logs.length / itemsPerPage)
-    const paginatedLogs = logs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
     return (
         <div className="space-y-6">
@@ -298,239 +319,230 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                         </div>
                     )}
 
-                    {/* Action Bar */}
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-medium flex items-center gap-2">
-                                <CalendarIcon className="w-5 h-5 text-primary" />
-                                Riwayat Aktivitas
-                            </h2>
-                        </div>
-                        {selectedUserId === currentUser.id && (
-                            <button
-                                onClick={openAddModal}
-                                className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                            >
-                                <Plus className="w-5 h-5" />
-                                <span className="hidden md:inline">Tambah Kegiatan</span>
-                            </button>
-                        )}
-                    </div>
 
                     {/* Data Table */}
                     {/* Mobile View */}
-                    <div className="md:hidden space-y-4">
-                        {isLoading ? (
-                            <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
-                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                                Loading data...
-                            </div>
-                        ) : logs.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
-                                Belum ada log aktivitas.
-                            </div>
-                        ) : (
-                            paginatedLogs.map(log => (
-                                <div key={log.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="font-medium text-foreground">
-                                                {format(new Date(log.date), 'dd MMMM yyyy', { locale: id })}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                                {format(new Date(log.date), 'EEEE', { locale: id })} - {format(new Date(log.updatedAt), 'HH:mm', { locale: id })}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {selectedUserId === currentUser.id && (
-                                                <button
-                                                    onClick={() => openEditModal(log)}
-                                                    className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                            {isAdmin && (
-                                                <button
-                                                    onClick={() => handleDelete(log.id)}
-                                                    className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                                                >
-                                                    <Trash className="w-4 h-4" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3 pt-3 border-t border-border">
-                                        <div>
-                                            <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Kegiatan</h4>
-                                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{log.activity}</p>
-                                        </div>
-                                        {log.problem && (
-                                            <div>
-                                                <h4 className="text-xs font-medium text-red-600/80 uppercase mb-1">Masalah</h4>
-                                                <p className="text-sm text-red-600/90 whitespace-pre-wrap leading-relaxed bg-red-50/50 p-2 rounded-lg border border-red-100 dark:bg-red-900/10 dark:border-red-900/20">{log.problem}</p>
-                                            </div>
-                                        )}
-                                        {log.image && (
-                                            <div>
-                                                <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Dokumentasi</h4>
-                                                <a
-                                                    href={log.image}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-block"
-                                                >
-                                                    <img
-                                                        src={log.image}
-                                                        alt="Dokumentasi aktivitas"
-                                                        className="w-20 h-20 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity cursor-pointer"
-                                                    />
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
+                    <TableWrapper loading={isLoading} className="md:hidden">
+                        <TableHeaderContent
+                            title="Riwayat Aktivitas"
+                            description="Daftar kegiatan harian yang telah dicatat."
+                            icon={<CalendarIcon className="w-5 h-5" />}
+                            actions={
+                                selectedUserId === currentUser.id && (
+                                    <button
+                                        onClick={openAddModal}
+                                        className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        <span>Tambah Kegiatan</span>
+                                    </button>
+                                )
+                            }
+                        />
+                        <div className="p-4 space-y-4">
+                            {isLoading ? (
+                                <div className="text-center py-12 text-muted-foreground bg-muted/20 border border-dashed border-border rounded-xl">
+                                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                                    Loading data...
                                 </div>
-                            ))
-                        )}
-                        {/* Mobile Pagination */}
-                        {logs.length > itemsPerPage && (
-                            <div className="flex items-center justify-between pt-2 pb-6">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="p-2 rounded-lg bg-card border border-border hover:bg-muted disabled:opacity-50"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <span className="text-sm font-medium text-muted-foreground">Hal {currentPage} / {totalPages}</span>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="p-2 rounded-lg bg-card border border-border hover:bg-muted disabled:opacity-50"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                            ) : logs.length === 0 ? (
+                                <div className="text-center py-12 text-muted-foreground bg-muted/20 border border-dashed border-border rounded-xl">
+                                    Belum ada log aktivitas.
+                                </div>
+                            ) : (
+                                paginatedLogs.map(log => (
+                                    <div key={log.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className="font-medium text-foreground">
+                                                    {format(new Date(log.date), 'dd MMMM yyyy', { locale: id })}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                    {format(new Date(log.date), 'EEEE', { locale: id })} - {format(new Date(log.updatedAt), 'HH:mm', { locale: id })}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {(isAdmin || (selectedUserId === currentUser.id && isSameDay(new Date(log.date), new Date()))) && (
+                                                    <button
+                                                        onClick={() => openEditModal(log)}
+                                                        className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={() => handleDelete(log.id)}
+                                                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                                    >
+                                                        <Trash className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3 pt-3 border-t border-border">
+                                            <div>
+                                                <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Kegiatan</h4>
+                                                <p className="text-sm whitespace-pre-wrap leading-relaxed">{log.activity}</p>
+                                            </div>
+                                            {log.problem && (
+                                                <div>
+                                                    <h4 className="text-xs font-medium text-red-600/80 uppercase mb-1">Masalah</h4>
+                                                    <p className="text-sm text-red-600/90 whitespace-pre-wrap leading-relaxed bg-red-50/50 p-2 rounded-lg border border-red-100 dark:bg-red-900/10 dark:border-red-900/20">{log.problem}</p>
+                                                </div>
+                                            )}
+                                            {log.image && (
+                                                <div>
+                                                    <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Dokumentasi</h4>
+                                                    <a
+                                                        href={log.image}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-block"
+                                                    >
+                                                        <img
+                                                            src={log.image}
+                                                            alt="Dokumentasi aktivitas"
+                                                            className="w-20 h-20 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity cursor-pointer"
+                                                        />
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={totalPagesHistory}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={pageSize}
+                            onItemsPerPageChange={setPageSize}
+                            totalCount={logs.length}
+                        />
+                    </TableWrapper>
 
                     {/* Desktop Table View */}
-                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
-                        <div className="overflow-x-auto overflow-y-hidden">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-muted text-muted-foreground uppercase font-normal">
-                                    <tr>
-                                        <th className="px-6 py-4 w-[150px]">Tanggal</th>
-                                        <th className="px-6 py-4">Kegiatan</th>
-                                        <th className="px-6 py-4 w-[25%]">Masalah</th>
-                                        <th className="px-6 py-4 w-[80px] text-center">Foto</th>
+                    <TableWrapper loading={isLoading} className="hidden md:flex">
+                        <TableHeaderContent
+                            title="Riwayat Aktivitas"
+                            description="Daftar kegiatan harian yang telah dicatat."
+                            icon={<CalendarIcon className="w-5 h-5" />}
+                            actions={
+                                selectedUserId === currentUser.id && (
+                                    <button
+                                        onClick={openAddModal}
+                                        className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        <span>Tambah Kegiatan</span>
+                                    </button>
+                                )
+                            }
+                        />
+                        <TableScrollArea>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow hoverable={false}>
+                                        <TableHead className="w-[150px]">Tanggal</TableHead>
+                                        <TableHead>Kegiatan</TableHead>
+                                        <TableHead className="w-[20%]">Masalah</TableHead>
+                                        <TableHead align="center" className="w-[100px]">Foto</TableHead>
                                         {(selectedUserId === currentUser.id || isAdmin) && (
-                                            <th className="px-6 py-4 w-[100px] text-center text-muted-foreground">Aksi</th>
+                                            <TableHead align="center" className="w-[120px]">Aksi</TableHead>
                                         )}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {isLoading ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                                                Loading data...
-                                            </td>
-                                        </tr>
-                                    ) : logs.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                                                Belum ada log aktivitas yang tercatat.
-                                            </td>
-                                        </tr>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {logs.length === 0 && !isLoading ? (
+                                        <TableEmpty
+                                            colSpan={6}
+                                            message="Belum ada log aktivitas yang tercatat."
+                                            icon={<CalendarIcon className="w-12 h-12 opacity-20" />}
+                                        />
                                     ) : (
                                         paginatedLogs.map(log => (
-                                            <tr key={log.id} className="hover:bg-accent/50 transition-colors">
-                                                <td className="px-6 py-4 align-top whitespace-nowrap">
-                                                    <div className="font-medium">{format(new Date(log.date), 'dd MMM yyyy', { locale: id })}</div>
-                                                    <div className="text-xs text-muted-foreground mt-1">
-                                                        {format(new Date(log.date), 'EEEE', { locale: id })} - {format(new Date(log.updatedAt), 'HH:mm', { locale: id })}
+                                            <TableRow key={log.id}>
+                                                <TableCell className="align-top">
+                                                    <div className="font-bold text-primary">{format(new Date(log.date), 'dd MMM yyyy', { locale: id })}</div>
+                                                    <div className="text-[10px] text-muted-foreground uppercase mt-0.5">
+                                                        {format(new Date(log.date), 'EEEE', { locale: id })} • {format(new Date(log.updatedAt), 'HH:mm', { locale: id })}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed">
-                                                    {log.activity}
-                                                </td>
-                                                <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed text-red-600/90 dark:text-red-400">
-                                                    {log.problem || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 align-top text-center">
+                                                </TableCell>
+                                                <TableCell className="align-top">
+                                                    <p className="whitespace-pre-wrap leading-relaxed max-w-md">{log.activity}</p>
+                                                </TableCell>
+                                                <TableCell className="align-top">
+                                                    {log.problem ? (
+                                                        <p className="text-red-600 dark:text-red-400 whitespace-pre-wrap leading-relaxed text-xs italic">
+                                                            {log.problem}
+                                                        </p>
+                                                    ) : (
+                                                        <span className="text-muted-foreground opacity-30">—</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="center" className="align-top">
                                                     {log.image ? (
                                                         <a
                                                             href={log.image}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            title="Klik untuk lihat gambar lengkap"
+                                                            className="group/img relative inline-block"
                                                         >
                                                             <img
                                                                 src={log.image}
                                                                 alt="Dokumentasi"
-                                                                className="w-12 h-12 object-cover rounded-lg border border-border hover:opacity-80 hover:scale-105 transition-all cursor-pointer mx-auto"
+                                                                className="w-11 h-11 object-cover rounded-lg border border-border shadow-sm group-hover/img:scale-105 transition-all duration-300"
                                                             />
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
+                                                                <Search className="w-3 h-3 text-white" />
+                                                            </div>
                                                         </a>
                                                     ) : (
-                                                        <span className="text-muted-foreground">-</span>
+                                                        <span className="text-muted-foreground opacity-30">—</span>
                                                     )}
-                                                </td>
-                                                <td className="px-6 py-4 align-top text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        {selectedUserId === currentUser.id && (
-                                                            <button
-                                                                onClick={() => openEditModal(log)}
-                                                                className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                                                title="Edit Kegiatan"
-                                                            >
-                                                                <Pencil className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        {isAdmin && (
-                                                            <button
-                                                                onClick={() => handleDelete(log.id)}
-                                                                className="p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                title="Hapus Log"
-                                                            >
-                                                                <Trash className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                </TableCell>
+                                                {(selectedUserId === currentUser.id || isAdmin) && (
+                                                    <TableCell align="center" className="align-top">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            {(isAdmin || (selectedUserId === currentUser.id && isSameDay(new Date(log.date), new Date()))) && (
+                                                                <button
+                                                                    onClick={() => openEditModal(log)}
+                                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                                    title="Edit Kegiatan"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            {isAdmin && (
+                                                                <button
+                                                                    onClick={() => handleDelete(log.id)}
+                                                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                                                    title="Hapus Log"
+                                                                >
+                                                                    <Trash className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
                                         ))
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
-                        {/* Pagination Controls */}
-                        {logs.length > itemsPerPage && (
-                            <div className="flex items-center justify-between p-4 border-t border-border bg-muted/20">
-                                <div className="text-sm text-muted-foreground">
-                                    Menampilkan {paginatedLogs.length} dari {logs.length} data
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="p-2 rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-                                    <span className="text-sm font-medium">Halaman {currentPage} dari {totalPages}</span>
-                                    <button
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="p-2 rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                                </TableBody>
+                            </Table>
+                        </TableScrollArea>
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={totalPagesHistory}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={pageSize}
+                            onItemsPerPageChange={setPageSize}
+                            totalCount={logs.length}
+                        />
+                    </TableWrapper>
                 </>
             ) : (
                 <div className="space-y-6 animate-in fade-in duration-300">
@@ -548,121 +560,159 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                     </div>
 
                     {/* Recap Mobile View */}
-                    <div className="md:hidden space-y-4">
-                        {isLoading ? (
-                            <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
-                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                                Memuat data rekap...
-                            </div>
-                        ) : recapData.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
-                                Tidak ada data user.
-                            </div>
-                        ) : (
-                            recapData.map((item: any) => (
-                                <div key={item.user.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-3">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="font-medium text-foreground">{item.user.name}</div>
-                                            <div className="text-xs text-muted-foreground">{item.user.username}</div>
-                                            <div className="text-xs text-muted-foreground">{item.user.department || '-'}</div>
-                                        </div>
-                                        {item.log?.image && (
-                                            <a
-                                                href={item.log.image}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                <img
-                                                    src={item.log.image}
-                                                    alt="Dokumentasi"
-                                                    className="w-16 h-16 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
-                                                />
-                                            </a>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2 pt-2 border-t border-border">
-                                        <div>
-                                            <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Kegiatan</h4>
-                                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.log?.activity || '-'}</p>
-                                        </div>
-                                        {item.log?.problem && (
-                                            <div>
-                                                <h4 className="text-xs font-medium text-red-600/80 uppercase mb-1">Masalah</h4>
-                                                <p className="text-sm text-red-600/90 whitespace-pre-wrap leading-relaxed bg-red-50/50 p-2 rounded-lg border border-red-100 dark:bg-red-900/10 dark:border-red-900/20">{item.log.problem}</p>
-                                            </div>
-                                        )}
-                                    </div>
+                    <TableWrapper loading={isLoading} className="md:hidden">
+                        <TableHeaderContent
+                            title="Rekap Harian"
+                            description={`Aktivitas seluruh user pada tanggal ${format(new Date(recapDate), 'dd MMMM yyyy', { locale: id })}.`}
+                            icon={<FileText className="w-5 h-5" />}
+                        />
+                        <div className="p-4 space-y-4">
+                            {isLoading ? (
+                                <div className="text-center py-12 text-muted-foreground bg-muted/20 border border-dashed border-border rounded-xl">
+                                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                                    Memuat data rekap...
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            ) : recapData.length === 0 ? (
+                                <div className="text-center py-12 text-muted-foreground bg-muted/20 border border-dashed border-border rounded-xl">
+                                    Tidak ada data user.
+                                </div>
+                            ) : (
+                                paginatedRecap.map((item: any) => (
+                                    <div key={item.user.id} className="bg-card border border-border p-4 rounded-xl shadow-sm space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className="font-medium text-foreground">{item.user.name}</div>
+                                                <div className="text-xs text-muted-foreground">{item.user.username}</div>
+                                                <div className="text-xs text-muted-foreground">{item.user.department || '-'}</div>
+                                            </div>
+                                            {item.log?.image && (
+                                                <a
+                                                    href={item.log.image}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    <img
+                                                        src={item.log.image}
+                                                        alt="Dokumentasi"
+                                                        className="w-16 h-16 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+                                                    />
+                                                </a>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2 pt-2 border-t border-border">
+                                            <div>
+                                                <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Kegiatan</h4>
+                                                <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.log?.activity || '-'}</p>
+                                            </div>
+                                            {item.log?.problem && (
+                                                <div>
+                                                    <h4 className="text-xs font-medium text-red-600/80 uppercase mb-1">Masalah</h4>
+                                                    <p className="text-sm text-red-600/90 whitespace-pre-wrap leading-relaxed bg-red-50/50 p-2 rounded-lg border border-red-100 dark:bg-red-900/10 dark:border-red-900/20">{item.log.problem}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <TablePagination
+                            currentPage={recapPage}
+                            totalPages={totalPagesRecap}
+                            onPageChange={setRecapPage}
+                            itemsPerPage={recapPageSize}
+                            onItemsPerPageChange={setRecapPageSize}
+                            totalCount={recapData.length}
+                        />
+                    </TableWrapper>
 
                     {/* Recap Desktop Table View */}
-                    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm hidden md:block">
-                        <div className="overflow-x-auto overflow-y-hidden">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-muted text-muted-foreground uppercase font-normal">
-                                    <tr>
-                                        <th className="px-6 py-4 w-[200px]">User</th>
-                                        <th className="px-6 py-4 w-[35%]">Kegiatan</th>
-                                        <th className="px-6 py-4">Masalah</th>
-                                        <th className="px-6 py-4 w-[80px] text-center">Foto</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {isLoading ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
-                                                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                                                Memuat data rekap...
-                                            </td>
-                                        </tr>
-                                    ) : recapData.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
-                                                Tidak ada data user.
-                                            </td>
-                                        </tr>
+                    <TableWrapper loading={isLoading} className="hidden md:flex">
+                        <TableHeaderContent
+                            title="Rekap Harian"
+                            description={`Aktivitas seluruh user pada tanggal ${format(new Date(recapDate), 'dd MMMM yyyy', { locale: id })}.`}
+                            icon={<FileText className="w-5 h-5" />}
+                        />
+                        <TableScrollArea>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow hoverable={false}>
+                                        <TableHead className="w-[200px]">User</TableHead>
+                                        <TableHead>Kegiatan</TableHead>
+                                        <TableHead className="w-[25%]">Masalah</TableHead>
+                                        <TableHead align="center" className="w-[100px]">Foto</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {recapData.length === 0 && !isLoading ? (
+                                        <TableEmpty
+                                            colSpan={4}
+                                            message="Tidak ada data user ditemukan."
+                                            icon={<User className="w-12 h-12 opacity-20" />}
+                                        />
                                     ) : (
-                                        recapData.map((item: any) => (
-                                            <tr key={item.user.id} className="hover:bg-accent/50 transition-colors">
-                                                <td className="px-6 py-4 align-top">
-                                                    <div className="font-medium text-foreground">{item.user.name}</div>
-                                                    <div className="text-xs text-muted-foreground">{item.user.username}</div>
-                                                    <div className="text-xs text-muted-foreground mt-0.5">{item.user.department || '-'}</div>
-                                                </td>
-                                                <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed">
-                                                    {item.log?.activity || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 align-top whitespace-pre-wrap leading-relaxed text-red-600/90 dark:text-red-400">
-                                                    {item.log?.problem || '-'}
-                                                </td>
-                                                <td className="px-6 py-4 align-top text-center">
+                                        paginatedRecap.map((item: any) => (
+                                            <TableRow key={item.user.id}>
+                                                <TableCell className="align-top">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="mt-1 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">
+                                                            {(item.user.name || item.user.username || 'U').substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-foreground leading-tight">{item.user.name || item.user.username}</div>
+                                                            <div className="text-[10px] text-muted-foreground uppercase font-medium mt-0.5">
+                                                                {item.user.department || 'Tanpa Divisi'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="align-top">
+                                                    <p className="whitespace-pre-wrap leading-relaxed">{item.log?.activity || <span className="text-muted-foreground italic opacity-50">Belum mengerjakan</span>}</p>
+                                                </TableCell>
+                                                <TableCell className="align-top">
+                                                    {item.log?.problem ? (
+                                                        <p className="text-red-600 dark:text-red-400 whitespace-pre-wrap leading-relaxed text-xs italic">
+                                                            {item.log.problem}
+                                                        </p>
+                                                    ) : (
+                                                        <span className="text-muted-foreground opacity-30">—</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="center" className="align-top">
                                                     {item.log?.image ? (
                                                         <a
                                                             href={item.log.image}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            title="Klik untuk lihat gambar lengkap"
+                                                            className="group/img relative inline-block"
                                                         >
                                                             <img
                                                                 src={item.log.image}
                                                                 alt="Dokumentasi"
-                                                                className="w-12 h-12 object-cover rounded-lg border border-border hover:opacity-80 hover:scale-105 transition-all cursor-pointer mx-auto"
+                                                                className="w-11 h-11 object-cover rounded-lg border border-border shadow-sm group-hover/img:scale-105 transition-all duration-300"
                                                             />
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
+                                                                <Search className="w-3 h-3 text-white" />
+                                                            </div>
                                                         </a>
                                                     ) : (
-                                                        <span className="text-muted-foreground">-</span>
+                                                        <span className="text-muted-foreground opacity-30">—</span>
                                                     )}
-                                                </td>
-                                            </tr>
+                                                </TableCell>
+                                            </TableRow>
                                         ))
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                                </TableBody>
+                            </Table>
+                        </TableScrollArea>
+                        <TablePagination
+                            currentPage={recapPage}
+                            totalPages={totalPagesRecap}
+                            onPageChange={setRecapPage}
+                            itemsPerPage={recapPageSize}
+                            onItemsPerPageChange={setRecapPageSize}
+                            totalCount={recapData.length}
+                        />
+                    </TableWrapper>
                 </div>
             )}
 

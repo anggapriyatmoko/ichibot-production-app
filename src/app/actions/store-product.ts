@@ -131,22 +131,34 @@ export async function getWooCommerceCategories() {
         const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64')
         const baseUrl = WC_URL.replace(/\/$/, '')
 
-        // Fetch all categories
-        const url = `${baseUrl}/wp-json/wc/v3/products/categories?per_page=100`
+        let allCategories: any[] = []
+        let page = 1
+        const perPage = 100
 
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Basic ${auth}`
-            },
-            next: { revalidate: 3600 } // Cache for 1 hour
-        })
+        while (true) {
+            const url = `${baseUrl}/wp-json/wc/v3/products/categories?per_page=${perPage}&page=${page}`
+            console.log(`Fetching categories page ${page}...`)
 
-        if (!response.ok) {
-            throw new Error(`Failed to fetch categories: ${response.status}`)
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Basic ${auth}`
+                },
+                next: { revalidate: 3600 } // Cache for 1 hour
+            })
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch categories: ${response.status}`)
+            }
+
+            const categories = await response.json()
+            if (!Array.isArray(categories) || categories.length === 0) break
+
+            allCategories = [...allCategories, ...categories]
+            if (categories.length < perPage) break
+            page++
         }
 
-        const categories = await response.json()
-        return { success: true, categories }
+        return { success: true, categories: allCategories }
     } catch (error: any) {
         console.error('Error fetching categories:', error)
         return { success: false, error: error.message || 'Gagal mengambil kategori' }

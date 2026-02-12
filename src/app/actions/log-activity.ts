@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 import sharp from 'sharp'
+import { isSameDay } from 'date-fns'
 
 // Helper function to delete old image file from storage
 async function deleteOldImage(imagePath: string | null) {
@@ -77,6 +78,12 @@ export async function upsertLogActivity(formData: FormData) {
     // Normalize date to midnight
     const dateObj = new Date(dateStr)
     dateObj.setHours(0, 0, 0, 0)
+
+    // Security check: only admin can edit past logs
+    const isAdmin = ['ADMIN', 'HRD'].includes(session?.user?.role)
+    if (!isAdmin && !isSameDay(dateObj, new Date())) {
+        throw new Error('Hanya Admin yang dapat mengisi atau mengubah log di hari sebelumnya.')
+    }
 
     // Check if existing log has an image that needs to be deleted
     const existingLog = await prisma.logActivity.findUnique({

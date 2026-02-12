@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { Trash2, X, Save, Loader2, Upload, ImageIcon, Plus, Tag } from 'lucide-react'
 import { updateWooCommerceProduct, createWooCommerceProduct, deleteWooCommerceProduct, uploadStoreProductImages, getWooCommerceCategories } from '@/app/actions/store-product'
+import { formatNumber } from '@/utils/format'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { cn } from '@/lib/utils'
 import Modal from '@/components/ui/modal'
+import { Combobox } from '@/components/ui/combobox'
 import { useEffect } from 'react'
 
 interface EditProductModalProps {
@@ -79,6 +81,16 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
         setFormData(prev => ({
             ...prev,
             [name]: value
+        }))
+    }
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        // Only allow digits
+        const numericValue = value.replace(/\D/g, '')
+        setFormData(prev => ({
+            ...prev,
+            [name]: numericValue
         }))
     }
 
@@ -291,20 +303,16 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
                         <Tag className="w-3 h-3" /> Kategori Produk
                     </label>
-                    <select
-                        name="categoryId"
+                    <Combobox
+                        options={categories.map((cat: any) => ({
+                            id: cat.id.toString(),
+                            label: cat.name
+                        }))}
                         value={formData.categoryId}
-                        onChange={handleChange}
+                        onChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+                        placeholder="Cari atau pilih kategori..."
                         disabled={isLoadingCategories}
-                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all appearance-none cursor-pointer"
-                    >
-                        <option value="">Pilih Kategori</option>
-                        {categories.map((cat: any) => (
-                            <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                            </option>
-                        ))}
-                    </select>
+                    />
                     {isLoadingCategories && <p className="text-[10px] text-muted-foreground italic mt-1">Memuat kategori...</p>}
                 </div>
 
@@ -339,11 +347,12 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Harga Reguler</label>
                         <input
-                            type="number"
+                            type="text"
                             name="regularPrice"
-                            value={formData.regularPrice}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={formData.regularPrice ? formatNumber(formData.regularPrice) : ''}
+                            onChange={handlePriceChange}
+                            placeholder="0"
+                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
                         />
                     </div>
                     <div className="space-y-1.5">
@@ -362,11 +371,12 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                 <div className="space-y-1.5">
                     <label className="text-xs font-bold text-muted-foreground uppercase">Harga Sale (Opsional)</label>
                     <input
-                        type="number"
+                        type="text"
                         name="salePrice"
-                        value={formData.salePrice}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={formData.salePrice ? formatNumber(formData.salePrice) : ''}
+                        onChange={handlePriceChange}
+                        placeholder="0"
+                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
                     />
                     <p className="text-[10px] text-muted-foreground italic">Kosongkan untuk menghapus harga sale dan kembali ke harga reguler.</p>
                 </div>

@@ -166,7 +166,14 @@ export default function StoreProductList({
         const stats = {
             totalProducts: physicalProducts.length,
             outOfStock: physicalProducts.filter(p => (p.stockQuantity || 0) <= 0).length,
-            totalAssetValue: physicalProducts.reduce((acc, p) => acc + ((p.price || 0) * (p.stockQuantity || 0)), 0),
+            totalAssetValue: physicalProducts
+                .filter(p =>
+                    p.status === 'publish' &&
+                    !p.categories?.some((cat: any) =>
+                        ['JASA ICHIBOT', 'PART ICHIBOT', 'ROBOT ICHIBOT'].includes(cat.name)
+                    )
+                )
+                .reduce((acc, p) => acc + ((p.price || 0) * (p.stockQuantity || 0)), 0),
             published: physicalProducts.filter(p => p.status === 'publish').length,
             draft: physicalProducts.filter(p => p.status === 'draft').length,
             variable: variableParents.length,
@@ -652,6 +659,11 @@ export default function StoreProductList({
                                                     <span className="text-[10px] text-muted-foreground">
                                                         ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
                                                     </span>
+                                                    {product.categories && product.categories.length > 0 && (
+                                                        <span className="text-[10px] text-primary/70 font-medium">
+                                                            • {product.categories.map((c: any) => c.name).join(', ')}
+                                                        </span>
+                                                    )}
                                                     <button
                                                         onClick={() => setEditingProduct(product)}
                                                         className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5"
@@ -811,7 +823,12 @@ export default function StoreProductList({
                     </div>
                     <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
                         <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Aset (Harga x Stok)</p>
-                        <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
+                        <div className="flex flex-col">
+                            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
+                            <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
+                                * Produk dengan status selain Publish, serta kategori JASA ICHIBOT, PART ICHIBOT, dan ROBOT ICHIBOT tidak dihitung.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="p-4 rounded-xl bg-muted/30 border border-border/50">

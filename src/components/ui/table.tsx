@@ -47,7 +47,7 @@ interface TableScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const TableScrollArea = React.forwardRef<HTMLDivElement, TableScrollAreaProps>(
-    ({ className, minHeight = "400px", ...props }, ref) => (
+    ({ className, minHeight = "none", ...props }, ref) => (
         <div
             ref={ref}
             style={{ minHeight }}
