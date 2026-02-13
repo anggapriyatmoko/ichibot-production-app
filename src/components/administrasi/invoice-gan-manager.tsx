@@ -33,10 +33,15 @@ import {
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
   TableEmpty,
+  TablePagination,
+  TableHeaderContent,
+  TableAnalysis,
+  TableAnalysisCardProps,
 } from "@/components/ui/table";
 import PdfSignatureModal, {
   SignatureType,
@@ -342,6 +347,10 @@ export default function InvoiceGANManager({
     0,
   );
 
+  // Calculate current page totals
+  const pageTotalItems = invoices.reduce((acc, inv) => acc + (inv.items?.length || 0), 0);
+  const pageGrandTotal = invoices.reduce((acc, inv) => acc + (inv.grand_total || 0), 0);
+
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -351,47 +360,68 @@ export default function InvoiceGANManager({
     }).format(amount);
   };
 
+  // Analysis Cards mapping
+  const totalNominal = invoices.reduce((acc, inv) => acc + inv.grand_total, 0);
+  const averageNominal = invoices.length > 0 ? totalNominal / invoices.length : 0;
+
+  const analysisCards: TableAnalysisCardProps[] = [
+    {
+      label: "Total Invoice GAN",
+      value: total,
+      icon: <Receipt className="w-4 h-4" />,
+      description: "Total keseluruhan invoice GAN",
+    },
+    {
+      label: "Nominal Halaman",
+      value: formatCurrency(totalNominal).replace("Rp", "").trim(),
+      icon: <div className="text-xs font-bold text-orange-600">IDR</div>,
+      description: "Total nilai pada halaman ini",
+    },
+    {
+      label: "Rata-rata Nilai",
+      value: formatCurrency(averageNominal).replace("Rp", "").trim(),
+      icon: <div className="text-xs font-bold text-orange-600">AVG</div>,
+      description: "Rata-rata per invoice",
+    },
+    {
+      label: "Status Data",
+      value: "Sinkron",
+      icon: <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />,
+      description: "Terhubung ke database GAN",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-lg">
-              <Receipt className="w-5 h-5 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Invoice GAN</p>
-              <p className="text-xl font-bold">{total}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TableAnalysis cards={analysisCards} />
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Cari invoice GAN..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-          />
-        </div>
-        <button
-          onClick={openAddModal}
-          className="shrink-0 px-4 py-2 bg-orange-500 text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Tambah Invoice GAN</span>
-        </button>
-      </div>
-
-      {/* Table */}
-      {/* Table Desktop View */}
-      <TableWrapper className="hidden md:block">
+      <TableWrapper>
+        <TableHeaderContent
+          title="Invoice GAN"
+          description="Kelola invoice khusus GAN dan cetak PDF dengan tanda tangan."
+          icon={<Receipt className="w-5 h-5 font-bold text-orange-600" />}
+          actions={
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Cari invoice GAN..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-orange-500 outline-none transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={openAddModal}
+                className="px-4 h-9 bg-orange-500 text-white rounded-lg text-sm font-bold transition-all hover:bg-orange-600 shadow-sm flex items-center gap-2 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Tambah Invoice
+              </button>
+            </div>
+          }
+        />
         <TableScrollArea>
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -494,11 +524,32 @@ export default function InvoiceGANManager({
                 ))}
                 {invoices.length === 0 && (
                   <TableEmpty
-                    colSpan={7}
+                    colSpan={8}
                     icon={<Receipt className="w-12 h-12 opacity-20" />}
                   />
                 )}
               </TableBody>
+              {invoices.length > 0 && (
+                <TableFooter>
+                  <TableRow hoverable={false}>
+                    <TableCell colSpan={4} className="px-6 py-4 font-bold text-foreground bg-muted/50">
+                      TOTAL (Halaman Ini)
+                    </TableCell>
+                    <TableCell className="px-4 py-4 whitespace-nowrap bg-muted/50">
+                      <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
+                        {pageTotalItems} Item
+                      </span>
+                    </TableCell>
+                    <TableCell align="right" className="px-4 py-4 bg-muted/50">
+                      <span className="font-bold text-green-600 tabular-nums">
+                        {formatCurrency(pageGrandTotal)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="bg-muted/50" />
+                    <TableCell className="bg-muted/50" />
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           )}
         </TableScrollArea>

@@ -358,6 +358,67 @@ const TableLoading = ({ colSpan, rows = 5 }: TableLoadingProps) => (
 TableLoading.displayName = 'TableLoading'
 
 // ============================================================================
+// TABLE ANALYSIS - Statistical summary section
+// ============================================================================
+interface TableAnalysisCardProps {
+    label: string
+    value: React.ReactNode
+    icon?: React.ReactNode
+    description?: string
+    trend?: {
+        value: string | number
+        isPositive: boolean
+    }
+    className?: string
+}
+
+const TableAnalysisCard = ({ label, value, icon, description, trend, className }: TableAnalysisCardProps) => (
+    <div className={cn(
+        "bg-background border border-border rounded-xl p-4 flex flex-col gap-1 shadow-sm transition-all hover:shadow-md",
+        className
+    )}>
+        <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{label}</span>
+            {icon && <div className="text-primary opacity-50">{icon}</div>}
+        </div>
+        <div className="text-xl font-bold tracking-tight text-foreground">{value}</div>
+        {(description || trend) && (
+            <div className="flex items-center gap-1.5 mt-1">
+                {trend && (
+                    <span className={cn(
+                        "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                        trend.isPositive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    )}>
+                        {trend.isPositive ? '+' : ''}{trend.value}
+                    </span>
+                )}
+                {description && <span className="text-[10px] text-muted-foreground font-medium truncate italic">{description}</span>}
+            </div>
+        )}
+    </div>
+)
+
+interface TableAnalysisProps {
+    cards: TableAnalysisCardProps[]
+    className?: string
+    gridClassName?: string
+}
+
+const TableAnalysis = ({ cards, className, gridClassName }: TableAnalysisProps) => (
+    <div className={cn("p-1", className)}>
+        <div className={cn(
+            "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+            gridClassName
+        )}>
+            {cards.map((card, idx) => (
+                <TableAnalysisCard key={idx} {...card} />
+            ))}
+        </div>
+    </div>
+)
+TableAnalysis.displayName = 'TableAnalysis'
+
+// ============================================================================
 // TABLE PAGINATION - Premium Pagination Controls
 // ============================================================================
 interface TablePaginationProps {
@@ -502,4 +563,8 @@ export {
     TableEmpty,
     TableLoading,
     TablePagination,
+    TableAnalysis,
+    TableAnalysisCard,
+    type TableAnalysisCardProps,
+    type TableAnalysisProps,
 }

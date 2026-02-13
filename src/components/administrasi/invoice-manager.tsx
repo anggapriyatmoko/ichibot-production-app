@@ -22,6 +22,7 @@ import {
   createInvoice,
   updateInvoice,
   deleteInvoice,
+  getInvoiceStats,
   Invoice,
   InvoiceFormData,
 } from "@/app/actions/invoice";
@@ -33,12 +34,15 @@ import {
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
   TableEmpty,
   TablePagination,
   TableHeaderContent,
+  TableAnalysis,
+  TableAnalysisCardProps,
 } from "@/components/ui/table";
 import PdfSignatureModal, {
   SignatureType,
@@ -61,6 +65,7 @@ export default function InvoiceManager({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<any>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -161,11 +166,23 @@ export default function InvoiceManager({
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const result = await getInvoiceStats();
+      if (result.success && result.data) {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     if (initialData.length === 0) {
       fetchInvoices();
     }
+    fetchStats();
   }, []);
 
   // Search with debounce
@@ -254,6 +271,7 @@ export default function InvoiceManager({
         showAlert(result.message || "Berhasil!", "success");
         setIsModalOpen(false);
         fetchInvoices(currentPage, search);
+        fetchStats();
       } else {
         showAlert(result.message || "Gagal menyimpan", "error");
       }
@@ -276,6 +294,7 @@ export default function InvoiceManager({
           if (result.success) {
             showAlert("Invoice berhasil dihapus", "success");
             fetchInvoices(currentPage, search);
+            fetchStats();
           } else {
             showAlert(result.message || "Gagal menghapus", "error");
           }
@@ -322,6 +341,10 @@ export default function InvoiceManager({
     0,
   );
 
+  // Calculate current page totals
+  const pageTotalItems = invoices.reduce((acc, inv) => acc + (inv.items?.length || 0), 0);
+  const pageGrandTotal = invoices.reduce((acc, inv) => acc + (inv.grand_total || 0), 0);
+
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -331,22 +354,41 @@ export default function InvoiceManager({
     }).format(amount);
   };
 
+  // Analysis Cards mapping
+  const analysisCards: TableAnalysisCardProps[] = [
+    {
+      label: "Total Invoice",
+      value: stats?.total_invoices || total || 0,
+      icon: <Receipt className="w-4 h-4" />,
+      description: "Keseluruhan invoice",
+    },
+    {
+      label: "Total Nominal",
+      value: formatCurrency(stats?.total_amount || 0).replace("Rp", "").trim(),
+      icon: <div className="text-xs font-bold text-primary">IDR</div>,
+      description: "Total nilai dari semua data",
+    },
+    {
+      label: "Bulan Ini",
+      value: stats?.invoices_this_month || 0,
+      icon: <CalendarIcon className="w-4 h-4" />,
+      description: `${stats?.amount_this_month ? formatCurrency(stats.amount_this_month) : "Nilai Rp 0"}`,
+    },
+    {
+      label: "Rata-rata Nilai",
+      value: formatCurrency(
+        (stats?.total_amount || 0) / (stats?.total_invoices || 1),
+      )
+        .replace("Rp", "")
+        .trim(),
+      icon: <div className="text-[10px] font-bold text-primary">AVG</div>,
+      description: "Rata-rata per invoice",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Receipt className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Invoice</p>
-              <p className="text-xl font-bold">{total}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TableAnalysis cards={analysisCards} />
 
       {/* Table Section */}
       <TableWrapper>
@@ -483,11 +525,32 @@ export default function InvoiceManager({
                   ))}
                   {invoices.length === 0 && (
                     <TableEmpty
-                      colSpan={7}
+                      colSpan={8}
                       icon={<Receipt className="w-12 h-12 opacity-20" />}
                     />
                   )}
                 </TableBody>
+                {invoices.length > 0 && (
+                  <TableFooter>
+                    <TableRow hoverable={false}>
+                      <TableCell colSpan={4} className="px-6 py-4 font-bold text-foreground bg-muted/50">
+                        TOTAL (Halaman Ini)
+                      </TableCell>
+                      <TableCell className="px-4 py-4 whitespace-nowrap bg-muted/50">
+                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
+                          {pageTotalItems} Item
+                        </span>
+                      </TableCell>
+                      <TableCell align="right" className="px-4 py-4 bg-muted/50">
+                        <span className="font-bold text-green-600 tabular-nums">
+                          {formatCurrency(pageGrandTotal)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="bg-muted/50" />
+                      <TableCell className="bg-muted/50" />
+                    </TableRow>
+                  </TableFooter>
+                )}
               </Table>
             )}
           </TableScrollArea>

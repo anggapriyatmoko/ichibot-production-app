@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { requireAuth } from "@/lib/auth";
 import ResiManager from "@/components/administrasi/resi-manager";
+import { getResis } from "@/app/actions/resi";
 
 type UserSession = {
   user?: {
@@ -23,6 +24,11 @@ export default async function DaftarResiPage() {
     redirect("/dashboard");
   }
 
+  // Fetch initial data
+  const result = await getResis({ per_page: 15 });
+  const initialResis = result.data?.resis || [];
+  const initialPagination = result.data?.pagination;
+
   return (
     <div className="max-width-7xl mx-auto px-4 sm:px-0">
       <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
@@ -32,7 +38,10 @@ export default async function DaftarResiPage() {
         Kelola data resi pengiriman. Data tersinkronisasi dengan
         administration.ichibot.id
       </p>
-      <ResiManager />
+      <ResiManager
+        initialData={initialResis}
+        initialPagination={initialPagination}
+      />
     </div>
   );
 }

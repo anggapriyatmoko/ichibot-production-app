@@ -11,6 +11,7 @@ import {
   Truck,
   Minus,
   Download,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   getSuratJalan,
@@ -25,6 +26,7 @@ import {
 import {
   Table,
   TableBody,
+  TableFooter,
   TableCell,
   TableHead,
   TableHeader,
@@ -33,6 +35,9 @@ import {
   TableScrollArea,
   TableEmpty,
   TablePagination,
+  TableHeaderContent,
+  TableAnalysis,
+  TableAnalysisCardProps,
 } from "@/components/ui/table";
 import { SignatureType } from "@/components/ui/pdf-signature-modal";
 import PdfSignatureModal from "@/components/ui/pdf-signature-modal";
@@ -245,47 +250,73 @@ export default function SuratJalanManager({
     }
   };
 
+  // Analysis Cards mapping
+  const shippingThisMonth = suratJalanList.filter((sj) => {
+    const d = new Date(sj.sj_date);
+    const now = new Date();
+    return (
+      d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+  const analysisCards: TableAnalysisCardProps[] = [
+    {
+      label: "Total Surat Jalan",
+      value: total,
+      icon: <Truck className="w-4 h-4" />,
+      description: "Total keseluruhan pengiriman",
+    },
+    {
+      label: "Bulan Ini",
+      value: shippingThisMonth,
+      icon: <CalendarIcon className="w-4 h-4" />,
+      description: "Pengiriman dilakukan bulan ini",
+    },
+    {
+      label: "Status Logistik",
+      value: "Lancar",
+      icon: <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />,
+      description: "Operasional pengiriman aktif",
+    },
+    {
+      label: "Sistem",
+      value: "Terhubung",
+      icon: <div className="w-2 h-2 rounded-full bg-blue-500" />,
+      description: "Database sinkron",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Truck className="w-5 h-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Surat Jalan</p>
-              <p className="text-xl font-bold">{total}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TableAnalysis cards={analysisCards} />
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Cari surat jalan..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-          />
-        </div>
-        <button
-          onClick={openAddModal}
-          className="shrink-0 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Buat Surat Jalan</span>
-        </button>
-      </div>
-
-      {/* Table Section */}
-      {/* Table Desktop View */}
-      <TableWrapper className="hidden md:block">
+      <TableWrapper>
+        <TableHeaderContent
+          title="Surat Jalan"
+          description="Kelola pengiriman barang dan cetak surat jalan resmi."
+          icon={<Truck className="w-5 h-5 font-bold text-primary" />}
+          actions={
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Cari surat jalan..."
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={openAddModal}
+                className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Buat Surat Jalan
+              </button>
+            </div>
+          }
+        />
         <TableScrollArea>
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -376,6 +407,18 @@ export default function SuratJalanManager({
                   />
                 )}
               </TableBody>
+              {suratJalanList.length > 0 && (
+                <TableFooter>
+                  <TableRow hoverable={false}>
+                    <TableCell colSpan={7} className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Surat Jalan:</span>
+                        <span className="text-sm font-bold text-primary">{suratJalanList.length} Dokumen</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           )}
         </TableScrollArea>

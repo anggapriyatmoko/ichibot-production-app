@@ -33,10 +33,15 @@ import {
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
   TableEmpty,
+  TablePagination,
+  TableHeaderContent,
+  TableAnalysis,
+  TableAnalysisCardProps,
 } from "@/components/ui/table";
 import PdfSignatureModal, {
   SignatureType,
@@ -344,6 +349,10 @@ export default function InvoiceEnglishManager({
     0,
   );
 
+  // Calculate current page totals
+  const pageTotalItems = invoices.reduce((acc, inv) => acc + (inv.items?.length || 0), 0);
+  const pageGrandTotal = invoices.reduce((acc, inv) => acc + (inv.grand_total || 0), 0);
+
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -353,47 +362,68 @@ export default function InvoiceEnglishManager({
     }).format(amount);
   };
 
+  // Analysis Cards mapping
+  const totalNominal = invoices.reduce((acc, inv) => acc + inv.grand_total, 0);
+  const averageNominal = invoices.length > 0 ? totalNominal / invoices.length : 0;
+
+  const analysisCards: TableAnalysisCardProps[] = [
+    {
+      label: "Total Invoice",
+      value: total,
+      icon: <Receipt className="w-4 h-4" />,
+      description: "Total overall English invoices",
+    },
+    {
+      label: "Page Nominal",
+      value: formatCurrency(totalNominal).replace("$", "").trim(),
+      icon: <div className="text-xs font-bold text-primary">USD</div>,
+      description: "Total value on current page",
+    },
+    {
+      label: "Average Value",
+      value: formatCurrency(averageNominal).replace("$", "").trim(),
+      icon: <div className="text-xs font-bold text-primary">AVG</div>,
+      description: "Average on current page",
+    },
+    {
+      label: "Data Status",
+      value: "Synced",
+      icon: <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />,
+      description: "Cloud database connected",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Receipt className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Invoice</p>
-              <p className="text-xl font-bold">{total}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TableAnalysis cards={analysisCards} />
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search invoice..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-          />
-        </div>
-        <button
-          onClick={openAddModal}
-          className="shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Invoice</span>
-        </button>
-      </div>
-
-      {/* Table */}
-      {/* Table Desktop View */}
-      <TableWrapper className="hidden md:block">
+      <TableWrapper>
+        <TableHeaderContent
+          title="English Invoices"
+          description="Manage international invoices and generate PDFs."
+          icon={<Receipt className="w-5 h-5 font-bold text-primary" />}
+          actions={
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search invoice..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={openAddModal}
+                className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Add Invoice
+              </button>
+            </div>
+          }
+        />
         <TableScrollArea>
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -496,408 +526,420 @@ export default function InvoiceEnglishManager({
                 ))}
                 {invoices.length === 0 && (
                   <TableEmpty
-                    colSpan={7}
+                    colSpan={8}
                     icon={<Receipt className="w-12 h-12 opacity-20" />}
                   />
                 )}
               </TableBody>
+              {invoices.length > 0 && (
+                <TableFooter>
+                  <TableRow hoverable={false}>
+                    <TableCell colSpan={4} className="px-6 py-4 font-bold text-foreground bg-muted/50">
+                      TOTAL (This Page)
+                    </TableCell>
+                    <TableCell className="px-4 py-4 whitespace-nowrap bg-muted/50">
+                      <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
+                        {pageTotalItems} Item(s)
+                      </span>
+                    </TableCell>
+                    <TableCell align="right" className="px-4 py-4 bg-muted/50">
+                      <span className="font-bold text-green-600 tabular-nums">
+                        {formatCurrency(pageGrandTotal)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="bg-muted/50" />
+                    <TableCell className="bg-muted/50" />
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           )}
         </TableScrollArea>
       </TableWrapper>
 
       {/* Mobile/Tablet Card View - Premium List */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <>
-            {invoices.map((invoice) => (
-              <div
-                key={invoice.id}
-                className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span className="font-mono text-sm font-bold text-primary">
-                      {invoice.invoice_number}
+      <div className="md:hidden space-y-4" >
+        {
+          loading ? (
+            <div className="flex items-center justify-center py-12" >
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div >
+          ) : (
+            <>
+              {invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <span className="font-mono text-sm font-bold text-primary">
+                        {invoice.invoice_number}
+                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(invoice.invoice_date).toLocaleDateString(
+                          "en-US",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedInvoiceForPdf(invoice);
+                          setIsPdfModalOpen(true);
+                        }}
+                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openEditModal(invoice)}
+                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(invoice)}
+                        className="p-2 bg-red-500/10 text-red-600 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-sm">{invoice.customer_name}</h4>
+                    {invoice.customer_address && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {invoice.customer_address}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-border flex justify-between items-center">
+                    <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
+                      {invoice.items?.length || 0} item
                     </span>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(invoice.invoice_date).toLocaleDateString(
-                        "en-US",
-                        {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        },
-                      )}
+                    <p className="font-bold text-green-600">
+                      {formatCurrency(invoice.grand_total)}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedInvoiceForPdf(invoice);
-                        setIsPdfModalOpen(true);
-                      }}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openEditModal(invoice)}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(invoice)}
-                      className="p-2 bg-red-500/10 text-red-600 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
-
-                <div>
-                  <h4 className="font-bold text-sm">{invoice.customer_name}</h4>
-                  {invoice.customer_address && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                      {invoice.customer_address}
-                    </p>
-                  )}
+              ))}
+              {invoices.length === 0 && (
+                <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                  No invoices found
                 </div>
-
-                <div className="pt-3 border-t border-border flex justify-between items-center">
-                  <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
-                    {invoice.items?.length || 0} item
-                  </span>
-                  <p className="font-bold text-green-600">
-                    {formatCurrency(invoice.grand_total)}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {invoices.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                No invoices found
-              </div>
-            )}
-          </>
-        )}
-      </div>
+              )}
+            </>
+          )
+        }
+      </div >
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => fetchInvoices(currentPage - 1, search)}
-              disabled={currentPage <= 1 || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => fetchInvoices(currentPage + 1, search)}
-              disabled={currentPage >= totalPages || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {
+        totalPages > 1 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => fetchInvoices(page, search)}
+            totalCount={total}
+          />
+        )
+      }
 
       {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-3xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
-              <h2 className="text-lg font-bold">
-                {editingInvoice ? "Edit Invoice" : "Add New Invoice"}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-accent rounded-full text-muted-foreground"
+      {
+        isModalOpen && (
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-card w-full max-w-3xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[90vh]">
+              {/* Modal Header */}
+              <div className="p-4 border-b border-border flex justify-between items-center bg-muted/20">
+                <h2 className="text-lg font-bold">
+                  {editingInvoice ? "Edit Invoice" : "Add New Invoice"}
+                </h2>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-accent rounded-full text-muted-foreground"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form
+                onSubmit={handleSubmit}
+                className="flex flex-col flex-1 overflow-hidden"
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+                <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-6">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        <CalendarIcon className="w-4 h-4 inline mr-1" />
+                        Invoice Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.invoice_date}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            invoice_date: e.target.value,
+                          })
+                        }
+                        required
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        <User className="w-4 h-4 inline mr-1" />
+                        Customer Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.customer_name}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            customer_name: e.target.value,
+                          })
+                        }
+                        required
+                        placeholder="Example Company Ltd."
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
 
-            {/* Modal Body */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col flex-1 overflow-hidden"
-            >
-              <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-6">
-                {/* Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      <CalendarIcon className="w-4 h-4 inline mr-1" />
-                      Invoice Date
+                      <MapPin className="w-4 h-4 inline mr-1" />
+                      Customer Address
                     </label>
-                    <input
-                      type="date"
-                      value={formData.invoice_date}
+                    <textarea
+                      value={formData.customer_address}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          invoice_date: e.target.value,
+                          customer_address: e.target.value,
                         })
                       }
-                      required
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      rows={2}
+                      placeholder="Full customer address..."
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
                     />
                   </div>
+
+                  {/* Reference Numbers */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        PO Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.po_number}
+                        onChange={(e) =>
+                          setFormData({ ...formData, po_number: e.target.value })
+                        }
+                        placeholder="PO-XXX"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        SVO Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.svo_number}
+                        onChange={(e) =>
+                          setFormData({ ...formData, svo_number: e.target.value })
+                        }
+                        placeholder="SVO-XXX"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">
+                        DO Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.do_number}
+                        onChange={(e) =>
+                          setFormData({ ...formData, do_number: e.target.value })
+                        }
+                        placeholder="DO-XXX"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notes */}
                   <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      <User className="w-4 h-4 inline mr-1" />
-                      Customer Name *
+                      Order Notes
                     </label>
-                    <input
-                      type="text"
-                      value={formData.customer_name}
+                    <textarea
+                      value={formData.order_notes}
                       onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          customer_name: e.target.value,
-                        })
+                        setFormData({ ...formData, order_notes: e.target.value })
                       }
-                      required
-                      placeholder="Example Company Ltd."
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
+                      rows={2}
+                      placeholder="Additional notes..."
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    Customer Address
-                  </label>
-                  <textarea
-                    value={formData.customer_address}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        customer_address: e.target.value,
-                      })
-                    }
-                    rows={2}
-                    placeholder="Full customer address..."
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
-                  />
-                </div>
-
-                {/* Reference Numbers */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      PO Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.po_number}
-                      onChange={(e) =>
-                        setFormData({ ...formData, po_number: e.target.value })
-                      }
-                      placeholder="PO-XXX"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      SVO Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.svo_number}
-                      onChange={(e) =>
-                        setFormData({ ...formData, svo_number: e.target.value })
-                      }
-                      placeholder="SVO-XXX"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      DO Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.do_number}
-                      onChange={(e) =>
-                        setFormData({ ...formData, do_number: e.target.value })
-                      }
-                      placeholder="DO-XXX"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors"
-                    />
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Order Notes
-                  </label>
-                  <textarea
-                    value={formData.order_notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, order_notes: e.target.value })
-                    }
-                    rows={2}
-                    placeholder="Additional notes..."
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors resize-none"
-                  />
-                </div>
-
-                {/* Items */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <Package className="w-4 h-4 text-primary" />
-                      Invoice Items *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      className="text-xs px-3 py-1 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                    >
-                      + Add Item
-                    </button>
-                  </div>
-
+                  {/* Items */}
                   <div className="space-y-3">
-                    {formData.items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="p-3 bg-muted/30 rounded-lg border border-border"
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <Package className="w-4 h-4 text-primary" />
+                        Invoice Items *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        className="text-xs px-3 py-1 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
                       >
-                        <div className="grid grid-cols-12 gap-3">
-                          <div className="col-span-12 md:col-span-5">
-                            <input
-                              type="text"
-                              value={item.name}
-                              onChange={(e) =>
-                                updateItem(index, "name", e.target.value)
-                              }
-                              placeholder="Item Name"
-                              required
-                              className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
-                            />
-                          </div>
-                          <div className="col-span-4 md:col-span-2">
-                            <input
-                              type="number"
-                              value={item.price}
-                              onChange={(e) =>
-                                updateItem(
-                                  index,
-                                  "price",
-                                  parseFloat(e.target.value) || 0,
-                                )
-                              }
-                              placeholder="Price"
-                              required
-                              min="0"
-                              className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
-                            />
-                          </div>
-                          <div className="col-span-3 md:col-span-2">
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                updateItem(
-                                  index,
-                                  "quantity",
-                                  parseFloat(e.target.value) || 1,
-                                )
-                              }
-                              placeholder="Qty"
-                              required
-                              min="0.01"
-                              step="0.01"
-                              className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
-                            />
-                          </div>
-                          <div className="col-span-3 md:col-span-2">
-                            <input
-                              type="text"
-                              value={item.unit}
-                              onChange={(e) =>
-                                updateItem(index, "unit", e.target.value)
-                              }
-                              placeholder="Unit"
-                              required
-                              className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
-                            />
-                          </div>
-                          <div className="col-span-2 md:col-span-1 flex items-center justify-center">
-                            {formData.items.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeItem(index)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-2 text-right text-sm text-muted-foreground">
-                          Subtotal:{" "}
-                          <span className="font-medium text-foreground">
-                            {formatCurrency(item.price * item.quantity)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        + Add Item
+                      </button>
+                    </div>
 
-                  {/* Grand Total */}
-                  <div className="flex justify-end pt-3 border-t border-border">
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
-                        Grand Total
-                      </p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatCurrency(grandTotal)}
-                      </p>
+                    <div className="space-y-3">
+                      {formData.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-3 bg-muted/30 rounded-lg border border-border"
+                        >
+                          <div className="grid grid-cols-12 gap-3">
+                            <div className="col-span-12 md:col-span-5">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) =>
+                                  updateItem(index, "name", e.target.value)
+                                }
+                                placeholder="Item Name"
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-4 md:col-span-2">
+                              <input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) =>
+                                  updateItem(
+                                    index,
+                                    "price",
+                                    parseFloat(e.target.value) || 0,
+                                  )
+                                }
+                                placeholder="Price"
+                                required
+                                min="0"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-3 md:col-span-2">
+                              <input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  updateItem(
+                                    index,
+                                    "quantity",
+                                    parseFloat(e.target.value) || 1,
+                                  )
+                                }
+                                placeholder="Qty"
+                                required
+                                min="0.01"
+                                step="0.01"
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-3 md:col-span-2">
+                              <input
+                                type="text"
+                                value={item.unit}
+                                onChange={(e) =>
+                                  updateItem(index, "unit", e.target.value)
+                                }
+                                placeholder="Unit"
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-primary transition-colors text-sm"
+                              />
+                            </div>
+                            <div className="col-span-2 md:col-span-1 flex items-center justify-center">
+                              {formData.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(index)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-2 text-right text-sm text-muted-foreground">
+                            Subtotal:{" "}
+                            <span className="font-medium text-foreground">
+                              {formatCurrency(item.price * item.quantity)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Grand Total */}
+                    <div className="flex justify-end pt-3 border-t border-border">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          Grand Total
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatCurrency(grandTotal)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {editingInvoice ? "Save Changes" : "Create Invoice"}
-                </button>
-              </div>
-            </form>
+                {/* Modal Footer */}
+                <div className="p-4 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {editingInvoice ? "Save Changes" : "Create Invoice"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
       {/* PDF Signature Modal */}
       <PdfSignatureModal
         isOpen={isPdfModalOpen}
@@ -908,6 +950,6 @@ export default function InvoiceEnglishManager({
         onDownload={handlePdfDownload}
         title="Download PDF Invoice"
       />
-    </div>
+    </div >
   );
 }

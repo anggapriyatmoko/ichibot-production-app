@@ -8,11 +8,13 @@ import { cn } from '@/lib/utils'
 export default function KeteranganEdit({
     wcId,
     initialValue,
-    productName
+    productName,
+    compact = false
 }: {
     wcId: number,
     initialValue: string | null,
-    productName: string
+    productName: string,
+    compact?: boolean
 }) {
     const [isOpen, setIsOpen] = useState(false)
     const [value, setValue] = useState(initialValue || '')
@@ -37,20 +39,32 @@ export default function KeteranganEdit({
         }
     }
 
+    const truncated = value.length > 30 ? value.slice(0, 30) + '...' : value
+
     return (
         <div className="relative">
-            <button
-                onClick={() => setIsOpen(true)}
-                className="group flex items-start gap-2 text-left hover:bg-black/5 dark:hover:bg-white/5 p-1 -m-1 rounded transition-colors w-full min-h-[1.5rem]"
-                title="Edit Keterangan"
-            >
-                {value ? (
-                    <span className="text-xs text-muted-foreground line-clamp-2 break-all">{value}</span>
-                ) : (
-                    <span className="text-[10px] text-muted-foreground/30 italic group-hover:text-primary transition-colors">Tambah keterangan...</span>
-                )}
-                <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5" />
-            </button>
+            {compact ? (
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="text-left text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer truncate w-full block"
+                    title={value || 'Tambah keterangan...'}
+                >
+                    {value ? value : <span className="italic opacity-50">+ keterangan</span>}
+                </button>
+            ) : (
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="group flex items-start gap-2 text-left hover:bg-black/5 dark:hover:bg-white/5 p-1 -m-1 rounded transition-colors w-full min-h-[1.5rem]"
+                    title="Edit Keterangan"
+                >
+                    {value ? (
+                        <span className="text-xs text-muted-foreground line-clamp-2 break-all">{value}</span>
+                    ) : (
+                        <span className="text-[10px] text-muted-foreground/30 italic group-hover:text-primary transition-colors">Tambah keterangan...</span>
+                    )}
+                    <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5" />
+                </button>
+            )}
 
             {isOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

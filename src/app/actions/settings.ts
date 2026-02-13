@@ -21,6 +21,7 @@ export async function setSystemSetting(key: string, value: string) {
             create: { key, value }
         })
         revalidatePath('/hr-settings')
+        revalidatePath('/store/settings')
         revalidatePath('/')
         return { success: true }
     } catch (error: any) {

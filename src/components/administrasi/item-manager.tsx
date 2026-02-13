@@ -17,6 +17,9 @@ import {
   Check,
   RotateCcw,
   CopyPlus,
+  CheckSquare,
+  RefreshCw,
+  Edit2,
 } from "lucide-react";
 import {
   getItems,
@@ -37,23 +40,32 @@ import {
   TableScrollArea,
   Table,
   TableHeader,
+  TableHeaderContent,
   TableBody,
   TableRow,
   TableHead,
   TableCell,
   TableEmpty,
+  TablePagination,
 } from "@/components/ui/table";
 
 interface ItemManagerProps {
-  initialItems?: Item[];
-  userRole?: string;
-  userName?: string;
+  initialItems: Item[];
+  initialPagination?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+  userRole: string;
+  userName: string;
 }
 
 export default function ItemManager({
-  initialItems = [],
-  userRole = "",
-  userName = "",
+  initialItems,
+  initialPagination,
+  userRole,
+  userName,
 }: ItemManagerProps) {
   const { showConfirmation } = useConfirmation();
   const { showAlert, showError } = useAlert();
@@ -62,25 +74,35 @@ export default function ItemManager({
   const [items, setItems] = useState<Item[]>(initialItems);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(
+    initialPagination?.current_page || 1,
+  );
+  const [totalPages, setTotalPages] = useState(initialPagination?.last_page || 1);
+  const [totalCount, setTotalCount] = useState(
+    initialPagination?.total || initialItems.length,
+  );
+  const [itemsPerPage, setItemsPerPage] = useState(
+    initialPagination?.per_page || 15,
+  );
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const fetchItems = useCallback(
-    async (page = 1, searchQuery = "") => {
+    async (page = 1, searchQuery = "", status = statusFilter) => {
       setLoading(true);
       try {
         const result = await getItems({
           page,
-          per_page: 15,
+          per_page: itemsPerPage,
           search: searchQuery || undefined,
-          status: statusFilter || undefined,
+          status: status !== "all" ? status : undefined,
         });
 
         if (result.success && result.data) {
           setItems(result.data.items);
           setTotalPages(result.data.pagination.last_page);
           setCurrentPage(result.data.pagination.current_page);
+          setTotalCount(result.data.pagination.total);
+          // setItemsPerPage(result.data.pagination.per_page); // Removed as per instruction
         } else {
           showError(result.message || "Gagal mengambil data");
         }
@@ -91,12 +113,12 @@ export default function ItemManager({
         setLoading(false);
       }
     },
-    [statusFilter, showError],
+    [statusFilter, itemsPerPage, showError],
   );
 
   // Refs for stable function references
   const fetchItemsRef = useRef<
-    ((page?: number, searchQuery?: string) => Promise<void>) | null
+    ((page?: number, searchQuery?: string, status?: string) => Promise<void>) | null
   >(null);
 
   // Keep ref updated
@@ -104,7 +126,8 @@ export default function ItemManager({
 
   // Initial load - only run once on mount
   useEffect(() => {
-    if (initialItems.length === 0) {
+    // No longer conditional on initialItems.length, always fetch if initialPagination is not provided or if we need to refresh
+    if (!initialPagination) {
       fetchItems();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,13 +141,13 @@ export default function ItemManager({
       return;
     }
     const timer = setTimeout(() => {
-      fetchItemsRef.current?.(1, search);
+      fetchItemsRef.current?.(1, search, statusFilter);
     }, 300);
     return () => clearTimeout(timer);
   }, [search, statusFilter]);
 
   // Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Renamed to showForm for clarity
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [reorderingItem, setReorderingItem] = useState<Item | null>(null); // For re-order mode
   const [saving, setSaving] = useState(false);
@@ -188,26 +211,18 @@ export default function ItemManager({
     }
   };
 
-  const handleDelete = (item: Item) => {
+  const handleDelete = (itemId: number) => {
     showConfirmation({
       title: "Hapus Permintaan",
       message: (
         <span>
-          Apakah Anda yakin ingin menghapus permintaan{" "}
-          <span className="font-semibold text-foreground">
-            {item.item_name}
-          </span>{" "}
-          dari{" "}
-          <span className="font-semibold text-foreground">
-            {item.requester_name}
-          </span>
-          ?
+          Apakah Anda yakin ingin menghapus permintaan ini secara permanen?
         </span>
       ),
       type: "confirm",
       action: async () => {
         try {
-          const result = await deleteItem(item.id);
+          const result = await deleteItem(itemId);
           if (result.success) {
             showAlert("Berhasil dihapus", "success");
             fetchItems(currentPage, search);
@@ -241,13 +256,14 @@ export default function ItemManager({
   };
 
   // State for Mark Done modal
-  const [markDoneItem, setMarkDoneItem] = useState<Item | null>(null);
-  const [markDoneQuantity, setMarkDoneQuantity] = useState("");
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [doneQuantity, setDoneQuantity] = useState<number | string>("");
+  const [showDoneDialog, setShowDoneDialog] = useState(false);
   const [markDoneLoading, setMarkDoneLoading] = useState(false);
 
   const handleMarkDone = async () => {
-    if (!markDoneItem) return;
-    const qty = parseInt(markDoneQuantity);
+    if (!selectedItem) return;
+    const qty = parseInt(doneQuantity as string);
     if (isNaN(qty) || qty < 1) {
       showError("Jumlah harus diisi minimal 1");
       return;
@@ -255,11 +271,12 @@ export default function ItemManager({
 
     setMarkDoneLoading(true);
     try {
-      const result = await markAsDone(markDoneItem.id, qty);
+      const result = await markAsDone(selectedItem.id, qty);
       if (result.success) {
         showAlert("Item berhasil ditandai sudah diorder", "success");
-        setMarkDoneItem(null);
-        setMarkDoneQuantity("");
+        setSelectedItem(null);
+        setDoneQuantity("");
+        setShowDoneDialog(false);
         fetchItems(currentPage, search);
       } else {
         showError(result.message || "Gagal menandai item");
@@ -271,22 +288,19 @@ export default function ItemManager({
     }
   };
 
-  const handleMarkUndone = (item: Item) => {
+  const handleMarkAsUndone = (itemId: number) => {
     showConfirmation({
       title: "Batalkan Order",
       message: (
         <span>
-          Batalkan status order untuk{" "}
-          <span className="font-semibold text-foreground">
-            {item.item_name}
-          </span>
-          ? Status akan kembali ke "Belum Diorder".
+          Batalkan status order untuk item ini? Status akan kembali ke "Belum
+          Diorder".
         </span>
       ),
       type: "confirm",
       action: async () => {
         try {
-          const result = await markAsUndone(item.id);
+          const result = await markAsUndone(itemId);
           if (result.success) {
             showAlert("Order berhasil dibatalkan", "success");
             fetchItems(currentPage, search);
@@ -306,259 +320,147 @@ export default function ItemManager({
   const canMarkOrder = userRole === "ADMIN" || userRole === "ADMINISTRASI";
 
   return (
-    <div className="space-y-6">
-      {/* Controls */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 rounded-xl border border-border shadow-sm">
-        <div className="flex flex-1 gap-3 w-full">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Cari permintaan..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-            />
-          </div>
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-background border border-border rounded-lg text-sm outline-none cursor-pointer hover:bg-accent transition-colors appearance-none pr-10"
-            >
-              <option value="">Semua Status</option>
-              <option value="Belum Diorder">Belum Diorder</option>
-              <option value="Sudah Diorder">Sudah Diorder</option>
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setEditingItem(null);
-            setReorderingItem(null);
-            setFormData({
-              requester_name: isAdmin ? "" : userName,
-              division: isAdmin ? "" : userRole,
-              request_date: new Date().toISOString().split("T")[0],
-              items: [{ name: "", quantity: 1, link: "" }],
-            });
-            setIsModalOpen(true);
-          }}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Buat Permintaan
-        </button>
-      </div>
-
-      {/* Table Desktop View */}
-      <TableWrapper className="hidden md:block">
-        <TableScrollArea>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Pemohon</TableHead>
-                  <TableHead>Barang</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead align="right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border",
-                          item.status_order === "Sudah Diorder"
-                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                            : "bg-orange-500/10 text-orange-600 border-orange-500/20",
-                        )}
-                      >
-                        {item.status_order}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{item.requester_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.division}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{item.item_name}</p>
-                        {item.link && (
-                          <a
-                            href={item.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline font-medium"
-                          >
-                            <ExternalLink className="w-3 h-3" /> Buka Tautan
-                          </a>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-semibold text-foreground">
-                        {item.quantity}
-                      </span>
-                    </TableCell>
-                    <TableCell align="right">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* Admin & Administrasi: Mark as Done / Undone */}
-                        {canMarkOrder && (
-                          <>
-                            {item.status_order === "Belum Diorder" ? (
-                              <button
-                                onClick={() => {
-                                  setMarkDoneItem(item);
-                                  setMarkDoneQuantity(item.quantity.toString());
-                                }}
-                                className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors"
-                                title="Tandai Sudah Diorder"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleMarkUndone(item)}
-                                className="p-2 hover:bg-orange-50 text-orange-600 rounded-lg transition-colors"
-                                title="Batalkan Order"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </button>
-                            )}
-                          </>
-                        )}
-                        {/* Re-Order Button - only for items already ordered */}
-                        {item.status_order === "Sudah Diorder" && (
-                          <button
-                            onClick={() => handleReorder(item)}
-                            className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"
-                            title="Order Ulang (Buat Baru)"
-                          >
-                            <CopyPlus className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => {
-                            setEditingItem(item);
-                            setReorderingItem(null);
-                            setFormData({
-                              requester_name: item.requester_name,
-                              division: item.division,
-                              request_date: item.request_date,
-                              items: [
-                                {
-                                  name: item.item_name,
-                                  quantity: item.quantity,
-                                  link: item.link || "",
-                                },
-                              ],
-                            });
-                            setIsModalOpen(true);
-                          }}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {items.length === 0 && (
-                  <TableEmpty
-                    colSpan={5}
-                    icon={<Package className="w-12 h-12 opacity-20" />}
-                    message="Belum ada data permintaan barang."
-                  />
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </TableScrollArea>
-      </TableWrapper>
-
-      {/* Mobile/Tablet Card View */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
+    <TableWrapper loading={loading}>
+      <TableHeaderContent
+        title="Permintaan Barang"
+        description="Pantau dan kelola permintaan pengadaan barang dari berbagai divisi secara real-time."
+        icon={<Package className="w-5 h-5" />}
+        actions={
           <>
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
+            <div className="relative flex-1 sm:min-w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Cari permintaan..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full sm:w-[160px] pl-4 pr-10 py-2 bg-background border border-border rounded-xl text-sm outline-none cursor-pointer hover:bg-accent transition-colors appearance-none"
               >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border",
-                        item.status_order === "Sudah Diorder"
-                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                          : "bg-orange-500/10 text-orange-600 border-orange-500/20",
-                      )}
-                    >
-                      {item.status_order}
+                <option value="all">Semua Status</option>
+                <option value="Belum Diorder">Belum Diorder</option>
+                <option value="Sudah Diorder">Sudah Diorder</option>
+              </select>
+              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            </div>
+            <button
+              onClick={() => {
+                setEditingItem(null);
+                setReorderingItem(null);
+                setFormData({
+                  requester_name: isAdmin ? "" : userName,
+                  division: isAdmin ? "" : userRole,
+                  request_date: new Date().toISOString().split("T")[0],
+                  items: [{ name: "", quantity: 1, link: "" }],
+                });
+                setIsModalOpen(true);
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" /> Buat Permintaan
+            </button>
+          </>
+        }
+      />
+
+      <TableScrollArea>
+        <Table>
+          <TableHeader>
+            <TableRow hoverable={false}>
+              <TableHead>Status</TableHead>
+              <TableHead>Pemohon</TableHead>
+              <TableHead>Barang</TableHead>
+              <TableHead>Qty</TableHead>
+              <TableHead align="right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border",
+                      item.status_order === "Sudah Diorder"
+                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                        : "bg-orange-500/10 text-orange-600 border-orange-500/20",
+                    )}
+                  >
+                    {item.status_order}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="text-foreground text-sm font-medium">
+                      {item.requester_name}
                     </span>
-                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">
+                    <span className="text-xs text-muted-foreground italic">
                       {item.division}
-                    </p>
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                </TableCell>
+                <TableCell>
+                  <div className="max-w-[300px]">
+                    <p className="text-foreground leading-tight">{item.item_name}</p>
+                    {item.link && (
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-primary flex items-center gap-1 mt-1 hover:underline font-bold uppercase tracking-wider"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Buka Tautan
+                      </a>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="px-2 py-0.5 bg-muted rounded-md text-xs font-bold text-foreground">
+                    {item.quantity}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
                     {/* Admin & Administrasi: Mark as Done / Undone */}
                     {canMarkOrder && (
                       <>
                         {item.status_order === "Belum Diorder" ? (
                           <button
                             onClick={() => {
-                              setMarkDoneItem(item);
-                              setMarkDoneQuantity(item.quantity.toString());
+                              setSelectedItem(item);
+                              setDoneQuantity(item.quantity);
+                              setShowDoneDialog(true);
                             }}
-                            className="p-2 bg-green-500/10 text-green-600 rounded-lg"
+                            className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200"
                             title="Tandai Sudah Diorder"
                           >
-                            <Check className="w-4 h-4" />
+                            <CheckSquare className="w-4.5 h-4.5" />
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleMarkUndone(item)}
-                            className="p-2 bg-orange-500/10 text-orange-600 rounded-lg"
-                            title="Batalkan Order"
+                            onClick={() => handleMarkAsUndone(item.id)}
+                            className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-all duration-200"
+                            title="Tandai Belum Diorder"
                           >
-                            <RotateCcw className="w-4 h-4" />
+                            <RotateCcw className="w-4.5 h-4.5" />
                           </button>
                         )}
                       </>
                     )}
-                    {/* Re-Order Button */}
+                    {/* Re-Order Button - only for items already ordered */}
                     {item.status_order === "Sudah Diorder" && (
                       <button
                         onClick={() => handleReorder(item)}
-                        className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg"
-                        title="Order Ulang"
+                        className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
+                        title="Reorder"
                       >
-                        <CopyPlus className="w-4 h-4" />
+                        <RefreshCw className="w-4.5 h-4.5" />
                       </button>
                     )}
                     <button
@@ -579,76 +481,44 @@ export default function ItemManager({
                         });
                         setIsModalOpen(true);
                       }}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                      className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
+                      title="Edit"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Edit2 className="w-4.5 h-4.5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(item)}
-                      className="p-2 bg-red-500/10 text-red-600 rounded-lg"
+                      onClick={() => handleDelete(item.id)}
+                      className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all duration-200"
+                      title="Hapus"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4.5 h-4.5" />
                     </button>
                   </div>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-sm">{item.requester_name}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {item.item_name}
-                  </p>
-                  {item.link && (
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary flex items-center gap-1 mt-1 font-medium"
-                    >
-                      <ExternalLink className="w-3 h-3" /> Buka Tautan
-                    </a>
-                  )}
-                </div>
-
-                <div className="pt-3 border-t border-border flex justify-between items-center">
-                  <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
-                    Qty: {item.quantity}
-                  </span>
-                </div>
-              </div>
+                </TableCell>
+              </TableRow>
             ))}
             {items.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                Belum ada data permintaan barang.
-              </div>
+              <TableEmpty
+                colSpan={5}
+                icon={<Package className="w-12 h-12 opacity-20" />}
+                message="Belum ada data permintaan barang."
+              />
             )}
-          </>
-        )}
-      </div>
+          </TableBody>
+        </Table>
+      </TableScrollArea>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Halaman {currentPage} dari {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => fetchItems(currentPage - 1, search)}
-              disabled={currentPage <= 1 || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => fetchItems(currentPage + 1, search)}
-              disabled={currentPage >= totalPages || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        itemsPerPage={itemsPerPage}
+        onPageChange={(page) => fetchItems(page, search)}
+        onItemsPerPageChange={(count) => {
+          setItemsPerPage(count);
+          fetchItems(1, search);
+        }}
+      />
 
       {/* Modal */}
       {isModalOpen && (
@@ -922,7 +792,7 @@ export default function ItemManager({
       )}
 
       {/* Mark Done Modal */}
-      {markDoneItem && (
+      {selectedItem && showDoneDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-border flex justify-between items-center bg-muted/30">
@@ -931,92 +801,64 @@ export default function ItemManager({
                   Tandai Sudah Diorder
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Masukkan jumlah yang diorder
+                  Konfirmasi jumlah item yang telah diorder.
                 </p>
               </div>
               <button
-                type="button"
-                onClick={() => {
-                  setMarkDoneItem(null);
-                  setMarkDoneQuantity("");
-                }}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                onClick={() => setShowDoneDialog(false)}
+                className="p-2 hover:bg-accent rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <div className="p-6 space-y-4">
-              {/* Item Info */}
-              <div className="bg-muted/50 rounded-xl p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Barang:</span>
-                  <span className="font-medium">{markDoneItem.item_name}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Pemohon:</span>
-                  <span className="font-medium">
-                    {markDoneItem.requester_name}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Qty Request:</span>
-                  <span className="font-bold text-primary">
-                    {markDoneItem.quantity}
-                  </span>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground px-1">
+                  Nama Barang
+                </label>
+                <div className="p-3 bg-muted rounded-xl border border-border text-sm font-medium">
+                  {selectedItem.item_name}
                 </div>
               </div>
-
-              {/* Quantity Input */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted-foreground px-1">
                   Jumlah yang Diorder
                 </label>
                 <input
                   type="number"
+                  className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-bold"
+                  value={doneQuantity}
+                  onChange={(e) => setDoneQuantity(e.target.value)}
                   min="1"
-                  value={markDoneQuantity}
-                  onChange={(e) => setMarkDoneQuantity(e.target.value)}
-                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-center text-lg font-bold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  placeholder="Masukkan jumlah..."
-                  autoFocus
+                  required
                 />
               </div>
-            </div>
-
-            <div className="p-5 border-t border-border flex justify-end gap-3 bg-muted/20">
-              <button
-                type="button"
-                onClick={() => {
-                  setMarkDoneItem(null);
-                  setMarkDoneQuantity("");
-                }}
-                className="px-5 py-2.5 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleMarkDone}
-                disabled={markDoneLoading}
-                className="px-8 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center gap-2"
-              >
-                {markDoneLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Menyimpan...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Tandai Selesai
-                  </>
-                )}
-              </button>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowDoneDialog(false)}
+                  className="px-5 py-2.5 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleMarkDone}
+                  disabled={markDoneLoading}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-2.5 text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
+                >
+                  {markDoneLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Memproses...
+                    </div>
+                  ) : (
+                    "Konfirmasi"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </TableWrapper>
   );
 }

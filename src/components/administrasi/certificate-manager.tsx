@@ -15,6 +15,7 @@ import {
   ListChecks,
   PenTool,
   BookOpen,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import {
   getCertificates,
@@ -34,10 +35,15 @@ import {
   Table,
   TableHeader,
   TableBody,
+  TableFooter,
   TableRow,
   TableHead,
   TableCell,
   TableEmpty,
+  TablePagination,
+  TableHeaderContent,
+  TableAnalysis,
+  TableAnalysisCardProps,
 } from "@/components/ui/table";
 import PdfSignatureModal, {
   SignatureType,
@@ -479,47 +485,75 @@ export default function CertificateManager({
     setFormData({ ...formData, nilai: newNilai });
   };
 
+  // Analysis Cards mapping
+  const certsThisMonth = certificates.filter((cert) => {
+    const d = new Date(cert.start_date);
+    const now = new Date();
+    return (
+      d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+  const analysisCards: TableAnalysisCardProps[] = [
+    {
+      label: "Total Sertifikat",
+      value: total,
+      icon: <Award className="w-4 h-4" />,
+      description: "Total keseluruhan sertifikat",
+    },
+    {
+      label: "Bulan Ini",
+      value: certsThisMonth,
+      icon: <CalendarIcon className="w-4 h-4" />,
+      description: "Sertifikat diterbitkan bulan ini",
+    },
+    {
+      label: "Top Penerima",
+      value: certificates[0]?.recipient_name || "-",
+      icon: <div className="text-[10px] font-bold text-primary">TOP</div>,
+      description: "Penerima terbaru",
+    },
+    {
+      label: "Verifikasi QR",
+      value: "Aktif",
+      icon: (
+        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+      ),
+      description: "Sistem verifikasi aktif",
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <Award className="w-5 h-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Sertifikat</p>
-              <p className="text-xl font-bold">{total}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TableAnalysis cards={analysisCards} />
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Cari sertifikat..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
-          />
-        </div>
-        <button
-          onClick={openAddModal}
-          className="shrink-0 px-4 py-2 bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Tambah Sertifikat</span>
-        </button>
-      </div>
-
-      {/* Table */}
-      {/* Table Desktop View */}
-      <TableWrapper className="hidden md:block">
+      <TableWrapper>
+        <TableHeaderContent
+          title="Sertifikat"
+          description="Kelola sertifikat pelatihan, kompetensi, dan penghargaan."
+          icon={<Award className="w-5 h-5 font-bold text-emerald-600" />}
+          actions={
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Cari sertifikat..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-emerald-500 outline-none transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={openAddModal}
+                className="px-4 h-9 bg-emerald-500 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-600 shadow-sm flex items-center gap-2 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                Tambah Sertifikat
+              </button>
+            </div>
+          }
+        />
         <TableScrollArea>
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -653,142 +687,138 @@ export default function CertificateManager({
                   />
                 )}
               </TableBody>
+              {certificates.length > 0 && (
+                <TableFooter>
+                  <TableRow hoverable={false}>
+                    <TableCell colSpan={7} className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Sertifikat:</span>
+                        <span className="text-sm font-bold text-primary">{certificates.length} Sertifikat</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
             </Table>
           )}
         </TableScrollArea>
-      </TableWrapper>
 
-      {/* Mobile/Tablet Card View - Premium List */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <>
-            {certificates.map((cert) => (
-              <div
-                key={cert.id}
-                className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span className="font-mono text-sm font-bold text-emerald-600 uppercase tracking-tight">
-                      {cert.certificate_number}
-                    </span>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                      {cert.instansi || "Ichibot"}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openEditModal(cert)}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cert)}
-                      className="p-2 bg-red-500/10 text-red-600 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <div>
-                  <h4 className="font-bold text-sm">{cert.recipient_name}</h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1 italic">
-                    {cert.activity_text_idn}
-                  </p>
-                </div>
-
-                {cert.materi && cert.materi.length > 0 && (
-                  <div className="p-3 bg-muted/30 rounded-lg space-y-2">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Materi & Nilai
-                    </p>
-                    <div className="grid grid-cols-1 gap-1">
-                      {cert.materi.slice(0, 3).map((m, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between items-center text-[10px]"
-                        >
-                          <span className="text-gray-600 truncate mr-2">
-                            {m}
-                          </span>
-                          <span className="font-bold text-emerald-600">
-                            {cert.materi_nilai?.[idx] || "-"}
-                          </span>
-                        </div>
-                      ))}
-                      {cert.materi.length > 3 && (
-                        <p className="text-[8px] text-muted-foreground italic text-center pt-1">
-                          +{cert.materi.length - 3} more items
-                        </p>
-                      )}
+        {/* Mobile/Tablet Card View - Premium List */}
+        <div className="md:hidden space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {certificates.map((cert) => (
+                <div
+                  key={cert.id}
+                  className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <span className="font-mono text-sm font-bold text-emerald-600 uppercase tracking-tight">
+                        {cert.certificate_number}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                        {cert.instansi || "Ichibot"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openEditModal(cert)}
+                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cert)}
+                        className="p-2 bg-red-500/10 text-red-600 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                )}
 
-                <div className="pt-3 border-t border-border flex justify-between items-center">
-                  <div className="text-[10px] text-muted-foreground font-medium">
-                    {new Date(cert.start_date).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                    })}{" "}
-                    -{" "}
-                    {new Date(cert.end_date).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                  <div>
+                    <h4 className="font-bold text-sm">{cert.recipient_name}</h4>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1 italic">
+                      {cert.activity_text_idn}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedCertificateForPdf(cert);
-                      setIsPdfModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-bold rounded-lg uppercase tracking-wider"
-                  >
-                    Download PDF
-                  </button>
-                </div>
-              </div>
-            ))}
-            {certificates.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                No certificates found
-              </div>
-            )}
-          </>
-        )}
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Halaman {currentPage} dari {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => fetchCertificates(currentPage - 1, search)}
-              disabled={currentPage <= 1 || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => fetchCertificates(currentPage + 1, search)}
-              disabled={currentPage >= totalPages || loading}
-              className="p-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+                  {cert.materi && cert.materi.length > 0 && (
+                    <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        Materi & Nilai
+                      </p>
+                      <div className="grid grid-cols-1 gap-1">
+                        {cert.materi.slice(0, 3).map((m, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between items-center text-[10px]"
+                          >
+                            <span className="text-gray-600 truncate mr-2">
+                              {m}
+                            </span>
+                            <span className="font-bold text-emerald-600">
+                              {cert.materi_nilai?.[idx] || "-"}
+                            </span>
+                          </div>
+                        ))}
+                        {cert.materi.length > 3 && (
+                          <p className="text-[8px] text-muted-foreground italic text-center pt-1">
+                            +{cert.materi.length - 3} more items
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-border flex justify-between items-center">
+                    <div className="text-[10px] text-muted-foreground font-medium">
+                      {new Date(cert.start_date).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}{" "}
+                      -{" "}
+                      {new Date(cert.end_date).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedCertificateForPdf(cert);
+                        setIsPdfModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-bold rounded-lg uppercase tracking-wider"
+                    >
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {certificates.length === 0 && (
+                <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                  No certificates found
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => fetchCertificates(page, search)}
+          totalCount={total}
+        />
+      </TableWrapper>
+
 
       {/* Modal */}
       {isModalOpen && (
@@ -1436,7 +1466,8 @@ export default function CertificateManager({
             </form>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* PDF Download Modal */}
       <PdfSignatureModal
@@ -1446,6 +1477,6 @@ export default function CertificateManager({
         title="Pilih Format Sertifikat"
         variant="certificate"
       />
-    </div>
+    </div >
   );
 }

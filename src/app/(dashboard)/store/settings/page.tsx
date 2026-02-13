@@ -1,6 +1,7 @@
 import { getStoreSuppliers } from '@/app/actions/store-supplier'
+import { getSystemSetting } from '@/app/actions/settings'
 import StoreSupplierManager from '@/components/store/store-supplier-manager'
-import { Settings } from 'lucide-react'
+import CurrencyConversionManager from '@/components/store/currency-conversion-manager'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/auth'
 
@@ -12,33 +13,33 @@ export default async function StoreSettingsPage() {
         redirect('/dashboard')
     }
 
-    const suppliers = await getStoreSuppliers()
+    const [suppliers, kursYuan, kursUsd] = await Promise.all([
+        getStoreSuppliers(),
+        getSystemSetting('KURS_YUAN'),
+        getSystemSetting('KURS_USD')
+    ])
 
     return (
-        <div className="p-6 space-y-8">
-            <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                    <Settings className="w-6 h-6 text-primary" />
-                    <h1 className="text-2xl font-bold tracking-tight">Store Settings</h1>
-                </div>
-                <p className="text-muted-foreground">
-                    Pengaturan operasional toko dan manajemen data pendukung.
-                </p>
+        <div className="p-4 md:p-6 space-y-8 max-w-7xl mx-auto">
+            {/* Header */}
+            <div>
+                <h1 className="text-2xl font-bold text-foreground">Pengaturan Toko</h1>
+                <p className="text-muted-foreground">Kelola data supplier dan konfigurasi mata uang</p>
             </div>
 
-            <div className="grid gap-8">
-                <section className="space-y-4">
-                    <div>
-                        <h2 className="text-lg font-semibold border-b border-border pb-2">Manajemen Supplier</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Kelola daftar supplier untuk keperluan pengadaan stok barang.
-                        </p>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column - Suppliers */}
+                <div className="lg:col-span-12 space-y-6">
+                    <section>
+                        <StoreSupplierManager initialSuppliers={suppliers} />
+                    </section>
 
-                    <StoreSupplierManager initialSuppliers={suppliers} />
-                </section>
+                    <hr className="border-border" />
 
-                {/* Additional settings sections can be added here in the future */}
+                    <section>
+                        <CurrencyConversionManager initialRates={{ KURS_YUAN: kursYuan, KURS_USD: kursUsd }} />
+                    </section>
+                </div>
             </div>
         </div>
     )

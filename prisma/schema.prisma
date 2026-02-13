@@ -623,6 +623,10 @@ model StoreProduct {
   storeName        String?
   purchased        Boolean   @default(false)
   purchasedAt      DateTime?
+  purchasePackage  Int?
+  purchaseQty      Int?
+  purchasePrice    Float?
+  purchaseCurrency String?
   isMissingFromWoo Boolean   @default(false)
   type             String?
   status           String?

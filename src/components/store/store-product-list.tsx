@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
-import { syncStoreProducts, toggleStoreProductPurchased } from '@/app/actions/store-product'
+import { syncStoreProducts, toggleStoreProductPurchased, syncSingleStoreProduct } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
 import KeteranganEdit from './keterangan-edit'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import EditProductModal from './edit-product-modal'
+import PurchaseInputModal from './purchase-input-modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -40,14 +41,20 @@ export default function StoreProductList({
     showSupplierColumn = true,
     showPurchasedColumn = true,
     showPurchasedAt = false,
-    showSyncButton = true
+    showSyncButton = true,
+    showPurchaseColumns = false,
+    kursYuan,
+    kursUsd
 }: {
     initialProducts: any[],
     showPurchasedStyles?: boolean,
     showSupplierColumn?: boolean,
     showPurchasedColumn?: boolean,
     showPurchasedAt?: boolean,
-    showSyncButton?: boolean
+    showSyncButton?: boolean,
+    showPurchaseColumns?: boolean,
+    kursYuan?: number,
+    kursUsd?: number
 }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
@@ -59,6 +66,7 @@ export default function StoreProductList({
     const [expandedRows, setExpandedRows] = useState<number[]>([])
     const [editingProduct, setEditingProduct] = useState<any>(null)
     const [isAddingProduct, setIsAddingProduct] = useState(false)
+    const [editPurchaseProduct, setEditPurchaseProduct] = useState<any>(null)
     const [showFilters, setShowFilters] = useState(false)
     const [filters, setFilters] = useState({
         sku: 'all', // all, with, without
@@ -75,6 +83,8 @@ export default function StoreProductList({
         key: 'name',
         direction: null
     })
+    const [syncingItems, setSyncingItems] = useState<Set<number>>(new Set())
+    const [finishedItems, setFinishedItems] = useState<Set<number>>(new Set())
     const { showConfirmation } = useConfirmation()
     const { showAlert, showError } = useAlert()
     const router = useRouter()
@@ -109,6 +119,50 @@ export default function StoreProductList({
             showError(error.message || 'Terjadi kesalahan sistem saat melakukan sinkronisasi.')
         } finally {
             setIsSyncing(false)
+        }
+    }
+
+    const handleSingleSync = async (product: any) => {
+        const id = product.wcId
+        if (syncingItems.has(id)) return
+
+        setSyncingItems(prev => new Set(prev).add(id))
+        try {
+            const result = await syncSingleStoreProduct(id, product.parentId)
+            if (result.success) {
+                // Remove from syncing and add to finished
+                setSyncingItems(prev => {
+                    const next = new Set(prev)
+                    next.delete(id)
+                    return next
+                })
+                setFinishedItems(prev => new Set(prev).add(id))
+
+                // Clear finished state after 5 seconds
+                setTimeout(() => {
+                    setFinishedItems(prev => {
+                        const next = new Set(prev)
+                        next.delete(id)
+                        return next
+                    })
+                }, 5000)
+
+                router.refresh()
+            } else {
+                showError(result.error || 'Gagal sinkronisasi produk.')
+                setSyncingItems(prev => {
+                    const next = new Set(prev)
+                    next.delete(id)
+                    return next
+                })
+            }
+        } catch (error: any) {
+            showError(error.message || 'Terjadi kesalahan sistem.')
+            setSyncingItems(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+            })
         }
     }
 
@@ -161,27 +215,45 @@ export default function StoreProductList({
     const analysis = useMemo(() => {
         // Filter out 'variable' type to avoid double counting stock (count only simple and variations)
         const physicalProducts = localProducts.filter(p => p.type !== 'variable')
-        const variableParents = localProducts.filter(p => p.type === 'variable')
 
+        const excludedCategories = ['JASA ICHIBOT', 'PART ICHIBOT', 'ROBOT ICHIBOT']
         const stats = {
             totalProducts: physicalProducts.length,
             outOfStock: physicalProducts.filter(p => (p.stockQuantity || 0) <= 0).length,
             totalAssetValue: physicalProducts
-                .filter(p =>
-                    p.status === 'publish' &&
-                    !p.categories?.some((cat: any) =>
-                        ['JASA ICHIBOT', 'PART ICHIBOT', 'ROBOT ICHIBOT'].includes(cat.name)
-                    )
-                )
-                .reduce((acc, p) => acc + ((p.price || 0) * (p.stockQuantity || 0)), 0),
+                .filter(p => p.status === 'publish')
+                .filter(p => {
+                    const cats = (p.categories || []).map((c: any) => (c.name || '').toUpperCase())
+                    return !cats.some((c: string) => excludedCategories.some(ex => c.includes(ex.toUpperCase())))
+                })
+                .reduce((acc, p) => {
+                    const price = p.price || 0
+                    const stock = Math.max(p.stockQuantity || 0, 0)
+                    return acc + (price * stock)
+                }, 0),
+            totalPurchaseValue: physicalProducts
+                .filter(p => p.purchasePrice && p.purchaseQty)
+                .reduce((acc, p) => {
+                    const paket = p.purchasePackage || 1
+                    const jumlah = p.purchaseQty || 0
+                    let priceInIdr = p.purchasePrice || 0
+                    const currency = p.purchaseCurrency || 'IDR'
+                    if (currency === 'CNY' && kursYuan) {
+                        priceInIdr = (p.purchasePrice || 0) * kursYuan
+                    } else if (currency === 'USD' && kursUsd) {
+                        priceInIdr = (p.purchasePrice || 0) * kursUsd
+                    }
+                    return acc + (priceInIdr * paket * jumlah)
+                }, 0),
             published: physicalProducts.filter(p => p.status === 'publish').length,
             draft: physicalProducts.filter(p => p.status === 'draft').length,
-            variable: variableParents.length,
+            variationProducts: localProducts.filter(p => p.type === 'variable').length,
+            multiPaket: physicalProducts.filter(p => (p.purchasePackage || 0) > 1).length,
             withSku: physicalProducts.filter(p => p.sku && p.sku.trim() !== '').length,
             withoutSku: physicalProducts.filter(p => !p.sku || p.sku.trim() === '').length,
         }
         return stats
-    }, [localProducts])
+    }, [localProducts, kursYuan, kursUsd])
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' | null = 'asc'
@@ -577,23 +649,21 @@ export default function StoreProductList({
                                     SKU
                                     <SortIcon columnKey="sku" sortConfig={sortConfig} />
                                 </TableHead>
-                                <TableHead>Keterangan</TableHead>
-                                <TableHead
-                                    align="right"
-                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
-                                    onClick={() => handleSort('stok')}
-                                >
-                                    Stok
-                                    <SortIcon columnKey="stok" sortConfig={sortConfig} />
-                                </TableHead>
+                                {!showPurchaseColumns && <TableHead>Keterangan</TableHead>}
                                 <TableHead
                                     align="right"
                                     className="cursor-pointer hover:bg-muted/80 transition-colors"
                                     onClick={() => handleSort('price')}
                                 >
-                                    Harga
+                                    Harga Jual & Stok
                                     <SortIcon columnKey="price" sortConfig={sortConfig} />
                                 </TableHead>
+                                {showPurchaseColumns && (
+                                    <>
+                                        <TableHead align="center">Jumlah Beli</TableHead>
+                                        <TableHead align="right">Harga Beli (IDR)</TableHead>
+                                    </>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -655,7 +725,7 @@ export default function StoreProductList({
                                                     {product.isVariation && <span className="text-primary font-bold mr-1">↳ [Varian]</span>}
                                                     {product.name}
                                                 </span>
-                                                <div className="flex items-center gap-2 mt-0.5">
+                                                <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                                                     <span className="text-[10px] text-muted-foreground">
                                                         ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
                                                     </span>
@@ -664,36 +734,95 @@ export default function StoreProductList({
                                                             • {product.categories.map((c: any) => c.name).join(', ')}
                                                         </span>
                                                     )}
+                                                    {showPurchaseColumns && product.purchased && (
+                                                        <button
+                                                            onClick={() => setEditPurchaseProduct(product)}
+                                                            className="p-0.5 rounded text-muted-foreground hover:text-amber-600 transition-colors flex items-center gap-0.5 text-[10px] font-bold uppercase"
+                                                            title="Edit Data Pembelian"
+                                                        >
+                                                            <ShoppingCart className="w-2.5 h-2.5" />
+                                                            Beli
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => setEditingProduct(product)}
-                                                        className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5"
-                                                        title="Edit Produk"
+                                                        onClick={() => handleSingleSync(product)}
+                                                        disabled={syncingItems.has(product.wcId)}
+                                                        className={cn(
+                                                            "p-0.5 rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5 text-[10px] font-bold uppercase",
+                                                            syncingItems.has(product.wcId) && "text-primary"
+                                                        )}
+                                                        title="Sync dari WooCommerce"
                                                     >
-                                                        <Edit2 className="w-2.5 h-2.5" />
-                                                        Edit
+                                                        <RefreshCw className={cn("w-2.5 h-2.5", syncingItems.has(product.wcId) && "animate-spin")} />
+                                                        {finishedItems.has(product.wcId) ? "Selesai" : "Sync"}
                                                     </button>
-                                                    <span className={cn(
-                                                        "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
-                                                        product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
-                                                    )}>
-                                                        {product.status}
-                                                    </span>
-                                                    {product.purchased && (
-                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-primary/10 text-primary border border-primary/20">
-                                                            Sudah Dibeli
-                                                        </span>
+                                                    {showPurchaseColumns && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => setEditingProduct(product)}
+                                                                className="p-0.5 rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5 text-[10px] font-bold uppercase"
+                                                                title="Edit Produk"
+                                                            >
+                                                                <Edit2 className="w-2.5 h-2.5" />
+                                                                Edit
+                                                            </button>
+                                                            <span className={cn(
+                                                                "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
+                                                                product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
+                                                            )}>
+                                                                {product.status}
+                                                            </span>
+                                                        </>
                                                     )}
-                                                    {!product.isVariation && product.type === 'variable' && (
-                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
-                                                            Variable
-                                                        </span>
-                                                    )}
-                                                    {product.isMissingFromWoo && (
-                                                        <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
-                                                            Tidak ditemukan
-                                                        </span>
+                                                    {!showPurchaseColumns && (
+                                                        <button
+                                                            onClick={() => setEditingProduct(product)}
+                                                            className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5"
+                                                            title="Edit Produk"
+                                                        >
+                                                            <Edit2 className="w-2.5 h-2.5" />
+                                                            Edit
+                                                        </button>
                                                     )}
                                                 </div>
+                                                {!showPurchaseColumns && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className={cn(
+                                                            "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
+                                                            product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
+                                                        )}>
+                                                            {product.status}
+                                                        </span>
+                                                        {product.purchased && (
+                                                            <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-primary/10 text-primary border border-primary/20">
+                                                                Sudah Dibeli
+                                                            </span>
+                                                        )}
+                                                        {!product.isVariation && product.type === 'variable' && (
+                                                            <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
+                                                                Variable
+                                                            </span>
+                                                        )}
+                                                        {product.isMissingFromWoo && (
+                                                            <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-destructive/10 text-destructive border border-destructive/20">
+                                                                Tidak ditemukan
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Inline keterangan for purchased page */}
+                                                {showPurchaseColumns && (
+                                                    <div className="mt-0.5">
+                                                        <KeteranganEdit
+                                                            key={`inline-${product.wcId}`}
+                                                            wcId={product.wcId}
+                                                            initialValue={product.keterangan}
+                                                            productName={product.name}
+                                                            compact
+                                                        />
+                                                    </div>
+                                                )}
 
                                                 {product.hasVariations && (
                                                     <button
@@ -743,38 +872,106 @@ export default function StoreProductList({
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="min-w-[200px]">
-                                            <KeteranganEdit
-                                                key={product.wcId}
-                                                wcId={product.wcId}
-                                                initialValue={product.keterangan}
-                                                productName={product.name}
-                                            />
-                                        </TableCell>
+                                        {!showPurchaseColumns && (
+                                            <TableCell className="min-w-[200px]">
+                                                <KeteranganEdit
+                                                    key={product.wcId}
+                                                    wcId={product.wcId}
+                                                    initialValue={product.keterangan}
+                                                    productName={product.name}
+                                                />
+                                            </TableCell>
+                                        )}
                                         <TableCell align="right" className="whitespace-nowrap">
-                                            <span className={cn(
-                                                "text-sm font-semibold",
-                                                (product.stockQuantity || 0) <= 0 ? "text-destructive" : "text-green-600"
-                                            )}>
-                                                {formatNumber(product.stockQuantity || 0)}
-                                            </span>
-                                            <span className="text-[10px] block text-muted-foreground uppercase leading-none mt-0.5">
-                                                {product.stockStatus || 'outofstock'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell align="right" className="whitespace-nowrap font-medium">
-                                            <div className="text-foreground">{formatCurrency(product.price || 0)}</div>
-                                            {product.salePrice > 0 && product.salePrice < product.regularPrice && (
-                                                <div className="text-[10px] text-muted-foreground line-through">
-                                                    {formatCurrency(product.regularPrice)}
+                                            <div className="flex flex-col items-end gap-1">
+                                                <div className="flex flex-col items-end">
+                                                    <div className="text-sm font-medium text-foreground">{formatCurrency(product.price || 0)}</div>
+                                                    {product.salePrice > 0 && product.salePrice < product.regularPrice && (
+                                                        <div className="text-[10px] text-muted-foreground line-through">
+                                                            {formatCurrency(product.regularPrice)}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                                <div className="flex flex-col items-end border-t border-border pt-1">
+                                                    <span className={cn(
+                                                        "text-sm font-semibold",
+                                                        (product.stockQuantity || 0) <= 0 ? "text-destructive" : "text-green-600"
+                                                    )}>
+                                                        {formatNumber(product.stockQuantity || 0)} stok
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </TableCell>
+                                        {showPurchaseColumns && (
+                                            <>
+                                                <TableCell align="center" className="whitespace-nowrap">
+                                                    {product.purchaseQty ? (() => {
+                                                        const paket = product.purchasePackage || 1
+                                                        const jumlah = product.purchaseQty
+                                                        const totalBarang = paket * jumlah
+                                                        return (
+                                                            <div className="flex flex-col items-center gap-0.5">
+                                                                <span className="text-sm font-semibold text-foreground">
+                                                                    {formatNumber(totalBarang)} pcs
+                                                                </span>
+                                                                {paket > 1 && (
+                                                                    <span className="text-[10px] text-muted-foreground">
+                                                                        {paket} paket × {jumlah}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })() : (
+                                                        <span className="text-muted-foreground text-xs">-</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right" className="whitespace-nowrap">
+                                                    {product.purchasePrice ? (() => {
+                                                        const paket = product.purchasePackage || 1
+                                                        const jumlah = product.purchaseQty || 0
+                                                        let priceInputIdr = product.purchasePrice
+                                                        const currency = product.purchaseCurrency || 'IDR'
+                                                        if (currency === 'CNY' && kursYuan) {
+                                                            priceInputIdr = product.purchasePrice * kursYuan
+                                                        } else if (currency === 'USD' && kursUsd) {
+                                                            priceInputIdr = product.purchasePrice * kursUsd
+                                                        }
+                                                        const perPcs = priceInputIdr / paket
+                                                        const totalHarga = priceInputIdr * paket * jumlah
+                                                        return (
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-[10px] text-muted-foreground uppercase">per pcs</span>
+                                                                    <span className="text-sm font-semibold text-foreground">
+                                                                        Rp {formatNumber(Math.round(perPcs))}
+                                                                    </span>
+                                                                </div>
+                                                                {jumlah > 0 && (
+                                                                    <div className="flex flex-col items-end border-t border-border pt-1">
+                                                                        <span className="text-[10px] text-muted-foreground uppercase">total</span>
+                                                                        <span className="text-sm font-bold text-primary">
+                                                                            Rp {formatNumber(Math.round(totalHarga))}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {currency !== 'IDR' && (
+                                                                    <span className="text-[10px] text-muted-foreground">
+                                                                        {currency === 'CNY' ? '¥' : '$'}{formatNumber(product.purchasePrice)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })() : (
+                                                        <span className="text-muted-foreground text-xs">-</span>
+                                                    )}
+                                                </TableCell>
+                                            </>
+                                        )}
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableEmpty
-                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + 6}
+                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? 2 : 0) + (showPurchaseColumns ? 4 : 5)}
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk ditemukan."
                                     description={searchTerm ? (
@@ -821,15 +1018,27 @@ export default function StoreProductList({
                         <p className="text-xs font-semibold text-red-600/70 uppercase tracking-wider mb-1">Stok Kosong (≤ 0)</p>
                         <p className="text-2xl font-bold text-red-600">{formatNumber(analysis.outOfStock)}</p>
                     </div>
-                    <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
-                        <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Aset (Harga x Stok)</p>
-                        <div className="flex flex-col">
-                            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
-                            <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
-                                * Produk dengan status selain Publish, serta kategori JASA ICHIBOT, PART ICHIBOT, dan ROBOT ICHIBOT tidak dihitung.
-                            </p>
+                    {showPurchaseColumns ? (
+                        <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
+                            <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Pembelian (IDR)</p>
+                            <div className="flex flex-col">
+                                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalPurchaseValue)}</p>
+                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
+                                    * Total dari semua produk yang memiliki data pembelian.
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
+                            <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Aset (Harga x Stok)</p>
+                            <div className="flex flex-col">
+                                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
+                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
+                                    * Produk dengan status selain Publish, serta kategori JASA ICHIBOT, PART ICHIBOT, dan ROBOT ICHIBOT tidak dihitung.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Publish</p>
@@ -846,9 +1055,13 @@ export default function StoreProductList({
                         </div>
                     </div>
                     <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Produk Varian</p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                            {showPurchaseColumns ? 'Produk Paket >1' : 'Produk Varian'}
+                        </p>
                         <div className="flex items-baseline gap-2">
-                            <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.variable)}</p>
+                            <p className="text-2xl font-bold text-foreground">
+                                {formatNumber(showPurchaseColumns ? analysis.multiPaket : analysis.variationProducts)}
+                            </p>
                             <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
                         </div>
                     </div>
@@ -913,6 +1126,17 @@ export default function StoreProductList({
                     />
                 )
             }
+
+            {editPurchaseProduct && (
+                <PurchaseInputModal
+                    isOpen={!!editPurchaseProduct}
+                    onClose={() => setEditPurchaseProduct(null)}
+                    product={editPurchaseProduct}
+                    kursYuan={kursYuan}
+                    kursUsd={kursUsd}
+                    editMode
+                />
+            )}
         </div >
     )
 }

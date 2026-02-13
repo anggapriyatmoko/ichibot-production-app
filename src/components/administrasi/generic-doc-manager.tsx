@@ -13,11 +13,15 @@ import {
     Table,
     TableHeader,
     TableBody,
+    TableFooter,
     TableRow,
     TableHead,
     TableCell,
     TableEmpty,
     TableHeaderContent,
+    TablePagination,
+    TableAnalysis,
+    TableAnalysisCardProps,
 } from '@/components/ui/table'
 
 type DocData = {
@@ -54,6 +58,10 @@ export default function GenericDocManager({ type, title, initialData, labels = {
     const [editingData, setEditingData] = useState<DocData | null>(null)
     const [saving, setSaving] = useState(false)
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(15)
+
     // User friendly labels
     const fieldLabels = {
         name: labels.name || 'Nama',
@@ -83,6 +91,58 @@ export default function GenericDocManager({ type, title, initialData, labels = {
             item.content.toLowerCase().includes(search.toLowerCase())
         )
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    // Paginate
+    const paginatedData = filteredData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    )
+
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+
+    // Analysis Data
+    const totalDocs = initialData.length
+    const thisMonthDocs = initialData.filter(item => {
+        const d = new Date(item.date)
+        const now = new Date()
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }).length
+
+    // Top Institution
+    const instCounts: Record<string, number> = {}
+    initialData.forEach(item => {
+        if (item.institution) {
+            instCounts[item.institution] = (instCounts[item.institution] || 0) + 1
+        }
+    })
+    const topInst = Object.entries(instCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+
+    const analysisCards: TableAnalysisCardProps[] = [
+        {
+            label: 'Total Dokumen',
+            value: totalDocs,
+            icon: <FileText className="w-4 h-4" />,
+            description: 'Keseluruhan data tersimpan'
+        },
+        {
+            label: 'Bulan Ini',
+            value: thisMonthDocs,
+            icon: <CalendarIcon className="w-4 h-4" />,
+            description: 'Dokumen baru bulan ini'
+        },
+        {
+            label: 'Top Instansi',
+            value: topInst,
+            icon: <ExternalLink className="w-4 h-4" />,
+            description: 'Instansi paling sering muncul'
+        },
+        {
+            label: 'Status Sistem',
+            value: 'Aktif',
+            icon: <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />,
+            description: 'Database tersinkronisasi'
+        }
+    ]
 
     // Lock body scroll when modal is open
     useEffect(() => {
@@ -175,6 +235,8 @@ export default function GenericDocManager({ type, title, initialData, labels = {
 
     return (
         <div className="space-y-6">
+            <TableAnalysis cards={analysisCards} />
+
             <TableWrapper>
                 <TableHeaderContent
                     title={title}
@@ -220,7 +282,7 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredData.map((item) => (
+                                {paginatedData.map((item) => (
                                     <TableRow key={item.id}>
                                         <TableCell className="whitespace-nowrap">
                                             <div className="font-medium text-foreground">
@@ -284,13 +346,25 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                                     <TableEmpty colSpan={7} icon={<FileText className="w-12 h-12 opacity-20" />} />
                                 )}
                             </TableBody>
+                            {filteredData.length > 0 && (
+                                <TableFooter>
+                                    <TableRow hoverable={false}>
+                                        <TableCell colSpan={7} className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total {title}:</span>
+                                                <span className="text-sm font-bold text-primary">{filteredData.length} Dokumen</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                </TableFooter>
+                            )}
                         </Table>
                     </TableScrollArea>
                 </div>
 
                 {/* Mobile View */}
                 <div className="md:hidden space-y-4 p-4">
-                    {filteredData.map((item) => (
+                    {paginatedData.map((item) => (
                         <div key={item.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
                             <div className="flex justify-between items-start">
                                 <div className="min-w-0">
@@ -333,6 +407,18 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                         </div>
                     )}
                 </div>
+
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => {
+                        setItemsPerPage(val)
+                        setCurrentPage(1)
+                    }}
+                    totalCount={filteredData.length}
+                />
             </TableWrapper>
 
             {/* Form Modal */}

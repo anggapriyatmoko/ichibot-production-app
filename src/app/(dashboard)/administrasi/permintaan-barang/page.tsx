@@ -33,6 +33,7 @@ export default async function PermintaanBarangPage() {
 
       <ItemManager
         initialItems={result.data?.items || []}
+        initialPagination={result.data?.pagination}
         userRole={userRole}
         userName={userName}
       />
