@@ -6,6 +6,19 @@ import { createProject, updateProject, deleteProject } from '@/app/actions/proje
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import { cn } from '@/lib/utils'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+    TableHeaderContent,
+    TablePagination,
+} from '@/components/ui/table'
 
 interface ProjectLink {
     id?: string
@@ -52,6 +65,8 @@ export default function ProjectManager({ initialProjects, categories, allUsers, 
     const [editingProject, setEditingProject] = useState<Project | null>(null)
     const [saving, setSaving] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [page, setPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
     const [formData, setFormData] = useState({
         name: '',
@@ -207,30 +222,12 @@ export default function ProjectManager({ initialProjects, categories, allUsers, 
         (p.client && p.client.toLowerCase().includes(searchTerm.toLowerCase()))
     )
 
+    const totalCount = filteredProjects.length
+    const totalPages = Math.ceil(totalCount / itemsPerPage)
+    const paginatedProjects = filteredProjects.slice((page - 1) * itemsPerPage, page * itemsPerPage)
+
     return (
         <div className="space-y-6">
-            {/* Header / Controls */}
-            <div className="flex justify-between items-center gap-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                        type="text"
-                        placeholder="Cari project atau client..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm outline-none focus:border-primary transition-all shadow-sm"
-                    />
-                </div>
-                {isAdmin && (
-                    <button
-                        onClick={() => { setIsAdding(true); setEditingProject(null); resetForm(); }}
-                        className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm"
-                    >
-                        <Plus className="w-5 h-5" />
-                        <span className="hidden md:inline text-sm">Tambah</span>
-                    </button>
-                )}
-            </div>
 
             {/* Modal Form */}
             {(isAdding || editingProject) && (
@@ -450,7 +447,27 @@ export default function ProjectManager({ initialProjects, categories, allUsers, 
 
             {/* Mobile View - Card based Layout */}
             <div className="md:hidden space-y-4">
-                {filteredProjects.map(project => (
+                <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Cari project..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
+                            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm outline-none focus:border-primary transition-all shadow-sm"
+                        />
+                    </div>
+                    {isAdmin && (
+                        <button
+                            onClick={() => { setIsAdding(true); setEditingProject(null); resetForm(); }}
+                            className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
+                {paginatedProjects.map(project => (
                     <div key={project.id} className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative">
                         {/* Mobile Action Button - Absolute Top Right */}
                         {isAdmin && (
@@ -569,116 +586,146 @@ export default function ProjectManager({ initialProjects, categories, allUsers, 
             </div>
 
             {/* Table Display - Standardized styling (Hidden on Mobile) */}
-            <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto min-h-[300px]">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
-                        <thead className="bg-muted text-foreground uppercase text-[10px] font-bold tracking-wider">
-                            <tr>
-                                <th className="px-6 py-4">Tanggal</th>
-                                <th className="px-6 py-4">Nama Project</th>
-                                <th className="px-6 py-4">Client</th>
-                                <th className="px-6 py-4">Deskripsi</th>
-                                <th className="px-6 py-4">Lampiran</th>
-                                {isAdmin && <th className="px-6 py-4 text-right">Aksi</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {filteredProjects.map(project => (
-                                <tr key={project.id} className="hover:bg-accent/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-foreground">
-                                                {project.date ? new Date(project.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                                            </span>
-                                            <span className="text-[10px] uppercase text-muted-foreground">
-                                                {project.category?.name || 'Umum'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col">
-                                            <span className="font-bold text-foreground">{project.name}</span>
-                                            <div className={cn(
-                                                "w-fit px-2 py-0.5 rounded text-[10px] font-bold mt-1",
-                                                project.status === 'DONE' ? 'bg-emerald-500/10 text-emerald-600' :
-                                                    project.status === 'ON_PROGRESS' ? 'bg-blue-500/10 text-blue-600' :
-                                                        project.status === 'CANCEL' ? 'bg-rose-500/10 text-rose-600' : 'bg-amber-500/10 text-amber-600'
-                                            )}>
-                                                {project.status.replace('_', ' ')}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-muted-foreground font-medium">{project.client || '-'}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground">
-                                            {project.description || '-'}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-wrap gap-1.5 max-w-[250px]">
-                                            {project.links && project.links.length > 0 ? (
-                                                project.links.map((link, idx) => (
-                                                    <a
-                                                        key={idx}
-                                                        href={link.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-secondary text-secondary-foreground rounded border border-border hover:bg-secondary/80 text-[10px] font-bold transition-all shadow-sm"
-                                                        title={link.url}
-                                                    >
-                                                        <ExternalLink className="w-2.5 h-2.5" />
-                                                        {link.label}
-                                                    </a>
-                                                ))
-                                            ) : (
-                                                <span className="text-muted-foreground italic text-[10px]">Tidak ada</span>
+            <div className="hidden md:block">
+                <TableWrapper>
+                    <TableHeaderContent
+                        title="Daftar Project"
+                        description={`${totalCount} project ditemukan`}
+                        icon={<FolderKanban className="w-5 h-5 font-bold text-primary" />}
+                        actions={
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:w-64">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        placeholder="Cari project atau client..."
+                                        value={searchTerm}
+                                        onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
+                                        className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                    />
+                                </div>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => { setIsAdding(true); setEditingProject(null); resetForm(); }}
+                                        className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        <span className="hidden sm:inline">Tambah</span>
+                                    </button>
+                                )}
+                            </div>
+                        }
+                    />
+                    <TableScrollArea>
+                        <Table>
+                            <TableHeader>
+                                <TableRow hoverable={false} className="bg-muted/50">
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>Nama Project</TableHead>
+                                    <TableHead>Client</TableHead>
+                                    <TableHead>Deskripsi</TableHead>
+                                    <TableHead>Lampiran</TableHead>
+                                    {isAdmin && <TableHead align="right">Aksi</TableHead>}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedProjects.length === 0 ? (
+                                    <TableEmpty
+                                        colSpan={isAdmin ? 6 : 5}
+                                        message={searchTerm ? 'Tidak ada project yang cocok dengan pencarian' : 'Belum ada project yang terdaftar'}
+                                        icon={<FolderKanban className="w-12 h-12 opacity-20" />}
+                                    />
+                                ) : (
+                                    paginatedProjects.map(project => (
+                                        <TableRow key={project.id}>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-foreground">
+                                                        {project.date ? new Date(project.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                                    </span>
+                                                    <span className="text-[10px] uppercase text-muted-foreground">
+                                                        {project.category?.name || 'Umum'}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-foreground">{project.name}</span>
+                                                    <div className={cn(
+                                                        "w-fit px-2 py-0.5 rounded text-[10px] font-bold mt-1",
+                                                        project.status === 'DONE' ? 'bg-emerald-500/10 text-emerald-600' :
+                                                            project.status === 'ON_PROGRESS' ? 'bg-blue-500/10 text-blue-600' :
+                                                                project.status === 'CANCEL' ? 'bg-rose-500/10 text-rose-600' : 'bg-amber-500/10 text-amber-600'
+                                                    )}>
+                                                        {project.status.replace('_', ' ')}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="text-muted-foreground font-medium">{project.client || '-'}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground">
+                                                    {project.description || '-'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-wrap gap-1.5 max-w-[250px]">
+                                                    {project.links && project.links.length > 0 ? (
+                                                        project.links.map((link, idx) => (
+                                                            <a
+                                                                key={idx}
+                                                                href={link.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-secondary text-secondary-foreground rounded border border-border hover:bg-secondary/80 text-[10px] font-bold transition-all shadow-sm"
+                                                                title={link.url}
+                                                            >
+                                                                <ExternalLink className="w-2.5 h-2.5" />
+                                                                {link.label}
+                                                            </a>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-muted-foreground italic text-[10px]">Tidak ada</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            {isAdmin && (
+                                                <TableCell align="right">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            onClick={() => startEdit(project)}
+                                                            className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(project.id, project.name)}
+                                                            className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors border border-border"
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </TableCell>
                                             )}
-                                        </div>
-                                    </td>
-                                    {isAdmin && (
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                <button
-                                                    onClick={() => startEdit(project)}
-                                                    className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(project.id, project.name)}
-                                                    className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors border border-border"
-                                                    title="Hapus"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableScrollArea>
 
-                {filteredProjects.length === 0 && (
-                    <div className="text-center py-20 bg-muted/30">
-                        <FolderKanban className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                        <p className="text-muted-foreground font-medium">
-                            {searchTerm ? 'Tidak ada project yang cocok dengan pencarian' : 'Belum ada project yang terdaftar'}
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Pagination placeholder to match styling if needed */}
-            <div className="hidden md:flex px-6 py-4 border border-t-0 border-border rounded-b-xl items-center justify-between bg-card text-xs text-muted-foreground">
-                <p>Menampilkan <span className="font-bold text-foreground">{filteredProjects.length}</span> project</p>
-                <div className="flex gap-2">
-                    {/* Add pagination later if project count grows large */}
-                </div>
+                    <TablePagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        itemsPerPage={itemsPerPage}
+                        onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                        totalCount={totalCount}
+                    />
+                </TableWrapper>
             </div>
         </div >
     )

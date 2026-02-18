@@ -1,15 +1,13 @@
 import GenericDocManager from '@/components/administrasi/generic-doc-manager'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import { getDocs } from '@/app/actions/administrasi'
+import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export default async function SuratUndanganPage() {
-    const session: any = await getServerSession(authOptions)
+    await requireAuth()
+    const allowed = await isAllowedForPage('/administrasi/surat-undangan', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    if (!allowed) redirect('/dashboard')
 
-    if (!session || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session.user.role)) {
-        redirect('/dashboard')
-    }
 
     const data = await getDocs('surat-undangan')
 

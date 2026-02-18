@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth";
 import ApiConfigManager from "@/components/settings/api-config-manager";
 import SyncProductionsButton from "@/components/settings/sync-productions-button";
+import RbacManager from "@/components/settings/rbac-manager";
 
 export const metadata = {
   title: "Settings | Ichibot Production",
@@ -11,7 +12,7 @@ export default async function SettingsPage() {
   await requireAdmin();
 
   return (
-    <div className="container mx-auto max-w-5xl">
+    <div className="container mx-auto max-w-7xl">
       <h1 className="text-3xl font-bold mb-8">System Settings</h1>
 
       <div className="mb-10">
@@ -20,6 +21,10 @@ export default async function SettingsPage() {
 
       <div className="mb-10">
         <SyncProductionsButton />
+      </div>
+
+      <div className="mb-10">
+        <RbacManager />
       </div>
 
       {/* Placeholder for future settings */}
@@ -35,3 +40,4 @@ export default async function SettingsPage() {
     </div>
   );
 }
+

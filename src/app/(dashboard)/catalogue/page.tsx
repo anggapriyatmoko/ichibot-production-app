@@ -3,19 +3,17 @@ import { Plus, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 import { createRecipe } from '@/app/actions/recipe'
 import RecipeList from '@/components/catalogue/recipe-list'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const dynamic = 'force-dynamic'
 
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 export default async function CataloguePage() {
     const session: any = await requireAuth()
-    if (session.user.role === 'EXTERNAL') {
-        redirect('/dashboard');
-    }
+    const allowed = await isAllowedForPage('/catalogue', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    if (!allowed) redirect('/dashboard');
+
 
     const [recipes, categories] = await prisma.$transaction([
         prisma.recipe.findMany({

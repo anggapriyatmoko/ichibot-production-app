@@ -1,6 +1,4 @@
-import { requireAuth } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireAuth, isAllowedForPage } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import InvoiceGANManager from "@/components/administrasi/invoice-gan-manager";
 
@@ -11,23 +9,11 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-interface UserSession {
-  user?: {
-    role?: string;
-  };
-}
-
 export default async function InvoiceGANPage() {
   await requireAuth();
-  const session = (await getServerSession(authOptions)) as UserSession | null;
+  const allowed = await isAllowedForPage('/administrasi/invoice-gan', ['ADMIN', 'HRD', 'ADMINISTRASI']);
+  if (!allowed) redirect("/dashboard");
 
-  // Only allow ADMIN, HRD, and ADMINISTRASI
-  if (
-    !session?.user?.role ||
-    !["ADMIN", "HRD", "ADMINISTRASI"].includes(session.user.role)
-  ) {
-    redirect("/dashboard");
-  }
 
   return (
     <div className="max-width-7xl mx-auto px-4 sm:px-0">

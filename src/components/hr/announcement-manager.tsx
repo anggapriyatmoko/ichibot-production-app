@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Megaphone, Trash2, CheckCircle2, XCircle, Search, Users, ChevronDown, Check } from 'lucide-react'
-import { createAnnouncement, deleteAnnouncement, toggleAnnouncementStatus, getAnnouncements } from '@/app/actions/announcement'
+import { Plus, Megaphone, Trash2, Pencil, Search, Users, ChevronDown, Check } from 'lucide-react'
+import { TablePagination } from '@/components/ui/table'
+import { createAnnouncement, updateAnnouncement, deleteAnnouncement, toggleAnnouncementStatus, getAnnouncements } from '@/app/actions/announcement'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import { cn } from '@/lib/utils'
@@ -31,14 +32,17 @@ interface AnnouncementManagerProps {
 export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
     const [announcements, setAnnouncements] = useState<Announcement[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [isAdding, setIsAdding] = useState(false)
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
     const [saving, setSaving] = useState(false)
 
     // Pagination
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
+    const [totalCount, setTotalCount] = useState(0)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
-    // Form Stats
+    // Form States
     const [content, setContent] = useState('')
     const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
 
@@ -50,15 +54,16 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
 
     useEffect(() => {
         loadAnnouncements(page)
-    }, [page])
+    }, [page, itemsPerPage])
 
     async function loadAnnouncements(currentPage: number = 1) {
         setIsLoading(true)
         try {
-            const result = await getAnnouncements(currentPage)
+            const result = await getAnnouncements(currentPage, itemsPerPage)
             if (result && result.data) {
                 setAnnouncements(result.data)
                 setTotalPages(result.totalPages)
+                setTotalCount(result.total)
             }
         } catch (error) {
             console.error(error)
@@ -70,7 +75,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
     const filteredUsers = allUsers.filter(u =>
         (u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
             u.username.toLowerCase().includes(userSearch.toLowerCase())) &&
-        u.role !== 'SYSTEM' // Assuming no need to announce to system accounts if any
+        u.role !== 'SYSTEM'
     )
 
     const handleSelectAll = () => {
@@ -87,6 +92,30 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
         )
     }
 
+    const openCreateModal = () => {
+        setEditingAnnouncement(null)
+        setContent('')
+        setSelectedUserIds([])
+        setUserSearch('')
+        setIsModalOpen(true)
+    }
+
+    const openEditModal = (ann: Announcement) => {
+        setEditingAnnouncement(ann)
+        setContent(ann.content)
+        setSelectedUserIds(ann.targetUsers.map(u => u.id))
+        setUserSearch('')
+        setIsModalOpen(true)
+    }
+
+    const closeModal = () => {
+        setIsModalOpen(false)
+        setEditingAnnouncement(null)
+        setContent('')
+        setSelectedUserIds([])
+        setUserSearch('')
+    }
+
     const handleSave = async () => {
         if (!content.trim()) {
             showAlert('Isi pengumuman wajib diisi', 'error')
@@ -99,15 +128,19 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
 
         setSaving(true)
         try {
-            const result = await createAnnouncement(content, selectedUserIds)
-            if (result.success) {
-                showAlert('Pengumuman berhasil dibuat', 'success')
-                setIsAdding(false)
-                setContent('')
-                setSelectedUserIds([])
-                loadAnnouncements()
+            let result
+            if (editingAnnouncement) {
+                result = await updateAnnouncement(editingAnnouncement.id, content, selectedUserIds)
             } else {
-                showAlert(result.error || 'Gagal membuat pengumuman', 'error')
+                result = await createAnnouncement(content, selectedUserIds)
+            }
+
+            if (result.success) {
+                showAlert(editingAnnouncement ? 'Pengumuman berhasil diperbarui' : 'Pengumuman berhasil dibuat', 'success')
+                closeModal()
+                loadAnnouncements(page)
+            } else {
+                showAlert(result.error || 'Gagal menyimpan pengumuman', 'error')
             }
         } catch (error) {
             console.error(error)
@@ -145,7 +178,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
                         <h2 className="text-lg font-bold">Daftar Pengumuman</h2>
                     </div>
                     <button
-                        onClick={() => setIsAdding(true)}
+                        onClick={openCreateModal}
                         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm"
                     >
                         <Plus className="w-4 h-4" />
@@ -202,6 +235,13 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
+                                                    onClick={() => openEditModal(ann)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-200"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleToggleStatus(ann.id, ann.isActive)}
                                                     className={cn(
                                                         "p-2 rounded-lg transition-colors border text-xs font-bold",
@@ -229,40 +269,26 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
                     </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-muted/20">
-                    <p className="text-xs text-muted-foreground">
-                        Halaman {page} dari {totalPages}
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                            className="px-3 py-1 text-xs font-medium border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Sebelumnya
-                        </button>
-                        <button
-                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages}
-                            className="px-3 py-1 text-xs font-medium border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Selanjutnya
-                        </button>
-                    </div>
-                </div>
+                <TablePagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                    totalCount={totalCount}
+                />
             </div>
 
-            {/* Modal Create */}
-            {isAdding && (
+            {/* Modal Create / Edit */}
+            {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20 rounded-t-xl">
                             <h3 className="text-lg font-bold flex items-center gap-2">
                                 <Megaphone className="w-5 h-5 text-primary" />
-                                Buat Pengumuman Baru
+                                {editingAnnouncement ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'}
                             </h3>
-                            <button onClick={() => setIsAdding(false)} className="text-muted-foreground hover:text-foreground">
+                            <button onClick={closeModal} className="text-muted-foreground hover:text-foreground">
                                 <ChevronDown className="w-5 h-5" />
                             </button>
                         </div>
@@ -279,7 +305,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
                                 />
                             </div>
 
-                            {/* User User Selection */}
+                            {/* User Selection */}
                             <div>
                                 <div className="flex justify-between items-end mb-2">
                                     <label className="block text-sm font-bold text-foreground">Target User ({selectedUserIds.length})</label>
@@ -332,7 +358,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
 
                         <div className="p-6 border-t border-border bg-muted/20 rounded-b-xl flex justify-end gap-3">
                             <button
-                                onClick={() => setIsAdding(false)}
+                                onClick={closeModal}
                                 className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                             >
                                 Batal
@@ -342,7 +368,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
                                 disabled={saving}
                                 className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm disabled:opacity-50"
                             >
-                                {saving ? "Menyimpan..." : "Simpan Pengumuman"}
+                                {saving ? "Menyimpan..." : (editingAnnouncement ? "Simpan Perubahan" : "Simpan Pengumuman")}
                             </button>
                         </div>
                     </div>

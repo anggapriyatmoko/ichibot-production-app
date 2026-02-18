@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Edit, Loader2, Save, X, Users, Upload, Trash2, Image as ImageIcon, Banknote } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { getAllUsersForHRD, updateUserData } from '@/app/actions/hrd'
 import { useAlert } from '@/hooks/use-alert'
 import Image from 'next/image'
@@ -17,6 +18,7 @@ import {
     TableCell,
     TableEmpty,
     TableHeaderContent,
+    TablePagination,
 } from '@/components/ui/table'
 
 interface User {
@@ -83,6 +85,25 @@ export default function UserManagementTable({ userRole }: Props) {
     const [editingUser, setEditingUser] = useState<User | null>(null)
     const [saving, setSaving] = useState(false)
     const [payrollUser, setPayrollUser] = useState<User | null>(null)
+    const [page, setPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
+    const [filterRoles, setFilterRoles] = useState<string[]>(['ADMIN', 'HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE'])
+
+    const ROLE_FILTERS = [
+        { id: 'ADMIN', label: 'Admin', color: 'red' },
+        { id: 'HRD', label: 'HRD', color: 'purple' },
+        { id: 'ADMINISTRASI', label: 'Administrasi', color: 'blue' },
+        { id: 'TEKNISI', label: 'Teknisi', color: 'cyan' },
+        { id: 'STORE', label: 'Store', color: 'orange' },
+        { id: 'USER', label: 'User', color: 'gray' },
+        { id: 'EXTERNAL', label: 'External', color: 'emerald' },
+    ]
+    const ALL_ROLE_IDS = ROLE_FILTERS.map(r => r.id)
+
+    const filteredUsers = users.filter(u => filterRoles.includes(u.role))
+    const totalCount = filteredUsers.length
+    const totalPages = Math.ceil(totalCount / itemsPerPage)
+    const paginatedUsers = filteredUsers.slice((page - 1) * itemsPerPage, page * itemsPerPage)
 
     // Form States
     const [formData, setFormData] = useState({
@@ -220,6 +241,64 @@ export default function UserManagementTable({ userRole }: Props) {
                     icon={<Users className="w-5 h-5 font-bold text-primary" />}
                 />
 
+                <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
+                    <span className="text-xs font-bold text-foreground">Filter :</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {ROLE_FILTERS.map((f) => {
+                            const isSelected = filterRoles.includes(f.id)
+                            const colorMap: Record<string, string> = {
+                                red: isSelected ? 'bg-red-500/10 border-red-500/30 text-red-600' : '',
+                                purple: isSelected ? 'bg-purple-500/10 border-purple-500/30 text-purple-600' : '',
+                                blue: isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' : '',
+                                cyan: isSelected ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600' : '',
+                                orange: isSelected ? 'bg-orange-500/10 border-orange-500/30 text-orange-600' : '',
+                                gray: isSelected ? 'bg-gray-500/10 border-gray-500/30 text-gray-600' : '',
+                                emerald: isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : '',
+                            }
+                            const dotMap: Record<string, string> = {
+                                red: isSelected ? 'bg-red-500 ring-red-500/20' : '',
+                                purple: isSelected ? 'bg-purple-500 ring-purple-500/20' : '',
+                                blue: isSelected ? 'bg-blue-500 ring-blue-500/20' : '',
+                                cyan: isSelected ? 'bg-cyan-500 ring-cyan-500/20' : '',
+                                orange: isSelected ? 'bg-orange-500 ring-orange-500/20' : '',
+                                gray: isSelected ? 'bg-gray-500 ring-gray-500/20' : '',
+                                emerald: isSelected ? 'bg-emerald-500 ring-emerald-500/20' : '',
+                            }
+                            return (
+                                <button
+                                    key={f.id}
+                                    onClick={() => {
+                                        setFilterRoles(prev => isSelected ? prev.filter(r => r !== f.id) : [...prev, f.id])
+                                        setPage(1)
+                                    }}
+                                    className={cn(
+                                        'flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all',
+                                        isSelected ? colorMap[f.color] : 'bg-background border-border text-muted-foreground/50 hover:bg-muted'
+                                    )}
+                                >
+                                    <div className={cn(
+                                        'w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent',
+                                        isSelected ? dotMap[f.color] : 'bg-muted-foreground/20 ring-transparent'
+                                    )} />
+                                    {f.label}
+                                </button>
+                            )
+                        })}
+
+                        <div className="h-4 w-[1px] bg-border mx-1" />
+
+                        <button
+                            onClick={() => {
+                                setFilterRoles(prev => prev.length === ALL_ROLE_IDS.length ? [] : [...ALL_ROLE_IDS])
+                                setPage(1)
+                            }}
+                            className="text-[10px] font-bold text-primary hover:underline px-2"
+                        >
+                            {filterRoles.length === ALL_ROLE_IDS.length ? 'Unselect All' : 'Select All'}
+                        </button>
+                    </div>
+                </div>
+
                 <TableScrollArea>
                     <Table>
                         <TableHeader>
@@ -239,7 +318,7 @@ export default function UserManagementTable({ userRole }: Props) {
                                     icon={<Users className="w-12 h-12 opacity-20" />}
                                 />
                             ) : (
-                                users.map((user) => (
+                                paginatedUsers.map((user) => (
                                     <TableRow key={user.id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
@@ -318,6 +397,15 @@ export default function UserManagementTable({ userRole }: Props) {
                         </TableBody>
                     </Table>
                 </TableScrollArea>
+
+                <TablePagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                    totalCount={totalCount}
+                />
             </TableWrapper>
 
             {/* Edit Modal */}

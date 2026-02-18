@@ -1,5 +1,3 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import { getWorkSchedules, getCustomWorkSchedules } from '@/app/actions/work-schedule'
 import { getSystemSetting } from '@/app/actions/settings'
@@ -7,6 +5,7 @@ import WorkScheduleManager from '@/components/hr/work-schedule-manager'
 import CustomWorkScheduleManager from '@/components/hr/custom-work-schedule-manager'
 import SalaryCalculationDateCard from '@/components/hr/salary-calculation-date-card'
 import AnnouncementSettings from '@/components/hr/announcement-settings'
+import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export const metadata = {
     title: 'Setting HR | Ichibot Production',
@@ -16,16 +15,10 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function HRSettingsPage() {
-    const session: any = await getServerSession(authOptions)
+    await requireAuth()
+    const allowed = await isAllowedForPage('/hr-settings', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    if (!allowed) redirect('/dashboard')
 
-    if (!session?.user) {
-        redirect('/login')
-    }
-
-    // Only ADMIN, HRD and ADMINISTRASI can access
-    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        redirect('/dashboard')
-    }
 
     const [schedules, customSchedules, announcementSpeed] = await Promise.all([
         getWorkSchedules(),

@@ -1,6 +1,6 @@
 import StoreProductList from '@/components/store/store-product-list';
 import { getStoreProducts } from '@/app/actions/store-product';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import StoreSkeleton from '@/components/store/store-skeleton';
@@ -20,9 +20,9 @@ async function StoreProductContent() {
 
 export default async function StoreProductPage() {
     const session = await requireAuth();
-    if (session.user.role === 'EXTERNAL') {
-        redirect('/dashboard');
-    }
+    const allowed = await isAllowedForPage('/store/product', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    if (!allowed) redirect('/dashboard');
+
 
     return (
         <div className="max-w-7xl mx-auto">

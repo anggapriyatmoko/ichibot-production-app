@@ -15,6 +15,7 @@ import {
     TableCell,
     TableEmpty,
     TableHeaderContent,
+    TablePagination,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -27,12 +28,18 @@ export default function UserTable({ users }: UserTableProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<any>(null)
     const [isDeleting, setIsDeleting] = useState<string | null>(null)
+    const [page, setPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
     const filteredUsers = users.filter(user =>
         user.name?.toLowerCase().includes(search.toLowerCase()) ||
         user.username?.toLowerCase().includes(search.toLowerCase()) ||
         user.email?.toLowerCase().includes(search.toLowerCase())
     )
+
+    const totalCount = filteredUsers.length
+    const totalPages = Math.ceil(totalCount / itemsPerPage)
+    const paginatedUsers = filteredUsers.slice((page - 1) * itemsPerPage, page * itemsPerPage)
 
     const handleEdit = (user: any) => {
         setEditingUser(user)
@@ -115,7 +122,7 @@ export default function UserTable({ users }: UserTableProps) {
                                     type="text"
                                     placeholder="Search users..."
                                     value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1) }}
                                     className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                                 />
                             </div>
@@ -135,7 +142,7 @@ export default function UserTable({ users }: UserTableProps) {
 
                 {/* Mobile View */}
                 <div className="md:hidden space-y-4 p-4">
-                    {filteredUsers.map((user) => (
+                    {paginatedUsers.map((user) => (
                         <div key={user.id} className="bg-card border border-border rounded-xl p-4 shadow-sm space-y-3">
                             <div className="flex justify-between items-start gap-3">
                                 <div className="flex items-center gap-3">
@@ -207,7 +214,7 @@ export default function UserTable({ users }: UserTableProps) {
                                         icon={<UserIcon className="w-12 h-12 opacity-20" />}
                                     />
                                 ) : (
-                                    filteredUsers.map((user) => (
+                                    paginatedUsers.map((user) => (
                                         <TableRow key={user.id} className="group">
                                             <TableCell className="px-6">
                                                 <div className="flex items-center gap-3">
@@ -257,6 +264,15 @@ export default function UserTable({ users }: UserTableProps) {
                         </Table>
                     </TableScrollArea>
                 </div>
+
+                <TablePagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                    totalCount={totalCount}
+                />
             </TableWrapper>
 
             <UserDialog

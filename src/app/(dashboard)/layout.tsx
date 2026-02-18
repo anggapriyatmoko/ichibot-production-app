@@ -3,9 +3,11 @@ import Header from '@/components/layout/header'
 import MobileSidebarToggle from '@/components/layout/mobile-sidebar-toggle'
 import { SidebarProvider } from '@/components/providers/sidebar-provider'
 import ChatWidget from '@/components/chat/chat-widget'
+import RbacGuard from '@/components/providers/rbac-guard'
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { getRbacConfig } from "@/app/actions/rbac"
 
 /**
  * Z-INDEX HIERARCHY (for reference when creating modals):
@@ -23,11 +25,14 @@ export default async function DashboardLayout({
     children: React.ReactNode
 }) {
     const session: any = await getServerSession(authOptions)
+    const rbacConfig = await getRbacConfig()
+    const userRole = session?.user?.role || ""
 
     return (
         <SidebarProvider>
+            <RbacGuard userRole={userRole} rbacConfig={rbacConfig} />
             <div className="flex h-dvh bg-background flex-col md:flex-row">
-                <Sidebar userRole={session?.user?.role} />
+                <Sidebar userRole={userRole} rbacConfig={rbacConfig} />
 
                 {/* Main content wrapper */}
                 <main className="flex-1 flex flex-col min-h-0 relative overflow-hidden">

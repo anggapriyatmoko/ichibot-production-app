@@ -142,6 +142,7 @@ export default async function ServiceRobotPage({
                 initialServices={services}
                 totalPages={totalPages}
                 currentPage={page}
+                totalCount={totalCount}
                 products={robotTypes}
                 customers={customers}
                 analysisData={analysisData}

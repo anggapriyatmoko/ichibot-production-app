@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Check, X, Clock, FileText, User as UserIcon, Calendar, Loader2, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Check, X, Clock, FileText, User as UserIcon, Calendar, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getOvertimeLeaves, updateOvertimeLeaveStatus, createOvertimeOrder, deleteOvertimeLeave, updateOvertimeLeave } from '@/app/actions/overtime-leave'
 import { getUsers } from '@/app/actions/user'
@@ -18,6 +18,7 @@ import {
     TableCell,
     TableEmpty,
     TableHeaderContent,
+    TablePagination,
 } from '@/components/ui/table'
 
 export default function OvertimeLeaveApproval() {
@@ -50,7 +51,7 @@ export default function OvertimeLeaveApproval() {
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [totalItems, setTotalItems] = useState(0)
-    const limit = 10
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
     // Filter state
     const [filterTypes, setFilterTypes] = useState<string[]>(['ORDER', 'OVERTIME_SUBMISSION', 'LEAVE', 'VACATION'])
@@ -91,7 +92,7 @@ export default function OvertimeLeaveApproval() {
 
     const fetchRequests = async () => {
         setIsLoading(true)
-        const res = await getOvertimeLeaves(page, limit, filterTypes, false, startDate, endDate)
+        const res = await getOvertimeLeaves(page, itemsPerPage, filterTypes, false, startDate, endDate)
         if (res.success) {
             setRequests(res.data || [])
             setTotalPages(res.pages || 1)
@@ -104,7 +105,7 @@ export default function OvertimeLeaveApproval() {
     useEffect(() => {
         fetchRequests()
         loadUsers()
-    }, [page, filterTypes, startDate, endDate])
+    }, [page, filterTypes, startDate, endDate, itemsPerPage])
 
     // Reset page on filter change
     useEffect(() => {
@@ -494,45 +495,14 @@ export default function OvertimeLeaveApproval() {
             </TableScrollArea>
 
             {/* Pagination Controls */}
-            {totalItems > 0 && (
-                <div className="bg-muted/30 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                        Showing <span className="font-bold text-foreground">{(page - 1) * limit + 1}-{Math.min(page * limit, totalItems)}</span> of <span className="font-bold text-foreground">{totalItems}</span>
-                    </p>
-                    {totalPages > 1 && (
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1 || isLoading}
-                                className="p-2 hover:bg-card rounded-lg border border-border disabled:opacity-30 transition-all shadow-sm"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                            <div className="flex items-center gap-1 px-2">
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                    <button
-                                        key={p}
-                                        onClick={() => setPage(p)}
-                                        className={cn(
-                                            "w-8 h-8 rounded-lg text-xs font-bold transition-all",
-                                            page === p ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:bg-card border border-transparent hover:border-border"
-                                        )}
-                                    >
-                                        {p}
-                                    </button>
-                                ))}
-                            </div>
-                            <button
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages || isLoading}
-                                className="p-2 hover:bg-card rounded-lg border border-border disabled:opacity-30 transition-all shadow-sm"
-                            >
-                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+            <TablePagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                totalCount={totalItems}
+            />
             {/* Perintah Lembur Modal */}
             {isAddingOrder && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

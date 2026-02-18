@@ -5,10 +5,6 @@ import { requireAdmin } from '@/lib/auth'
 export default async function ProjectSettingsPage() {
     const session = await requireAdmin()
 
-    // Strictly restrict to ADMIN only (not HRD)
-    if (session.user.role !== 'ADMIN') {
-        throw new Error('Hanya Admin yang dapat mengakses halaman ini')
-    }
 
     const categories = await getProjectCategories()
 

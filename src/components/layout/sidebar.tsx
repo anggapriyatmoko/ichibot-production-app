@@ -36,14 +36,15 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/providers/sidebar-provider";
 import UserNav from "./user-nav";
+import type { RbacConfig } from "@/app/actions/rbac";
 
-const dashboardItem = {
+export const dashboardItem = {
   name: "Dashboard",
   href: "/dashboard",
   icon: LayoutDashboard,
 };
 
-const navigationGroups = [
+export const navigationGroups = [
   {
     label: "Inventory",
     items: [
@@ -227,12 +228,28 @@ const navigationGroups = [
   },
 ];
 
-export default function Sidebar({ userRole }: { userRole?: string }) {
+export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; rbacConfig?: RbacConfig | null }) {
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(true);
   const { isMobileOpen, setIsMobileOpen } = useSidebar();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const pathname = usePathname();
+
+  // RBAC helper: check if a href is allowed for the current role
+  const isHrefAllowed = (href: string): boolean => {
+    if (!rbacConfig) return true; // No config = allow all (backward compat)
+    if (userRole === "ADMIN") return true; // Admin always allowed
+    const allowedRoles = rbacConfig[href];
+    if (!allowedRoles) return true; // href not in config = allow (not managed)
+    return allowedRoles.includes(userRole || "");
+  };
+
+  // RBAC filter: check if an item (or any of its children) should be shown
+  const isItemAllowed = (item: any): boolean => {
+    if (item.href) return isHrefAllowed(item.href);
+    if (item.children) return item.children.some((child: any) => isItemAllowed(child));
+    return true;
+  };
 
   const toggleMenu = (name: string) => {
     setOpenMenus((prev) =>
@@ -276,8 +293,14 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
           {isMenuOpen && !isCollapsed && (
             <div className="ml-4 space-y-1 border-l border-border pl-2">
               {item.children.map((child: any) => {
-                if (child.adminOnly && userRole !== "ADMIN") return null;
-                if (child.excludeRoles && child.excludeRoles.includes(userRole)) return null;
+                if (rbacConfig) {
+                  // RBAC mode: only check RBAC config
+                  if (!isItemAllowed(child)) return null;
+                } else {
+                  // Legacy mode: use hardcoded filters
+                  if (child.adminOnly && userRole !== "ADMIN") return null;
+                  if (child.excludeRoles && child.excludeRoles.includes(userRole)) return null;
+                }
                 return (
                   <NavItem
                     key={child.name}
@@ -371,10 +394,19 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
           <NavItem item={dashboardItem} isCollapsed={!isOpen} />
 
           {navigationGroups.map((group) => {
-            if (group.roles && !group.roles.includes(userRole || ""))
-              return null;
-            if (group.excludeRoles && group.excludeRoles.includes(userRole || ""))
-              return null;
+            if (!rbacConfig) {
+              // Legacy mode: use hardcoded group-level filters
+              if (group.roles && !group.roles.includes(userRole || ""))
+                return null;
+              if (group.excludeRoles && group.excludeRoles.includes(userRole || ""))
+                return null;
+            }
+
+            // In RBAC mode: check if any item in this group is allowed
+            if (rbacConfig && userRole !== "ADMIN") {
+              const hasAnyAllowedItem = (group.items as any[]).some((item: any) => isItemAllowed(item));
+              if (!hasAnyAllowedItem) return null;
+            }
 
             return (
               <div key={group.label} className="pt-4 pb-1">
@@ -386,12 +418,18 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
                 )}
                 <div className="mt-1 space-y-1">
                   {group.items.map((item: any) => {
-                    if (item.adminOnly && userRole !== "ADMIN") return null;
-                    if (
-                      item.excludeRoles &&
-                      item.excludeRoles.includes(userRole)
-                    )
-                      return null;
+                    if (rbacConfig) {
+                      // RBAC mode: only check RBAC config
+                      if (!isItemAllowed(item)) return null;
+                    } else {
+                      // Legacy mode: use hardcoded filters
+                      if (item.adminOnly && userRole !== "ADMIN") return null;
+                      if (
+                        item.excludeRoles &&
+                        item.excludeRoles.includes(userRole)
+                      )
+                        return null;
+                    }
                     return (
                       <NavItem
                         key={item.name}

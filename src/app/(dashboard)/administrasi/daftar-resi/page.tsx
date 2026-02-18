@@ -1,28 +1,13 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, isAllowedForPage } from "@/lib/auth";
 import ResiManager from "@/components/administrasi/resi-manager";
 import { getResis } from "@/app/actions/resi";
 
-type UserSession = {
-  user?: {
-    role?: string;
-  };
-};
-
 export default async function DaftarResiPage() {
   await requireAuth();
-  const session = (await getServerSession(authOptions)) as UserSession | null;
+  const allowed = await isAllowedForPage('/administrasi/daftar-resi', ['ADMIN', 'HRD', 'ADMINISTRASI', 'USER', 'TEKNISI']);
+  if (!allowed) redirect("/dashboard");
 
-  if (
-    !session?.user?.role ||
-    !["ADMIN", "HRD", "ADMINISTRASI", "USER", "TEKNISI"].includes(
-      session.user.role
-    )
-  ) {
-    redirect("/dashboard");
-  }
 
   // Fetch initial data
   const result = await getResis({ per_page: 15 });

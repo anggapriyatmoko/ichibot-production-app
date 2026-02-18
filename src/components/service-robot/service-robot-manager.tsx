@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, ChevronLeft, ChevronRight, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck, Camera, ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck, Camera, ImageIcon } from 'lucide-react'
 import { createServiceRobot, updateServiceRobot, deleteServiceRobot, getServiceRobots } from '@/app/actions/service-robot'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -11,6 +11,19 @@ import ImportServiceRobotModal from './import-service-robot-modal'
 import SendResiModal from './send-resi-modal'
 import { processImageFile } from '@/utils/image-compression'
 import Image from 'next/image'
+import {
+    TableWrapper,
+    TableScrollArea,
+    Table,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableHead,
+    TableCell,
+    TableEmpty,
+    TableHeaderContent,
+    TablePagination,
+} from '@/components/ui/table'
 
 interface ServiceRobot {
     id: string
@@ -31,6 +44,7 @@ interface ServiceRobotManagerProps {
     initialServices: ServiceRobot[]
     totalPages: number
     currentPage: number
+    totalCount: number
     products: string[]
     customers: { name: string; address: string; phone: string }[]
     isAdmin?: boolean
@@ -65,7 +79,7 @@ const STATUS_COLORS = {
     'CANCELLED': 'bg-gray-500'
 }
 
-export default function ServiceRobotManager({ initialServices, totalPages, currentPage, products, customers, analysisData, isAdmin = false }: ServiceRobotManagerProps) {
+export default function ServiceRobotManager({ initialServices, totalPages, currentPage, totalCount, products, customers, analysisData, isAdmin = false }: ServiceRobotManagerProps) {
     const router = useRouter()
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
 
@@ -514,98 +528,83 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
     return (
         <>
             <div className="space-y-6">
-                {/* Header Actions */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-                    <div className="flex gap-2 flex-1">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Cari nama, no HP, jenis robot..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
-                            />
-                        </div>
-                        {/* Action Buttons */}
-                        <div className="flex gap-2">
-                            <ImportServiceRobotModal isAdmin={isAdmin} validRobotTypes={products} />
-                            <button
-                                onClick={handleExport}
-                                disabled={isLoadingExport}
-                                className="p-2 border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                                title="Export to Excel"
-                            >
-                                {isLoadingExport ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <Download className="w-5 h-5" />
-                                )}
-                            </button>
-                            <button
-                                onClick={openAddForm}
-                                className="p-2 md:px-4 md:py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm md:font-medium md:flex md:items-center md:gap-2"
-                                title="Tambah Service"
-                            >
-                                <Plus className="w-5 h-5 md:w-4 md:h-4" />
-                                <span className="hidden md:inline">Tambah Service</span>
-                            </button>
-                        </div>
+                {/* Header Actions - Mobile */}
+                <div className="flex gap-2 flex-1 md:hidden">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Cari nama, no HP, jenis robot..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <ImportServiceRobotModal isAdmin={isAdmin} validRobotTypes={products} />
+                        <button
+                            onClick={handleExport}
+                            disabled={isLoadingExport}
+                            className="p-2 border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                            title="Export to Excel"
+                        >
+                            {isLoadingExport ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <Download className="w-5 h-5" />
+                            )}
+                        </button>
+                        <button
+                            onClick={openAddForm}
+                            className="p-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-sm"
+                            title="Tambah Service"
+                        >
+                            <Plus className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
 
-                {/* Status Filter Buttons */}
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-sm font-medium">Filter :</span>
-                    <button
-                        onClick={() => toggleStatusFilter('PENDING')}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
-                            statusFilters.PENDING
-                                ? "bg-red-500/10 text-red-600 border-red-500/20"
-                                : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
-                        )}
-                    >
-                        <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.PENDING ? "bg-red-500" : "bg-muted-foreground/30")} />
-                        Service Masuk
-                    </button>
-                    <button
-                        onClick={() => toggleStatusFilter('IN_PROGRESS')}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
-                            statusFilters.IN_PROGRESS
-                                ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                                : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
-                        )}
-                    >
-                        <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.IN_PROGRESS ? "bg-blue-500" : "bg-muted-foreground/30")} />
-                        Dikerjakan
-                    </button>
-                    <button
-                        onClick={() => toggleStatusFilter('DONE')}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
-                            statusFilters.DONE
-                                ? "bg-green-500/10 text-green-600 border-green-500/20"
-                                : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
-                        )}
-                    >
-                        <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.DONE ? "bg-green-500" : "bg-muted-foreground/30")} />
-                        Selesai
-                    </button>
-                    <button
-                        onClick={() => toggleStatusFilter('DELIVERED')}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 px-2 py-px rounded-full text-[11px] font-medium border transition-all",
-                            statusFilters.DELIVERED
-                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                : "bg-card text-muted-foreground/50 border-border hover:bg-accent line-through"
-                        )}
-                    >
-                        <span className={cn("w-1.5 h-1.5 rounded-full", statusFilters.DELIVERED ? "bg-emerald-600" : "bg-muted-foreground/30")} />
-                        Dikirim
-                    </button>
-
+                {/* Status Filter Buttons - Mobile */}
+                <div className="flex flex-wrap items-center gap-2 mb-4 md:hidden">
+                    <span className="text-xs font-bold text-foreground">Filter :</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {[
+                            { key: 'PENDING', label: 'Service Masuk', color: 'red' },
+                            { key: 'IN_PROGRESS', label: 'Dikerjakan', color: 'blue' },
+                            { key: 'DONE', label: 'Selesai', color: 'green' },
+                            { key: 'DELIVERED', label: 'Dikirim', color: 'emerald' },
+                        ].map((f) => {
+                            const isSelected = statusFilters[f.key]
+                            const colorMap: Record<string, string> = {
+                                red: isSelected ? 'bg-red-500/10 border-red-500/30 text-red-600' : '',
+                                blue: isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' : '',
+                                green: isSelected ? 'bg-green-500/10 border-green-500/30 text-green-600' : '',
+                                emerald: isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : '',
+                            }
+                            const dotMap: Record<string, string> = {
+                                red: isSelected ? 'bg-red-500 ring-red-500/20' : '',
+                                blue: isSelected ? 'bg-blue-500 ring-blue-500/20' : '',
+                                green: isSelected ? 'bg-green-500 ring-green-500/20' : '',
+                                emerald: isSelected ? 'bg-emerald-500 ring-emerald-500/20' : '',
+                            }
+                            return (
+                                <button
+                                    key={f.key}
+                                    onClick={() => toggleStatusFilter(f.key)}
+                                    className={cn(
+                                        'flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all',
+                                        isSelected ? colorMap[f.color] : 'bg-background border-border text-muted-foreground/50 hover:bg-muted'
+                                    )}
+                                >
+                                    <div className={cn(
+                                        'w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent',
+                                        isSelected ? dotMap[f.color] : 'bg-muted-foreground/20 ring-transparent'
+                                    )} />
+                                    {f.label}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </div>
 
                 {/* Modal Form */}
@@ -868,157 +867,278 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                 )}
 
                 {/* Desktop Table */}
-                <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto overflow-y-hidden">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-muted text-foreground uppercase font-normal text-xs">
-                                <tr>
-                                    <th onClick={() => handleSort('entryDate')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                        <div className="flex items-center">Tgl Masuk <SortIcon column="entryDate" /></div>
-                                    </th>
-                                    <th className="px-2 py-3 w-12">Foto</th>
-                                    <th onClick={() => handleSort('customerName')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                        <div className="flex items-center">Pelanggan <SortIcon column="customerName" /></div>
-                                    </th>
-                                    <th onClick={() => handleSort('robotType')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                        <div className="flex items-center">Jenis Robot <SortIcon column="robotType" /></div>
-                                    </th>
-                                    <th className="px-4 py-3">Kelengkapan</th>
-                                    <th className="px-4 py-3">Keluhan</th>
-                                    <th onClick={() => handleSort('serviceStatus')} className="px-4 py-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                        <div className="flex items-center">Status <SortIcon column="serviceStatus" /></div>
-                                    </th>
-                                    <th className="px-4 py-3 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {filteredServices.map((service) => (
-                                    <tr key={service.id} className="hover:bg-accent/50 transition-colors">
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                            <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
-                                        </td>
-                                        <td className="px-2 py-3">
-                                            {service.image ? (
-                                                <a href={service.image} target="_blank" rel="noopener noreferrer" className="block">
-                                                    <img
-                                                        src={service.image}
-                                                        alt="Robot"
-                                                        className="w-10 h-10 object-cover rounded-lg border border-border hover:border-primary hover:opacity-80 transition-all cursor-pointer"
-                                                    />
-                                                </a>
-                                            ) : (
-                                                <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                                                    <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 min-w-0">
-                                            <div className="flex items-start gap-2">
-                                                <div className={cn(
-                                                    "w-2 h-2 rounded-full mt-1.5 shrink-0",
-                                                    service.serviceStatus === 'PENDING' && "bg-red-500",
-                                                    service.serviceStatus === 'IN_PROGRESS' && "bg-blue-500",
-                                                    (service.serviceStatus === 'DONE' || service.serviceStatus === 'DELIVERED') && "bg-green-500"
-                                                )} />
-                                                <div className="min-w-0">
-                                                    <div className="font-medium text-foreground truncate">{service.customerName}</div>
-                                                    <div className="text-xs font-mono text-muted-foreground my-0.5">{service.customerPhone}</div>
-                                                    <div className="text-xs text-muted-foreground line-clamp-2">{service.customerAddress}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <div className="font-medium text-foreground">{service.robotType}</div>
-                                            <div className="mt-1">
-                                                <span className={cn(
-                                                    "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-                                                    service.warrantyStatus === 'YA'
-                                                        ? 'bg-green-500/10 text-green-600 border border-green-500/20'
-                                                        : 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
-                                                )}>
-                                                    {service.warrantyStatus === 'YA' ? 'Garansi' : 'Tidak Garansi'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-xs min-w-[150px] whitespace-pre-wrap">{service.accessories || '-'}</td>
-                                        <td className="px-4 py-3 min-w-[200px]">
-                                            <div className="text-xs whitespace-pre-wrap text-foreground mb-2">{service.complaint}</div>
+                <div className="hidden md:block">
+                    <TableWrapper>
+                        <TableHeaderContent
+                            title="Service Robot"
+                            description="Kelola service dan maintenance robot."
+                            icon={<Bot className="w-5 h-5 font-bold text-primary" />}
+                            actions={
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="relative flex-1 sm:w-64">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                        <input
+                                            type="text"
+                                            placeholder="Cari nama, HP, robot..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                        />
+                                    </div>
+                                    <ImportServiceRobotModal isAdmin={isAdmin} validRobotTypes={products} />
+                                    <button
+                                        onClick={handleExport}
+                                        disabled={isLoadingExport}
+                                        className="p-2 border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                        title="Export to Excel"
+                                    >
+                                        {isLoadingExport ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <Download className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={openAddForm}
+                                        className="shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm"
+                                        title="Tambah Service"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        <span className="hidden lg:inline">Tambah</span>
+                                    </button>
+                                </div>
+                            }
+                        />
 
-                                            <div className="pt-2 border-t border-border border-dashed">
-                                                {service.serviceNotes ? (
-                                                    <div
-                                                        className="group cursor-pointer"
-                                                        onClick={() => handleSolutionClick(service)}
-                                                    >
-                                                        <div className="flex items-center gap-1 text-xs font-bold text-green-600 mb-1">
-                                                            <span>Solusi:</span>
-                                                            <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {/* Status Filter */}
+                        <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
+                            <span className="text-xs font-bold text-foreground">Filter :</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {[
+                                    { key: 'PENDING', label: 'Service Masuk', color: 'red' },
+                                    { key: 'IN_PROGRESS', label: 'Dikerjakan', color: 'blue' },
+                                    { key: 'DONE', label: 'Selesai', color: 'green' },
+                                    { key: 'DELIVERED', label: 'Dikirim', color: 'emerald' },
+                                ].map((f) => {
+                                    const isSelected = statusFilters[f.key]
+                                    const colorMap: Record<string, string> = {
+                                        red: isSelected ? 'bg-red-500/10 border-red-500/30 text-red-600' : '',
+                                        blue: isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' : '',
+                                        green: isSelected ? 'bg-green-500/10 border-green-500/30 text-green-600' : '',
+                                        emerald: isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : '',
+                                    }
+                                    const dotMap: Record<string, string> = {
+                                        red: isSelected ? 'bg-red-500 ring-red-500/20' : '',
+                                        blue: isSelected ? 'bg-blue-500 ring-blue-500/20' : '',
+                                        green: isSelected ? 'bg-green-500 ring-green-500/20' : '',
+                                        emerald: isSelected ? 'bg-emerald-500 ring-emerald-500/20' : '',
+                                    }
+                                    return (
+                                        <button
+                                            key={f.key}
+                                            onClick={() => toggleStatusFilter(f.key)}
+                                            className={cn(
+                                                'flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all',
+                                                isSelected ? colorMap[f.color] : 'bg-background border-border text-muted-foreground/50 hover:bg-muted'
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                'w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent',
+                                                isSelected ? dotMap[f.color] : 'bg-muted-foreground/20 ring-transparent'
+                                            )} />
+                                            {f.label}
+                                        </button>
+                                    )
+                                })}
+
+                                <div className="h-4 w-[1px] bg-border mx-1" />
+
+                                <button
+                                    onClick={() => {
+                                        const allSelected = Object.values(statusFilters).every(v => v)
+                                        const newFilters = Object.keys(statusFilters).reduce((acc, key) => ({ ...acc, [key]: !allSelected }), {} as Record<string, boolean>)
+                                        setStatusFilters(newFilters)
+                                        const activeStatuses = Object.entries(newFilters).filter(([_, active]) => active).map(([s]) => s)
+                                        const params = new URLSearchParams(window.location.search)
+                                        params.set('page', '1')
+                                        if (activeStatuses.length < 4) params.set('status', activeStatuses.join(','))
+                                        else params.delete('status')
+                                        router.push(`/service-robot?${params.toString()}`)
+                                    }}
+                                    className="text-[10px] font-bold text-primary hover:underline px-2"
+                                >
+                                    {Object.values(statusFilters).every(v => v) ? 'Unselect All' : 'Select All'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <TableScrollArea>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow hoverable={false} className="bg-muted/50">
+                                        <TableHead>
+                                            <button onClick={() => handleSort('entryDate')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                                                Tgl Masuk <SortIcon column="entryDate" />
+                                            </button>
+                                        </TableHead>
+                                        <TableHead>Foto</TableHead>
+                                        <TableHead>
+                                            <button onClick={() => handleSort('customerName')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                                                Pelanggan <SortIcon column="customerName" />
+                                            </button>
+                                        </TableHead>
+                                        <TableHead>
+                                            <button onClick={() => handleSort('robotType')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                                                Jenis Robot <SortIcon column="robotType" />
+                                            </button>
+                                        </TableHead>
+                                        <TableHead>Kelengkapan</TableHead>
+                                        <TableHead>Keluhan</TableHead>
+                                        <TableHead>
+                                            <button onClick={() => handleSort('serviceStatus')} className="flex items-center gap-1 hover:text-primary transition-colors">
+                                                Status <SortIcon column="serviceStatus" />
+                                            </button>
+                                        </TableHead>
+                                        <TableHead align="right">Aksi</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredServices.length === 0 ? (
+                                        <TableEmpty
+                                            colSpan={8}
+                                            message="Belum ada data service."
+                                            icon={<Bot className="w-12 h-12 opacity-20" />}
+                                        />
+                                    ) : (
+                                        filteredServices.map((service) => (
+                                            <TableRow key={service.id}>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div className="font-medium">{new Date(service.entryDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                                    <div className="text-xs text-muted-foreground">{new Date(service.entryDate).toLocaleDateString('id-ID', { weekday: 'long' })} - {new Date(service.entryDate).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {service.image ? (
+                                                        <a href={service.image} target="_blank" rel="noopener noreferrer" className="block">
+                                                            <img
+                                                                src={service.image}
+                                                                alt="Robot"
+                                                                className="w-10 h-10 object-cover rounded-lg border border-border hover:border-primary hover:opacity-80 transition-all cursor-pointer"
+                                                            />
+                                                        </a>
+                                                    ) : (
+                                                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                                                            <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
                                                         </div>
-                                                        <div className="text-xs text-muted-foreground whitespace-pre-wrap group-hover:text-foreground transition-colors">
-                                                            {service.serviceNotes}
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="min-w-0">
+                                                    <div className="flex items-start gap-2">
+                                                        <div className={cn(
+                                                            "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                                                            service.serviceStatus === 'PENDING' && "bg-red-500",
+                                                            service.serviceStatus === 'IN_PROGRESS' && "bg-blue-500",
+                                                            (service.serviceStatus === 'DONE' || service.serviceStatus === 'DELIVERED') && "bg-green-500"
+                                                        )} />
+                                                        <div className="min-w-0">
+                                                            <div className="font-medium text-foreground truncate">{service.customerName}</div>
+                                                            <div className="text-xs font-mono text-muted-foreground my-0.5">{service.customerPhone}</div>
+                                                            <div className="text-xs text-muted-foreground line-clamp-2">{service.customerAddress}</div>
                                                         </div>
                                                     </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleSolutionClick(service)}
-                                                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                                    >
-                                                        <Plus className="w-3 h-3" />
-                                                        Input Penyelesaian
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            {getStatusBadge(service.serviceStatus, () => handleStatusClick(service))}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button
-                                                    onClick={() => handleWhatsAppClick(service)}
-                                                    className="p-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 rounded-lg"
-                                                    title="Hubungi via WhatsApp"
-                                                >
-                                                    <MessageCircle className="w-4 h-4" />
-                                                </button>
-                                                {(service.serviceStatus === 'DONE' || service.serviceStatus === 'DELIVERED') && (
-                                                    <button
-                                                        onClick={() => { setResiService(service); setResiModalOpen(true); }}
-                                                        className="p-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-600 rounded-lg"
-                                                        title="Kirim Resi"
-                                                    >
-                                                        <Truck className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => openEditForm(service)}
-                                                    className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg"
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(service)}
-                                                    className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 rounded-lg"
-                                                    title="Hapus"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredServices.length === 0 && (
-                                    <tr>
-                                        <td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">
-                                            Belum ada data service.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div className="font-medium text-foreground">{service.robotType}</div>
+                                                    <div className="mt-1">
+                                                        <span className={cn(
+                                                            "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+                                                            service.warrantyStatus === 'YA'
+                                                                ? 'bg-green-500/10 text-green-600 border border-green-500/20'
+                                                                : 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
+                                                        )}>
+                                                            {service.warrantyStatus === 'YA' ? 'Garansi' : 'Tidak Garansi'}
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-xs min-w-[150px] whitespace-pre-wrap">{service.accessories || '-'}</TableCell>
+                                                <TableCell className="min-w-[200px]">
+                                                    <div className="text-xs whitespace-pre-wrap text-foreground mb-2">{service.complaint}</div>
+                                                    <div className="pt-2 border-t border-border border-dashed">
+                                                        {service.serviceNotes ? (
+                                                            <div
+                                                                className="group cursor-pointer"
+                                                                onClick={() => handleSolutionClick(service)}
+                                                            >
+                                                                <div className="flex items-center gap-1 text-xs font-bold text-green-600 mb-1">
+                                                                    <span>Solusi:</span>
+                                                                    <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                </div>
+                                                                <div className="text-xs text-muted-foreground whitespace-pre-wrap group-hover:text-foreground transition-colors">
+                                                                    {service.serviceNotes}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleSolutionClick(service)}
+                                                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                                            >
+                                                                <Plus className="w-3 h-3" />
+                                                                Input Penyelesaian
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {getStatusBadge(service.serviceStatus, () => handleStatusClick(service))}
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button
+                                                            onClick={() => handleWhatsAppClick(service)}
+                                                            className="p-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 rounded-lg"
+                                                            title="Hubungi via WhatsApp"
+                                                        >
+                                                            <MessageCircle className="w-4 h-4" />
+                                                        </button>
+                                                        {(service.serviceStatus === 'DONE' || service.serviceStatus === 'DELIVERED') && (
+                                                            <button
+                                                                onClick={() => { setResiService(service); setResiModalOpen(true); }}
+                                                                className="p-1.5 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-600 rounded-lg"
+                                                                title="Kirim Resi"
+                                                            >
+                                                                <Truck className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => openEditForm(service)}
+                                                            className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(service)}
+                                                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 rounded-lg"
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableScrollArea>
+
+                        <TablePagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={handlePageChange}
+                            itemsPerPage={20}
+                            totalCount={totalCount}
+                        />
+                    </TableWrapper>
                 </div>
 
                 {/* Mobile Card View */}
@@ -1150,26 +1270,14 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                 </div>
 
                 {/* Pagination */}
-                <div className="bg-card border border-border rounded-xl px-6 py-4 flex items-center justify-between shadow-sm">
-                    <div className="text-sm text-muted-foreground">
-                        Halaman <span className="font-medium text-foreground">{currentPage}</span> dari <span className="font-medium text-foreground">{totalPages}</span>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage <= 1}
-                            className="p-2 border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage >= totalPages}
-                            className="p-2 border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronRight className="w-5 h-5" />
-                        </button>
-                    </div>
+                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm md:hidden">
+                    <TablePagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        itemsPerPage={20}
+                        totalCount={totalCount}
+                    />
                 </div>
                 {/* Status Update Modal */}
                 {statusModalOpen && (

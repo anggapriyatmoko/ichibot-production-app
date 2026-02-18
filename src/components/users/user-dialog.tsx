@@ -138,6 +138,7 @@ export default function UserDialog({ isOpen, onClose, user }: UserDialogProps) {
                                 <option value="TEKNISI">Teknisi</option>
                                 <option value="HRD">HRD</option>
                                 <option value="ADMINISTRASI">Administrasi</option>
+                                <option value="STORE">Store</option>
                                 <option value="ADMIN">Admin</option>
                             </select>
                         </div>

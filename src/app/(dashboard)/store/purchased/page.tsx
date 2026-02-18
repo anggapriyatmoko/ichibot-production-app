@@ -1,7 +1,7 @@
 import { getStorePurchasedProducts } from '@/app/actions/store-product'
 import { getSystemSetting } from '@/app/actions/system-settings'
 import StoreProductList from '@/components/store/store-product-list'
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import StoreSkeleton from '@/components/store/store-skeleton';
@@ -33,9 +33,9 @@ async function StorePurchasedContent({ userRole }: { userRole: string }) {
 
 export default async function StorePurchasedPage() {
     const session = await requireAuth();
-    if (session.user.role === 'EXTERNAL') {
-        redirect('/dashboard');
-    }
+    const allowed = await isAllowedForPage('/store/purchased', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    if (!allowed) redirect('/dashboard');
+
 
     return (
         <div className="p-6 space-y-6">

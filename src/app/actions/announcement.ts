@@ -33,6 +33,28 @@ export async function createAnnouncement(content: string, targetUserIds: string[
     }
 }
 
+export async function updateAnnouncement(id: string, content: string, targetUserIds: string[]) {
+    await requireAdmin()
+
+    try {
+        await prisma.announcement.update({
+            where: { id },
+            data: {
+                contentEnc: encrypt(content) || '',
+                targetUsers: {
+                    set: targetUserIds.map(id => ({ id }))
+                }
+            }
+        })
+        revalidatePath('/hrd-dashboard')
+        revalidatePath('/')
+        return { success: true }
+    } catch (error: any) {
+        console.error(error)
+        return { error: error.message }
+    }
+}
+
 export async function updateAnnouncementSpeed(id: string, speed: number) {
     await requireAdmin()
 

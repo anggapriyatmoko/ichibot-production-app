@@ -2,7 +2,7 @@ import AssetManager from '@/components/assets/asset-manager'
 import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isAllowedForPage } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export const metadata = {
@@ -18,9 +18,9 @@ export default async function AssetsPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
     const sessionSession: any = await requireAuth()
-    if (sessionSession.user.role === 'EXTERNAL') {
-        redirect('/dashboard');
-    }
+    const allowed = await isAllowedForPage('/assets', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    if (!allowed) redirect('/dashboard');
+
     const params = await searchParams
     const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1

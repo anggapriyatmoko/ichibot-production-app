@@ -1,20 +1,13 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
+import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HumanResourcePage() {
-    const session: any = await getServerSession(authOptions)
+    await requireAuth()
+    const allowed = await isAllowedForPage('/human-resource', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    if (!allowed) redirect('/dashboard')
 
-    if (!session?.user) {
-        redirect('/login')
-    }
-
-    // Only ADMIN, HRD, and ADMINISTRASI can access this page
-    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        redirect('/dashboard')
-    }
 
     return (
         <div className="max-w-7xl mx-auto">

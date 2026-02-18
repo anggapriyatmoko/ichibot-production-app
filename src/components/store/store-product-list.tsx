@@ -59,7 +59,7 @@ export default function StoreProductList({
     const [searchTerm, setSearchTerm] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage, setItemsPerPage] = useState(20)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
     const [localProducts, setLocalProducts] = useState(initialProducts)
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
@@ -1033,8 +1033,8 @@ export default function StoreProductList({
                             <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Aset (Harga x Stok)</p>
                             <div className="flex flex-col">
                                 <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
-                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
-                                    * Produk dengan status selain Publish, serta kategori JASA ICHIBOT, PART ICHIBOT, dan ROBOT ICHIBOT tidak dihitung.
+                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic leading-relaxed">
+                                    * Hanya produk status <span className="font-bold underline">Publish</span> dengan stok positif yang dihitung. Stok minus dihitung sebagai 0. Kategori JASA, PART, dan ROBOT ICHIBOT dikecualikan.
                                 </p>
                             </div>
                         </div>

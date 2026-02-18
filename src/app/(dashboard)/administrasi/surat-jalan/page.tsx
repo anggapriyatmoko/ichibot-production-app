@@ -1,9 +1,8 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import SuratJalanManager from "@/components/administrasi/surat-jalan-manager";
 import { getSuratJalan } from "@/app/actions/surat-jalan";
+import { requireAuth, isAllowedForPage } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Surat Jalan | Ichibot Admin",
@@ -11,14 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default async function SuratJalanPage() {
-  const session: any = await getServerSession(authOptions);
+  await requireAuth();
+  const allowed = await isAllowedForPage('/administrasi/surat-jalan', ['ADMIN', 'HRD', 'ADMINISTRASI']);
+  if (!allowed) redirect("/dashboard");
 
-  if (
-    !session ||
-    !["ADMIN", "HRD", "ADMINISTRASI"].includes(session.user.role)
-  ) {
-    redirect("/dashboard");
-  }
 
   const initialData = await getSuratJalan(1);
 

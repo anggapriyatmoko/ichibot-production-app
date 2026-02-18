@@ -1,25 +1,12 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, isAllowedForPage } from "@/lib/auth";
 import CertificateManager from "@/components/administrasi/certificate-manager";
-
-type UserSession = {
-  user?: {
-    role?: string;
-  };
-};
 
 export default async function CertificatePage() {
   await requireAuth();
-  const session = (await getServerSession(authOptions)) as UserSession | null;
+  const allowed = await isAllowedForPage('/administrasi/certificate', ['ADMIN', 'HRD', 'ADMINISTRASI']);
+  if (!allowed) redirect("/dashboard");
 
-  if (
-    !session?.user?.role ||
-    !["ADMIN", "HRD", "ADMINISTRASI"].includes(session.user.role)
-  ) {
-    redirect("/dashboard");
-  }
 
   return (
     <div className="max-width-7xl mx-auto px-4 sm:px-0">

@@ -14,10 +14,6 @@ export default async function CatalogueSettingsPage({
 }) {
     const session = await requireAdmin()
 
-    // Strictly restrict to ADMIN only
-    if (session.user.role !== 'ADMIN') {
-        throw new Error('Hanya Admin yang dapat mengakses halaman ini')
-    }
 
     const params = await searchParams
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
