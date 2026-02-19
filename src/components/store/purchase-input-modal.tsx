@@ -34,8 +34,8 @@ export default function PurchaseInputModal({
     kursUsd,
     editMode = false
 }: PurchaseInputModalProps) {
-    const [purchasePackage, setPurchasePackage] = useState<number | ''>(1)
-    const [purchaseQty, setPurchaseQty] = useState<number | ''>('')
+    const [purchasePackage, setPurchasePackage] = useState<number | ''>('')
+    const [purchaseQty, setPurchaseQty] = useState<number | ''>(1)
     const [purchasePrice, setPurchasePrice] = useState<number | ''>('')
     const [purchaseCurrency, setPurchaseCurrency] = useState('CNY')
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,13 +48,13 @@ export default function PurchaseInputModal({
             const hasHistory = product.purchasePrice || product.purchaseQty || product.purchasePackage
 
             if (editMode || hasHistory) {
-                setPurchasePackage(product.purchasePackage || 1)
-                setPurchaseQty(product.purchaseQty || '')
+                setPurchasePackage(product.purchasePackage || '')
+                setPurchaseQty(product.purchaseQty || 1)
                 setPurchasePrice(product.purchasePrice || '')
                 setPurchaseCurrency(product.purchaseCurrency || 'CNY')
             } else {
-                setPurchasePackage(1)
-                setPurchaseQty('')
+                setPurchasePackage('')
+                setPurchaseQty(1)
                 setPurchasePrice('')
                 setPurchaseCurrency('CNY')
             }
@@ -163,48 +163,48 @@ export default function PurchaseInputModal({
             </div>
 
             <div className="space-y-5">
-                {/* Paket Barang */}
-                <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                        <Layers className="w-4 h-4 text-muted-foreground" />
-                        Paket Barang
-                    </label>
-                    <input
-                        type="text"
-                        inputMode="numeric"
-                        value={purchasePackage}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '')
-                            setPurchasePackage(val === '' ? '' : parseInt(val) || 0)
-                        }}
-                        className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
-                        placeholder="1"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Jumlah paket/karton yang dibeli</p>
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    {/* QTY Pembelian */}
+                    <div>
+                        <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                            <Layers className="w-4 h-4 text-muted-foreground" />
+                            QTY Pembelian
+                        </label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={purchasePackage}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '')
+                                setPurchasePackage(val === '' ? '' : parseInt(val) || 0)
+                            }}
+                            className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                            placeholder="Misal: 1"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-tight">Jumlah qty yang dibeli</p>
+                    </div>
 
-                {/* Jumlah Barang */}
-                <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                        <Hash className="w-4 h-4 text-muted-foreground" />
-                        {Number(purchasePackage) > 1 ? 'Isi per Paket' : 'Jumlah Barang'} <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        inputMode="numeric"
-                        value={purchaseQty}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '')
-                            setPurchaseQty(val === '' ? '' : parseInt(val) || 0)
-                        }}
-                        className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
-                        placeholder={Number(purchasePackage) > 1 ? "Misal: 10" : "Masukkan jumlah barang"}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {Number(purchasePackage) > 1
-                            ? `Tiap paket berisi berapa pcs. Total: ${(Number(purchasePackage) || 0) * (Number(purchaseQty) || 0)} pcs`
-                            : 'Total unit/pcs yang dibeli'}
-                    </p>
+                    {/* Jumlah Barang / Isi per Paket */}
+                    <div>
+                        <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                            <Hash className="w-4 h-4 text-muted-foreground" />
+                            Isi per Paket <span className="text-destructive">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={purchaseQty}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '')
+                                setPurchaseQty(val === '' ? '' : parseInt(val) || 0)
+                            }}
+                            className="w-full px-3 py-2.5 bg-blue-50/50 border border-blue-200/50 rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                            placeholder="1"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                            Total: {(Number(purchasePackage) || 0) * (Number(purchaseQty) || 0)} pcs
+                        </p>
+                    </div>
                 </div>
 
                 {/* Harga + Currency */}
@@ -253,8 +253,8 @@ export default function PurchaseInputModal({
                     const paket = Number(purchasePackage) || 1
                     const qtyPerPaket = Number(purchaseQty) || 1
                     const totalItems = paket * qtyPerPaket
-                    const totalAmountIdr = priceInputIdr * paket // Total the user pays
-                    const pricePerPieceIdr = totalAmountIdr / (totalItems || 1) // Harga per Pcs sesuai rumus user
+                    const totalAmountIdr = priceInputIdr * paket // Total = Harga * Paket
+                    const pricePerPieceIdr = totalAmountIdr / (totalItems || 1) // per Pcs = Total / Total Items
 
                     return (
                         <div className="pt-3 space-y-2 border-t border-border mt-3 text-right">

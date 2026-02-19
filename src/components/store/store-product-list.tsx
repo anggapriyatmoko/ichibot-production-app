@@ -232,10 +232,9 @@ export default function StoreProductList({
                     return acc + (price * stock)
                 }, 0),
             totalPurchaseValue: physicalProducts
-                .filter(p => p.purchasePrice && p.purchaseQty)
+                .filter(p => p.purchased && p.purchasePrice && p.purchaseQty)
                 .reduce((acc, p) => {
                     const paket = p.purchasePackage || 1
-                    const jumlah = p.purchaseQty || 0
                     let priceInIdr = p.purchasePrice || 0
                     const currency = p.purchaseCurrency || 'IDR'
                     if (currency === 'CNY' && kursYuan) {
@@ -243,7 +242,7 @@ export default function StoreProductList({
                     } else if (currency === 'USD' && kursUsd) {
                         priceInIdr = (p.purchasePrice || 0) * kursUsd
                     }
-                    return acc + (priceInIdr * paket * jumlah)
+                    return acc + (priceInIdr * paket) // Total = Harga * Paket
                 }, 0),
             published: physicalProducts.filter(p => p.status === 'publish').length,
             draft: physicalProducts.filter(p => p.status === 'draft').length,
@@ -338,13 +337,7 @@ export default function StoreProductList({
                         if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
                         else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
 
-                        // Treat stored price as price per UNIT (Package or Pcs)
-                        // Total = Price * Paket
-                        const paket = p.purchasePackage || 1
-                        const qty = p.purchaseQty || 1
-                        const total = price * paket
-                        const perPcs = total / (paket * qty)
-                        return perPcs
+                        return price
                     }
                     aValue = getPriceValue(a)
                     bValue = getPriceValue(b)
@@ -385,8 +378,7 @@ export default function StoreProductList({
                             const paket = p.purchasePackage || 1
                             const qty = p.purchaseQty || 1
                             const total = price * paket
-                            const perPcs = total / (paket * qty)
-                            return perPcs
+                            return total / ((paket * qty) || 1) // Sort by per Pcs
                         }
                         aValue = getPriceValue(a)
                         bValue = getPriceValue(b)
@@ -966,7 +958,7 @@ export default function StoreProductList({
                                                                 </span>
                                                                 {paket > 1 && (
                                                                     <span className="text-[10px] text-muted-foreground">
-                                                                        {paket} paket × {jumlah}
+                                                                        {paket} qty × {jumlah}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -986,19 +978,19 @@ export default function StoreProductList({
                                                         } else if (currency === 'USD' && kursUsd) {
                                                             priceInputIdr = product.purchasePrice * kursUsd
                                                         }
-                                                        const perPcs = priceInputIdr / jumlah
                                                         const totalHarga = priceInputIdr * paket
+                                                        const perPcs = totalHarga / ((paket * jumlah) || 1)
                                                         return (
                                                             <div className="flex flex-col items-end gap-1">
                                                                 <div className="flex flex-col items-end">
-                                                                    <span className="text-[10px] text-muted-foreground uppercase">per pcs</span>
+                                                                    <span className="text-[10px] text-muted-foreground uppercase">Harga per Pcs</span>
                                                                     <span className="text-sm font-semibold text-foreground">
                                                                         Rp {formatNumber(Math.round(perPcs))}
                                                                     </span>
                                                                 </div>
                                                                 {jumlah > 0 && (
                                                                     <div className="flex flex-col items-end border-t border-border pt-1">
-                                                                        <span className="text-[10px] text-muted-foreground uppercase">total</span>
+                                                                        <span className="text-[10px] text-muted-foreground uppercase">Total Pembelian</span>
                                                                         <span className="text-sm font-bold text-primary">
                                                                             Rp {formatNumber(Math.round(totalHarga))}
                                                                         </span>
@@ -1106,7 +1098,7 @@ export default function StoreProductList({
                     </div>
                     <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                            {showPurchaseColumns ? 'Produk Paket >1' : 'Produk Varian'}
+                            {showPurchaseColumns ? 'Produk QTY Beli >1' : 'Produk Varian'}
                         </p>
                         <div className="flex items-baseline gap-2">
                             <p className="text-2xl font-bold text-foreground">
