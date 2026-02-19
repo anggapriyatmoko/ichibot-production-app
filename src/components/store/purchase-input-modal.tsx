@@ -34,7 +34,7 @@ export default function PurchaseInputModal({
     kursUsd,
     editMode = false
 }: PurchaseInputModalProps) {
-    const [purchasePackage, setPurchasePackage] = useState(1)
+    const [purchasePackage, setPurchasePackage] = useState<number | ''>(1)
     const [purchaseQty, setPurchaseQty] = useState<number | ''>('')
     const [purchasePrice, setPurchasePrice] = useState<number | ''>('')
     const [purchaseCurrency, setPurchaseCurrency] = useState('CNY')
@@ -76,7 +76,7 @@ export default function PurchaseInputModal({
         setIsSubmitting(true)
         try {
             const data = {
-                purchasePackage,
+                purchasePackage: Number(purchasePackage) || 1,
                 purchaseQty: Number(purchaseQty),
                 purchasePrice: Number(purchasePrice),
                 purchaseCurrency,
@@ -166,10 +166,13 @@ export default function PurchaseInputModal({
                         Paket Barang
                     </label>
                     <input
-                        type="number"
-                        min={1}
+                        type="text"
+                        inputMode="numeric"
                         value={purchasePackage}
-                        onChange={(e) => setPurchasePackage(Math.max(1, parseInt(e.target.value) || 1))}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '')
+                            setPurchasePackage(val === '' ? '' : parseInt(val) || 0)
+                        }}
                         className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                         placeholder="1"
                     />
@@ -183,10 +186,13 @@ export default function PurchaseInputModal({
                         Jumlah Barang <span className="text-destructive">*</span>
                     </label>
                     <input
-                        type="number"
-                        min={1}
+                        type="text"
+                        inputMode="numeric"
                         value={purchaseQty}
-                        onChange={(e) => setPurchaseQty(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '')
+                            setPurchaseQty(val === '' ? '' : parseInt(val) || 0)
+                        }}
                         className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                         placeholder="Masukkan jumlah barang"
                     />
@@ -201,11 +207,15 @@ export default function PurchaseInputModal({
                     </label>
                     <div className="flex gap-2">
                         <input
-                            type="number"
-                            min={0}
-                            step="any"
+                            type="text"
+                            inputMode="decimal"
                             value={purchasePrice}
-                            onChange={(e) => setPurchasePrice(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9.]/g, '')
+                                // Prevent multiple decimal points
+                                if ((val.match(/\./g) || []).length > 1) return
+                                setPurchasePrice(val === '' ? '' : val.endsWith('.') ? val as any : parseFloat(val) || 0)
+                            }}
                             className="flex-1 px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                             placeholder="Masukkan harga"
                         />

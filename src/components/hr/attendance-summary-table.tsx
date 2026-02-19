@@ -49,7 +49,7 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
     const [downloading, setDownloading] = useState(false)
     const [page, setPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
-    const [filterRoles, setFilterRoles] = useState<string[]>(['ADMIN', 'HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE'])
+    const [filterRoles, setFilterRoles] = useState<string[]>(['HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE', 'USER'])
 
     const ROLE_FILTERS = [
         { id: 'ADMIN', label: 'Admin', color: 'red' },

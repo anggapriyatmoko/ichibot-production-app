@@ -87,7 +87,7 @@ export default function UserManagementTable({ userRole }: Props) {
     const [payrollUser, setPayrollUser] = useState<User | null>(null)
     const [page, setPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
-    const [filterRoles, setFilterRoles] = useState<string[]>(['ADMIN', 'HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE'])
+    const [filterRoles, setFilterRoles] = useState<string[]>(['HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE', 'USER'])
 
     const ROLE_FILTERS = [
         { id: 'ADMIN', label: 'Admin', color: 'red' },

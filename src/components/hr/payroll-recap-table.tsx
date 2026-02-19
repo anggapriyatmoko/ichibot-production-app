@@ -45,7 +45,7 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
     const [isPending, startTransition] = useTransition()
     const [page, setPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
-    const [filterRoles, setFilterRoles] = useState<string[]>(['ADMIN', 'HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE'])
+    const [filterRoles, setFilterRoles] = useState<string[]>(['HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE', 'USER'])
 
     const ROLE_FILTERS = [
         { id: 'ADMIN', label: 'Admin', color: 'red' },
@@ -62,6 +62,10 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
     const totalCount = filteredData.length
     const totalPages = Math.ceil(totalCount / itemsPerPage)
     const paginatedData = filteredData.slice((page - 1) * itemsPerPage, page * itemsPerPage)
+
+    // Calculate global stats for header (all roles, all pages) - ignore filters/pagination
+    const globalNetSalary = data.reduce((sum, d) => sum + (d.hasPayroll ? d.netSalary : 0), 0)
+    const globalEmployeesCount = data.filter(d => d.hasPayroll).length
 
     const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const m = e.target.value
@@ -113,9 +117,9 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                 description={
                     <div className="flex flex-col gap-1">
                         <p>Data penggajian seluruh karyawan.</p>
-                        {employeesWithPayroll > 0 && (
+                        {globalEmployeesCount > 0 && (
                             <p className="text-xs font-bold text-primary">
-                                Total Pengeluaran: {formatCurrency(totalNetSalary)}
+                                Total Pengeluaran: {formatCurrency(globalNetSalary)}
                             </p>
                         )}
                     </div>
