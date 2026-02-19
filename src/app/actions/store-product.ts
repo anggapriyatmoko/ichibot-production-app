@@ -445,16 +445,21 @@ export async function toggleStoreProductPurchased(
     }
 ) {
     try {
+        const updateData: any = {
+            purchased,
+            purchasedAt: purchased ? new Date() : null,
+        }
+
+        if (purchased && purchaseData) {
+            updateData.purchasePackage = purchaseData.purchasePackage ?? null
+            updateData.purchaseQty = purchaseData.purchaseQty ?? null
+            updateData.purchasePrice = purchaseData.purchasePrice ?? null
+            updateData.purchaseCurrency = purchaseData.purchaseCurrency ?? null
+        }
+
         await prisma.storeProduct.update({
             where: { wcId },
-            data: {
-                purchased,
-                purchasedAt: purchased ? new Date() : null,
-                purchasePackage: purchased ? (purchaseData?.purchasePackage ?? null) : null,
-                purchaseQty: purchased ? (purchaseData?.purchaseQty ?? null) : null,
-                purchasePrice: purchased ? (purchaseData?.purchasePrice ?? null) : null,
-                purchaseCurrency: purchased ? (purchaseData?.purchaseCurrency ?? null) : null,
-            }
+            data: updateData
         })
         revalidatePath('/store/product')
         revalidatePath('/store/low-stock')

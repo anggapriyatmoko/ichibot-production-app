@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Package, DollarSign, Hash, Layers } from 'lucide-react'
+import { Package, DollarSign, Hash, Layers, BarChart3 } from 'lucide-react'
 import Modal from '@/components/ui/modal'
 import { toggleStoreProductPurchased, updatePurchaseData } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
@@ -42,18 +42,22 @@ export default function PurchaseInputModal({
     const { showError } = useAlert()
     const router = useRouter()
 
-    // Pre-fill fields when editing
+    // Pre-fill fields when editing or if product has history
     useEffect(() => {
-        if (isOpen && editMode && product) {
-            setPurchasePackage(product.purchasePackage || 1)
-            setPurchaseQty(product.purchaseQty || '')
-            setPurchasePrice(product.purchasePrice || '')
-            setPurchaseCurrency(product.purchaseCurrency || 'CNY')
-        } else if (isOpen && !editMode) {
-            setPurchasePackage(1)
-            setPurchaseQty('')
-            setPurchasePrice('')
-            setPurchaseCurrency('CNY')
+        if (isOpen && product) {
+            const hasHistory = product.purchasePrice || product.purchaseQty || product.purchasePackage
+
+            if (editMode || hasHistory) {
+                setPurchasePackage(product.purchasePackage || 1)
+                setPurchaseQty(product.purchaseQty || '')
+                setPurchasePrice(product.purchasePrice || '')
+                setPurchaseCurrency(product.purchaseCurrency || 'CNY')
+            } else {
+                setPurchasePackage(1)
+                setPurchaseQty('')
+                setPurchasePrice('')
+                setPurchaseCurrency('CNY')
+            }
         }
     }, [isOpen, editMode, product])
 
@@ -183,7 +187,7 @@ export default function PurchaseInputModal({
                 <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                         <Hash className="w-4 h-4 text-muted-foreground" />
-                        Jumlah Barang <span className="text-destructive">*</span>
+                        {Number(purchasePackage) > 1 ? 'Isi per Paket' : 'Jumlah Barang'} <span className="text-destructive">*</span>
                     </label>
                     <input
                         type="text"
@@ -194,9 +198,13 @@ export default function PurchaseInputModal({
                             setPurchaseQty(val === '' ? '' : parseInt(val) || 0)
                         }}
                         className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
-                        placeholder="Masukkan jumlah barang"
+                        placeholder={Number(purchasePackage) > 1 ? "Misal: 10" : "Masukkan jumlah barang"}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Total unit/pcs yang dibeli</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        {Number(purchasePackage) > 1
+                            ? `Tiap paket berisi berapa pcs. Total: ${(Number(purchasePackage) || 0) * (Number(purchaseQty) || 0)} pcs`
+                            : 'Total unit/pcs yang dibeli'}
+                    </p>
                 </div>
 
                 {/* Harga + Currency */}
@@ -229,14 +237,42 @@ export default function PurchaseInputModal({
                             ))}
                         </select>
                     </div>
-                    {conversionHint && (
-                        <p className="text-xs text-primary font-medium mt-1.5 flex items-center gap-1">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
-                            {conversionHint}
+                    {purchasePrice && Number(purchasePrice) > 0 && (
+                        <p className="text-[10px] text-primary font-medium mt-1.5 flex items-center gap-1">
+                            <span className="inline-block w-1 h-1 rounded-full bg-primary" />
+                            ≈ Rp {formatNumber(Math.round(Number(purchasePrice) * ((purchaseCurrency === 'CNY' ? kursYuan : purchaseCurrency === 'USD' ? kursUsd : 1) || 1)))}
                         </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">Harga beli per pcs/satuan</p>
                 </div>
+
+                {(() => {
+                    if (!purchasePrice || purchasePrice <= 0 || !purchaseQty || purchaseQty <= 0) return null
+
+                    const rate = (purchaseCurrency === 'CNY' ? kursYuan : purchaseCurrency === 'USD' ? kursUsd : 1) || 1
+                    const priceInputIdr = Number(purchasePrice) * rate
+                    const paket = Number(purchasePackage) || 1
+                    const qtyPerPaket = Number(purchaseQty) || 1
+                    const totalItems = paket * qtyPerPaket
+                    const totalAmountIdr = priceInputIdr * paket // Total the user pays
+                    const pricePerPieceIdr = totalAmountIdr / (totalItems || 1) // Harga per Pcs sesuai rumus user
+
+                    return (
+                        <div className="pt-3 space-y-2 border-t border-border mt-3 text-right">
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground uppercase text-[10px]">Harga per Pcs</span>
+                                <span className="font-semibold text-foreground">Rp {formatNumber(Math.round(pricePerPieceIdr))}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground uppercase">Total Barang</span>
+                                <span className="font-semibold text-foreground">{formatNumber(totalItems)} pcs</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2 mt-1 border-t border-dotted border-border">
+                                <span className="text-xs font-bold text-primary uppercase">Total Pembelian</span>
+                                <span className="text-lg font-black text-primary">Rp {formatNumber(Math.round(totalAmountIdr))}</span>
+                            </div>
+                        </div>
+                    )
+                })()}
             </div>
         </Modal>
     )

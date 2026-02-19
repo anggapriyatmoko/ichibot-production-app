@@ -333,14 +333,21 @@ export default function StoreProductList({
                     aValue = (a.purchasePackage || 1) * (a.purchaseQty || 0)
                     bValue = (b.purchasePackage || 1) * (b.purchaseQty || 0)
                 } else if (sortConfig.key === 'hargaBeliIdr') {
-                    const getPerPcs = (p: any) => {
+                    const getPriceValue = (p: any) => {
                         let price = p.purchasePrice || 0
                         if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
                         else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
-                        return price / (p.purchasePackage || 1)
+
+                        // Treat stored price as price per UNIT (Package or Pcs)
+                        // Total = Price * Paket
+                        const paket = p.purchasePackage || 1
+                        const qty = p.purchaseQty || 1
+                        const total = price * paket
+                        const perPcs = total / (paket * qty)
+                        return perPcs
                     }
-                    aValue = getPerPcs(a)
-                    bValue = getPerPcs(b)
+                    aValue = getPriceValue(a)
+                    bValue = getPriceValue(b)
                 }
 
                 if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
@@ -370,14 +377,19 @@ export default function StoreProductList({
                         aValue = (a.purchasePackage || 1) * (a.purchaseQty || 0)
                         bValue = (b.purchasePackage || 1) * (b.purchaseQty || 0)
                     } else if (sortConfig.key === 'hargaBeliIdr') {
-                        const getPerPcs = (p: any) => {
+                        const getPriceValue = (p: any) => {
                             let price = p.purchasePrice || 0
                             if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
                             else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
-                            return price / (p.purchasePackage || 1)
+
+                            const paket = p.purchasePackage || 1
+                            const qty = p.purchaseQty || 1
+                            const total = price * paket
+                            const perPcs = total / (paket * qty)
+                            return perPcs
                         }
-                        aValue = getPerPcs(a)
-                        bValue = getPerPcs(b)
+                        aValue = getPriceValue(a)
+                        bValue = getPriceValue(b)
                     }
 
                     if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
@@ -974,8 +986,8 @@ export default function StoreProductList({
                                                         } else if (currency === 'USD' && kursUsd) {
                                                             priceInputIdr = product.purchasePrice * kursUsd
                                                         }
-                                                        const perPcs = priceInputIdr / paket
-                                                        const totalHarga = priceInputIdr * paket * jumlah
+                                                        const perPcs = priceInputIdr / jumlah
+                                                        const totalHarga = priceInputIdr * paket
                                                         return (
                                                             <div className="flex flex-col items-end gap-1">
                                                                 <div className="flex flex-col items-end">
