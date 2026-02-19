@@ -59,6 +59,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const { showConfirmation } = useConfirmation()
     const [lastOrder, setLastOrder] = useState<any>(null)
     const [activeTab, setActiveTab] = useState<'cart' | 'orders'>('cart')
+    const [mobileTab, setMobileTab] = useState<'products' | 'cart'>('products')
 
     const lastSearchedRef = useRef('')
     const lastPageRef = useRef(1)
@@ -308,33 +309,67 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     }, [selectedProduct, variationPickerProduct])
 
     return (
-        <div className="flex-1 flex overflow-hidden min-h-0 bg-background w-full h-full relative">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 bg-background w-full h-full relative">
+            {/* Mobile Navigation */}
+            <div className="md:hidden shrink-0 flex items-center border-b border-border bg-card">
+                <button
+                    onClick={() => setMobileTab('products')}
+                    className={cn(
+                        "flex-1 py-3 text-sm font-bold border-b-2 transition-colors",
+                        mobileTab === 'products'
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    Produk
+                </button>
+                <button
+                    onClick={() => setMobileTab('cart')}
+                    className={cn(
+                        "flex-1 py-3 text-sm font-bold border-b-2 transition-colors relative",
+                        mobileTab === 'cart'
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    Keranjang
+                    {cart.length > 0 && (
+                        <span className="absolute top-1 right-2 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] shadow-sm animate-in zoom-in duration-300">
+                            {cart.length}
+                        </span>
+                    )}
+                </button>
+            </div>
+
             {/* Left side: Search and Results */}
-            <div className="flex-1 flex flex-col p-6 overflow-hidden h-full">
-                <div className="mb-6 shrink-0 flex items-center gap-4">
+            <div className={cn(
+                "flex-1 flex flex-col p-4 md:p-6 overflow-hidden h-full transition-all",
+                mobileTab === 'cart' ? 'hidden md:flex' : 'flex'
+            )}>
+                <div className="mb-4 md:mb-6 shrink-0 flex items-center gap-2 md:gap-4">
                     <div className="flex items-center gap-2">
                         <Link
                             href="/"
-                            className="p-3 bg-card border border-border rounded-2xl text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm"
+                            className="p-2 md:p-3 bg-card border border-border rounded-xl md:rounded-2xl text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm"
                             title="Ke Dashboard"
                         >
-                            <Home className="w-6 h-6" />
+                            <Home className="w-5 h-5 md:w-6 md:h-6" />
                         </Link>
                         <a
                             href={process.env.NEXT_PUBLIC_WC_URL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-3 bg-card border border-border rounded-2xl text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm"
+                            className="p-2 md:p-3 bg-card border border-border rounded-xl md:rounded-2xl text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm"
                             title="Ke Toko"
                         >
-                            <Store className="w-6 h-6" />
+                            <Store className="w-5 h-5 md:w-6 md:h-6" />
                         </a>
                     </div>
                     <div className="relative flex-1 max-w-2xl">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Cari produk disini..."
+                            placeholder="Cari produk..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={(e) => {
@@ -342,7 +377,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                     handleSearch(searchTerm)
                                 }
                             }}
-                            className="w-full pl-12 pr-4 py-4 bg-card border border-border rounded-2xl text-lg font-medium shadow-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            className="w-full pl-9 md:pl-12 pr-4 py-2 md:py-4 bg-card border border-border rounded-xl md:rounded-2xl text-sm md:text-lg font-medium shadow-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                         />
                     </div>
                 </div>
@@ -471,10 +506,10 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                         {formatCurrency(product.regularPrice)}
                                                     </div>
                                                 )}
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-0">
                                                     <span className="text-primary font-bold">{formatCurrency(product.price)}</span>
                                                     <span className={cn(
-                                                        "text-xs px-2 py-1 rounded font-bold",
+                                                        "text-xs px-2 py-1 rounded font-bold w-fit",
                                                         product.stockQuantity <= 0
                                                             ? "bg-destructive/10 text-destructive"
                                                             : "bg-emerald-500/10 text-emerald-600"
@@ -543,7 +578,10 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
             </div>
 
             {/* Right side: Basket */}
-            <div className="w-96 bg-card border-l border-border flex flex-col shadow-xl z-20">
+            <div className={cn(
+                "bg-card border-l border-border flex flex-col shadow-xl z-20 transition-all overflow-hidden",
+                mobileTab === 'products' ? 'hidden md:flex w-96' : 'flex-1 w-full md:w-96'
+            )}>
                 <div className="flex flex-col border-b border-border bg-muted/10">
                     <div className="flex w-full">
                         <button
@@ -787,13 +825,13 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                 </div>
 
                 {activeTab === 'cart' && (
-                    <div className="p-6 border-t border-border bg-muted/30 space-y-4 animate-in slide-in-from-bottom-4 duration-300">
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-muted-foreground">
+                    <div className="p-4 md:p-6 border-t border-border bg-muted/30 space-y-3 md:space-y-4 animate-in slide-in-from-bottom-4 duration-300">
+                        <div className="space-y-1 md:space-y-2">
+                            <div className="flex justify-between text-muted-foreground text-xs md:text-base">
                                 <span>Total Item</span>
                                 <span>{cart.reduce((acc, item) => acc + item.quantity, 0)}</span>
                             </div>
-                            <div className="flex justify-between text-xl font-black">
+                            <div className="flex justify-between text-lg md:text-xl font-black">
                                 <span>TOTAL</span>
                                 <span className="text-primary">{formatCurrency(total)}</span>
                             </div>
@@ -802,7 +840,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                         <button
                             onClick={handleCheckout}
                             disabled={cart.length === 0 || loading || isCheckingOut}
-                            className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 disabled:grayscale transition-all flex items-center justify-center gap-2"
+                            className="w-full py-3 md:py-4 bg-primary text-primary-foreground rounded-xl md:rounded-2xl font-bold text-base md:text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 disabled:grayscale transition-all flex items-center justify-center gap-2"
                         >
                             {isCheckingOut ? 'Memproses...' : 'Checkout / Bayar'}
                         </button>

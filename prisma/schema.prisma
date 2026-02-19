@@ -679,10 +679,10 @@ model serviceOrder {
   orderNumber String             @unique(map: "ServiceOrder_orderNumber_key")
   userId      String?
   createdAt   DateTime           @default(now())
-  user        user?              @relation(fields: [userId], references: [id])
+  user        user?              @relation(fields: [userId], references: [id], map: "fk_so_user_unique")
   items       serviceOrderItem[]
 
-  @@index([userId])
+  @@index([userId], map: "idx_so_user_unique")
   @@map("serviceOrder")
 }
 
@@ -696,8 +696,56 @@ model serviceOrderItem {
   productSku   String?
   quantity     Float
   createdAt    DateTime     @default(now())
-  order        serviceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order        serviceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "fk_so_item_order_unique")
 
-  @@index([orderId])
+  @@index([orderId], map: "idx_so_item_order_unique")
   @@map("serviceOrderItem")
+}
+
+model PriceListGroup {
+  id        String          @id @default(cuid())
+  name      String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  uncategorizedOrder Int    @default(0)
+  categories PriceListCategory[]
+  items     PriceListItem[]
+
+  @@map("PriceListGroup")
+}
+
+model PriceListCategory {
+  id        String          @id @default(cuid())
+  groupId   String
+  name      String
+  order     Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  group     PriceListGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  items     PriceListItem[]
+
+  @@index([groupId])
+  @@map("PriceListCategory")
+}
+
+model PriceListItem {
+  id          String         @id @default(cuid())
+  groupId     String
+  categoryId  String?        // Relation FK
+  name        String         @db.Text
+  quantity    String? // Flexible quantity (e.g. "1 pcs", "1 box")
+  price       Float          @default(0)
+  discount    Float          @default(0)
+  description String?        @db.LongText // Rich text
+  category    String?        @db.Text // Deprecated: Old string field
+  image           String?        @db.Text
+  additionalImages String?       @db.Text // JSON array of strings
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  group       PriceListGroup @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "fk_pli_group_unique")
+  categoryRel PriceListCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([groupId], map: "idx_pli_group_unique")
+  @@index([categoryId])
+  @@map("PriceListItem")
 }

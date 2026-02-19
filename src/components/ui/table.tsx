@@ -52,7 +52,7 @@ const TableScrollArea = React.forwardRef<HTMLDivElement, TableScrollAreaProps>(
             ref={ref}
             style={{ minHeight }}
             className={cn(
-                "overflow-x-auto",
+                "overflow-x-auto overflow-y-hidden",
                 className
             )}
             {...props}

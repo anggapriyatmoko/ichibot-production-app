@@ -5,13 +5,13 @@ const prismaClientSingleton = () => {
 }
 
 declare global {
-    var prismaGlobal: PrismaClient | undefined
+    var prismaGlobal_v2: PrismaClient | undefined
 }
 
-const prisma = globalThis.prismaGlobal ?? new PrismaClient()
+const prisma = globalThis.prismaGlobal_v2 ?? new PrismaClient()
 
 export default prisma
 
-if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma
+if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal_v2 = prisma
 
 // Force reload for schema changes

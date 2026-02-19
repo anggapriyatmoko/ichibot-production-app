@@ -32,6 +32,7 @@ import {
   Store,
   AlertTriangle,
   CheckCircle2,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/providers/sidebar-provider";
@@ -166,6 +167,12 @@ export const navigationGroups = [
         name: "Permintaan Barang",
         href: "/administrasi/permintaan-barang",
         icon: ClipboardList,
+        excludeRoles: ["EXTERNAL"],
+      },
+      {
+        name: "Daftar Harga",
+        href: "/administrasi/daftar-harga",
+        icon: Banknote,
         excludeRoles: ["EXTERNAL"],
       },
     ],
