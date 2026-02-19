@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart } from 'lucide-react'
+import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased } from '@/app/actions/store-product'
@@ -25,6 +25,15 @@ import {
     TablePagination,
 } from '@/components/ui/table'
 
+function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { key: string, direction: 'asc' | 'desc' | null } }) {
+    if (sortConfig.key !== columnKey || !sortConfig.direction) {
+        return <ArrowUpDown className="w-3 h-3 text-muted-foreground/30 inline-block ml-1" />
+    }
+    return sortConfig.direction === 'asc'
+        ? <ArrowUp className="w-3 h-3 text-primary inline-block ml-1" />
+        : <ArrowDown className="w-3 h-3 text-primary inline-block ml-1" />
+}
+
 export default function StoreLowStockList({
     initialProducts,
     suppliers = [],
@@ -44,6 +53,10 @@ export default function StoreLowStockList({
     const [expandedRows, setExpandedRows] = useState<number[]>([])
     const [editingProduct, setEditingProduct] = useState<any>(null)
     const [purchaseTarget, setPurchaseTarget] = useState<any>(null)
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' | null }>({
+        key: 'stok',
+        direction: 'asc'
+    })
     const { showError, showAlert } = useAlert()
     const router = useRouter()
 
@@ -107,6 +120,13 @@ export default function StoreLowStockList({
         )
     }
 
+    const handleSort = (key: string) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }))
+    }
+
     const filteredProducts = useMemo(() => {
         const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
 
@@ -127,11 +147,75 @@ export default function StoreLowStockList({
         const parents = localProducts.filter(p => !p.parentId)
         const variations = localProducts.filter(p => p.parentId)
 
+        // Apply Sorting to Parents
+        if (sortConfig.direction) {
+            parents.sort((a, b) => {
+                let aValue = a[sortConfig.key]
+                let bValue = b[sortConfig.key]
+
+                if (sortConfig.key === 'stok') {
+                    aValue = a.stockQuantity || 0
+                    bValue = b.stockQuantity || 0
+                } else if (sortConfig.key === 'name') {
+                    aValue = a.name.toLowerCase()
+                    bValue = b.name.toLowerCase()
+                } else if (sortConfig.key === 'supplier') {
+                    aValue = (a.storeName || '').toLowerCase()
+                    bValue = (b.storeName || '').toLowerCase()
+                } else if (sortConfig.key === 'sku') {
+                    aValue = (a.sku || '').toLowerCase()
+                    bValue = (b.sku || '').toLowerCase()
+                } else if (sortConfig.key === 'keterangan') {
+                    aValue = (a.keterangan || '').toLowerCase()
+                    bValue = (b.keterangan || '').toLowerCase()
+                } else if (sortConfig.key === 'price') {
+                    aValue = a.price || 0
+                    bValue = b.price || 0
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+                return 0
+            })
+        }
+
         let result: any[] = []
         parents.forEach(parent => {
             const children = variations.filter(v => v.parentId === parent.wcId)
             const parentMatches = matchesSearch(parent)
             const matchingChildren = children.filter(matchesSearch)
+
+            // Sort variations
+            if (sortConfig.direction) {
+                matchingChildren.sort((a, b) => {
+                    let aValue = a[sortConfig.key]
+                    let bValue = b[sortConfig.key]
+
+                    if (sortConfig.key === 'stok') {
+                        aValue = a.stockQuantity || 0
+                        bValue = b.stockQuantity || 0
+                    } else if (sortConfig.key === 'name') {
+                        aValue = a.name.toLowerCase()
+                        bValue = b.name.toLowerCase()
+                    } else if (sortConfig.key === 'supplier') {
+                        aValue = (a.storeName || '').toLowerCase()
+                        bValue = (b.storeName || '').toLowerCase()
+                    } else if (sortConfig.key === 'sku') {
+                        aValue = (a.sku || '').toLowerCase()
+                        bValue = (b.sku || '').toLowerCase()
+                    } else if (sortConfig.key === 'keterangan') {
+                        aValue = (a.keterangan || '').toLowerCase()
+                        bValue = (b.keterangan || '').toLowerCase()
+                    } else if (sortConfig.key === 'price') {
+                        aValue = a.price || 0
+                        bValue = b.price || 0
+                    }
+
+                    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+                    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+                    return 0
+                })
+            }
 
             if (parentMatches || matchingChildren.length > 0) {
                 result.push({ ...parent, hasVariations: children.length > 0 })
@@ -146,7 +230,7 @@ export default function StoreLowStockList({
         })
 
         return result
-    }, [localProducts, searchTerm, selectedSuppliers, expandedRows])
+    }, [localProducts, searchTerm, selectedSuppliers, expandedRows, sortConfig])
 
     // Pagination calculation
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -217,12 +301,24 @@ export default function StoreLowStockList({
                             <TableRow hoverable={false}>
                                 <TableHead align="center" className="w-10">Beli</TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
-                                <TableHead>Info Produk</TableHead>
-                                <TableHead>Supplier</TableHead>
-                                <TableHead>SKU</TableHead>
-                                <TableHead>Keterangan</TableHead>
-                                <TableHead align="right">Stok</TableHead>
-                                <TableHead align="right">Harga</TableHead>
+                                <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/80 transition-colors">
+                                    Info Produk <SortIcon columnKey="name" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('supplier')} className="cursor-pointer hover:bg-muted/80 transition-colors">
+                                    Supplier <SortIcon columnKey="supplier" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('sku')} className="cursor-pointer hover:bg-muted/80 transition-colors">
+                                    SKU <SortIcon columnKey="sku" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead onClick={() => handleSort('keterangan')} className="cursor-pointer hover:bg-muted/80 transition-colors">
+                                    Keterangan <SortIcon columnKey="keterangan" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead align="right" onClick={() => handleSort('stok')} className="cursor-pointer hover:bg-muted/80 transition-colors">
+                                    Stok <SortIcon columnKey="stok" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead align="right" onClick={() => handleSort('price')} className="cursor-pointer hover:bg-muted/80 transition-colors">
+                                    Harga <SortIcon columnKey="price" sortConfig={sortConfig} />
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

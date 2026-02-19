@@ -329,6 +329,18 @@ export default function StoreProductList({
                 if (sortConfig.key === 'stok') {
                     aValue = a.stockQuantity || 0
                     bValue = b.stockQuantity || 0
+                } else if (sortConfig.key === 'jumlahBeli') {
+                    aValue = (a.purchasePackage || 1) * (a.purchaseQty || 0)
+                    bValue = (b.purchasePackage || 1) * (b.purchaseQty || 0)
+                } else if (sortConfig.key === 'hargaBeliIdr') {
+                    const getPerPcs = (p: any) => {
+                        let price = p.purchasePrice || 0
+                        if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
+                        else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
+                        return price / (p.purchasePackage || 1)
+                    }
+                    aValue = getPerPcs(a)
+                    bValue = getPerPcs(b)
                 }
 
                 if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
@@ -354,6 +366,18 @@ export default function StoreProductList({
                     if (sortConfig.key === 'stok') {
                         aValue = a.stockQuantity || 0
                         bValue = b.stockQuantity || 0
+                    } else if (sortConfig.key === 'jumlahBeli') {
+                        aValue = (a.purchasePackage || 1) * (a.purchaseQty || 0)
+                        bValue = (b.purchasePackage || 1) * (b.purchaseQty || 0)
+                    } else if (sortConfig.key === 'hargaBeliIdr') {
+                        const getPerPcs = (p: any) => {
+                            let price = p.purchasePrice || 0
+                            if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
+                            else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
+                            return price / (p.purchasePackage || 1)
+                        }
+                        aValue = getPerPcs(a)
+                        bValue = getPerPcs(b)
                     }
 
                     if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
@@ -660,8 +684,22 @@ export default function StoreProductList({
                                 </TableHead>
                                 {showPurchaseColumns && (
                                     <>
-                                        <TableHead align="center">Jumlah Beli</TableHead>
-                                        <TableHead align="right">Harga Beli (IDR)</TableHead>
+                                        <TableHead
+                                            align="center"
+                                            className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                            onClick={() => handleSort('jumlahBeli')}
+                                        >
+                                            Jumlah Beli
+                                            <SortIcon columnKey="jumlahBeli" sortConfig={sortConfig} />
+                                        </TableHead>
+                                        <TableHead
+                                            align="right"
+                                            className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                            onClick={() => handleSort('hargaBeliIdr')}
+                                        >
+                                            Harga Beli (IDR)
+                                            <SortIcon columnKey="hargaBeliIdr" sortConfig={sortConfig} />
+                                        </TableHead>
                                     </>
                                 )}
                             </TableRow>
