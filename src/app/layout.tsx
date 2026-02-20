@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
-import { Rubik } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModalProvider } from "@/components/providers/modal-provider"
 import { SessionProvider } from "@/components/providers/session-provider"
 
-const rubik = Rubik({
-  variable: "--font-rubik",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -23,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${rubik.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${manrope.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

@@ -176,13 +176,19 @@ export default function RbacManager() {
                                 {/* Group header row */}
                                 <TableRow key={`group-${groupName}`} hoverable={false}>
                                     <TableCell
-                                        colSpan={ALL_ROLES.length + 1}
-                                        className="bg-muted/30 py-2"
+                                        className="sticky left-0 z-10 bg-muted/50 py-2"
                                     >
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        <span className="text-[10px] font-bold text-foreground uppercase tracking-widest">
                                             {groupName}
                                         </span>
                                     </TableCell>
+                                    {ALL_ROLES.map(role => (
+                                        <TableCell key={`group-${groupName}-${role}`} align="center" className="bg-muted/30 py-2">
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                                {role}
+                                            </span>
+                                        </TableCell>
+                                    ))}
                                 </TableRow>
 
                                 {/* Page rows */}

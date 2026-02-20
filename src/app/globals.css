@@ -23,7 +23,9 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
-  --font-sans: var(--font-rubik), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Brand Colors */
 }
 
 /* Custom Utilities */
@@ -63,6 +65,9 @@
   --input: #e4e4e7;
   --ring: #2563eb;
 
+  --brand-blue: #2563eb;
+  --brand-blue-dark: #1d4ed8;
+
   --radius: 0.5rem;
 }
 
@@ -96,13 +101,16 @@
   /* was white/10 -> #262626 approx */
   --input: #27272a;
   --ring: #1d4ed8;
+
+  --brand-blue: #2563eb;
+  --brand-blue-dark: #1d4ed8;
 }
 
 /* Base Styles */
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-rubik), 'Rubik', Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), 'Manrope', Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -187,6 +195,24 @@ th {
 
 .animate-shimmer-fast {
   animation: shimmer 1s infinite linear;
+}
+
+/* Sidebar Specific Scrollbar */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.4);
 }
 
 /* FullCalendar CSS - di akhir untuk prioritas tinggi */

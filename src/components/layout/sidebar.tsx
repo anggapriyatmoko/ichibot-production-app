@@ -237,8 +237,7 @@ export const navigationGroups = [
 
 export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; rbacConfig?: RbacConfig | null }) {
   const { data: session } = useSession();
-  const [isOpen, setIsOpen] = useState(true);
-  const { isMobileOpen, setIsMobileOpen } = useSidebar();
+  const { isOpen, isMobileOpen, setIsMobileOpen } = useSidebar();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const pathname = usePathname();
 
@@ -280,8 +279,8 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
             className={cn(
               "w-full group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
               isChildActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                ? "bg-white/10 text-white font-semibold"
+                : "text-white/80 hover:bg-white/10 hover:text-white",
               isCollapsed && "justify-center px-2",
             )}
           >
@@ -298,7 +297,7 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
             )}
           </button>
           {isMenuOpen && !isCollapsed && (
-            <div className="ml-4 space-y-1 border-l border-border pl-2">
+            <div className="ml-4 space-y-1 border-l border-white/20 pl-2">
               {item.children.map((child: any) => {
                 if (rbacConfig) {
                   // RBAC mode: only check RBAC config
@@ -330,8 +329,8 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
         className={cn(
           "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            ? "bg-white/10 text-white font-semibold shadow-sm"
+            : "text-white/80 hover:bg-white/10 hover:text-white",
           isCollapsed && "justify-center px-2",
           isSubItem && "py-1.5",
         )}
@@ -358,51 +357,41 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
       )}
       <aside
         className={cn(
-          "bg-card border-r border-border transition-all duration-300 flex flex-col h-full",
+          "bg-[#2563eb] border-r border-[#2563eb] transition-all duration-300 flex flex-col h-full",
           // Mobile state
           "fixed inset-y-0 left-0 z-50",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
           // Desktop state - z-60 ensures sidebar stays above modal overlays (z-50)
           "md:relative md:translate-x-0 md:z-60",
-          isOpen ? "w-64" : "md:w-20",
         )}
       >
         <div
           className={cn(
-            "flex flex-col border-b border-border transition-all duration-300",
-            isOpen ? "px-4 py-4" : "h-16 items-center justify-center px-4"
+            "flex shrink-0 transition-all duration-300 border-b border-white/10",
+            isOpen ? "px-4 h-[65px] justify-center" : "h-[65px] items-center justify-center px-4"
           )}
         >
           {isOpen ? (
-            <div className="flex flex-col">
+            <div className="flex flex-col justify-center">
               <div className="flex items-start justify-between gap-2">
                 <Link href="/dashboard" className="group flex flex-col transition-opacity hover:opacity-80">
-                  <h1 className="text-xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tight uppercase leading-none">
+                  <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none drop-shadow-sm">
                     SIGMA ICHIBOT
                   </h1>
-                  <p className="text-[10px] font-medium text-muted-foreground leading-tight tracking-tight uppercase max-w-[190px] mt-1">
+                  <p className="text-[10px] font-medium text-white/70 leading-tight tracking-tight uppercase max-w-[190px] mt-1">
                     Sistem Integrasi Manajerial & Administrasi ICHIBOT
                   </p>
                 </Link>
-                <button
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="p-1 hover:bg-accent rounded-md text-muted-foreground transition-colors shrink-0 mt-0.5"
-                >
-                  <PanelLeftClose className="h-4 w-4" />
-                </button>
               </div>
             </div>
           ) : (
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-1.5 hover:bg-accent rounded-md text-muted-foreground transition-colors"
-            >
-              <PanelLeftOpen className="h-5 w-5" />
-            </button>
+            <div className="flex items-center justify-center h-full w-full">
+              <span className="text-xl font-black text-white tracking-tight leading-none drop-shadow-sm">SI</span>
+            </div>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 sidebar-scrollbar">
           <NavItem item={dashboardItem} isCollapsed={!isOpen} />
 
           {navigationGroups.map((group) => {
@@ -422,9 +411,9 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
 
             return (
               <div key={group.label} className="pt-4 pb-1">
-                <div className="border-t border-border mx-2" />
+                <div className="border-t border-white/10 mx-2" />
                 {isOpen && (
-                  <p className="px-3 pt-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  <p className="px-3 pt-2 text-[10px] font-bold text-white/50 uppercase tracking-wider">
                     {group.label}
                   </p>
                 )}

@@ -248,7 +248,7 @@ export default function ConfidentialAccess({ children }: { children: React.React
                             Hubungi administrator jika Anda lupa kode akses
                         </p>
                         <p className="text-xs text-center text-muted-foreground/60 mt-1 hidden md:block">
-                            💡 Desktop: Klik keypad atau ketik langsung dengan keyboard
+                            * Klik keypad atau ketik langsung dengan keyboard
                         </p>
                     </div>
                 </div>

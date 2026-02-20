@@ -694,12 +694,11 @@ export default function ItemManager({
                         </label>
                         <input
                           type="number"
-                          className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-bold"
+                          className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           value={item.quantity}
                           onChange={(e) => {
                             const newItems = [...formData.items];
-                            newItems[idx].quantity =
-                              parseInt(e.target.value) || 1;
+                            newItems[idx].quantity = e.target.value === "" ? ("" as any) : parseInt(e.target.value);
                             setFormData({ ...formData, items: newItems });
                           }}
                           min="1"
