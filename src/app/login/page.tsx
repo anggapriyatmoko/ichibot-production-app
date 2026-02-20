@@ -321,7 +321,7 @@ function LoginContent() {
                                                 )}
                                                 {pin.length === 6 && !hasError && loading && (
                                                     <p className="text-xs text-primary flex items-center gap-1">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                                                         Memvalidasi...
                                                     </p>
                                                 )}
