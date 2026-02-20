@@ -49,6 +49,8 @@ import {
   TablePagination,
 } from "@/components/ui/table";
 
+import Modal from "@/components/ui/modal";
+
 interface ItemManagerProps {
   initialItems: Item[];
   initialPagination?: {
@@ -522,38 +524,23 @@ export default function ItemManager({
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-border flex justify-between items-center bg-muted/30">
-              <div>
-                <h2 className="font-bold text-lg">
-                  {reorderingItem
-                    ? "Re-Order Barang"
-                    : editingItem
-                      ? "Edit Permintaan"
-                      : "Permintaan Baru"}
-                </h2>
-                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none mt-1">
-                  {reorderingItem
-                    ? "Buat Permintaan Baru dari Item Sebelumnya"
-                    : "Permintaan Pengadaan Barang"}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setReorderingItem(null);
-                }}
-                className="p-2 hover:bg-accent rounded-full transition-colors"
-                type="button"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form
-              onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto p-6 space-y-5"
-            >
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setReorderingItem(null);
+          }}
+          title={
+            reorderingItem
+              ? "Re-Order Barang"
+              : editingItem
+                ? "Edit Permintaan"
+                : "Permintaan Baru"
+          }
+          maxWidth="lg"
+        >
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase text-muted-foreground px-1">
@@ -751,65 +738,49 @@ export default function ItemManager({
                   </div>
                 ))}
               </div>
+            </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setReorderingItem(null);
-                  }}
-                  className="px-5 py-2.5 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className={cn(
-                    "px-8 py-2.5 text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50",
-                    reorderingItem
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90",
-                  )}
-                >
-                  {saving ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Menyimpan...
-                    </div>
-                  ) : reorderingItem ? (
-                    "Buat Order Baru"
-                  ) : (
-                    "Simpan Permintaan"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            {/* Modal Footer */}
+            <div className="p-4 mt-6 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setReorderingItem(null);
+                }}
+                className="px-5 py-2.5 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className={cn(
+                  "px-8 py-2.5 text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center gap-2",
+                  reorderingItem
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90",
+                )}
+              >
+                {saving && (
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                )}
+                {reorderingItem ? "Buat Order Baru" : "Simpan Permintaan"}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Mark Done Modal */}
       {selectedItem && showDoneDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-border flex justify-between items-center bg-muted/30">
-              <div>
-                <h3 className="font-bold text-lg text-foreground">
-                  Tandai Sudah Diorder
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Konfirmasi jumlah item yang telah diorder.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowDoneDialog(false)}
-                className="p-2 hover:bg-accent rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <Modal
+          isOpen={showDoneDialog}
+          onClose={() => setShowDoneDialog(false)}
+          title="Tandai Sudah Diorder"
+          maxWidth="md"
+        >
+          <div className="flex flex-col flex-1">
             <div className="p-6 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground px-1">
@@ -832,31 +803,35 @@ export default function ItemManager({
                   required
                 />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  onClick={() => setShowDoneDialog(false)}
-                  className="px-5 py-2.5 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleMarkDone}
-                  disabled={markDoneLoading}
-                  className="bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-2.5 text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50"
-                >
-                  {markDoneLoading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Memproses...
-                    </div>
-                  ) : (
-                    "Konfirmasi"
-                  )}
-                </button>
-              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 mt-2 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => setShowDoneDialog(false)}
+                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkDone}
+                disabled={markDoneLoading}
+                className="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-bold shadow-lg shadow-emerald-600/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {markDoneLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Konfirmasi"
+                )}
+              </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </TableWrapper>
   );

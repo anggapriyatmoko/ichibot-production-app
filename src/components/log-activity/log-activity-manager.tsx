@@ -8,6 +8,7 @@ import { id } from 'date-fns/locale' // Indonesian locale
 import { upsertLogActivity, getLogActivities, deleteLogActivity, getDailyActivityRecap } from '@/app/actions/log-activity'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import Modal from '@/components/ui/modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -298,28 +299,6 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
             {viewMode === 'history' ? (
                 <>
-                    {/* Admin Controls */}
-                    {isAdmin && users.length > 0 && (
-                        <div className="bg-card border border-border p-4 rounded-xl flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <User className="w-5 h-5" />
-                                <span className="font-medium">Pilih User:</span>
-                            </div>
-                            <select
-                                value={selectedUserId}
-                                onChange={(e) => handleUserChange(e.target.value)}
-                                className="flex-1 max-w-sm px-3 py-2 bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/50"
-                            >
-                                {users.map(user => (
-                                    <option key={user.id} value={user.id}>
-                                        {user.name || user.username} {user.department ? `(${user.department})` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
-
                     {/* Data Table */}
                     {/* Mobile View */}
                     <TableWrapper loading={isLoading} className="md:hidden">
@@ -328,15 +307,31 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                             description="Daftar kegiatan harian yang telah dicatat."
                             icon={<CalendarIcon className="w-5 h-5" />}
                             actions={
-                                selectedUserId === currentUser.id && (
-                                    <button
-                                        onClick={openAddModal}
-                                        className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        <span>Tambah Kegiatan</span>
-                                    </button>
-                                )
+                                <div className="flex items-center gap-2">
+                                    {isAdmin && users.length > 0 && (
+                                        <select
+                                            value={selectedUserId}
+                                            onChange={(e) => handleUserChange(e.target.value)}
+                                            className="px-3 py-2 bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/50 text-xs font-medium max-w-[150px] truncate"
+                                        >
+                                            {users.map(user => (
+                                                <option key={user.id} value={user.id}>
+                                                    {user.name || user.username}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {selectedUserId === currentUser.id && (
+                                        <button
+                                            onClick={openAddModal}
+                                            className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-sm active:scale-95 whitespace-nowrap text-xs"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Tambah Kegiatan</span>
+                                            <span className="sm:hidden">Tambah</span>
+                                        </button>
+                                    )}
+                                </div>
                             }
                         />
                         <div className="p-4 space-y-4">
@@ -431,15 +426,33 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                             description="Daftar kegiatan harian yang telah dicatat."
                             icon={<CalendarIcon className="w-5 h-5" />}
                             actions={
-                                selectedUserId === currentUser.id && (
-                                    <button
-                                        onClick={openAddModal}
-                                        className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        <span>Tambah Kegiatan</span>
-                                    </button>
-                                )
+                                <div className="flex items-center gap-3">
+                                    {isAdmin && users.length > 0 && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">User:</span>
+                                            <select
+                                                value={selectedUserId}
+                                                onChange={(e) => handleUserChange(e.target.value)}
+                                                className="min-w-[200px] px-3 py-2 bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/50 text-sm font-medium"
+                                            >
+                                                {users.map(user => (
+                                                    <option key={user.id} value={user.id}>
+                                                        {user.name || user.username} {user.department ? `(${user.department})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {selectedUserId === currentUser.id && (
+                                        <button
+                                            onClick={openAddModal}
+                                            className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            <span>Tambah Kegiatan</span>
+                                        </button>
+                                    )}
+                                </div>
                             }
                         />
                         <TableScrollArea>
@@ -546,25 +559,20 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                 </>
             ) : (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                    {/* Date Selection */}
-                    <div className="bg-card border border-border p-4 rounded-xl shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <label className="text-sm font-medium whitespace-nowrap">Pilih Tanggal:</label>
-                            <input
-                                type="date"
-                                value={recapDate}
-                                onChange={(e) => setRecapDate(e.target.value)}
-                                className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/50 outline-none"
-                            />
-                        </div>
-                    </div>
-
                     {/* Recap Mobile View */}
                     <TableWrapper loading={isLoading} className="md:hidden">
                         <TableHeaderContent
                             title="Rekap Harian"
                             description={`Aktivitas seluruh user pada tanggal ${format(new Date(recapDate), 'dd MMMM yyyy', { locale: id })}.`}
                             icon={<FileText className="w-5 h-5" />}
+                            actions={
+                                <input
+                                    type="date"
+                                    value={recapDate}
+                                    onChange={(e) => setRecapDate(e.target.value)}
+                                    className="px-2 py-1.5 border border-border rounded-lg bg-background text-[10px] font-medium focus:ring-2 focus:ring-primary/50 outline-none max-w-[120px]"
+                                />
+                            }
                         />
                         <div className="p-4 space-y-4">
                             {isLoading ? (
@@ -631,6 +639,17 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                             title="Rekap Harian"
                             description={`Aktivitas seluruh user pada tanggal ${format(new Date(recapDate), 'dd MMMM yyyy', { locale: id })}.`}
                             icon={<FileText className="w-5 h-5" />}
+                            actions={
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Pilih Tanggal:</span>
+                                    <input
+                                        type="date"
+                                        value={recapDate}
+                                        onChange={(e) => setRecapDate(e.target.value)}
+                                        className="px-3 py-2 border border-border rounded-lg bg-background text-sm font-medium focus:ring-2 focus:ring-primary/50 outline-none"
+                                    />
+                                </div>
+                            }
                         />
                         <TableScrollArea>
                             <Table>
@@ -718,123 +737,123 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-background rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" autoComplete="off">
-                            <div className="p-6 border-b border-border shrink-0">
-                                <h3 className="text-lg font-medium">Input Log Activity</h3>
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title="Input Log Activity"
+                    maxWidth="2xl"
+                >
+                    <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden" autoComplete="off">
+                        <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Tanggal</label>
+                                <div className="px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm font-medium">
+                                    {format(new Date(formData.date), 'dd MMMM yyyy', { locale: id })}
+                                </div>
                             </div>
-                            <div className="p-6 space-y-4 overflow-y-auto flex-1">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Tanggal</label>
-                                    <div className="px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm font-medium">
-                                        {format(new Date(formData.date), 'dd MMMM yyyy', { locale: id })}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Kegiatan</label>
-                                    <textarea
-                                        required
-                                        rows={5}
-                                        value={formData.activity}
-                                        onChange={e => setFormData({ ...formData, activity: e.target.value })}
-                                        placeholder="Jelaskan kegiatan hari ini..."
-                                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Problem / Kendala (Opsional)</label>
-                                    <textarea
-                                        rows={3}
-                                        value={formData.problem}
-                                        onChange={e => setFormData({ ...formData, problem: e.target.value })}
-                                        placeholder="Ada kendala apa hari ini?"
-                                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                {/* Image Upload */}
-                                <div>
-                                    <label className="block text-sm font-medium mb-2">Gambar (Opsional, Maks. 1MB)</label>
-                                    <div className="flex items-start gap-4">
-                                        {formData.image ? (
-                                            <div className="relative">
-                                                <img
-                                                    src={formData.image}
-                                                    alt="Preview"
-                                                    className="w-32 h-32 object-cover rounded-lg border border-border"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={handleRemoveImage}
-                                                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Kegiatan</label>
+                                <textarea
+                                    required
+                                    rows={5}
+                                    value={formData.activity}
+                                    onChange={e => setFormData({ ...formData, activity: e.target.value })}
+                                    placeholder="Jelaskan kegiatan hari ini..."
+                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Problem / Kendala (Opsional)</label>
+                                <textarea
+                                    rows={3}
+                                    value={formData.problem}
+                                    onChange={e => setFormData({ ...formData, problem: e.target.value })}
+                                    placeholder="Ada kendala apa hari ini?"
+                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/50 outline-none resize-none"
+                                    autoComplete="off"
+                                />
+                            </div>
+                            {/* Image Upload */}
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Gambar (Opsional, Maks. 1MB)</label>
+                                <div className="flex items-start gap-4">
+                                    {formData.image ? (
+                                        <div className="relative">
+                                            <img
+                                                src={formData.image}
+                                                alt="Preview"
+                                                className="w-32 h-32 object-cover rounded-lg border border-border"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveImage}
+                                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 border-2 border-dashed border-border rounded-lg p-4">
+                                            <div className="text-center mb-3">
+                                                <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                                <span className="text-sm text-muted-foreground block">
+                                                    Upload gambar atau ambil foto
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    JPG, PNG, WEBP, GIF (Maks. 1MB)
+                                                </span>
                                             </div>
-                                        ) : (
-                                            <div className="flex-1 border-2 border-dashed border-border rounded-lg p-4">
-                                                <div className="text-center mb-3">
-                                                    <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                                                    <span className="text-sm text-muted-foreground block">
-                                                        Upload gambar atau ambil foto
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        JPG, PNG, WEBP, GIF (Maks. 1MB)
-                                                    </span>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            capture="environment"
-                                                            onChange={handleImageChange}
-                                                            className="hidden"
-                                                        />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
-                                                            <Camera className="w-4 h-4" />
-                                                            Ambil Foto
-                                                        </div>
-                                                    </label>
-                                                    <label className="flex-1 cursor-pointer">
-                                                        <input
-                                                            type="file"
-                                                            accept="image/jpeg,image/png,image/webp,image/gif"
-                                                            onChange={handleImageChange}
-                                                            className="hidden"
-                                                        />
-                                                        <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
-                                                            <Image className="w-4 h-4" />
-                                                            Pilih File
-                                                        </div>
-                                                    </label>
-                                                </div>
+                                            <div className="flex gap-2">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        capture="environment"
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp,image/gif"
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                    />
+                                                    <div className="flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium">
+                                                        <Image className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-muted-foreground hover:bg-muted/50 rounded-lg transition-colors"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                >
-                                    {isLoading ? 'Menyimpan...' : 'Simpan Activity'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        </div>
+                        <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 shrink-0 rounded-b-2xl">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 text-muted-foreground hover:bg-muted/50 rounded-lg transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                            >
+                                {isLoading ? 'Menyimpan...' : 'Simpan Activity'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
             )}
         </div>
     )

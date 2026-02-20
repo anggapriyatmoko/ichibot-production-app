@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/table";
 import { SignatureType } from "@/components/ui/pdf-signature-modal";
 import PdfSignatureModal from "@/components/ui/pdf-signature-modal";
+import Modal from "@/components/ui/modal";
 
 interface SuratTugasManagerProps {
   initialData?: SuratTugas[];
@@ -546,28 +547,13 @@ export default function SuratTugasManager({
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[50] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
-            {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 leading-none">
-                  {editingST ? "Edit Surat Tugas" : "Buat Surat Tugas Baru"}
-                </h2>
-                <p className="text-sm text-gray-500 mt-2 font-medium">
-                  {editingST
-                    ? "Perbarui informasi penugasan."
-                    : "Isi detail untuk menerbitkan surat tugas."}
-                </p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-white hover:shadow-md rounded-2xl transition-all text-gray-400 hover:text-gray-900 border border-transparent hover:border-gray-100"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title={editingST ? "Edit Surat Tugas" : "Buat Surat Tugas Baru"}
+          maxWidth="4xl"
+        >
+          <div className="flex flex-col flex-1 h-full">
             <form
               onSubmit={handleSubmit}
               className="flex-1 overflow-y-auto overscroll-contain p-8 custom-scrollbar"
@@ -659,9 +645,9 @@ export default function SuratTugasManager({
                 </div>
 
                 {/* Participants & Dates */}
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between ml-1">
+                <div className="space-y-6 flex flex-col h-full">
+                  <div className="space-y-4 flex flex-col flex-1 min-h-0">
+                    <div className="flex items-center justify-between ml-1 shrink-0">
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                         Peserta Penugasan
                       </label>
@@ -682,7 +668,7 @@ export default function SuratTugasManager({
                       </button>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                       {formData.peserta.map((p, idx) => (
                         <div
                           key={idx}
@@ -737,7 +723,7 @@ export default function SuratTugasManager({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 shrink-0 pt-4 border-t border-gray-100">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
                         Mulai
@@ -773,7 +759,7 @@ export default function SuratTugasManager({
             </form>
 
             {/* Footer */}
-            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -791,7 +777,7 @@ export default function SuratTugasManager({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* PDF Modal */}

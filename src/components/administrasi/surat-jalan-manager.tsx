@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/table";
 import { SignatureType } from "@/components/ui/pdf-signature-modal";
 import PdfSignatureModal from "@/components/ui/pdf-signature-modal";
+import Modal from "@/components/ui/modal";
 
 interface SuratJalanManagerProps {
   initialData?: SuratJalan[];
@@ -542,28 +543,13 @@ export default function SuratJalanManager({
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[50] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
-            {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 leading-none">
-                  {editingSJ ? "Edit Surat Jalan" : "Buat Surat Jalan Baru"}
-                </h2>
-                <p className="text-sm text-gray-500 mt-2 font-medium">
-                  {editingSJ
-                    ? "Perbarui informasi pengiriman."
-                    : "Isi detail untuk menerbitkan surat jalan baru."}
-                </p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-white hover:shadow-md rounded-2xl transition-all text-gray-400 hover:text-gray-900 border border-transparent hover:border-gray-100"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title={editingSJ ? "Edit Surat Jalan" : "Buat Surat Jalan Baru"}
+          maxWidth="4xl"
+        >
+          <div className="flex flex-col flex-1 h-full">
             <form
               onSubmit={handleSubmit}
               className="flex-1 overflow-y-auto overscroll-contain p-8 custom-scrollbar"
@@ -673,7 +659,7 @@ export default function SuratJalanManager({
                 </div>
 
                 {/* Items Section */}
-                <div className="space-y-4">
+                <div className="space-y-4 flex flex-col h-full">
                   <div className="flex items-center justify-between ml-1">
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                       Daftar Barang
@@ -687,7 +673,7 @@ export default function SuratJalanManager({
                     </button>
                   </div>
 
-                  <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     {formData.items.map((item, idx) => (
                       <div
                         key={idx}
@@ -747,7 +733,7 @@ export default function SuratJalanManager({
                     ))}
                   </div>
 
-                  <div className="pt-4 border-t border-gray-100">
+                  <div className="pt-4 border-t border-gray-100 shrink-0">
                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
                       Catatan Tambahan
                     </label>
@@ -765,7 +751,7 @@ export default function SuratJalanManager({
             </form>
 
             {/* Footer */}
-            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -783,7 +769,7 @@ export default function SuratJalanManager({
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* PDF Modal */}

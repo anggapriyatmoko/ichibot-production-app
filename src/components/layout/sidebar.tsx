@@ -378,9 +378,6 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
                   <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none drop-shadow-sm">
                     SIGMA ICHIBOT
                   </h1>
-                  <p className="text-[10px] font-medium text-white/70 leading-tight tracking-tight uppercase max-w-[190px] mt-1">
-                    Sistem Integrasi Manajerial & Administrasi ICHIBOT
-                  </p>
                 </Link>
               </div>
             </div>

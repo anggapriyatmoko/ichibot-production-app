@@ -48,6 +48,7 @@ import {
 import PdfSignatureModal, {
   SignatureType,
 } from "@/components/ui/pdf-signature-modal";
+import Modal from '@/components/ui/modal'
 
 interface CertificateManagerProps {
   initialData?: Certificate[];
@@ -822,652 +823,646 @@ export default function CertificateManager({
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-6xl rounded-2xl border border-border shadow-lg flex flex-col max-h-[95vh]">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-border flex justify-between items-center bg-emerald-50 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                  <Award className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-emerald-700">
-                    {editingCertificate
-                      ? "Edit Sertifikat"
-                      : "Buat Sertifikat Baru"}
-                  </h2>
-                  <p className="text-xs text-emerald-600">
-                    {editingCertificate
-                      ? "Perbarui data sertifikat"
-                      : "Lengkapi form berikut"}
-                  </p>
-                </div>
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title={
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <Award className="w-5 h-5 text-emerald-600" />
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-emerald-100 rounded-full text-muted-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div>
+                <h2 className="text-lg font-bold text-emerald-700">
+                  {editingCertificate
+                    ? "Edit Sertifikat"
+                    : "Buat Sertifikat Baru"}
+                </h2>
+                <p className="text-sm font-normal text-emerald-600">
+                  {editingCertificate
+                    ? "Perbarui data sertifikat"
+                    : "Lengkapi form berikut"}
+                </p>
+              </div>
             </div>
-
-            {/* Modal Body */}
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col flex-1 overflow-hidden"
-            >
-              <div className="p-6 overflow-y-auto overscroll-contain flex-1 space-y-6">
-                {/* Main Content - Two Column Layout */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="grid grid-cols-1 lg:grid-cols-2">
-                    {/* Indonesian Column */}
-                    <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-100">
-                      {/* Language Header */}
-                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                        <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
-                          <img
-                            src="https://flagcdn.com/w40/id.png"
-                            alt="Indonesia"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">
-                            Indonesia
-                          </h3>
-                          <p className="text-[10px] text-gray-400">
-                            Bahasa Indonesia
-                          </p>
-                        </div>
+          }
+          maxWidth="full"
+          className="max-w-6xl"
+        >
+          {/* Modal Body */}
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1"
+          >
+            <div className="p-6 overflow-y-auto overscroll-contain flex-1 space-y-6">
+              {/* Main Content - Two Column Layout */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="grid grid-cols-1 lg:grid-cols-2">
+                  {/* Indonesian Column */}
+                  <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-100">
+                    {/* Language Header */}
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
+                        <img
+                          src="https://flagcdn.com/w40/id.png"
+                          alt="Indonesia"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-
-                      <div className="space-y-5">
-                        {/* Nomor Sertifikat */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Nomor Sertifikat{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.certificate_number || ""}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                certificate_number: e.target.value,
-                              })
-                            }
-                            placeholder="Otomatis jika kosong"
-                            className="w-full bg-white border-2 border-emerald-400 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-emerald-400 placeholder:italic focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Teks Pembuka */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Teks Pembuka <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.present_text_idn}
-                            onChange={(e) =>
-                              handleIdnChange(
-                                "present_text_idn",
-                                "present_text_en",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Nama Penerima */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Nama Penerima{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.recipient_name}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                recipient_name: e.target.value,
-                              })
-                            }
-                            placeholder="Masukkan nama lengkap penerima"
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Deskripsi */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Deskripsi <span className="text-red-500">*</span>
-                          </label>
-                          <textarea
-                            value={formData.description_text_idn}
-                            onChange={(e) =>
-                              handleIdnChange(
-                                "description_text_idn",
-                                "description_text_en",
-                                e.target.value,
-                              )
-                            }
-                            rows={2}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none resize-none"
-                          />
-                        </div>
-
-                        {/* Kegiatan */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Kegiatan <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.activity_text_idn}
-                            onChange={(e) =>
-                              handleIdnChange(
-                                "activity_text_idn",
-                                "activity_text_en",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Contoh: Training of Trainer Basic IoT"
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Instansi */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Instansi <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={formData.instansi}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                instansi: e.target.value,
-                              })
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          >
-                            <option value="">Pilih Instansi</option>
-                            {INSTITUTIONS.map((inst) => (
-                              <option key={inst} value={inst}>
-                                {inst}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Teks Tindakan */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Teks Tindakan{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.completion_text_idn}
-                            onChange={(e) =>
-                              handleIdnChange(
-                                "completion_text_idn",
-                                "completion_text_en",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Evaluasi Akhir */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Evaluasi Akhir{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.evaluation_text_idn}
-                            onChange={(e) =>
-                              handleIdnChange(
-                                "evaluation_text_idn",
-                                "evaluation_text_en",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Periode Pelaksanaan */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Periode Pelaksanaan{" "}
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-1">
-                                Mulai
-                              </label>
-                              <input
-                                type="date"
-                                value={formData.start_date}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    start_date: e.target.value,
-                                  })
-                                }
-                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-1">
-                                Selesai
-                              </label>
-                              <input
-                                type="date"
-                                value={formData.end_date}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    end_date: e.target.value,
-                                  })
-                                }
-                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                              />
-                            </div>
-                          </div>
-                        </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">
+                          Indonesia
+                        </h3>
+                        <p className="text-[10px] text-gray-400">
+                          Bahasa Indonesia
+                        </p>
                       </div>
                     </div>
 
-                    {/* English Column */}
-                    <div className="p-6 bg-gray-50/30">
-                      {/* Language Header */}
-                      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
-                        <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
-                          <img
-                            src="https://flagcdn.com/w40/gb.png"
-                            alt="English"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">
-                            English
-                          </h3>
-                          <p className="text-[10px] text-gray-400">
-                            Versi Bahasa Inggris
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-5">
-                        {/* Certificate Number (readonly) */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Certificate Number
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.certificate_number || "(Otomatis)"}
-                            readOnly
-                            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
-                          />
-                        </div>
-
-                        {/* Opening Text */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Opening Text
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.present_text_en}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                present_text_en: e.target.value,
-                              })
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Recipient Name (readonly) */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Recipient Name
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData.recipient_name ||
-                              "(Sama dengan Indonesia)"
-                            }
-                            readOnly
-                            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
-                          />
-                        </div>
-
-                        {/* Description */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Description
-                          </label>
-                          <textarea
-                            value={formData.description_text_en}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                description_text_en: e.target.value,
-                              })
-                            }
-                            rows={2}
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none resize-none"
-                          />
-                        </div>
-
-                        {/* Activity */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Activity
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.activity_text_en}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                activity_text_en: e.target.value,
-                              })
-                            }
-                            placeholder="Eg: Training on Basic IoT for WSA Preparation"
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Institution (readonly) */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Institution
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData.instansi || "(Pilih di kolom Indonesia)"
-                            }
-                            readOnly
-                            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
-                          />
-                        </div>
-
-                        {/* Completion Text */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Completion Text
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.completion_text_en}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                completion_text_en: e.target.value,
-                              })
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Final Evaluation */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Final Evaluation
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.evaluation_text_en}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                evaluation_text_en: e.target.value,
-                              })
-                            }
-                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                          />
-                        </div>
-
-                        {/* Execution Period (readonly) */}
-                        <div className="space-y-2">
-                          <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                            Execution Period
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-1">
-                                Start
-                              </label>
-                              <input
-                                type="date"
-                                value={formData.start_date}
-                                readOnly
-                                className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] text-gray-400 mb-1">
-                                End
-                              </label>
-                              <input
-                                type="date"
-                                value={formData.end_date}
-                                readOnly
-                                className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Materi & Nilai Section */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
-                    <h2 className="font-semibold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-wider">
-                      <ListChecks className="w-4 h-4 text-emerald-600" />
-                      Materi & Nilai
-                    </h2>
-
-                    {/* Materi Counter */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                        Jumlah Materi
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={removeMateri}
-                          disabled={(formData.materi?.length || 0) === 0}
-                          className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-600 rounded-xl hover:bg-red-200 transition-colors active:scale-95 border border-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
+                    <div className="space-y-5">
+                      {/* Nomor Sertifikat */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Nomor Sertifikat{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
-                          value={formData.materi?.length || 0}
-                          readOnly
-                          className="w-14 text-center bg-gray-50 border border-gray-200 rounded-xl py-2 font-semibold text-gray-700 cursor-not-allowed"
+                          value={formData.certificate_number || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              certificate_number: e.target.value,
+                            })
+                          }
+                          placeholder="Otomatis jika kosong"
+                          className="w-full bg-white border-2 border-emerald-400 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-emerald-400 placeholder:italic focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
                         />
-                        <button
-                          type="button"
-                          onClick={addMateri}
-                          className="w-9 h-9 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-200 transition-colors active:scale-95 border border-emerald-100"
+                      </div>
+
+                      {/* Teks Pembuka */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Teks Pembuka <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.present_text_idn}
+                          onChange={(e) =>
+                            handleIdnChange(
+                              "present_text_idn",
+                              "present_text_en",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Nama Penerima */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Nama Penerima{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.recipient_name}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              recipient_name: e.target.value,
+                            })
+                          }
+                          placeholder="Masukkan nama lengkap penerima"
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Deskripsi */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Deskripsi <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          value={formData.description_text_idn}
+                          onChange={(e) =>
+                            handleIdnChange(
+                              "description_text_idn",
+                              "description_text_en",
+                              e.target.value,
+                            )
+                          }
+                          rows={2}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none resize-none"
+                        />
+                      </div>
+
+                      {/* Kegiatan */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Kegiatan <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.activity_text_idn}
+                          onChange={(e) =>
+                            handleIdnChange(
+                              "activity_text_idn",
+                              "activity_text_en",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="Contoh: Training of Trainer Basic IoT"
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Instansi */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Instansi <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.instansi}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              instansi: e.target.value,
+                            })
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
                         >
-                          <Plus className="w-4 h-4" />
-                        </button>
+                          <option value="">Pilih Instansi</option>
+                          {INSTITUTIONS.map((inst) => (
+                            <option key={inst} value={inst}>
+                              {inst}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Teks Tindakan */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Teks Tindakan{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.completion_text_idn}
+                          onChange={(e) =>
+                            handleIdnChange(
+                              "completion_text_idn",
+                              "completion_text_en",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Evaluasi Akhir */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Evaluasi Akhir{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.evaluation_text_idn}
+                          onChange={(e) =>
+                            handleIdnChange(
+                              "evaluation_text_idn",
+                              "evaluation_text_en",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Periode Pelaksanaan */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Periode Pelaksanaan{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] text-gray-400 mb-1">
+                              Mulai
+                            </label>
+                            <input
+                              type="date"
+                              value={formData.start_date}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  start_date: e.target.value,
+                                })
+                              }
+                              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-400 mb-1">
+                              Selesai
+                            </label>
+                            <input
+                              type="date"
+                              value={formData.end_date}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  end_date: e.target.value,
+                                })
+                              }
+                              className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-6">
-                    {/* Judul Materi */}
-                    <div className="mb-6 space-y-2">
-                      <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                        Judul Materi
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.materi_judul}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            materi_judul: e.target.value,
-                          })
-                        }
-                        placeholder="Contoh: Materi Training IoT"
-                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                      />
-                    </div>
-
-                    {/* Empty State */}
-                    {(formData.materi?.length || 0) === 0 && (
-                      <div className="py-12 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-50 rounded-full mb-4">
-                          <BookOpen className="w-8 h-8 text-gray-300" />
-                        </div>
-                        <p className="text-gray-400 font-semibold mb-1">
-                          Belum ada materi
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Klik tombol{" "}
-                          <span className="text-emerald-600 font-semibold">
-                            +
-                          </span>{" "}
-                          di atas untuk menambah materi
+                  {/* English Column */}
+                  <div className="p-6 bg-gray-50/30">
+                    {/* Language Header */}
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden shadow-sm">
+                        <img
+                          src="https://flagcdn.com/w40/gb.png"
+                          alt="English"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">
+                          English
+                        </h3>
+                        <p className="text-[10px] text-gray-400">
+                          Versi Bahasa Inggris
                         </p>
                       </div>
-                    )}
+                    </div>
 
-                    {/* Materi Container */}
-                    <div className="space-y-4">
-                      {formData.materi?.map((mat, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-gray-50/50 rounded-xl p-5 border border-gray-100"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-semibold text-sm shrink-0">
-                              {idx + 1}
+                    <div className="space-y-5">
+                      {/* Certificate Number (readonly) */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Certificate Number
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.certificate_number || "(Otomatis)"}
+                          readOnly
+                          className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* Opening Text */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Opening Text
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.present_text_en}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              present_text_en: e.target.value,
+                            })
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Recipient Name (readonly) */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Recipient Name
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            formData.recipient_name ||
+                            "(Sama dengan Indonesia)"
+                          }
+                          readOnly
+                          className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Description
+                        </label>
+                        <textarea
+                          value={formData.description_text_en}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              description_text_en: e.target.value,
+                            })
+                          }
+                          rows={2}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none resize-none"
+                        />
+                      </div>
+
+                      {/* Activity */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Activity
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.activity_text_en}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              activity_text_en: e.target.value,
+                            })
+                          }
+                          placeholder="Eg: Training on Basic IoT for WSA Preparation"
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Institution (readonly) */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Institution
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            formData.instansi || "(Pilih di kolom Indonesia)"
+                          }
+                          readOnly
+                          className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* Completion Text */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Completion Text
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.completion_text_en}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              completion_text_en: e.target.value,
+                            })
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Final Evaluation */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Final Evaluation
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.evaluation_text_en}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              evaluation_text_en: e.target.value,
+                            })
+                          }
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Execution Period (readonly) */}
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                          Execution Period
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] text-gray-400 mb-1">
+                              Start
+                            </label>
+                            <input
+                              type="date"
+                              value={formData.start_date}
+                              readOnly
+                              className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-400 mb-1">
+                              End
+                            </label>
+                            <input
+                              type="date"
+                              value={formData.end_date}
+                              readOnly
+                              className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-gray-500 font-medium cursor-not-allowed"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Materi & Nilai Section */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <ListChecks className="w-4 h-4 text-emerald-600" />
+                    Materi & Nilai
+                  </h2>
+
+                  {/* Materi Counter */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                      Jumlah Materi
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={removeMateri}
+                        disabled={(formData.materi?.length || 0) === 0}
+                        className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-600 rounded-xl hover:bg-red-200 transition-colors active:scale-95 border border-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <input
+                        type="text"
+                        value={formData.materi?.length || 0}
+                        readOnly
+                        className="w-14 text-center bg-gray-50 border border-gray-200 rounded-xl py-2 font-semibold text-gray-700 cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={addMateri}
+                        className="w-9 h-9 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-200 transition-colors active:scale-95 border border-emerald-100"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {/* Judul Materi */}
+                  <div className="mb-6 space-y-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                      Judul Materi
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.materi_judul}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          materi_judul: e.target.value,
+                        })
+                      }
+                      placeholder="Contoh: Materi Training IoT"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                    />
+                  </div>
+
+                  {/* Empty State */}
+                  {(formData.materi?.length || 0) === 0 && (
+                    <div className="py-12 text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-50 rounded-full mb-4">
+                        <BookOpen className="w-8 h-8 text-gray-300" />
+                      </div>
+                      <p className="text-gray-400 font-semibold mb-1">
+                        Belum ada materi
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Klik tombol{" "}
+                        <span className="text-emerald-600 font-semibold">
+                          +
+                        </span>{" "}
+                        di atas untuk menambah materi
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Materi Container */}
+                  <div className="space-y-4">
+                    {formData.materi?.map((mat, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-gray-50/50 rounded-xl p-5 border border-gray-100"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-8 h-8 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-semibold text-sm shrink-0">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                            <div className="col-span-3 space-y-1">
+                              <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                Materi {idx + 1}
+                              </label>
+                              <input
+                                type="text"
+                                value={mat}
+                                onChange={(e) =>
+                                  updateMateriName(idx, e.target.value)
+                                }
+                                placeholder="Deskripsi materi"
+                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                              />
                             </div>
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                              <div className="col-span-3 space-y-1">
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                  Materi {idx + 1}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={mat}
-                                  onChange={(e) =>
-                                    updateMateriName(idx, e.target.value)
+                            <div className="space-y-1">
+                              <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                Nilai
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={formData.nilai?.[idx] ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === "" || /^\d+$/.test(val)) {
+                                    updateNilai(idx, val);
                                   }
-                                  placeholder="Deskripsi materi"
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                  Nilai
-                                </label>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={formData.nilai?.[idx] ?? ""}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === "" || /^\d+$/.test(val)) {
-                                      updateNilai(idx, val);
-                                    }
-                                  }}
-                                  placeholder="0-100"
-                                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium text-center focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                                />
-                              </div>
+                                }}
+                                placeholder="0-100"
+                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium text-center focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                              />
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tanda Tangan Section */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100">
-                    <h2 className="font-semibold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-wider">
-                      <PenTool className="w-4 h-4 text-emerald-600" />
-                      Tanda Tangan
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                        Nama Penandatangan{" "}
-                        <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.signature_name}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            signature_name: e.target.value,
-                          })
-                        }
-                        placeholder="Contoh: Angga Priyatmoko, S.T., M.Eng."
-                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
-                      />
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-4 border-t border-border shrink-0 bg-emerald-50 flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-3 bg-white border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-100 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>
-                    {editingCertificate
-                      ? "Update Sertifikat"
-                      : "Simpan Sertifikat"}
-                  </span>
-                </button>
+              {/* Tanda Tangan Section */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100">
+                  <h2 className="font-semibold text-gray-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+                    <PenTool className="w-4 h-4 text-emerald-600" />
+                    Tanda Tangan
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                      Nama Penandatangan{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.signature_name}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          signature_name: e.target.value,
+                        })
+                      }
+                      placeholder="Contoh: Angga Priyatmoko, S.T., M.Eng."
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-medium placeholder:text-gray-300 focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all outline-none"
+                    />
+                  </div>
+                </div>
               </div>
-            </form>
-          </div>
-        </div>
-      )
-      }
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 mt-6 border-t border-border shrink-0 bg-emerald-50 flex justify-end gap-4 rounded-b-2xl">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-3 bg-white border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-100 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>
+                  {editingCertificate
+                    ? "Update Sertifikat"
+                    : "Simpan Sertifikat"}
+                </span>
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* PDF Download Modal */}
       <PdfSignatureModal
@@ -1477,6 +1472,6 @@ export default function CertificateManager({
         title="Pilih Format Sertifikat"
         variant="certificate"
       />
-    </div >
+    </div>
   );
 }
