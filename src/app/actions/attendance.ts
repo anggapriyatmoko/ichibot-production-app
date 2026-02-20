@@ -290,6 +290,25 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
     const workDays = workSchedules.filter(ws => ws.isWorkDay).map(ws => ws.dayOfWeek)
     const scheduleByDay = new Map(workSchedules.map(ws => [ws.dayOfWeek, ws]))
 
+    // Get custom work schedules that overlap with the period
+    const customSchedules = await prisma.customWorkSchedule.findMany({
+        where: {
+            startDate: { lte: endDate },
+            endDate: { gte: startDate }
+        }
+    })
+
+    // Helper to find custom schedule for a date
+    const findCustomSchedule = (date: Date) => {
+        return customSchedules.find(cs => {
+            const csStart = new Date(cs.startDate)
+            csStart.setHours(0, 0, 0, 0)
+            const csEnd = new Date(cs.endDate)
+            csEnd.setHours(23, 59, 59, 999)
+            return date >= csStart && date <= csEnd
+        })
+    }
+
     // Get all attendances in period
     const allAttendances = await prisma.attendance.findMany({
         where: {
@@ -338,8 +357,9 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
                 continue
             }
 
-            // Check if it's a work day based on schedule
-            const isWorkDay = workDays.includes(dayOfWeek)
+            // Check if it's a work day based on schedule or custom schedule
+            const customSchedule = findCustomSchedule(currentDate)
+            const isWorkDay = customSchedule ? true : workDays.includes(dayOfWeek)
 
             if (isWorkDay) {
                 if (attendance) {
@@ -349,10 +369,11 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
                     if (status === 'PERMIT' || status === 'LEAVE' || status === 'SICK') {
                         permitCount++
                     } else if (status === 'PRESENT' || !status) {
-                        // Check if late
-                        if (decrypted?.clockIn && schedule?.startTime) {
+                        // Check if late - use custom schedule times if available
+                        const effectiveStartTime = customSchedule?.startTime || schedule?.startTime
+                        if (decrypted?.clockIn && effectiveStartTime) {
                             const clockInTime = new Date(decrypted.clockIn)
-                            const [schedHours, schedMins] = schedule.startTime.split(':').map(Number)
+                            const [schedHours, schedMins] = effectiveStartTime.split(':').map(Number)
                             const scheduleStart = new Date(currentDate)
                             scheduleStart.setHours(schedHours, schedMins, 0, 0)
 
@@ -452,6 +473,25 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
     const workDays = workSchedules.filter(ws => ws.isWorkDay).map(ws => ws.dayOfWeek)
     const scheduleByDay = new Map(workSchedules.map(ws => [ws.dayOfWeek, ws]))
 
+    // Get custom work schedules that overlap with the period
+    const customSchedules = await prisma.customWorkSchedule.findMany({
+        where: {
+            startDate: { lte: endDate },
+            endDate: { gte: startDate }
+        }
+    })
+
+    // Helper to find custom schedule for a date
+    const findCustomSchedule = (date: Date) => {
+        return customSchedules.find(cs => {
+            const csStart = new Date(cs.startDate)
+            csStart.setHours(0, 0, 0, 0)
+            const csEnd = new Date(cs.endDate)
+            csEnd.setHours(23, 59, 59, 999)
+            return date >= csStart && date <= csEnd
+        })
+    }
+
     // Get user attendances in period
     const userAttendances = await prisma.attendance.findMany({
         where: {
@@ -497,8 +537,9 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
             continue
         }
 
-        // Check if it's a work day based on schedule
-        const isWorkDay = workDays.includes(dayOfWeek)
+        // Check if it's a work day based on schedule or custom schedule
+        const customSchedule = findCustomSchedule(currentDate)
+        const isWorkDay = customSchedule ? true : workDays.includes(dayOfWeek)
 
         if (isWorkDay) {
             if (attendance) {
@@ -508,10 +549,11 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
                 if (status === 'PERMIT' || status === 'LEAVE' || status === 'SICK') {
                     permitCount++
                 } else if (status === 'PRESENT' || !status) {
-                    // Check if late
-                    if (decrypted?.clockIn && schedule?.startTime) {
+                    // Check if late - use custom schedule times if available
+                    const effectiveStartTime = customSchedule?.startTime || schedule?.startTime
+                    if (decrypted?.clockIn && effectiveStartTime) {
                         const clockInTime = new Date(decrypted.clockIn)
-                        const [schedHours, schedMins] = schedule.startTime.split(':').map(Number)
+                        const [schedHours, schedMins] = effectiveStartTime.split(':').map(Number)
                         const scheduleStart = new Date(currentDate)
                         scheduleStart.setHours(schedHours, schedMins, 0, 0)
 

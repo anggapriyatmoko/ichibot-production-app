@@ -96,6 +96,14 @@ export default async function AttendancePage({
     const workSchedules = await prisma.workSchedule.findMany()
     const workScheduleMap = new Map<number, typeof workSchedules[0]>(workSchedules.map(s => [s.dayOfWeek, s]))
 
+    // Get custom work schedules
+    const customSchedules = await prisma.customWorkSchedule.findMany({
+        where: {
+            startDate: { lte: new Date(currentYear, currentMonth, 0) }, // <= last day of month
+            endDate: { gte: firstDay } // >= first day of month
+        }
+    })
+
     // Build monthly data structure
     const monthlyData = users.map(userItem => {
         const user = {
@@ -126,9 +134,23 @@ export default async function AttendancePage({
                 const dayOfWeek = dateToCheck.getDay()
                 const schedule = workScheduleMap.get(dayOfWeek)
 
-                if (schedule && schedule.isWorkDay && schedule.startTime && schedule.endTime) {
+                // Check if a custom schedule applies to this date
+                const customSchedule = customSchedules.find(cs => {
+                    const csStart = new Date(cs.startDate)
+                    csStart.setHours(0, 0, 0, 0)
+                    const csEnd = new Date(cs.endDate)
+                    csEnd.setHours(23, 59, 59, 999)
+                    return dateToCheck >= csStart && dateToCheck <= csEnd
+                })
+
+                // Use custom schedule times if available, otherwise use regular schedule
+                const effectiveStartTime = customSchedule?.startTime || (schedule?.isWorkDay ? schedule.startTime : null)
+                const effectiveEndTime = customSchedule?.endTime || (schedule?.isWorkDay ? schedule.endTime : null)
+                const isWorkDay = customSchedule ? true : (schedule?.isWorkDay ?? false)
+
+                if (isWorkDay && effectiveStartTime && effectiveEndTime) {
                     // Late Calculation: Compare Minutes Only
-                    const [scheduleHours, scheduleMinutes] = schedule.startTime.split(':').map(Number)
+                    const [scheduleHours, scheduleMinutes] = effectiveStartTime.split(':').map(Number)
                     const scheduleTotalMinutes = scheduleHours * 60 + scheduleMinutes
 
                     const clockIn = new Date(attendance.clockIn)
@@ -141,15 +163,15 @@ export default async function AttendancePage({
 
                     // Early Departure Calculation: Compare Minutes Only
                     if (attendance.clockOut) {
-                        const [endHours, endMinutes] = schedule.endTime.split(':').map(Number)
-                        const scheduleTotalMinutes = endHours * 60 + endMinutes
+                        const [endHours, endMinutes] = effectiveEndTime.split(':').map(Number)
+                        const endTotalMinutes = endHours * 60 + endMinutes
 
                         const clockOut = new Date(attendance.clockOut)
                         const clockOutTotalMinutes = clockOut.getHours() * 60 + clockOut.getMinutes()
 
-                        if (clockOutTotalMinutes < scheduleTotalMinutes) {
+                        if (clockOutTotalMinutes < endTotalMinutes) {
                             isEarlyDeparture = true
-                            totalEarlyDepartureMinutes += (scheduleTotalMinutes - clockOutTotalMinutes)
+                            totalEarlyDepartureMinutes += (endTotalMinutes - clockOutTotalMinutes)
                         }
                     }
                 }
@@ -160,8 +182,20 @@ export default async function AttendancePage({
                 const dayOfWeek = dateToCheck.getDay()
                 const schedule = workScheduleMap.get(dayOfWeek)
 
+                // Check if a custom schedule applies
+                const customScheduleForAbsent = customSchedules.find(cs => {
+                    const csStart = new Date(cs.startDate)
+                    csStart.setHours(0, 0, 0, 0)
+                    const csEnd = new Date(cs.endDate)
+                    csEnd.setHours(23, 59, 59, 999)
+                    return dateToCheck >= csStart && dateToCheck <= csEnd
+                })
+
+                // If custom schedule exists for this date, it's a work day
+                const isWorkDay = customScheduleForAbsent ? true : (schedule?.isWorkDay ?? false)
+
                 // If it's a work day and no attendance record (and not future), count as absent
-                if (schedule && schedule.isWorkDay && dateToCheck <= new Date()) {
+                if (isWorkDay && dateToCheck <= new Date()) {
                     totalAbsentDays++
                 }
             }
