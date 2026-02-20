@@ -71,15 +71,11 @@ function calculateRemainingTime(dateString: string | null) {
 }
 
 import { useSession } from 'next-auth/react'
+import { useEffect } from 'react'
 
 export default function HROtherDataPage() {
     const { data: session } = useSession()
     const userRole = (session?.user as any)?.role
-    const [isUnlocked, setIsUnlocked] = useState(false)
-    const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
-    const [error, setError] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
     const [profileData, setProfileData] = useState<ProfileData | null>(null)
     const [payrollData, setPayrollData] = useState<PayrollData | null>(null)
     const [loadingProfile, setLoadingProfile] = useState(false)
@@ -87,27 +83,11 @@ export default function HROtherDataPage() {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     const [hrDocs, setHrDocs] = useState<any[]>([])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setIsLoading(true)
-        setError('')
-
-        try {
-            const result = await verifyUserPassword(password)
-
-            if (result.success) {
-                setIsUnlocked(true)
-                // Fetch profile data after successful unlock
-                loadProfileData()
-            } else {
-                setError(result.error || 'Password salah')
-            }
-        } catch (err) {
-            setError('Terjadi kesalahan')
-        } finally {
-            setIsLoading(false)
+    useEffect(() => {
+        if (userRole && userRole !== 'EXTERNAL') {
+            loadProfileData()
         }
-    }
+    }, [userRole])
 
     const loadProfileData = async () => {
         setLoadingProfile(true)
@@ -162,72 +142,6 @@ export default function HROtherDataPage() {
         )
     }
 
-    if (!isUnlocked) {
-        return (
-            <div className="max-w-md mx-auto mt-20">
-                <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-                    <div className="p-6 border-b border-border bg-muted/30">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 rounded-full bg-blue-500/10">
-                                <Lock className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-foreground">Data Lainnya</h1>
-                                <p className="text-sm text-muted-foreground">Masukkan password akun Anda untuk mengakses</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Password Akun
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Masukkan password akun Anda"
-                                    autoComplete="new-password"
-                                    className="w-full px-4 py-3 pr-12 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                                    autoFocus
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                                >
-                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <p className="text-sm text-red-500 font-medium">{error}</p>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={isLoading || !password}
-                            className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Memverifikasi...
-                                </>
-                            ) : (
-                                'Buka Halaman'
-                            )}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        )
-    }
-
-    // Unlocked - Show the profile data
     return (
         <div className="max-w-2xl mx-auto">
             <div className="mb-8 text-left">
@@ -299,7 +213,7 @@ export default function HROtherDataPage() {
                                             <CreditCard className="w-5 h-5 text-purple-500 mt-0.5" />
                                             <div>
                                                 <p className="text-xs text-muted-foreground">No KTP</p>
-                                                <p className="font-mono font-medium text-foreground">{profileData?.ktpNumber || '-'}</p>
+                                                <p className="font-medium text-foreground">{profileData?.ktpNumber || '-'}</p>
                                             </div>
                                         </div>
 

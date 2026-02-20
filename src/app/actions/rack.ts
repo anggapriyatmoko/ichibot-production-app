@@ -89,7 +89,7 @@ export async function getUnusedDrawers(rackName: string, drawerCount: number) {
     return allDrawers.filter(drawer => !usedDrawers.has(drawer))
 }
 
-// Get all racks with their unused drawer counts
+// Get all racks with their drawer details
 export async function getRacksWithUnusedDrawers() {
     await requireAuth() // Allow all authenticated users to view
 
@@ -98,44 +98,59 @@ export async function getRacksWithUnusedDrawers() {
     })
 
     // Get all products - check SKU for drawer codes
-    const productsWithDrawers = await prisma.product.findMany({
-        where: {
-            sku: { not: null }
-        },
-        select: {
-            sku: true
-        }
+    const products = await prisma.product.findMany({
+        where: { sku: { startsWith: '' } }, // Fetch all with SKU
+        select: { name: true, sku: true, stock: true, image: true }
     })
 
-    // Get all sparepart projects - check SKU for drawer codes
-    const sparepartProjectsWithDrawers = await prisma.sparepartProject.findMany({
-        where: {
-            sku: { not: null }
-        },
-        select: {
-            sku: true
-        }
+    // Get all sparepart projects
+    const sparepartProjects = await (prisma as any).sparepartProject.findMany({
+        where: { sku: { startsWith: '' } },
+        select: { name: true, sku: true, stock: true, image: true }
     })
 
-    const usedDrawers = new Set([
-        ...productsWithDrawers.map(p => p.sku),
-        ...sparepartProjectsWithDrawers.map(sp => sp.sku)
-    ])
+    // Get all service products
+    const serviceProducts = await (prisma as any).serviceProduct.findMany({
+        where: { sku: { startsWith: '' } },
+        select: { name: true, sku: true, stock: true, image: true }
+    })
 
-    // Calculate unused drawers for each rack
+    // Map by SKU for quick lookup
+    const drawerDetails = new Map<string, { name: string; sku: string; stock: number; image: string | null }>()
+
+    products.forEach(p => {
+        if (p.sku) drawerDetails.set(p.sku, { name: p.name, sku: p.sku, stock: p.stock, image: p.image })
+    })
+    sparepartProjects.forEach((sp: any) => {
+        if (sp.sku) drawerDetails.set(sp.sku, { name: sp.name, sku: sp.sku, stock: sp.stock, image: sp.image })
+    })
+    serviceProducts.forEach((sv: any) => {
+        if (sv.sku) drawerDetails.set(sv.sku, { name: sv.name, sku: sv.sku, stock: sv.stock, image: sv.image })
+    })
+
+    // Calculate details for each rack
     return racks.map(rack => {
-        const allDrawers: string[] = []
+        const allDrawers: Array<{ code: string; isUsed: boolean; details?: { name: string; sku: string; stock: number; image: string | null } }> = []
+        let usedCount = 0
+
         for (let i = 1; i <= rack.drawerCount; i++) {
             const drawerNum = i.toString().padStart(2, '0')
-            allDrawers.push(`${rack.name}-${drawerNum}`)
-        }
+            const code = `${rack.name}-${drawerNum}`
+            const details = drawerDetails.get(code)
 
-        const unusedDrawersList = allDrawers.filter(drawer => !usedDrawers.has(drawer))
+            if (details) {
+                usedCount++
+                allDrawers.push({ code, isUsed: true, details })
+            } else {
+                allDrawers.push({ code, isUsed: false })
+            }
+        }
 
         return {
             ...rack,
-            unusedDrawersList, // Array of unused drawer codes
-            unusedDrawersCount: unusedDrawersList.length
+            allDrawers, // Array of all drawer objects with details
+            unusedDrawersCount: rack.drawerCount - usedCount,
+            unusedDrawersList: allDrawers.filter(d => !d.isUsed).map(d => d.code) // Keep for backward compatibility if needed
         }
     })
 }

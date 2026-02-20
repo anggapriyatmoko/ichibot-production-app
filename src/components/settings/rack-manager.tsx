@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Save, X, Warehouse } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Save, X, Warehouse, ImageIcon, Box, Info, MapPin, Search } from 'lucide-react'
+import Image from 'next/image'
 import { getRacksWithUnusedDrawers, createRack, updateRack, deleteRack } from '@/app/actions/rack'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -13,10 +14,130 @@ interface RackWithDrawers {
     description: string | null
     unusedDrawersList: string[]
     unusedDrawersCount: number
+    allDrawers: Array<{
+        code: string
+        isUsed: boolean
+        details?: {
+            name: string
+            sku: string
+            stock: number
+            image: string | null
+        }
+    }>
 }
 
 interface RackManagerProps {
     userRole?: string
+}
+
+import { useRef } from 'react'
+import { cn } from '@/lib/utils'
+
+interface DrawerItemProps {
+    drawer: {
+        code: string
+        isUsed: boolean
+        details?: {
+            name: string
+            sku: string
+            stock: number
+            image: string | null
+        }
+    }
+}
+
+function DrawerItem({ drawer }: DrawerItemProps) {
+    const [align, setAlign] = useState<'left' | 'right' | 'center'>('center')
+    const containerRef = useRef<HTMLDivElement>(null)
+
+    const handleMouseEnter = () => {
+        if (containerRef.current) {
+            const triggerRect = containerRef.current.getBoundingClientRect()
+            const tooltipWidth = 208 // w-52 is 13rem = 208px
+            const viewportWidth = window.innerWidth
+
+            // Calculate where the tooltip would be if centered
+            const expectedLeft = triggerRect.left + (triggerRect.width / 2) - (tooltipWidth / 2)
+            const expectedRight = expectedLeft + tooltipWidth
+
+            if (expectedLeft < 10) {
+                setAlign('left')
+            } else if (expectedRight > viewportWidth - 10) {
+                setAlign('right')
+            } else {
+                setAlign('center')
+            }
+        }
+    }
+
+    return (
+        <div
+            ref={containerRef}
+            className="relative group/tooltip"
+            onMouseEnter={handleMouseEnter}
+        >
+            <span className={cn(
+                "px-2 py-1 rounded text-[10px] font-medium shadow-sm transition-colors block cursor-default",
+                drawer.isUsed
+                    ? "bg-emerald-500 text-white cursor-help"
+                    : "bg-orange-500 text-white"
+            )}>
+                {drawer.code}
+            </span>
+
+            {/* Tooltip for used drawers */}
+            {drawer.isUsed && drawer.details && (
+                <div className={cn(
+                    "absolute bottom-full mb-2 w-52 p-3 bg-white border border-border rounded-lg shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-[60] pointer-events-none",
+                    align === 'center' && "left-1/2 -translate-x-1/2",
+                    align === 'left' && "left-0",
+                    align === 'right' && "right-0"
+                )}>
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1 border-b pb-1">Detail Barang</div>
+
+                    {/* Thumbnail Image */}
+                    <div className="flex gap-3 mb-3 mt-1">
+                        <div className="w-12 h-12 rounded border border-border overflow-hidden bg-muted flex-shrink-0">
+                            {drawer.details.image ? (
+                                <Image
+                                    src={drawer.details.image}
+                                    alt={drawer.details.name}
+                                    width={48}
+                                    height={48}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-foreground leading-tight line-clamp-2">{drawer.details.name}</div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-2 pt-2 border-t border-dashed">
+                        <div>
+                            <p className="text-[9px] text-muted-foreground uppercase">SKU</p>
+                            <p className="text-[10px] font-medium text-foreground">{drawer.details.sku}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[9px] text-muted-foreground uppercase">Stok</p>
+                            <p className="text-[10px] font-bold text-emerald-600">{drawer.details.stock} pcs</p>
+                        </div>
+                    </div>
+                    {/* Arrow */}
+                    <div className={cn(
+                        "absolute top-full border-8 border-transparent border-t-white drop-shadow-sm",
+                        align === 'center' && "left-1/2 -translate-x-1/2",
+                        align === 'left' && "left-4",
+                        align === 'right' && "right-4"
+                    )} />
+                </div>
+            )}
+        </div>
+    )
 }
 
 export default function RackManager({ userRole }: RackManagerProps) {
@@ -238,21 +359,18 @@ export default function RackManager({ userRole }: RackManagerProps) {
                                     )}
                                 </div>
 
-                                {/* Unused Drawers */}
+                                {/* All Drawers */}
                                 <div className="bg-muted/30 rounded-lg p-3">
                                     <p className="text-xs font-medium text-foreground mb-2">
-                                        Laci yang belum dipakai ({rack.unusedDrawersCount}):
+                                        Status Laci ({rack.drawerCount}):
                                     </p>
-                                    {rack.unusedDrawersList.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {rack.unusedDrawersList.map(drawer => (
-                                                <span key={drawer} className="px-2 py-1 bg-orange-500 text-white rounded text-xs font-mono font-medium shadow-sm">
-                                                    {drawer}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5">
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(rack.allDrawers || []).map(drawer => (
+                                            <DrawerItem key={drawer.code} drawer={drawer} />
+                                        ))}
+                                    </div>
+                                    {rack.unusedDrawersCount === 0 && (
+                                        <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 mt-3 pt-3 border-t border-border/50">
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                             Semua laci sudah dipakai ✓
                                         </p>
