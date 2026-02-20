@@ -142,16 +142,21 @@ function LoginContent() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
             <div className="w-full max-w-md space-y-8">
-                <div className="text-center">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent mb-2">
-                        Ichibot Production
+                <div className="text-center space-y-1">
+                    <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tighter">
+                        SIGMA ICHIBOT
                     </h1>
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                        Welcome back
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-2">
-                        Sign in to your account to manage inventory
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground tracking-[0.2em] uppercase">
+                        Sistem Integrasi Manajerial & Administrasi ICHIBOT
                     </p>
+                    <div className="pt-4">
+                        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                            Welcome back
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Sign in to your account to manage inventory
+                        </p>
+                    </div>
                 </div>
 
                 <div className="bg-card border border-border px-6 md:px-8 py-8 md:py-10 rounded-2xl shadow-xl">
@@ -345,17 +350,23 @@ function LoginLoading() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
             <div className="w-full max-w-md space-y-8">
-                <div className="text-center">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent mb-2">
-                        Ichibot Production
+                <div className="text-center space-y-1">
+                    <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tighter">
+                        SIGMA ICHIBOT
                     </h1>
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                        Welcome back
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-2">
-                        Sign in to your account to manage inventory
+                    <p className="text-[10px] sm:text-xs font-bold text-muted-foreground tracking-[0.2em] uppercase">
+                        Sistem Integrasi Manajerial & Administrasi ICHIBOT
                     </p>
+                    <div className="pt-4">
+                        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                            Welcome back
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Sign in to your account to manage inventory
+                        </p>
+                    </div>
                 </div>
+
                 <div className="bg-card border border-border px-6 md:px-8 py-8 md:py-10 rounded-2xl shadow-xl">
                     <div className="flex items-center justify-center py-12">
                         <Loader2 className="animate-spin h-8 w-8 text-primary" />

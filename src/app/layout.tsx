@@ -12,7 +12,7 @@ const rubik = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "Ichibot Production",
+  title: "Sigma Ichibot",
   description: "Website for Production Monitoring Ichibot",
 };
 

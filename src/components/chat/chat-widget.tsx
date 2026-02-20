@@ -42,8 +42,10 @@ type User = {
     name: string
 }
 
+import { useSidebar } from '@/components/providers/sidebar-provider'
+
 export default function ChatWidget() {
-    const [isOpen, setIsOpen] = useState(false)
+    const { isChatOpen: isOpen, setIsChatOpen: setIsOpen, unreadCount, setUnreadCount } = useSidebar()
     const [view, setView] = useState<'list' | 'chat' | 'new'>('list')
     const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
     const [currentRoom, setCurrentRoom] = useState<{ id: string; name: string; isGroup?: boolean } | null>(null)
@@ -52,7 +54,6 @@ export default function ChatWidget() {
     const [loading, setLoading] = useState(false)
     const [sending, setSending] = useState(false)
     const [users, setUsers] = useState<User[]>([])
-    const [unreadCount, setUnreadCount] = useState(0)
     const [error, setError] = useState<string | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const pollingRef = useRef<NodeJS.Timeout | null>(null)
@@ -411,21 +412,6 @@ export default function ChatWidget() {
 
     return (
         <div className="fixed bottom-6 right-6 z-50 hidden lg:block">
-            {/* Chat Button */}
-            {!isOpen && (
-                <button
-                    onClick={() => setIsOpen(true)}
-                    className="relative w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center"
-                >
-                    <MessageCircle className="w-6 h-6" />
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                    )}
-                </button>
-            )}
-
             {/* Chat Panel */}
             {isOpen && (
                 <div className="w-80 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 animate-in slide-in-from-bottom-4 fade-in duration-300">

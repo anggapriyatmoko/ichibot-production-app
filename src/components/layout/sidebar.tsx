@@ -369,32 +369,37 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
       >
         <div
           className={cn(
-            "flex items-center h-16 border-b border-border px-4",
-            isOpen ? "justify-between" : "justify-center",
+            "flex flex-col border-b border-border transition-all duration-300",
+            isOpen ? "px-4 py-4" : "h-16 items-center justify-center px-4"
           )}
         >
-          {isOpen && (
-            <Link href="/dashboard" className="flex items-center">
-              <Image
-                src="/uploads/ichibot-text-logo.png"
-                alt="Logo"
-                width={120}
-                height={30}
-                className="object-contain"
-                priority
-              />
-            </Link>
-          )}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-1.5 hover:bg-accent rounded-md text-muted-foreground"
-          >
-            {isOpen ? (
-              <PanelLeftClose className="h-4 w-4" />
-            ) : (
+          {isOpen ? (
+            <div className="flex flex-col">
+              <div className="flex items-start justify-between gap-2">
+                <Link href="/dashboard" className="group flex flex-col transition-opacity hover:opacity-80">
+                  <h1 className="text-xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tight uppercase leading-none">
+                    SIGMA ICHIBOT
+                  </h1>
+                  <p className="text-[10px] font-medium text-muted-foreground leading-tight tracking-tight uppercase max-w-[190px] mt-1">
+                    Sistem Integrasi Manajerial & Administrasi ICHIBOT
+                  </p>
+                </Link>
+                <button
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="p-1 hover:bg-accent rounded-md text-muted-foreground transition-colors shrink-0 mt-0.5"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-1.5 hover:bg-accent rounded-md text-muted-foreground transition-colors"
+            >
               <PanelLeftOpen className="h-5 w-5" />
-            )}
-          </button>
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
