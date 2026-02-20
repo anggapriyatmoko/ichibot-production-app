@@ -14,6 +14,7 @@ interface ModalProps {
     headerActions?: ReactNode
     maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full'
     className?: string
+    wrapperClassName?: string
 }
 
 const maxWidthClasses = {
@@ -36,7 +37,8 @@ export default function Modal({
     footer,
     headerActions,
     maxWidth = 'lg',
-    className
+    className,
+    wrapperClassName
 }: ModalProps) {
     // Lock body scroll when modal is open
     useEffect(() => {
@@ -54,7 +56,7 @@ export default function Modal({
 
     return (
         <Portal>
-            <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+            <div className={cn("fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200", wrapperClassName)}>
                 <div
                     className={cn(
                         "bg-background border border-border rounded-2xl shadow-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh]",

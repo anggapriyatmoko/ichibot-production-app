@@ -7,6 +7,7 @@ import { getOvertimeLeaves, updateOvertimeLeaveStatus, createOvertimeOrder, dele
 import { getUsers } from '@/app/actions/user'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
+import Modal from '@/components/ui/modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -505,19 +506,39 @@ export default function OvertimeLeaveApproval() {
             />
             {/* Perintah Lembur Modal */}
             {isAddingOrder && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-md rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-border flex justify-between items-center">
-                            <h3 className="font-bold text-lg flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-primary" />
-                                Buat Perintah Lembur
-                            </h3>
-                            <button onClick={() => setIsAddingOrder(false)} className="p-1 hover:bg-muted rounded-full transition-colors">
-                                <X className="w-5 h-5" />
+                <Modal
+                    isOpen={isAddingOrder}
+                    onClose={() => setIsAddingOrder(false)}
+                    title={
+                        <span className="flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-primary" />
+                            Buat Perintah Lembur
+                        </span>
+                    }
+                    maxWidth="md"
+                    footer={
+                        <div className="flex justify-end gap-2 text-sm w-full">
+                            <button
+                                type="button"
+                                onClick={() => setIsAddingOrder(false)}
+                                className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium transition-colors border border-transparent"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="createOrderForm"
+                                disabled={isSubmittingOrder}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-bold transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                            >
+                                {isSubmittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                Kirim Perintah
                             </button>
                         </div>
-
-                        <form onSubmit={handleCreateOrder} className="p-4 space-y-4">
+                    }
+                >
+                    <div className="p-4">
+                        <form id="createOrderForm" onSubmit={handleCreateOrder} className="space-y-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Pilih Karyawan</label>
                                 <select
@@ -579,48 +600,53 @@ export default function OvertimeLeaveApproval() {
                                 />
                             </div>
 
-                            <div className="flex gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAddingOrder(false)}
-                                    className="flex-1 py-2 rounded-lg border border-border hover:bg-muted font-bold text-sm transition-all"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmittingOrder}
-                                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-                                >
-                                    {isSubmittingOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                    Kirim Perintah
-                                </button>
-                            </div>
                         </form>
                     </div>
-                </div>
+                </Modal>
             )}
             {/* Decision Modal (Approve/Reject) */}
             {isDeciding && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-sm rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200">
-                        <div className={cn(
-                            "p-4 border-b border-border flex justify-between items-center",
-                            decisionStatus === 'APPROVED' ? "bg-emerald-500/5" : "bg-rose-500/5"
+                <Modal
+                    isOpen={isDeciding}
+                    onClose={() => setIsDeciding(false)}
+                    title={
+                        <span className={cn(
+                            "flex items-center gap-2",
+                            decisionStatus === 'APPROVED' ? "text-emerald-600" : "text-rose-600"
                         )}>
-                            <h3 className={cn(
-                                "font-bold text-lg flex items-center gap-2",
-                                decisionStatus === 'APPROVED' ? "text-emerald-600" : "text-rose-600"
-                            )}>
-                                {decisionStatus === 'APPROVED' ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
-                                {decisionStatus === 'APPROVED' ? "Terima Pengajuan" : "Tolak Pengajuan"}
-                            </h3>
-                            <button onClick={() => setIsDeciding(false)} className="p-1 hover:bg-muted rounded-full transition-colors">
-                                <X className="w-5 h-5" />
+                            {decisionStatus === 'APPROVED' ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                            {decisionStatus === 'APPROVED' ? "Terima Pengajuan" : "Tolak Pengajuan"}
+                        </span>
+                    }
+                    maxWidth="sm"
+                    footer={
+                        <div className="flex justify-end gap-2 text-sm w-full">
+                            <button
+                                type="button"
+                                onClick={() => setIsDeciding(false)}
+                                className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="decisionForm"
+                                disabled={processingId !== null}
+                                className={cn(
+                                    "px-4 py-2 text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50",
+                                    decisionStatus === 'APPROVED'
+                                        ? "bg-emerald-500 hover:bg-emerald-600"
+                                        : "bg-rose-500 hover:bg-rose-600"
+                                )}
+                            >
+                                {processingId !== null ? <Loader2 className="w-4 h-4 animate-spin" /> : (decisionStatus === 'APPROVED' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />)}
+                                Konfirmasi {decisionStatus === 'APPROVED' ? "Terima" : "Tolak"}
                             </button>
                         </div>
-
-                        <form onSubmit={handleDecisionSubmit} className="p-4 space-y-4">
+                    }
+                >
+                    <div className="p-4">
+                        <form id="decisionForm" onSubmit={handleDecisionSubmit} className="space-y-4">
                             {decisionStatus === 'APPROVED' && (
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Nominal Rupiah (Opsional)</label>
@@ -647,47 +673,45 @@ export default function OvertimeLeaveApproval() {
                                 />
                             </div>
 
-                            <div className="flex gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsDeciding(false)}
-                                    className="flex-1 py-2 rounded-lg border border-border hover:bg-muted font-bold text-sm transition-all"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processingId !== null}
-                                    className={cn(
-                                        "flex-1 py-2 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg",
-                                        decisionStatus === 'APPROVED'
-                                            ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-                                            : "bg-rose-500 hover:bg-rose-600 shadow-rose-500/20"
-                                    )}
-                                >
-                                    {processingId !== null ? <Loader2 className="w-4 h-4 animate-spin" /> : (decisionStatus === 'APPROVED' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />)}
-                                    Konfirmasi {decisionStatus === 'APPROVED' ? "Terima" : "Tolak"}
-                                </button>
-                            </div>
                         </form>
                     </div>
-                </div>
+                </Modal>
             )}
             {/* Edit Modal */}
             {isEditing && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border flex flex-col animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh]">
-                        <div className="p-4 border-b border-border flex justify-between items-center bg-blue-500/5">
-                            <h3 className="font-bold text-lg flex items-center gap-2 text-blue-600">
-                                <Pencil className="w-5 h-5" />
-                                Edit Data Pengajuan
-                            </h3>
-                            <button onClick={() => setIsEditing(false)} className="p-1 hover:bg-muted rounded-full transition-colors">
-                                <X className="w-5 h-5" />
+                <Modal
+                    isOpen={isEditing}
+                    onClose={() => setIsEditing(false)}
+                    title={
+                        <span className="flex items-center gap-2 text-blue-600">
+                            <Pencil className="w-5 h-5" />
+                            Edit Data Pengajuan
+                        </span>
+                    }
+                    maxWidth="lg"
+                    footer={
+                        <div className="flex justify-end gap-2 text-sm w-full">
+                            <button
+                                type="button"
+                                onClick={() => setIsEditing(false)}
+                                className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="editRequestForm"
+                                disabled={processingId !== null}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                            >
+                                {processingId !== null ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Simpan Perubahan
                             </button>
                         </div>
-
-                        <form onSubmit={handleEditSubmit} className="p-4 space-y-4">
+                    }
+                >
+                    <div className="p-4">
+                        <form id="editRequestForm" onSubmit={handleEditSubmit} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Tanggal</label>
@@ -782,26 +806,9 @@ export default function OvertimeLeaveApproval() {
                                 />
                             </div>
 
-                            <div className="flex gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditing(false)}
-                                    className="flex-1 py-2 rounded-lg border border-border hover:bg-muted font-bold text-sm transition-all"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processingId !== null}
-                                    className="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
-                                >
-                                    {processingId !== null ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                    Simpan Perubahan
-                                </button>
-                            </div>
                         </form>
                     </div>
-                </div>
+                </Modal>
             )}
         </TableWrapper>
     )

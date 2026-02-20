@@ -15,6 +15,7 @@ import { useRef } from 'react'
 import { useAlert } from '@/hooks/use-alert'
 import { createServiceProduct, updateServiceProduct, deleteServiceProduct, exportServiceProducts, importServiceProducts } from '@/app/actions/service-product'
 import { checkoutServiceOrder, getServiceOrderHistory, exportServiceOrders, importServiceOrders } from '@/app/actions/service-order'
+import Modal from '@/components/ui/modal'
 
 type ServiceProduct = {
     id: string
@@ -999,146 +1000,13 @@ export default function POSServiceSystem({
 
             {/* Product Edit/Add Modal */}
             {isEditingProduct && currentProduct && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
-                        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                            <h2 className="text-lg font-bold">
-                                {currentProduct.id ? 'Edit Barang Service' : 'Tambah Barang Service'}
-                            </h2>
-                            <button onClick={() => setIsEditingProduct(false)} className="p-2 hover:bg-muted rounded-full transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto scrollbar-hide">
-                            {/* Product Image Section */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Product Image</label>
-                                <div className="relative group border-2 border-dashed border-border rounded-3xl overflow-hidden bg-muted/30 aspect-square flex flex-col items-center justify-center p-4 transition-all hover:bg-muted/50">
-                                    {currentProduct.image ? (
-                                        <>
-                                            <img src={currentProduct.image} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                <button
-                                                    onClick={() => startCamera()}
-                                                    className="p-3 bg-white/20 backdrop-blur-md rounded-2xl hover:bg-white/40 transition-all"
-                                                    title="Ambil Foto"
-                                                >
-                                                    <Camera className="w-6 h-6 text-white" />
-                                                </button>
-                                                <button
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="p-3 bg-white/20 backdrop-blur-md rounded-2xl hover:bg-white/40 transition-all"
-                                                    title="Upload File"
-                                                >
-                                                    <Upload className="w-6 h-6 text-white" />
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setCurrentProduct({ ...currentProduct, image: null })
-                                                        setRemoveImage(true)
-                                                    }}
-                                                    className="p-3 bg-rose-500/80 backdrop-blur-md rounded-2xl hover:bg-rose-500 transition-all"
-                                                    title="Hapus"
-                                                >
-                                                    <Trash2 className="w-6 h-6 text-white" />
-                                                </button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center space-y-4">
-                                            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
-                                                <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
-                                            </div>
-                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4 leading-relaxed">
-                                                Upload gambar atau ambil foto (maks 1MB)
-                                            </p>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={startCamera}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold active:scale-95 transition-all"
-                                                >
-                                                    <Camera className="w-4 h-4" />
-                                                    Ambil Foto
-                                                </button>
-                                                <button
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-muted text-foreground rounded-xl text-xs font-bold active:scale-95 transition-all"
-                                                >
-                                                    <Upload className="w-4 h-4" />
-                                                    Pilih File
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        className="hidden"
-                                        accept="image/*"
-                                        onChange={handleFileSelect}
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Nama Barang</label>
-                                <input
-                                    type="text"
-                                    value={currentProduct.name}
-                                    onChange={e => setCurrentProduct({ ...currentProduct, name: e.target.value })}
-                                    className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">SKU</label>
-                                <input
-                                    type="text"
-                                    value={currentProduct.sku || ''}
-                                    onChange={e => setCurrentProduct({ ...currentProduct, sku: e.target.value })}
-                                    placeholder="SO-XXX"
-                                    className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Harga Normal</label>
-                                    <input
-                                        type="number"
-                                        value={currentProduct.price ?? ''}
-                                        onChange={e => setCurrentProduct({ ...currentProduct, price: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                        className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Harga Diskon</label>
-                                    <input
-                                        type="number"
-                                        value={currentProduct.salePrice ?? ''}
-                                        onChange={e => setCurrentProduct({ ...currentProduct, salePrice: e.target.value ? parseFloat(e.target.value) : null })}
-                                        placeholder="Optional"
-                                        className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Stock</label>
-                                <input
-                                    type="number"
-                                    value={currentProduct.stock ?? ''}
-                                    onChange={e => setCurrentProduct({ ...currentProduct, stock: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                    className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Keterangan</label>
-                                <textarea
-                                    value={currentProduct.description || ''}
-                                    onChange={e => setCurrentProduct({ ...currentProduct, description: e.target.value })}
-                                    placeholder="Warna, tipe, dll..."
-                                    className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px]"
-                                />
-                            </div>
-                        </div>
-                        <div className="p-6 pt-0 flex gap-3">
+                <Modal
+                    isOpen={isEditingProduct}
+                    onClose={() => setIsEditingProduct(false)}
+                    title={currentProduct.id ? 'Edit Barang Service' : 'Tambah Barang Service'}
+                    maxWidth="md"
+                    footer={
+                        <div className="flex gap-3">
                             <button
                                 onClick={() => setIsEditingProduct(false)}
                                 className="flex-1 py-3 font-bold rounded-2xl border border-border hover:bg-muted transition-all"
@@ -1154,27 +1022,156 @@ export default function POSServiceSystem({
                                 Simpan
                             </button>
                         </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        {/* Product Image Section */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Product Image</label>
+                            <div className="relative group border-2 border-dashed border-border rounded-3xl overflow-hidden bg-muted/30 aspect-square flex flex-col items-center justify-center p-4 transition-all hover:bg-muted/50">
+                                {currentProduct.image ? (
+                                    <>
+                                        <img src={currentProduct.image} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={() => startCamera()}
+                                                className="p-3 bg-white/20 backdrop-blur-md rounded-2xl hover:bg-white/40 transition-all"
+                                                title="Ambil Foto"
+                                            >
+                                                <Camera className="w-6 h-6 text-white" />
+                                            </button>
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="p-3 bg-white/20 backdrop-blur-md rounded-2xl hover:bg-white/40 transition-all"
+                                                title="Upload File"
+                                            >
+                                                <Upload className="w-6 h-6 text-white" />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setCurrentProduct({ ...currentProduct, image: null })
+                                                    setRemoveImage(true)
+                                                }}
+                                                className="p-3 bg-rose-500/80 backdrop-blur-md rounded-2xl hover:bg-rose-500 transition-all"
+                                                title="Hapus"
+                                            >
+                                                <Trash2 className="w-6 h-6 text-white" />
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center space-y-4">
+                                        <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
+                                            <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+                                        </div>
+                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4 leading-relaxed">
+                                            Upload gambar atau ambil foto (maks 1MB)
+                                        </p>
+                                        <div className="flex gap-2 justify-center">
+                                            <button
+                                                onClick={startCamera}
+                                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold active:scale-95 transition-all"
+                                            >
+                                                <Camera className="w-4 h-4" />
+                                                Ambil Foto
+                                            </button>
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="flex items-center gap-2 px-4 py-2 bg-muted text-foreground rounded-xl text-xs font-bold active:scale-95 transition-all"
+                                            >
+                                                <Upload className="w-4 h-4" />
+                                                Pilih File
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleFileSelect}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Nama Barang</label>
+                            <input
+                                type="text"
+                                value={currentProduct.name}
+                                onChange={e => setCurrentProduct({ ...currentProduct, name: e.target.value })}
+                                className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">SKU</label>
+                            <input
+                                type="text"
+                                value={currentProduct.sku || ''}
+                                onChange={e => setCurrentProduct({ ...currentProduct, sku: e.target.value })}
+                                placeholder="SO-XXX"
+                                className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Harga Normal</label>
+                                <input
+                                    type="number"
+                                    value={currentProduct.price ?? ''}
+                                    onChange={e => setCurrentProduct({ ...currentProduct, price: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                    className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Harga Diskon</label>
+                                <input
+                                    type="number"
+                                    value={currentProduct.salePrice ?? ''}
+                                    onChange={e => setCurrentProduct({ ...currentProduct, salePrice: e.target.value ? parseFloat(e.target.value) : null })}
+                                    placeholder="Optional"
+                                    className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Stock</label>
+                            <input
+                                type="number"
+                                value={currentProduct.stock ?? ''}
+                                onChange={e => setCurrentProduct({ ...currentProduct, stock: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Keterangan</label>
+                            <textarea
+                                value={currentProduct.description || ''}
+                                onChange={e => setCurrentProduct({ ...currentProduct, description: e.target.value })}
+                                placeholder="Warna, tipe, dll..."
+                                className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px]"
+                            />
+                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* History Modal */}
             {showHistory && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-card w-full max-w-4xl h-full max-h-[800px] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 duration-500">
-                        <div className="px-8 py-6 border-b border-border flex items-center justify-between">
-                            <h2 className="text-2xl font-black">Riwayat Order Service</h2>
-                            <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-muted rounded-full transition-colors">
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <div className="p-4 border-b border-border bg-muted/10 flex items-center gap-2">
-                            <div className="relative flex-1">
+                <Modal
+                    isOpen={showHistory}
+                    onClose={() => setShowHistory(false)}
+                    title="Riwayat Order Service"
+                    maxWidth="4xl"
+                    className="p-0"
+                    headerActions={
+                        <div className="flex items-center gap-2 mr-2">
+                            <div className="relative w-64 hidden sm:block">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder="Cari order number atau produk..."
-                                    className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                                    placeholder="Cari order number..."
+                                    className="w-full bg-muted border border-border rounded-xl pl-10 pr-4 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
                                     value={historySearchTerm}
                                     onChange={e => setHistorySearchTerm(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && fetchHistory(1, historySearchTerm)}
@@ -1189,175 +1186,123 @@ export default function POSServiceSystem({
                             />
                             <button
                                 onClick={handleExportHistory}
-                                className="p-2 hover:bg-muted rounded-full transition-colors"
+                                className="p-1.5 hover:bg-white/50 dark:hover:bg-black/50 rounded-lg transition-colors border border-transparent hover:border-border/50 bg-muted/50"
                                 title="Export History"
                             >
-                                <Download className="w-5 h-5" />
+                                <Download className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => importHistoryRef.current?.click()}
-                                className="p-2 hover:bg-muted rounded-full transition-colors"
+                                className="p-1.5 hover:bg-white/50 dark:hover:bg-black/50 rounded-lg transition-colors border border-transparent hover:border-border/50 bg-muted/50"
                                 title="Import History"
                             >
-                                <Upload className="w-5 h-5" />
+                                <Upload className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                            {historyLoading ? (
-                                <div className="h-full flex items-center justify-center">
-                                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                                </div>
-                            ) : orderHistory.length === 0 ? (
-                                <div className="text-center py-20 opacity-40">Belum ada riwayat order</div>
-                            ) : (
-                                <div className="grid gap-4">
-                                    {orderHistory.map(order => (
-                                        <div key={order.id} className="bg-muted/10 border border-border rounded-2xl p-6 hover:bg-muted/20 transition-all">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
-                                                    <p className="text-xs font-bold text-primary uppercase tracking-widest">{order.orderNumber}</p>
-                                                    <p className="text-sm font-bold mt-1">
-                                                        {new Date(order.createdAt).toLocaleDateString('id-ID', {
-                                                            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                        })}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                                                        <User className="w-4 h-4" />
-                                                        {order.user?.name || order.user?.username || 'System'}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            setReceiptData(order)
-                                                            setShowReceipt(true)
-                                                        }}
-                                                        className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
-                                                        title="Print Receipt"
-                                                    >
-                                                        <Printer className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2 border-t border-border/50 pt-4">
-                                                {order.items.map(item => (
-                                                    <div key={item.id} className="flex items-center gap-4 py-2 border-b border-border/30 last:border-0 text-sm">
-                                                        <div className="flex-1">
-                                                            <p className="font-bold">{item.productName}</p>
-                                                            <p className="text-xs text-muted-foreground">x{item.quantity}</p>
-                                                        </div>
-                                                        <span className="font-bold">Rp {formatNumber(item.productPrice * item.quantity)}</span>
-                                                    </div>
-                                                ))}
-                                                <div className="flex justify-between pt-2 border-t border-dashed border-border text-base font-bold text-primary">
-                                                    <span>Total</span>
-                                                    <span>Rp {formatNumber(order.items.reduce((acc, i) => acc + (i.productPrice * i.quantity), 0))}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        {totalPages > 1 && (
-                            <div className="px-8 py-4 border-t border-border flex justify-center gap-2">
+                    }
+                    footer={
+                        totalPages > 1 && (
+                            <div className="flex justify-center gap-2">
                                 <button
                                     disabled={historyPage <= 1}
                                     onClick={() => fetchHistory(historyPage - 1, historySearchTerm)}
-                                    className="p-2 border border-border rounded-lg disabled:opacity-30"
+                                    className="p-2 border border-border rounded-lg disabled:opacity-30 bg-background hover:bg-muted transition-colors"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </button>
-                                <span className="flex items-center px-4 font-bold text-sm">{historyPage} / {totalPages}</span>
+                                <span className="flex items-center px-4 font-bold text-sm bg-muted/50 rounded-lg border border-border">{historyPage} / {totalPages}</span>
                                 <button
                                     disabled={historyPage >= totalPages}
                                     onClick={() => fetchHistory(historyPage + 1, historySearchTerm)}
-                                    className="p-2 border border-border rounded-lg disabled:opacity-30"
+                                    className="p-2 border border-border rounded-lg disabled:opacity-30 bg-background hover:bg-muted transition-colors"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
                             </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Receipt Modal */}
-            {showReceipt && receiptData && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-gray-200 flex justify-between items-center no-print">
-                            <h3 className="text-lg font-bold text-gray-900 leading-tight uppercase tracking-tight">Receipt Service</h3>
-                            <button
-                                onClick={() => setShowReceipt(false)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                            >
-                                <X className="w-5 h-5 text-gray-600" />
-                            </button>
-                        </div>
-
-                        {/* Thermal Preview Section */}
-                        <div id="service-receipt" className="p-6 bg-white overflow-y-auto max-h-[60vh]">
-                            <div className="text-center space-y-1">
-                                <h2 className="text-2xl font-black text-black">ICHIBOT SERVICE</h2>
-                                <p className="text-[12px] text-black uppercase tracking-widest">Bukti pembayaran service robot ichibot</p>
-                                <p className="text-[12px] font-bold mt-2 text-black">{receiptData.orderNumber}</p>
-                                <p className="text-[12px] text-black">
-                                    {new Date(receiptData.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false }).replace(/\./g, ':')}
-                                </p>
+                        )
+                    }
+                >
+                    <div className="p-6">
+                        {historyLoading ? (
+                            <div className="py-20 flex flex-col items-center justify-center gap-4">
+                                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                                <p className="text-sm font-medium text-muted-foreground animate-pulse">Memuat riwayat transaksi...</p>
                             </div>
-
-                            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-4 space-y-3">
-                                {receiptData.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex flex-col py-1 border-b border-gray-50 last:border-0">
-                                        <div className="text-[12px] font-bold text-black leading-tight uppercase">
-                                            {item.productName}
-                                        </div>
-                                        <div className="flex justify-between items-center mt-1">
-                                            <div className="text-[12px] text-black font-bold shrink-0">
-                                                {item.quantity} x Rp {formatNumber(item.productPrice)}
+                        ) : orderHistory.length === 0 ? (
+                            <div className="text-center py-20 flex flex-col items-center justify-center gap-3">
+                                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-2">
+                                    <History className="w-8 h-8 text-muted-foreground opacity-50" />
+                                </div>
+                                <h4 className="font-bold text-lg">Belum Ada Riwayat</h4>
+                                <p className="text-sm text-muted-foreground max-w-sm">Transaksi service yang berhasil checkout akan muncul di sini beserta detail produknya.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                                {orderHistory.map(order => (
+                                    <div key={order.id} className="bg-card border border-border rounded-2xl p-6 hover:border-primary/20 transition-all hover:shadow-md group">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-xs font-black text-primary uppercase tracking-widest px-2 py-0.5 bg-primary/10 rounded border border-primary/20">{order.orderNumber}</p>
+                                                    <span className="text-[10px] text-muted-foreground border border-border px-2 py-0.5 rounded flex items-center gap-1">
+                                                        <User className="w-3 h-3" />
+                                                        {order.user?.name || order.user?.username || 'System'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm font-bold mt-2 text-foreground/80">
+                                                    {new Date(order.createdAt).toLocaleDateString('id-ID', {
+                                                        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </p>
                                             </div>
-                                            <div className="text-right text-[12px] font-bold text-black">
-                                                Rp {formatNumber(item.productPrice * item.quantity)}
+                                            <div className="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => {
+                                                        setReceiptData(order)
+                                                        setShowReceipt(true)
+                                                    }}
+                                                    className="p-2.5 bg-primary text-primary-foreground rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm shadow-primary/20"
+                                                    title="Print Receipt"
+                                                >
+                                                    <Printer className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 border-t border-border/50 pt-4 mt-2">
+                                            {order.items.map(item => (
+                                                <div key={item.id} className="flex items-center gap-4 py-2 border-b border-border/30 last:border-0 text-sm">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-[13px] truncate">{item.productName}</p>
+                                                        <p className="text-xs text-muted-foreground flex justify-between mt-0.5">
+                                                            <span>x{item.quantity}</span>
+                                                        </p>
+                                                    </div>
+                                                    <span className="font-bold text-[13px] whitespace-nowrap">Rp {formatNumber(item.productPrice * item.quantity)}</span>
+                                                </div>
+                                            ))}
+                                            <div className="flex justify-between items-center pt-3 mt-1 border-t border-dashed border-border text-base font-black text-primary">
+                                                <span>Total Nilai</span>
+                                                <span>Rp {formatNumber(order.items.reduce((acc, i) => acc + (i.productPrice * i.quantity), 0))}</span>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
+                        )}
+                    </div>
+                </Modal>
+            )}
 
-                            <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-3">
-                                <div className="flex justify-between items-center font-bold text-[12px] text-black">
-                                    <span className="uppercase tracking-tighter">TOTAL:</span>
-                                    <span>Rp {formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 pt-3 border-t border-gray-100 space-y-4">
-                                <div className="flex justify-between text-[12px]">
-                                    <span className="text-black">Printed by:</span>
-                                    <span className="font-bold text-black">{userName}</span>
-                                </div>
-                                <div className="text-center space-y-2 mt-6 pt-4 border-t border-gray-100">
-                                    <div className="space-y-1">
-                                        <p className="text-[12px] text-black">Terimakasih sudah mempercayakan service robot di ICHIBOT ROBOTICS.</p>
-                                        <p className="text-[12px] text-black">Cek katalog dan stock produk di <b>www.store.ichibot.id</b></p>
-                                    </div>
-                                    <hr className="border-gray-200" />
-                                    <p className="text-[12px] text-black font-medium">Semoga robot kakak bisa awet dan mendapatkan juara</p>
-                                    <hr className="border-gray-200" />
-                                    <div className="text-[12px] text-black space-y-0.5">
-                                        <p>Instagram : @team.ichibot</p>
-                                        <p>Tokopedia : ICHIBOT</p>
-                                        <p>Shopee : ichibot</p>
-                                        <p>Youtube : ICHIBOT</p>
-                                        <p>Tiktok : @team.ichibot</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="p-3 border-t border-gray-200 grid grid-cols-4 gap-2 no-print bg-gray-50/50">
+            {/* Receipt Modal */}
+            {showReceipt && receiptData && (
+                <Modal
+                    isOpen={showReceipt && !!receiptData}
+                    onClose={() => setShowReceipt(false)}
+                    title="Receipt Service"
+                    maxWidth="sm"
+                    className="p-0 bg-white"
+                    footer={
+                        <div className="grid grid-cols-4 gap-2 no-print w-full">
                             <button
                                 onClick={handleDownloadPDF}
                                 className="flex flex-col items-center justify-center p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all active:scale-95 group"
@@ -1389,8 +1334,67 @@ export default function POSServiceSystem({
                                 <span className="text-[10px] font-black uppercase tracking-widest text-center leading-none">Close</span>
                             </button>
                         </div>
+                    }
+                >
+                    <div id="service-receipt" className="p-6 bg-white overflow-y-auto w-[70mm] mx-auto min-h-[100mm]">
+                        <div className="text-center space-y-1 pb-4 border-b-2 border-dashed border-gray-300">
+                            <h2 className="text-2xl font-black text-black">ICHIBOT SERVICE</h2>
+                            <p className="text-[12px] text-black uppercase tracking-widest">Bukti pembayaran service robot ichibot</p>
+                            <p className="text-[12px] font-bold mt-2 text-black">{receiptData.orderNumber}</p>
+                            <p className="text-[12px] text-black">
+                                {new Date(receiptData.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false }).replace(/\./g, ':')}
+                            </p>
+                        </div>
+
+                        <div className="mt-4 pt-2 space-y-3">
+                            {receiptData.items.map((item: any, idx: number) => (
+                                <div key={idx} className="flex flex-col py-1 border-b border-gray-50 last:border-0">
+                                    <div className="text-[12px] font-bold text-black leading-tight uppercase">
+                                        {item.productName}
+                                    </div>
+                                    <div className="flex justify-between items-center mt-1">
+                                        <div className="text-[12px] text-black font-bold shrink-0">
+                                            {item.quantity} x Rp {formatNumber(item.productPrice)}
+                                        </div>
+                                        <div className="text-right text-[12px] font-bold text-black">
+                                            Rp {formatNumber(item.productPrice * item.quantity)}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-3">
+                            <div className="flex justify-between items-center font-bold text-[12px] text-black">
+                                <span className="uppercase tracking-tighter">TOTAL:</span>
+                                <span>Rp {formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-gray-100 space-y-4">
+                            <div className="flex justify-between text-[12px]">
+                                <span className="text-black">Printed by:</span>
+                                <span className="font-bold text-black">{userName}</span>
+                            </div>
+                            <div className="text-center space-y-2 mt-6 pt-4 border-t border-gray-100">
+                                <div className="space-y-1">
+                                    <p className="text-[12px] text-black">Terimakasih sudah mempercayakan service robot di ICHIBOT ROBOTICS.</p>
+                                    <p className="text-[12px] text-black">Cek katalog dan stock produk di <b>www.store.ichibot.id</b></p>
+                                </div>
+                                <hr className="border-gray-200" />
+                                <p className="text-[12px] text-black font-medium">Semoga robot kakak bisa awet dan mendapatkan juara</p>
+                                <hr className="border-gray-200" />
+                                <div className="text-[12px] text-black space-y-0.5">
+                                    <p>Instagram : @team.ichibot</p>
+                                    <p>Tokopedia : ICHIBOT</p>
+                                    <p>Shopee : ichibot</p>
+                                    <p>Youtube : ICHIBOT</p>
+                                    <p>Tiktok : @team.ichibot</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Camera Capture Modal Overlay */}
@@ -1427,27 +1431,13 @@ export default function POSServiceSystem({
 
             {/* Save Cart Modal */}
             {showSaveCartModal && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-card border border-border rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold">Simpan Keranjang</h3>
-                            <button onClick={() => { setShowSaveCartModal(false); setSaveCartNote(''); }} className="p-2 hover:bg-muted rounded-full">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Keterangan / Nama Simpanan</label>
-                            <input
-                                autoFocus
-                                type="text"
-                                value={saveCartNote}
-                                onChange={(e) => setSaveCartNote(e.target.value)}
-                                placeholder="Contoh: Robot A - Service Sensor"
-                                className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                                onKeyDown={(e) => e.key === 'Enter' && confirmSaveCart()}
-                            />
-                        </div>
-                        <div className="flex gap-3 pt-2">
+                <Modal
+                    isOpen={showSaveCartModal}
+                    onClose={() => { setShowSaveCartModal(false); setSaveCartNote(''); }}
+                    title="Simpan Keranjang"
+                    maxWidth="sm"
+                    footer={
+                        <div className="flex gap-3 w-full">
                             <button
                                 onClick={() => { setShowSaveCartModal(false); setSaveCartNote(''); }}
                                 className="flex-1 py-3 bg-muted hover:bg-muted/80 font-bold rounded-2xl transition-all"
@@ -1461,82 +1451,97 @@ export default function POSServiceSystem({
                                 Simpan
                             </button>
                         </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-muted-foreground uppercase ml-1">Keterangan / Nama Simpanan</label>
+                            <input
+                                autoFocus
+                                type="text"
+                                value={saveCartNote}
+                                onChange={(e) => setSaveCartNote(e.target.value)}
+                                placeholder="Contoh: Robot A - Service Sensor"
+                                className="w-full bg-muted/50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                                onKeyDown={(e) => e.key === 'Enter' && confirmSaveCart()}
+                            />
+                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Saved Carts List Modal */}
             {showSavedCartsList && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-card border border-border rounded-3xl w-full max-w-2xl h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-                        <div className="p-6 border-b border-border flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Archive className="w-6 h-6 text-primary" />
-                                <div>
-                                    <h3 className="text-lg font-bold">Daftar Keranjang Disimpan</h3>
-                                    <p className="text-xs text-muted-foreground">{savedCarts.length} simpanan tersedia</p>
-                                </div>
+                <Modal
+                    isOpen={showSavedCartsList}
+                    onClose={() => setShowSavedCartsList(false)}
+                    title={
+                        <div className="flex items-center gap-3">
+                            <Archive className="w-6 h-6 text-primary" />
+                            <div>
+                                <span className="block text-lg font-bold">Daftar Keranjang Disimpan</span>
+                                <span className="block text-xs font-normal text-muted-foreground mt-0.5">{savedCarts.length} simpanan tersedia</span>
                             </div>
-                            <button onClick={() => setShowSavedCartsList(false)} className="p-2 hover:bg-muted rounded-full">
-                                <X className="w-5 h-5" />
-                            </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {savedCarts.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-20 opacity-40">
-                                    <Archive className="w-16 h-16 mb-4" />
-                                    <p className="font-medium">Belum ada keranjang disimpan</p>
-                                </div>
-                            ) : (
-                                <div className="grid gap-4">
-                                    {savedCarts.map((saved) => (
-                                        <div key={saved.id} className="bg-muted/10 border border-border rounded-2xl p-4 hover:bg-muted/20 transition-all group/card">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div>
-                                                    <h4 className="font-bold text-primary">{saved.note}</h4>
-                                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-                                                        {new Date(saved.createdAt).toLocaleDateString('id-ID', {
-                                                            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                                        })}
-                                                    </p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleLoadSavedCart(saved)}
-                                                        className="px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
-                                                    >
-                                                        Buka
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteSavedCart(saved.id)}
-                                                        className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                    }
+                    maxWidth="2xl"
+                    className="p-6"
+                >
+                    <div className="space-y-4">
+                        {savedCarts.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center text-muted-foreground py-20 opacity-40">
+                                <Archive className="w-16 h-16 mb-4" />
+                                <p className="font-medium">Belum ada keranjang disimpan</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4">
+                                {savedCarts.map((saved) => (
+                                    <div key={saved.id} className="bg-muted/10 border border-border rounded-2xl p-4 hover:bg-muted/20 transition-all group/card">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h4 className="font-bold text-primary">{saved.note}</h4>
+                                                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+                                                    {new Date(saved.createdAt).toLocaleDateString('id-ID', {
+                                                        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </p>
                                             </div>
-                                            <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
-                                                {saved.items.slice(0, 3).map((item, idx) => (
-                                                    <span key={idx} className="text-[10px] bg-muted px-2 py-1 rounded-md text-muted-foreground">
-                                                        {item.name} x{item.quantity}
-                                                    </span>
-                                                ))}
-                                                {saved.items.length > 3 && (
-                                                    <span className="text-[10px] text-muted-foreground italic flex items-center">
-                                                        +{saved.items.length - 3} lainnya
-                                                    </span>
-                                                )}
-                                                <div className="ml-auto text-xs font-bold text-primary">
-                                                    Total: Rp {formatNumber(saved.items.reduce((acc, i) => acc + (i.salePrice || i.price) * i.quantity, 0))}
-                                                </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleLoadSavedCart(saved)}
+                                                    className="px-4 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:shadow-lg hover:shadow-primary/20 transition-all active:scale-95"
+                                                >
+                                                    Buka
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteSavedCart(saved.id)}
+                                                    className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                        <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+                                            {saved.items.slice(0, 3).map((item, idx) => (
+                                                <span key={idx} className="text-[10px] bg-muted px-2 py-1 rounded-md text-muted-foreground">
+                                                    {item.name} x{item.quantity}
+                                                </span>
+                                            ))}
+                                            {saved.items.length > 3 && (
+                                                <span className="text-[10px] text-muted-foreground italic flex items-center">
+                                                    +{saved.items.length - 3} lainnya
+                                                </span>
+                                            )}
+                                            <div className="ml-auto text-xs font-bold text-primary">
+                                                Total: Rp {formatNumber(saved.items.reduce((acc, i) => acc + (i.salePrice || i.price) * i.quantity, 0))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
     )

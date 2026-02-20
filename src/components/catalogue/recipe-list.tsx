@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
+import Modal from '@/components/ui/modal'
 
 type Category = {
     id: string
@@ -40,18 +41,6 @@ export default function RecipeList({
     const router = useRouter()
     const { showConfirmation } = useConfirmation()
     const { showError } = useAlert()
-
-    // Lock body scroll when modal is open
-    useEffect(() => {
-        if (isAdding) {
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
-        }
-        return () => {
-            document.body.style.overflow = ''
-        }
-    }, [isAdding])
 
     // Form State
     const [formData, setFormData] = useState({
@@ -167,71 +156,73 @@ export default function RecipeList({
                 </div>
             )}
 
-            {isAdding && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-                        <h3 className="text-lg font-bold text-foreground mb-4">{editingRecipeId ? 'Edit Product' : 'Add New Product'}</h3>
-                        <form onSubmit={handleAdd} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
-                                <input
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    required
-                                    autoFocus
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                    placeholder="e.g. Roti Tawar"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Production ID <span className="text-red-500">*</span></label>
-                                <input
-                                    value={formData.productionId}
-                                    onChange={e => setFormData({ ...formData, productionId: e.target.value })}
-                                    required
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                    placeholder="e.g. PID-001"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
-                                <div className="flex gap-2">
-                                    <select
-                                        value={formData.categoryId}
-                                        onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
-                                        required
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
-                                    >
-                                        <option value="">Select Category...</option>
-                                        {categories.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    rows={3}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                    placeholder="Optional description..."
-                                />
-                            </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => { setIsAdding(false); setEditingRecipeId(null); }} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
-                                    {isLoading ? 'Saving...' : (editingRecipeId ? 'Save Changes' : 'Create Product')}
-                                </button>
-                            </div>
-                        </form>
+            <Modal
+                isOpen={isAdding}
+                onClose={() => { setIsAdding(false); setEditingRecipeId(null); }}
+                title={editingRecipeId ? 'Edit Product' : 'Add New Product'}
+                maxWidth="md"
+                footer={(
+                    <div className="flex justify-end gap-3 w-full">
+                        <button type="button" onClick={() => { setIsAdding(false); setEditingRecipeId(null); }} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        <button disabled={isLoading} onClick={handleAdd} type="button" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
+                            {isLoading ? 'Saving...' : (editingRecipeId ? 'Save Changes' : 'Create Product')}
+                        </button>
                     </div>
-                </div>
-            )}
+                )}
+            >
+                <form id="recipe-form" onSubmit={handleAdd} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Product Name</label>
+                        <input
+                            value={formData.name}
+                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            required
+                            autoFocus
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                            placeholder="e.g. Roti Tawar"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Production ID <span className="text-red-500">*</span></label>
+                        <input
+                            value={formData.productionId}
+                            onChange={e => setFormData({ ...formData, productionId: e.target.value })}
+                            required
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                            placeholder="e.g. PID-001"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
+                        <div className="flex gap-2">
+                            <select
+                                value={formData.categoryId}
+                                onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
+                                required
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary outline-none"
+                            >
+                                <option value="">Select Category...</option>
+                                {categories.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Description</label>
+                        <textarea
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            rows={3}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                            placeholder="Optional description..."
+                        />
+                    </div>
+                </form>
+            </Modal>
 
             {/* Grouped Display by Category */}
             {categories.map(category => {

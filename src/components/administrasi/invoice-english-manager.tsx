@@ -352,7 +352,7 @@ export default function InvoiceEnglishManager({
 
   // Calculate current page totals
   const pageTotalItems = invoices.reduce((acc, inv) => acc + (inv.items?.length || 0), 0);
-  const pageGrandTotal = invoices.reduce((acc, inv) => acc + (inv.grand_total || 0), 0);
+  const pageGrandTotal = invoices.reduce((acc, inv) => acc + (Number(inv.grand_total) || 0), 0);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -364,7 +364,7 @@ export default function InvoiceEnglishManager({
   };
 
   // Analysis Cards mapping
-  const totalNominal = invoices.reduce((acc, inv) => acc + inv.grand_total, 0);
+  const totalNominal = invoices.reduce((acc, inv) => acc + (Number(inv.grand_total) || 0), 0);
   const averageNominal = invoices.length > 0 ? totalNominal / invoices.length : 0;
 
   const analysisCards: TableAnalysisCardProps[] = [

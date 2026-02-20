@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Edit, Loader2, Save, X, Users, Upload, Trash2, Image as ImageIcon, Banknote } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Modal from '@/components/ui/modal'
 import { getAllUsersForHRD, updateUserData } from '@/app/actions/hrd'
 import { useAlert } from '@/hooks/use-alert'
 import Image from 'next/image'
@@ -410,23 +411,44 @@ export default function UserManagementTable({ userRole }: Props) {
 
             {/* Edit Modal */}
             {editingUser && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                        {/* Header */}
-                        <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-card z-10">
-                            <h3 className="text-lg font-bold text-foreground">
-                                Edit Data Karyawan
-                            </h3>
+                <Modal
+                    isOpen={!!editingUser}
+                    onClose={closeModal}
+                    title="Edit Data Karyawan"
+                    maxWidth="lg"
+                    footer={
+                        <div className="flex justify-end gap-2">
                             <button
+                                type="button"
                                 onClick={closeModal}
-                                className="p-1 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+                                disabled={saving}
+                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                <X className="w-5 h-5" />
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="editUserForm"
+                                disabled={saving}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {saving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Menyimpan...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-4 h-4" />
+                                        Simpan
+                                    </>
+                                )}
                             </button>
                         </div>
-
-                        {/* Form */}
-                        <form onSubmit={handleSave} className="p-4 space-y-4">
+                    }
+                >
+                    <div className="p-4">
+                        <form id="editUserForm" onSubmit={handleSave} className="space-y-4">
                             {/* Photo Upload Section */}
                             <div className="flex justify-center mb-4">
                                 <div className="relative group">
@@ -567,37 +589,9 @@ export default function UserManagementTable({ userRole }: Props) {
                                 />
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    disabled={saving}
-                                    className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            Menyimpan...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="w-4 h-4" />
-                                            Simpan
-                                        </>
-                                    )}
-                                </button>
-                            </div>
                         </form>
                     </div>
-                </div>
+                </Modal>
             )}
 
             {/* Payroll Modal */}

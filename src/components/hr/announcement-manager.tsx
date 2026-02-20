@@ -7,6 +7,7 @@ import { createAnnouncement, updateAnnouncement, deleteAnnouncement, toggleAnnou
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import { cn } from '@/lib/utils'
+import Modal from '@/components/ui/modal'
 
 interface User {
     id: string
@@ -281,98 +282,97 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
 
             {/* Modal Create / Edit */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20 rounded-t-xl">
-                            <h3 className="text-lg font-bold flex items-center gap-2">
-                                <Megaphone className="w-5 h-5 text-primary" />
-                                {editingAnnouncement ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'}
-                            </h3>
-                            <button onClick={closeModal} className="text-muted-foreground hover:text-foreground">
-                                <ChevronDown className="w-5 h-5" />
-                            </button>
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={closeModal}
+                    title={
+                        <div className="flex items-center gap-2">
+                            <Megaphone className="w-5 h-5 text-primary" />
+                            {editingAnnouncement ? 'Edit Pengumuman' : 'Buat Pengumuman Baru'}
                         </div>
-
-                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                            {/* Content Input */}
-                            <div>
-                                <label className="block text-sm font-bold text-foreground mb-2">Isi Pengumuman</label>
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none min-h-[100px]"
-                                    placeholder="Tuliskan pengumuman di sini..."
-                                />
-                            </div>
-
-                            {/* User Selection */}
-                            <div>
-                                <div className="flex justify-between items-end mb-2">
-                                    <label className="block text-sm font-bold text-foreground">Target User ({selectedUserIds.length})</label>
-                                    <button
-                                        onClick={handleSelectAll}
-                                        className="text-xs font-medium text-primary hover:underline"
-                                    >
-                                        {selectedUserIds.length === filteredUsers.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
-                                    </button>
-                                </div>
-                                <div className="mb-3 relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <input
-                                        type="text"
-                                        placeholder="Cari user..."
-                                        value={userSearch}
-                                        onChange={(e) => setUserSearch(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2 text-xs focus:border-primary outline-none"
-                                    />
-                                </div>
-                                <div className="border border-border rounded-lg max-h-[250px] overflow-y-auto divide-y divide-border bg-background">
-                                    {filteredUsers.length === 0 ? (
-                                        <div className="p-4 text-center text-xs text-muted-foreground">Tidak ada user ditemukan</div>
-                                    ) : (
-                                        filteredUsers.map(user => (
-                                            <div
-                                                key={user.id}
-                                                onClick={() => toggleUserSelection(user.id)}
-                                                className={cn(
-                                                    "flex items-center gap-3 p-3 cursor-pointer transition-colors hover:bg-accent/50",
-                                                    selectedUserIds.includes(user.id) ? "bg-primary/5" : ""
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "w-5 h-5 rounded border flex items-center justify-center transition-all",
-                                                    selectedUserIds.includes(user.id) ? "bg-primary border-primary" : "border-muted-foreground"
-                                                )}>
-                                                    {selectedUserIds.includes(user.id) && <Check className="w-3.5 h-3.5 text-white" />}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium leading-none">{user.name || user.username}</p>
-                                                    <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">{user.role}</p>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-border bg-muted/20 rounded-b-xl flex justify-end gap-3">
+                    }
+                    maxWidth="2xl"
+                    footer={
+                        <div className="flex justify-end gap-3 text-sm">
                             <button
                                 onClick={closeModal}
-                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                                className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground"
                             >
                                 Batal
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm disabled:opacity-50"
+                                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm disabled:opacity-50"
                             >
                                 {saving ? "Menyimpan..." : (editingAnnouncement ? "Simpan Perubahan" : "Simpan Pengumuman")}
                             </button>
                         </div>
+                    }
+                >
+                    <div className="p-6 space-y-6">
+                        {/* Content Input */}
+                        <div>
+                            <label className="block text-sm font-bold text-foreground mb-2">Isi Pengumuman</label>
+                            <textarea
+                                value={content}
+                                onChange={(e) => setContent(e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none min-h-[100px]"
+                                placeholder="Tuliskan pengumuman di sini..."
+                            />
+                        </div>
+
+                        {/* User Selection */}
+                        <div>
+                            <div className="flex justify-between items-end mb-2">
+                                <label className="block text-sm font-bold text-foreground">Target User ({selectedUserIds.length})</label>
+                                <button
+                                    onClick={handleSelectAll}
+                                    className="text-xs font-medium text-primary hover:underline"
+                                >
+                                    {selectedUserIds.length === filteredUsers.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+                                </button>
+                            </div>
+                            <div className="mb-3 relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <input
+                                    type="text"
+                                    placeholder="Cari user..."
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2 text-xs focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div className="border border-border rounded-lg max-h-[250px] overflow-y-auto divide-y divide-border bg-background">
+                                {filteredUsers.length === 0 ? (
+                                    <div className="p-4 text-center text-xs text-muted-foreground">Tidak ada user ditemukan</div>
+                                ) : (
+                                    filteredUsers.map(user => (
+                                        <div
+                                            key={user.id}
+                                            onClick={() => toggleUserSelection(user.id)}
+                                            className={cn(
+                                                "flex items-center gap-3 p-3 cursor-pointer transition-colors hover:bg-accent/50",
+                                                selectedUserIds.includes(user.id) ? "bg-primary/5" : ""
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "w-5 h-5 rounded border flex items-center justify-center transition-all",
+                                                selectedUserIds.includes(user.id) ? "bg-primary border-primary" : "border-muted-foreground"
+                                            )}>
+                                                {selectedUserIds.includes(user.id) && <Check className="w-3.5 h-3.5 text-white" />}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium leading-none">{user.name || user.username}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">{user.role}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
     )

@@ -6,6 +6,7 @@ import { X, Save, Loader2, Upload, FileText, Trash2 } from 'lucide-react'
 import { upsertPayroll, getPayroll } from '@/app/actions/payroll'
 import { getSalaryComponents } from '@/app/actions/salary-settings'
 import { useAlert } from '@/hooks/use-alert'
+import Modal from '@/components/ui/modal'
 
 interface User {
     id: string
@@ -212,182 +213,23 @@ export default function PayrollModal({ user, onClose }: Props) {
     }
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-card order border-border rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto flex flex-col">
-                {/* Header */}
-                <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-card z-10">
-                    <div>
-                        <h3 className="text-lg font-bold text-foreground">Input Data Gaji</h3>
-                        <p className="text-sm text-muted-foreground">{user.name}</p>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="p-1 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+        <Modal
+            isOpen={true}
+            onClose={onClose}
+            title={
+                <div>
+                    <h3 className="text-lg font-bold text-foreground">Input Data Gaji</h3>
+                    <p className="text-sm font-normal text-muted-foreground">{user.name}</p>
                 </div>
-
-                {/* Form */}
-                <form onSubmit={handleSave} className="p-6 space-y-6 flex-1 overflow-y-auto">
-                    {/* Month Year Selection */}
-                    <div className="flex gap-4">
-                        <div className="flex-1">
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">Bulan</label>
-                            <select
-                                value={month}
-                                onChange={(e) => handleDateChange(parseInt(e.target.value), year)}
-                                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                            >
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                    <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-xs font-medium text-muted-foreground mb-1">Tahun</label>
-                            <select
-                                value={year}
-                                onChange={(e) => handleDateChange(month, parseInt(e.target.value))}
-                                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                            >
-                                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="py-12 text-center">
-                            <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-                        </div>
-                    ) : (
-                        <>
-                            {/* Basic Salary */}
-                            <div>
-                                <label className="block text-xs font-medium text-foreground mb-1">Gaji Pokok</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-2 text-muted-foreground text-sm">Rp</span>
-                                    <input
-                                        type="text"
-                                        value={basicSalary}
-                                        onChange={handleBasicSalaryChange}
-                                        className="w-full pl-10 px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Deductions */}
-                                <div className="space-y-3">
-                                    <h4 className="text-sm font-semibold text-red-600 border-b border-red-200 pb-1">Pemotongan</h4>
-                                    {deductions.map(comp => (
-                                        <div key={comp.id}>
-                                            <label className="block text-xs font-medium text-muted-foreground mb-1">{comp.name}</label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-2 text-muted-foreground text-sm">Rp</span>
-                                                <input
-                                                    type="text"
-                                                    value={itemValues[comp.id] || ''}
-                                                    onChange={(e) => handleItemChange(comp.id, e.target.value)}
-                                                    className="w-full pl-10 px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {deductions.length === 0 && <p className="text-xs text-muted-foreground italic">Tidak ada komponen pemotongan</p>}
-                                </div>
-
-                                {/* Additions */}
-                                <div className="space-y-3">
-                                    <h4 className="text-sm font-semibold text-green-600 border-b border-green-200 pb-1">Penambahan</h4>
-                                    {additions.map(comp => (
-                                        <div key={comp.id}>
-                                            <label className="block text-xs font-medium text-muted-foreground mb-1">{comp.name}</label>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-2 text-muted-foreground text-sm">Rp</span>
-                                                <input
-                                                    type="text"
-                                                    value={itemValues[comp.id] || ''}
-                                                    onChange={(e) => handleItemChange(comp.id, e.target.value)}
-                                                    className="w-full pl-10 px-3 py-2 bg-background border border-border rounded-lg text-sm"
-                                                    placeholder="0"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {additions.length === 0 && <p className="text-xs text-muted-foreground italic">Tidak ada komponen penambahan</p>}
-                                </div>
-                            </div>
-
-
-                            {/* Summary */}
-                            <div className="bg-muted/30 p-4 rounded-lg flex justify-between items-center border border-border">
-                                <span className="font-semibold text-foreground">Total Gaji Bersih</span>
-                                <span className="font-bold text-xl text-primary">
-                                    Rp {calculateNet().toLocaleString('id-ID')}
-                                </span>
-                            </div>
-
-                            {/* File Upload */}
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-foreground">Upload Slip Gaji (PDF)</label>
-                                <div className="border-2 border-dashed border-border rounded-lg p-6 hover:bg-muted/50 transition-colors text-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="application/pdf"
-                                        onChange={handleFileChange}
-                                        className="hidden"
-                                    />
-                                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-sm text-foreground font-medium">Klik untuk upload file</p>
-                                    <p className="text-xs text-muted-foreground">Maksimal 1MB, Format PDF</p>
-                                </div>
-
-                                {(salarySlipFile || (existingSlip && !removeExistingSlip)) && (
-                                    <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-200 rounded-lg">
-                                        <FileText className="w-5 h-5 text-blue-600" />
-                                        <div className="flex-1 overflow-hidden">
-                                            <p className="text-sm font-medium text-foreground truncate">
-                                                {salarySlipFile ? salarySlipFile.name : 'Slip Gaji Tersimpan.pdf'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {salarySlipFile ? `${(salarySlipFile.size / 1024).toFixed(0)} KB` : 'File tersimpan'}
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                if (salarySlipFile) {
-                                                    setSalarySlipFile(null)
-                                                } else {
-                                                    setRemoveExistingSlip(true)
-                                                }
-                                            }}
-                                            className="p-1.5 hover:bg-red-500/20 bg-red-500/10 text-red-500 rounded-lg transition-colors"
-                                            title="Hapus slip gaji"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-                </form>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-border flex justify-end gap-2 bg-card">
+            }
+            maxWidth="2xl"
+            footer={
+                <div className="flex justify-end gap-2">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={saving}
-                        className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Batal
                     </button>
@@ -409,7 +251,159 @@ export default function PayrollModal({ user, onClose }: Props) {
                         )}
                     </button>
                 </div>
-            </div>
-        </div>
+            }
+        >
+            <form onSubmit={handleSave} className="p-6 space-y-6">
+                {/* Month Year Selection */}
+                <div className="flex gap-4">
+                    <div className="flex-1">
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Bulan</label>
+                        <select
+                            value={month}
+                            onChange={(e) => handleDateChange(parseInt(e.target.value), year)}
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                        >
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Tahun</label>
+                        <select
+                            value={year}
+                            onChange={(e) => handleDateChange(month, parseInt(e.target.value))}
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                        >
+                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div className="py-12 text-center">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+                    </div>
+                ) : (
+                    <>
+                        {/* Basic Salary */}
+                        <div>
+                            <label className="block text-xs font-medium text-foreground mb-1">Gaji Pokok</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2 text-muted-foreground text-sm">Rp</span>
+                                <input
+                                    type="text"
+                                    value={basicSalary}
+                                    onChange={handleBasicSalaryChange}
+                                    className="w-full pl-10 px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                                    placeholder="0"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Deductions */}
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-red-600 border-b border-red-200 pb-1">Pemotongan</h4>
+                                {deductions.map(comp => (
+                                    <div key={comp.id}>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1">{comp.name}</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2 text-muted-foreground text-sm">Rp</span>
+                                            <input
+                                                type="text"
+                                                value={itemValues[comp.id] || ''}
+                                                onChange={(e) => handleItemChange(comp.id, e.target.value)}
+                                                className="w-full pl-10 px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                {deductions.length === 0 && <p className="text-xs text-muted-foreground italic">Tidak ada komponen pemotongan</p>}
+                            </div>
+
+                            {/* Additions */}
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-green-600 border-b border-green-200 pb-1">Penambahan</h4>
+                                {additions.map(comp => (
+                                    <div key={comp.id}>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1">{comp.name}</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-2 text-muted-foreground text-sm">Rp</span>
+                                            <input
+                                                type="text"
+                                                value={itemValues[comp.id] || ''}
+                                                onChange={(e) => handleItemChange(comp.id, e.target.value)}
+                                                className="w-full pl-10 px-3 py-2 bg-background border border-border rounded-lg text-sm"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                                {additions.length === 0 && <p className="text-xs text-muted-foreground italic">Tidak ada komponen penambahan</p>}
+                            </div>
+                        </div>
+
+
+                        {/* Summary */}
+                        <div className="bg-muted/30 p-4 rounded-lg flex justify-between items-center border border-border">
+                            <span className="font-semibold text-foreground">Total Gaji Bersih</span>
+                            <span className="font-bold text-xl text-primary">
+                                Rp {calculateNet().toLocaleString('id-ID')}
+                            </span>
+                        </div>
+
+                        {/* File Upload */}
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-foreground">Upload Slip Gaji (PDF)</label>
+                            <div className="border-2 border-dashed border-border rounded-lg p-6 hover:bg-muted/50 transition-colors text-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="application/pdf"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                                <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                <p className="text-sm text-foreground font-medium">Klik untuk upload file</p>
+                                <p className="text-xs text-muted-foreground">Maksimal 1MB, Format PDF</p>
+                            </div>
+
+                            {(salarySlipFile || (existingSlip && !removeExistingSlip)) && (
+                                <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-200 rounded-lg">
+                                    <FileText className="w-5 h-5 text-blue-600" />
+                                    <div className="flex-1 overflow-hidden">
+                                        <p className="text-sm font-medium text-foreground truncate">
+                                            {salarySlipFile ? salarySlipFile.name : 'Slip Gaji Tersimpan.pdf'}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {salarySlipFile ? `${(salarySlipFile.size / 1024).toFixed(0)} KB` : 'File tersimpan'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (salarySlipFile) {
+                                                setSalarySlipFile(null)
+                                            } else {
+                                                setRemoveExistingSlip(true)
+                                            }
+                                        }}
+                                        className="p-1.5 hover:bg-red-500/20 bg-red-500/10 text-red-500 rounded-lg transition-colors"
+                                        title="Hapus slip gaji"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </form>
+        </Modal>
     )
 }

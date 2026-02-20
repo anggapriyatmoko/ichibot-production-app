@@ -12,6 +12,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import ImportAssetModal from './import-asset-modal'
+import Modal from '@/components/ui/modal'
 import {
     Table,
     TableBody,
@@ -584,222 +585,221 @@ export default function AssetManager({
                         </div>
 
                         {/* Desktop Modal View */}
-                        <div className="hidden md:flex fixed inset-0 z-[100] items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                            <div className="bg-card border border-border rounded-2xl w-full max-w-2xl relative animate-in zoom-in-95 duration-200 shadow-2xl max-h-[90vh] flex flex-col">
-                                <div className="p-6 border-b border-border shrink-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-primary/10 rounded-lg">
-                                            <Wrench className="w-5 h-5 text-primary" />
+                        <Modal
+                            isOpen={(isAdding || editingAsset !== null) ? true : false}
+                            onClose={cancelEdit}
+                            title={
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-primary/10 rounded-lg">
+                                        <Wrench className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <span>{isAdding ? 'Tambah Aset Baru' : 'Edit Aset'}</span>
+                                </div>
+                            }
+                            maxWidth="2xl"
+                            wrapperClassName="hidden md:flex"
+                            footer={
+                                <div className="flex justify-end gap-3 w-full">
+                                    <button
+                                        onClick={cancelEdit}
+                                        disabled={saving}
+                                        className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        onClick={isAdding ? handleAdd : handleUpdate}
+                                        disabled={saving}
+                                        className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20 disabled:opacity-50"
+                                    >
+                                        {saving ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Menyimpan...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="w-4 h-4" />
+                                                {isAdding ? 'Simpan Aset' : 'Update Aset'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            }
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Image Upload */}
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gambar</label>
+                                    {imagePreview ? (
+                                        <div className="relative border border-border rounded-xl p-4 bg-background/50 group">
+                                            <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded-lg" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setImagePreview(null)
+                                                    setImageFile(null)
+                                                }}
+                                                className="absolute top-4 right-4 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                Hapus
+                                            </button>
                                         </div>
-                                        <h3 className="text-xl font-bold text-foreground">
-                                            {isAdding ? 'Tambah Aset Baru' : 'Edit Aset'}
-                                        </h3>
+                                    ) : editingAsset?.image && !removeImage ? (
+                                        <div className="relative border border-border rounded-xl p-4 bg-background/50 group">
+                                            <img src={editingAsset.image} alt="Current" className="w-full h-48 object-contain rounded-lg" />
+                                            <div className="flex justify-between mt-4 gap-3">
+                                                <label className="cursor-pointer flex-1 text-center py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-colors">
+                                                    Ganti Gambar
+                                                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRemoveImage(true)}
+                                                    className="px-4 py-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-sm font-medium transition-colors"
+                                                >
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="border-2 border-dashed border-border rounded-xl p-8 bg-background/50 hover:bg-background/80 transition-colors">
+                                            <div className="text-center mb-6">
+                                                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                                                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                                                </div>
+                                                <p className="text-sm font-medium text-foreground">Upload gambar atau ambil foto</p>
+                                                <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP (maks 1MB)</p>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20">
+                                                        <Camera className="w-4 h-4" />
+                                                        Ambil Foto
+                                                    </div>
+                                                </label>
+                                                <label className="flex-1 cursor-pointer">
+                                                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
+                                                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all text-sm font-bold">
+                                                        <ImageIcon className="w-4 h-4" />
+                                                        Pilih File
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                                            Nama Mesin/Alat <span className="text-destructive">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            placeholder="Nama mesin/alat"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Kode</label>
+                                        <input
+                                            type="text"
+                                            value={formData.code}
+                                            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            placeholder="Kode aset"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                                            Lokasi <span className="text-destructive">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formData.location}
+                                            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            placeholder="Lokasi aset"
+                                        />
                                     </div>
                                 </div>
-                                <div className="p-6 overflow-y-auto overscroll-contain flex-1">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Image Upload */}
-                                        <div className="md:col-span-2">
-                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Gambar</label>
-                                            {imagePreview ? (
-                                                <div className="relative border border-border rounded-xl p-4 bg-background/50 group">
-                                                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-contain rounded-lg" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setImagePreview(null)
-                                                            setImageFile(null)
-                                                        }}
-                                                        className="absolute top-4 right-4 p-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 text-xs font-medium shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        Hapus
-                                                    </button>
-                                                </div>
-                                            ) : editingAsset?.image && !removeImage ? (
-                                                <div className="relative border border-border rounded-xl p-4 bg-background/50 group">
-                                                    <img src={editingAsset.image} alt="Current" className="w-full h-48 object-contain rounded-lg" />
-                                                    <div className="flex justify-between mt-4 gap-3">
-                                                        <label className="cursor-pointer flex-1 text-center py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-colors">
-                                                            Ganti Gambar
-                                                            <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
-                                                        </label>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setRemoveImage(true)}
-                                                            className="px-4 py-2.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg text-sm font-medium transition-colors"
-                                                        >
-                                                            Hapus
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="border-2 border-dashed border-border rounded-xl p-8 bg-background/50 hover:bg-background/80 transition-colors">
-                                                    <div className="text-center mb-6">
-                                                        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
-                                                            <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                                                        </div>
-                                                        <p className="text-sm font-medium text-foreground">Upload gambar atau ambil foto</p>
-                                                        <p className="text-xs text-muted-foreground mt-1">Format: JPG, PNG, WEBP (maks 1MB)</p>
-                                                    </div>
-                                                    <div className="flex flex-col sm:flex-row gap-3">
-                                                        <label className="flex-1 cursor-pointer">
-                                                            <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
-                                                            <div className="flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20">
-                                                                <Camera className="w-4 h-4" />
-                                                                Ambil Foto
-                                                            </div>
-                                                        </label>
-                                                        <label className="flex-1 cursor-pointer">
-                                                            <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" onChange={handleImageChange} className="hidden" />
-                                                            <div className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all text-sm font-bold">
-                                                                <ImageIcon className="w-4 h-4" />
-                                                                Pilih File
-                                                            </div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        <div className="space-y-4">
+                                <div className="space-y-4">
+                                    {isAdmin && (
+                                        <>
                                             <div>
-                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                                                    Nama Mesin/Alat <span className="text-destructive">*</span>
-                                                </label>
+                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Harga Beli</label>
                                                 <input
-                                                    type="text"
-                                                    value={formData.name}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    type="number"
+                                                    value={formData.price}
+                                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                    placeholder="Nama mesin/alat"
+                                                    placeholder="Harga pembelian"
                                                 />
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Kode</label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.code}
-                                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                    placeholder="Kode aset"
-                                                />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Tgl Beli</label>
+                                                    <input
+                                                        type="date"
+                                                        value={formData.purchaseDate}
+                                                        onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
+                                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Umur (Thn)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={formData.usefulLife}
+                                                        onChange={(e) => setFormData({ ...formData, usefulLife: e.target.value })}
+                                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                                        placeholder="5"
+                                                        min="1"
+                                                    />
+                                                </div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                                                    Lokasi <span className="text-destructive">*</span>
-                                                </label>
+                                                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Nilai Residu</label>
                                                 <input
-                                                    type="text"
-                                                    value={formData.location}
-                                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                                    type="number"
+                                                    value={formData.residualValue}
+                                                    onChange={(e) => setFormData({ ...formData, residualValue: e.target.value })}
                                                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                    placeholder="Lokasi aset"
+                                                    placeholder="Nilai sisa"
+                                                    min="0"
                                                 />
                                             </div>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            {isAdmin && (
-                                                <>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Harga Beli</label>
-                                                        <input
-                                                            type="number"
-                                                            value={formData.price}
-                                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                            placeholder="Harga pembelian"
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Tgl Beli</label>
-                                                            <input
-                                                                type="date"
-                                                                value={formData.purchaseDate}
-                                                                onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Umur (Thn)</label>
-                                                            <input
-                                                                type="number"
-                                                                value={formData.usefulLife}
-                                                                onChange={(e) => setFormData({ ...formData, usefulLife: e.target.value })}
-                                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                                placeholder="5"
-                                                                min="1"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Nilai Residu</label>
-                                                        <input
-                                                            type="number"
-                                                            value={formData.residualValue}
-                                                            onChange={(e) => setFormData({ ...formData, residualValue: e.target.value })}
-                                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                                            placeholder="Nilai sisa"
-                                                            min="0"
-                                                        />
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <div className="md:col-span-2">
-                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Spesifikasi</label>
-                                            <textarea
-                                                value={formData.specification}
-                                                onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
-                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
-                                                rows={2}
-                                                placeholder="Spesifikasi mesin/alat"
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Keterangan</label>
-                                            <textarea
-                                                value={formData.notes}
-                                                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
-                                                rows={2}
-                                                placeholder="Keterangan tambahan"
-                                            />
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
-                                <div className="p-6 border-t border-border shrink-0 bg-card rounded-b-xl">
-                                    <div className="flex justify-end gap-3">
-                                        <button
-                                            onClick={cancelEdit}
-                                            disabled={saving}
-                                            className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
-                                        >
-                                            Batal
-                                        </button>
-                                        <button
-                                            onClick={isAdding ? handleAdd : handleUpdate}
-                                            disabled={saving}
-                                            className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20 disabled:opacity-50"
-                                        >
-                                            {saving ? (
-                                                <>
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                    Menyimpan...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Save className="w-4 h-4" />
-                                                    {isAdding ? 'Simpan Aset' : 'Update Aset'}
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Spesifikasi</label>
+                                    <textarea
+                                        value={formData.specification}
+                                        onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
+                                        rows={2}
+                                        placeholder="Spesifikasi mesin/alat"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Keterangan</label>
+                                    <textarea
+                                        value={formData.notes}
+                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none transition-all"
+                                        rows={2}
+                                        placeholder="Keterangan tambahan"
+                                    />
                                 </div>
                             </div>
-                        </div>
+                        </Modal>
                     </>
                 )}
 

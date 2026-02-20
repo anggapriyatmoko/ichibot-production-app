@@ -29,6 +29,7 @@ import {
     TableCell,
     TableEmpty
 } from '@/components/ui/table'
+import Modal from '@/components/ui/modal'
 
 export default function ImportProductModal() {
     const { showError } = useAlert()
@@ -205,192 +206,14 @@ export default function ImportProductModal() {
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="p-6 border-b border-border flex justify-between items-start flex-shrink-0">
-                            <div>
-                                <h2 className="text-xl font-bold text-foreground">Import Sparepart</h2>
-                                <p className="text-sm text-muted-foreground mt-1">Upload Excel (.xlsx) or CSV file to update inventory.</p>
-                            </div>
-                            <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
-                                <span className="sr-only">Close</span>
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-hidden p-6 gap-6 flex flex-col min-h-0">
-
-                            {!previewData.length && !importResult ? (
-                                <div className="space-y-6 overflow-y-auto pr-2">
-                                    {/* Upload Area */}
-                                    <div className="border-2 border-dashed border-border rounded-2xl h-48 flex flex-col items-center justify-center bg-muted/10 hover:bg-accent/50 transition-colors relative group">
-                                        <input
-                                            type="file"
-                                            accept=".xlsx,.xls,.csv"
-                                            onChange={handleFileUpload}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="p-4 rounded-full bg-blue-500/10 text-blue-600 mb-3 group-hover:scale-110 transition-transform">
-                                            {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
-                                        </div>
-                                        <p className="font-medium text-foreground">Click to upload or drag and drop</p>
-                                        <p className="text-sm text-muted-foreground mt-1">Supports .xlsx, .xls, .csv</p>
-                                    </div>
-
-                                    {/* Instructions */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
-                                            <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                Format Requirements
-                                            </h3>
-                                            <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
-                                                <li>First row must be <strong>Headers</strong></li>
-                                                <li>Required Columns: <strong>Product Name</strong></li>
-                                                <li>Optional Columns: <strong>SKU, Stock, Low Stock Threshold, Image URL</strong></li>
-                                                <li>Duplicate SKUs will flagged as <strong>ERROR</strong></li>
-                                            </ul>
-                                        </div>
-
-                                        <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
-                                            <h3 className="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-2 mb-3">
-                                                <Download className="w-4 h-4" />
-                                                Download Template
-                                            </h3>
-                                            <p className="text-sm text-blue-900/80 dark:text-blue-400/80 mb-4">
-                                                Use our predefined template to ensure correct formatting.
-                                            </p>
-                                            <div className="flex gap-3">
-                                                <button onClick={() => downloadTemplate('xlsx')} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-blue-500 text-blue-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
-                                                    <FileSpreadsheet className="w-3 h-3" />
-                                                    Excel Template (.xlsx)
-                                                </button>
-                                                <button onClick={() => downloadTemplate('csv')} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-green-500 text-green-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
-                                                    <FileText className="w-3 h-3" />
-                                                    CSV Template
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : null}
-
-                            {/* Preview Area */}
-                            {previewData.length > 0 && !importResult && (
-                                <div className="flex flex-col h-full gap-4 overflow-hidden">
-                                    <div className="flex items-center justify-between flex-shrink-0">
-                                        <div className="flex gap-4">
-                                            <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
-                                                Total Rows: <span className="text-foreground">{fileStats?.total}</span>
-                                            </div>
-                                            <div className="px-3 py-1 bg-green-500/10 rounded-full text-xs font-medium text-green-600">
-                                                Valid: <span className="font-bold">{fileStats?.valid}</span>
-                                            </div>
-                                            {((fileStats?.total || 0) - (fileStats?.valid || 0)) > 0 && (
-                                                <div className="px-3 py-1 bg-red-500/10 rounded-full text-xs font-medium text-red-600">
-                                                    Invalid: <span className="font-bold">{(fileStats?.total || 0) - (fileStats?.valid || 0)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button onClick={() => { setPreviewData([]); setFileStats(null) }} className="text-sm text-red-600 hover:underline">
-                                            Clear / Re-upload
-                                        </button>
-                                    </div>
-
-                                    <TableWrapper className="border border-border rounded-lg overflow-hidden flex-1 flex flex-col min-h-0 bg-background/50">
-                                        <TableScrollArea>
-                                            <Table>
-                                                <TableHeader className="sticky top-0 z-10 bg-muted">
-                                                    <TableRow>
-                                                        <TableHead className="w-10">#</TableHead>
-                                                        <TableHead>Status</TableHead>
-                                                        <TableHead>SKU</TableHead>
-                                                        <TableHead>Name</TableHead>
-                                                        <TableHead align="right">Stock</TableHead>
-                                                        <TableHead align="right">Threshold</TableHead>
-                                                        <TableHead>Image</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {previewData.map((row, i) => (
-                                                        <TableRow key={i} className={cn(
-                                                            !row.isValid && "bg-destructive/5 hover:bg-destructive/10"
-                                                        )}>
-                                                            <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
-                                                            <TableCell>
-                                                                {row.isValid ? (
-                                                                    <span className="inline-flex items-center gap-1 text-emerald-600 text-[10px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                                                                        <Check className="w-3 h-3" /> Ready
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="inline-flex items-center gap-1 text-destructive text-[10px] font-bold uppercase px-2 py-0.5 bg-destructive/10 rounded-full border border-destructive/20" title={row.errors.join(', ')}>
-                                                                        <AlertTriangle className="w-3 h-3" /> {row.errors[0]}
-                                                                    </span>
-                                                                )}
-                                                            </TableCell>
-                                                            <TableCell className="font-mono text-xs">{row.sku}</TableCell>
-                                                            <TableCell className="font-medium">{row.name}</TableCell>
-                                                            <TableCell align="right" className="tabular-nums font-semibold">{row.stock}</TableCell>
-                                                            <TableCell align="right" className="text-muted-foreground tabular-nums text-xs">{row.lowStockThreshold}</TableCell>
-                                                            <TableCell>
-                                                                {row.image ? (
-                                                                    <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-border bg-muted">
-                                                                        <img src={row.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                                                                    </div>
-                                                                ) : <span className="text-xs text-muted-foreground">-</span>}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </TableScrollArea>
-                                    </TableWrapper>
-                                </div>
-                            )}
-
-                            {/* Result Area */}
-                            {importResult && (
-                                <div className="space-y-6 py-8 text-center animate-in fade-in overflow-y-auto">
-                                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Check className="w-8 h-8" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-foreground">Import Completed!</h3>
-                                        <p className="text-muted-foreground mt-2">
-                                            Successfully imported/updated <strong className="text-foreground">{importResult.success}</strong> items.
-                                        </p>
-                                    </div>
-
-                                    {importResult.errors.length > 0 && (
-                                        <div className="max-w-xl mx-auto mt-6 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 rounded-xl p-4 text-left">
-                                            <h4 className="text-sm font-bold text-red-800 dark:text-red-400 mb-2 flex items-center gap-2">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                Errors ({importResult.errors.length})
-                                            </h4>
-                                            <div className="max-h-32 overflow-y-auto text-xs text-red-700 dark:text-red-300 space-y-1">
-                                                {importResult.errors.map((err, i) => (
-                                                    <div key={i}>{err}</div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="pt-4">
-                                        <button onClick={() => { setIsOpen(false); setPreviewData([]); setImportResult(null); }} className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
-                                            Done
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-
-                        {/* Footer */}
-                        {!importResult && (
-                            <div className="p-4 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-xl flex-shrink-0">
+                <Modal
+                    isOpen={isOpen}
+                    onClose={() => setIsOpen(false)}
+                    title="Import Sparepart"
+                    maxWidth="4xl"
+                    footer={
+                        !importResult && (
+                            <div className="flex justify-end gap-3 w-full">
                                 <button onClick={() => setIsOpen(false)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium">Cancel</button>
                                 {previewData.length > 0 && (
                                     <button
@@ -403,9 +226,177 @@ export default function ImportProductModal() {
                                     </button>
                                 )}
                             </div>
+                        )
+                    }
+                >
+                    <p className="text-sm text-muted-foreground mt-1 mb-6">Upload Excel (.xlsx) or CSV file to update inventory.</p>
+                    <div className="flex-1 overflow-hidden gap-6 flex flex-col min-h-0">
+
+                        {!previewData.length && !importResult ? (
+                            <div className="space-y-6 overflow-y-auto pr-2">
+                                {/* Upload Area */}
+                                <div className="border-2 border-dashed border-border rounded-2xl h-48 flex flex-col items-center justify-center bg-muted/10 hover:bg-accent/50 transition-colors relative group">
+                                    <input
+                                        type="file"
+                                        accept=".xlsx,.xls,.csv"
+                                        onChange={handleFileUpload}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        disabled={isLoading}
+                                    />
+                                    <div className="p-4 rounded-full bg-blue-500/10 text-blue-600 mb-3 group-hover:scale-110 transition-transform">
+                                        {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
+                                    </div>
+                                    <p className="font-medium text-foreground">Click to upload or drag and drop</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Supports .xlsx, .xls, .csv</p>
+                                </div>
+
+                                {/* Instructions */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
+                                        <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
+                                            <AlertTriangle className="w-4 h-4" />
+                                            Format Requirements
+                                        </h3>
+                                        <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
+                                            <li>First row must be <strong>Headers</strong></li>
+                                            <li>Required Columns: <strong>Product Name</strong></li>
+                                            <li>Optional Columns: <strong>SKU, Stock, Low Stock Threshold, Image URL</strong></li>
+                                            <li>Duplicate SKUs will flagged as <strong>ERROR</strong></li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+                                        <h3 className="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-2 mb-3">
+                                            <Download className="w-4 h-4" />
+                                            Download Template
+                                        </h3>
+                                        <p className="text-sm text-blue-900/80 dark:text-blue-400/80 mb-4">
+                                            Use our predefined template to ensure correct formatting.
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <button onClick={() => downloadTemplate('xlsx')} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-blue-500 text-blue-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
+                                                <FileSpreadsheet className="w-3 h-3" />
+                                                Excel Template (.xlsx)
+                                            </button>
+                                            <button onClick={() => downloadTemplate('csv')} className="flex items-center gap-2 px-3 py-2 bg-background border border-border hover:border-green-500 text-green-600 rounded-lg text-xs font-medium transition-colors shadow-sm">
+                                                <FileText className="w-3 h-3" />
+                                                CSV Template
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {/* Preview Area */}
+                        {previewData.length > 0 && !importResult && (
+                            <div className="flex flex-col h-full gap-4 overflow-hidden">
+                                <div className="flex items-center justify-between flex-shrink-0">
+                                    <div className="flex gap-4">
+                                        <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
+                                            Total Rows: <span className="text-foreground">{fileStats?.total}</span>
+                                        </div>
+                                        <div className="px-3 py-1 bg-green-500/10 rounded-full text-xs font-medium text-green-600">
+                                            Valid: <span className="font-bold">{fileStats?.valid}</span>
+                                        </div>
+                                        {((fileStats?.total || 0) - (fileStats?.valid || 0)) > 0 && (
+                                            <div className="px-3 py-1 bg-red-500/10 rounded-full text-xs font-medium text-red-600">
+                                                Invalid: <span className="font-bold">{(fileStats?.total || 0) - (fileStats?.valid || 0)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button onClick={() => { setPreviewData([]); setFileStats(null) }} className="text-sm text-red-600 hover:underline">
+                                        Clear / Re-upload
+                                    </button>
+                                </div>
+
+                                <TableWrapper className="border border-border rounded-lg overflow-hidden flex-1 flex flex-col min-h-0 bg-background/50">
+                                    <TableScrollArea>
+                                        <Table>
+                                            <TableHeader className="sticky top-0 z-10 bg-muted">
+                                                <TableRow>
+                                                    <TableHead className="w-10">#</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>SKU</TableHead>
+                                                    <TableHead>Name</TableHead>
+                                                    <TableHead align="right">Stock</TableHead>
+                                                    <TableHead align="right">Threshold</TableHead>
+                                                    <TableHead>Image</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {previewData.map((row, i) => (
+                                                    <TableRow key={i} className={cn(
+                                                        !row.isValid && "bg-destructive/5 hover:bg-destructive/10"
+                                                    )}>
+                                                        <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
+                                                        <TableCell>
+                                                            {row.isValid ? (
+                                                                <span className="inline-flex items-center gap-1 text-emerald-600 text-[10px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                                                                    <Check className="w-3 h-3" /> Ready
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 text-destructive text-[10px] font-bold uppercase px-2 py-0.5 bg-destructive/10 rounded-full border border-destructive/20" title={row.errors.join(', ')}>
+                                                                    <AlertTriangle className="w-3 h-3" /> {row.errors[0]}
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-xs">{row.sku}</TableCell>
+                                                        <TableCell className="font-medium">{row.name}</TableCell>
+                                                        <TableCell align="right" className="tabular-nums font-semibold">{row.stock}</TableCell>
+                                                        <TableCell align="right" className="text-muted-foreground tabular-nums text-xs">{row.lowStockThreshold}</TableCell>
+                                                        <TableCell>
+                                                            {row.image ? (
+                                                                <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-border bg-muted">
+                                                                    <img src={row.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                                                </div>
+                                                            ) : <span className="text-xs text-muted-foreground">-</span>}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableScrollArea>
+                                </TableWrapper>
+                            </div>
+                        )}
+
+                        {/* Result Area */}
+                        {importResult && (
+                            <div className="space-y-6 py-8 text-center animate-in fade-in overflow-y-auto">
+                                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Check className="w-8 h-8" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-bold text-foreground">Import Completed!</h3>
+                                    <p className="text-muted-foreground mt-2">
+                                        Successfully imported/updated <strong className="text-foreground">{importResult.success}</strong> items.
+                                    </p>
+                                </div>
+
+                                {importResult.errors.length > 0 && (
+                                    <div className="max-w-xl mx-auto mt-6 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 rounded-xl p-4 text-left">
+                                        <h4 className="text-sm font-bold text-red-800 dark:text-red-400 mb-2 flex items-center gap-2">
+                                            <AlertTriangle className="w-4 h-4" />
+                                            Errors ({importResult.errors.length})
+                                        </h4>
+                                        <div className="max-h-32 overflow-y-auto text-xs text-red-700 dark:text-red-300 space-y-1">
+                                            {importResult.errors.map((err, i) => (
+                                                <div key={i}>{err}</div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="pt-4">
+                                    <button onClick={() => { setIsOpen(false); setPreviewData([]); setImportResult(null); }} className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </div>
-                </div>
+                </Modal>
             )}
         </>
     )

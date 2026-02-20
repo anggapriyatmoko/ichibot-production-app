@@ -16,6 +16,7 @@ import {
     TableEmpty,
     TableHeaderContent,
 } from '@/components/ui/table'
+import Modal from '@/components/ui/modal'
 
 interface HRDocument {
     id: string
@@ -46,18 +47,6 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
     const [error, setError] = useState('')
 
     const [removeFile, setRemoveFile] = useState(false)
-
-    // Lock body scroll when modal is open
-    useEffect(() => {
-        if (isModalOpen) {
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
-        }
-        return () => {
-            document.body.style.overflow = ''
-        }
-    }, [isModalOpen])
 
     // Reset removeFile when opening modal
     const handleOpenModal = (doc?: HRDocument) => {
@@ -256,115 +245,115 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card w-full max-w-md rounded-2xl shadow-lg border border-border flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-border">
-                            <h3 className="font-semibold text-lg">{editingDoc ? 'Edit Dokumen' : 'Tambah Dokumen'}</h3>
-                        </div>
-
-                        <div className="p-4 overflow-y-auto">
-                            <form id="docForm" onSubmit={handleSubmit} className="space-y-4">
-                                {error && (
-                                    <div className="bg-red-500/10 text-red-500 text-sm p-3 rounded-lg flex items-center gap-2">
-                                        <AlertCircle className="w-4 h-4" />
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Nama Dokumen <span className="text-red-500">*</span></label>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        placeholder="Contoh: Peraturan Perusahaan"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Keterangan (Opsional)</label>
-                                    <textarea
-                                        value={formData.description}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-20 resize-none"
-                                        placeholder="Deskripsi singkat tentang dokumen..."
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Link (Opsional)</label>
-                                    <input
-                                        type="url"
-                                        value={formData.link}
-                                        onChange={e => setFormData({ ...formData, link: e.target.value })}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        placeholder="https://..."
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Upload File PDF (Opsional, max 1MB)</label>
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        onChange={handleFileChange}
-                                        className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                                    />
-                                    {editingDoc?.filePath && !selectedFile && !removeFile && (
-                                        <div className="flex items-center gap-2 mt-2 bg-muted/30 p-2 rounded-lg border border-border">
-                                            <FileText className="w-4 h-4 text-red-500" />
-                                            <a href={editingDoc.filePath} target="_blank" className="text-xs text-primary hover:underline flex-1 truncate">
-                                                File PDF Tersimpan
-                                            </a>
-                                            <button
-                                                type="button"
-                                                onClick={() => setRemoveFile(true)}
-                                                className="p-1 hover:bg-red-100 text-muted-foreground hover:text-red-500 rounded transition-colors"
-                                                title="Hapus File"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {removeFile && (
-                                        <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-red-50 text-red-600 text-xs border border-red-100">
-                                            <Trash2 className="w-3 h-3" />
-                                            File akan dihapus saat disimpan.
-                                            <button
-                                                type="button"
-                                                onClick={() => setRemoveFile(false)}
-                                                className="ml-auto underline hover:text-red-800"
-                                            >
-                                                Batalkan
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="p-4 border-t border-border flex justify-end gap-2 bg-muted/10">
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title={editingDoc ? 'Edit Dokumen' : 'Tambah Dokumen'}
+                    maxWidth="md"
+                    footer={
+                        <div className="flex justify-end gap-2 text-sm">
                             <button
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                className="px-4 py-2 font-medium text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Batal
                             </button>
                             <button
                                 type="submit"
                                 form="docForm"
-                                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                                className="px-4 py-2 font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
                                 disabled={isPending}
                             >
                                 {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                                 {editingDoc ? 'Simpan Perubahan' : 'Tambah Dokumen'}
                             </button>
                         </div>
+                    }
+                >
+                    <div className="p-4">
+                        <form id="docForm" onSubmit={handleSubmit} className="space-y-4">
+                            {error && (
+                                <div className="bg-red-500/10 text-red-500 text-sm p-3 rounded-lg flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" />
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Nama Dokumen <span className="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    placeholder="Contoh: Peraturan Perusahaan"
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Keterangan (Opsional)</label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 h-20 resize-none"
+                                    placeholder="Deskripsi singkat tentang dokumen..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Link (Opsional)</label>
+                                <input
+                                    type="url"
+                                    value={formData.link}
+                                    onChange={e => setFormData({ ...formData, link: e.target.value })}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    placeholder="https://..."
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Upload File PDF (Opsional, max 1MB)</label>
+                                <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={handleFileChange}
+                                    className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                                />
+                                {editingDoc?.filePath && !selectedFile && !removeFile && (
+                                    <div className="flex items-center gap-2 mt-2 bg-muted/30 p-2 rounded-lg border border-border">
+                                        <FileText className="w-4 h-4 text-red-500" />
+                                        <a href={editingDoc.filePath} target="_blank" className="text-xs text-primary hover:underline flex-1 truncate">
+                                            File PDF Tersimpan
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRemoveFile(true)}
+                                            className="p-1 hover:bg-red-100 text-muted-foreground hover:text-red-500 rounded transition-colors"
+                                            title="Hapus File"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
+                                {removeFile && (
+                                    <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-red-50 text-red-600 text-xs border border-red-100">
+                                        <Trash2 className="w-3 h-3" />
+                                        File akan dihapus saat disimpan.
+                                        <button
+                                            type="button"
+                                            onClick={() => setRemoveFile(false)}
+                                            className="ml-auto underline hover:text-red-800"
+                                        >
+                                            Batalkan
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </form>
                     </div>
-                </div>
+                </Modal>
             )}
         </TableWrapper>
     )
