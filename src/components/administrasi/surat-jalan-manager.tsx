@@ -548,210 +548,8 @@ export default function SuratJalanManager({
           onClose={() => setIsModalOpen(false)}
           title={editingSJ ? "Edit Surat Jalan" : "Buat Surat Jalan Baru"}
           maxWidth="4xl"
-        >
-          <div className="flex flex-col flex-1 h-full">
-            <form
-              onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto overscroll-contain p-8 custom-scrollbar"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Information Section */}
-                <div className="space-y-6">
-                  {/* SJ Number Banner */}
-                  <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20">
-                    <div className="flex items-center gap-3 mb-1 opactiy-80">
-                      <Truck className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">
-                        Nomor Surat Jalan
-                      </span>
-                    </div>
-                    <div className="text-2xl font-mono font-bold">
-                      {editingSJ
-                        ? editingSJ.sj_number
-                        : nextNumber || "AUTO-GENERATING..."}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Nama Penerima
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                        placeholder="Nama lengkap penerima..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                          Nomor Telepon
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.phone}
-                          onChange={(e) =>
-                            setFormData({ ...formData, phone: e.target.value })
-                          }
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                          placeholder="08XXX..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                          Tanggal
-                        </label>
-                        <input
-                          type="date"
-                          required
-                          value={formData.sj_date}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              sj_date: e.target.value,
-                            })
-                          }
-                          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-gray-700"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Alamat Tujuan
-                      </label>
-                      <textarea
-                        required
-                        value={formData.address}
-                        onChange={(e) =>
-                          setFormData({ ...formData, address: e.target.value })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none min-h-[100px] resize-none"
-                        placeholder="Alamat lengkap pengiriman..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Expedisi / Kurir
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.expedition}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            expedition: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                        placeholder="Contoh: JNE, J&T, Internal, dll."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items Section */}
-                <div className="space-y-4 flex flex-col h-full">
-                  <div className="flex items-center justify-between ml-1">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      Daftar Barang
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleAddItem}
-                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-1"
-                    >
-                      + Tambah Item
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {formData.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="group bg-gray-50 border border-gray-100 p-4 rounded-2xl space-y-3 relative hover:border-blue-200 transition-all"
-                      >
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Nama atau Kode Barang"
-                            required
-                            value={item.item_name}
-                            onChange={(e) =>
-                              updateItem(idx, "item_name", e.target.value)
-                            }
-                            className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-blue-500"
-                          />
-                          <div className="flex gap-2 w-32">
-                            <input
-                              type="number"
-                              required
-                              value={item.qty}
-                              onChange={(e) =>
-                                updateItem(idx, "qty", e.target.value)
-                              }
-                              className="w-16 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-center outline-none focus:border-blue-500"
-                            />
-                            <input
-                              type="text"
-                              value={item.unit}
-                              onChange={(e) =>
-                                updateItem(idx, "unit", e.target.value)
-                              }
-                              className="w-12 bg-white border border-gray-200 rounded-lg px-1 py-2 text-[10px] font-bold text-center text-gray-400 outline-none focus:border-blue-500"
-                              placeholder="pcs"
-                            />
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Keterangan (opsional)"
-                          value={item.notes}
-                          onChange={(e) =>
-                            updateItem(idx, "notes", e.target.value)
-                          }
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-[10px] font-medium outline-none focus:border-blue-500"
-                        />
-                        {formData.items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(idx)}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-red-100 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-red-50"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-100 shrink-0">
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                      Catatan Tambahan
-                    </label>
-                    <textarea
-                      value={formData.notes || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      className="w-full bg-gray-100 border-none rounded-xl px-4 py-3 text-xs font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none min-h-[80px] resize-none"
-                      placeholder="Catatan untuk pengiriman..."
-                    />
-                  </div>
-                </div>
-              </div>
-            </form>
-
-            {/* Footer */}
-            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+          footer={
+            <div className="flex justify-end gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -760,7 +558,8 @@ export default function SuratJalanManager({
                 Batal
               </button>
               <button
-                onClick={handleSubmit}
+                type="submit"
+                form="sj-form"
                 disabled={saving}
                 className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
@@ -768,20 +567,223 @@ export default function SuratJalanManager({
                 {editingSJ ? "Perbarui" : "Buat Surat Jalan"}
               </button>
             </div>
-          </div>
+          }
+        >
+          <form
+            id="sj-form"
+            onSubmit={handleSubmit}
+            className="space-y-8"
+          >
+            <div className="space-y-8">
+              {/* Information Section */}
+              <div className="space-y-6">
+                {/* SJ Number Banner */}
+                <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20">
+                  <div className="flex items-center gap-3 mb-1 opactiy-80">
+                    <Truck className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                      Nomor Surat Jalan
+                    </span>
+                  </div>
+                  <div className="text-2xl font-mono font-bold">
+                    {editingSJ
+                      ? editingSJ.sj_number
+                      : nextNumber || "AUTO-GENERATING..."}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Nama Penerima
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                      placeholder="Nama lengkap penerima..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Nomor Telepon
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                        placeholder="08XXX..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Tanggal
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.sj_date}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            sj_date: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-gray-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Alamat Tujuan
+                    </label>
+                    <textarea
+                      required
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none min-h-[100px] resize-none"
+                      placeholder="Alamat lengkap pengiriman..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Expedisi / Kurir
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.expedition}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          expedition: e.target.value,
+                        })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                      placeholder="Contoh: JNE, J&T, Internal, dll."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Section */}
+              <div className="space-y-4 flex flex-col h-full">
+                <div className="flex items-center justify-between ml-1">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Daftar Barang
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddItem}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest flex items-center gap-1"
+                  >
+                    + Tambah Item
+                  </button>
+                </div>
+
+                <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                  {formData.items.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="group bg-gray-50 border border-gray-100 p-4 rounded-2xl space-y-3 relative hover:border-blue-200 transition-all"
+                    >
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nama atau Kode Barang"
+                          required
+                          value={item.item_name}
+                          onChange={(e) =>
+                            updateItem(idx, "item_name", e.target.value)
+                          }
+                          className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-blue-500"
+                        />
+                        <div className="flex gap-2 w-32">
+                          <input
+                            type="number"
+                            required
+                            value={item.qty}
+                            onChange={(e) =>
+                              updateItem(idx, "qty", e.target.value)
+                            }
+                            className="w-16 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold text-center outline-none focus:border-blue-500"
+                          />
+                          <input
+                            type="text"
+                            value={item.unit}
+                            onChange={(e) =>
+                              updateItem(idx, "unit", e.target.value)
+                            }
+                            className="w-12 bg-white border border-gray-200 rounded-lg px-1 py-2 text-[10px] font-bold text-center text-gray-400 outline-none focus:border-blue-500"
+                            placeholder="pcs"
+                          />
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Keterangan (opsional)"
+                        value={item.notes}
+                        onChange={(e) =>
+                          updateItem(idx, "notes", e.target.value)
+                        }
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-[10px] font-medium outline-none focus:border-blue-500"
+                      />
+                      {formData.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(idx)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-red-100 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-red-50"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 shrink-0">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                    Catatan Tambahan
+                  </label>
+                  <textarea
+                    value={formData.notes || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    className="w-full bg-gray-100 border-none rounded-xl px-4 py-3 text-xs font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none min-h-[80px] resize-none"
+                    placeholder="Catatan untuk pengiriman..."
+                  />
+                </div>
+              </div>
+            </div>
+          </form>
         </Modal>
       )}
 
       {/* PDF Modal */}
-      {isPdfModalOpen && selectedSJForPdf && (
-        <PdfSignatureModal
-          isOpen={isPdfModalOpen}
-          onClose={() => setIsPdfModalOpen(false)}
-          onDownload={handlePdfDownload}
-          title="Unduh Surat Jalan"
-          variant="ichibot"
-        />
-      )}
+      {
+        isPdfModalOpen && selectedSJForPdf && (
+          <PdfSignatureModal
+            isOpen={isPdfModalOpen}
+            onClose={() => setIsPdfModalOpen(false)}
+            onDownload={handlePdfDownload}
+            title="Unduh Surat Jalan"
+            variant="ichibot"
+          />
+        )
+      }
     </div>
   );
 }

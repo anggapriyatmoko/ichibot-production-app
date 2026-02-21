@@ -601,246 +601,245 @@ export default function ResiManager({
           onClose={() => setIsModalOpen(false)}
           title={editingResi ? "Edit Resi" : "Tambah Resi Baru"}
           maxWidth="2xl"
-        >
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Pengirim Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <User className="w-4 h-4 text-blue-500" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-blue-600">
-                    Data Pengirim
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      Nama Pengirim <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sender_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          sender_name: e.target.value,
-                        })
-                      }
-                      placeholder="Masukkan nama pengirim"
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      No. Telepon Pengirim
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sender_phone}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          sender_phone: e.target.value,
-                        })
-                      }
-                      placeholder="08xxxxxxxxxx"
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Alamat Pengirim
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sender_address}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        sender_address: e.target.value,
-                      })
-                    }
-                    placeholder="Masukkan alamat pengirim"
-                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
-                </div>
-              </div>
-
-              {/* Penerima Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <MapPin className="w-4 h-4 text-green-500" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-green-600">
-                    Data Penerima
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      Nama Penerima <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.receiver_name}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          receiver_name: e.target.value,
-                        })
-                      }
-                      placeholder="Masukkan nama penerima"
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      No. Telepon Penerima
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.receiver_phone}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          receiver_phone: e.target.value,
-                        })
-                      }
-                      placeholder="08xxxxxxxxxx"
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Alamat Penerima <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={formData.receiver_address}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        receiver_address: e.target.value,
-                      })
-                    }
-                    placeholder="Masukkan alamat lengkap penerima"
-                    rows={3}
-                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Detail Pengiriman Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <Truck className="w-4 h-4 text-purple-500" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wider text-purple-600">
-                    Detail Pengiriman
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      Kurir
-                    </label>
-                    <select
-                      value={formData.courier_id || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          courier_id: e.target.value
-                            ? Number(e.target.value)
-                            : null,
-                        })
-                      }
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    >
-                      <option value="">Pilih Kurir</option>
-                      {couriers.map((courier) => (
-                        <option key={courier.id} value={courier.id}>
-                          {courier.service_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      No. Resi / Tracking
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.tracking_number || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          tracking_number: e.target.value,
-                        })
-                      }
-                      placeholder="Nomor resi pengiriman"
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status || "pending"}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          status: e.target.value as ResiFormData["status"],
-                        })
-                      }
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    >
-                      {RESI_STATUS_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      Catatan
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.notes || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
-                      }
-                      placeholder="Catatan tambahan (optional)"
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-border flex justify-end gap-3 shrink-0 bg-muted/30 rounded-b-2xl">
+          footer={
+            <div className="flex justify-end gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 border border-border rounded-xl font-medium hover:bg-muted transition-colors"
+                className="px-4 py-2 border border-border rounded-xl font-medium hover:bg-muted transition-colors text-sm"
               >
                 Batal
               </button>
               <button
                 type="submit"
+                form="resi-form"
                 disabled={saving}
-                className="px-6 py-2 bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2 bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {editingResi ? "Simpan Perubahan" : "Tambah Resi"}
               </button>
+            </div>
+          }
+        >
+          <form id="resi-form" onSubmit={handleSubmit} className="space-y-6">
+            {/* Pengirim Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <User className="w-4 h-4 text-blue-500" />
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-blue-600">
+                  Data Pengirim
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Nama Pengirim <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sender_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        sender_name: e.target.value,
+                      })
+                    }
+                    placeholder="Masukkan nama pengirim"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    No. Telepon Pengirim
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sender_phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        sender_phone: e.target.value,
+                      })
+                    }
+                    placeholder="08xxxxxxxxxx"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  Alamat Pengirim
+                </label>
+                <input
+                  type="text"
+                  value={formData.sender_address}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      sender_address: e.target.value,
+                    })
+                  }
+                  placeholder="Masukkan alamat pengirim"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                />
+              </div>
+            </div>
+
+            {/* Penerima Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <MapPin className="w-4 h-4 text-green-500" />
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-green-600">
+                  Data Penerima
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Nama Penerima <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.receiver_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        receiver_name: e.target.value,
+                      })
+                    }
+                    placeholder="Masukkan nama penerima"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    No. Telepon Penerima
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.receiver_phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        receiver_phone: e.target.value,
+                      })
+                    }
+                    placeholder="08xxxxxxxxxx"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">
+                  Alamat Penerima <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={formData.receiver_address}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      receiver_address: e.target.value,
+                    })
+                  }
+                  placeholder="Masukkan alamat lengkap penerima"
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Detail Pengiriman Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <Truck className="w-4 h-4 text-purple-500" />
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-purple-600">
+                  Detail Pengiriman
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Kurir
+                  </label>
+                  <select
+                    value={formData.courier_id || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        courier_id: e.target.value
+                          ? Number(e.target.value)
+                          : null,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  >
+                    <option value="">Pilih Kurir</option>
+                    {couriers.map((courier) => (
+                      <option key={courier.id} value={courier.id}>
+                        {courier.service_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    No. Resi / Tracking
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.tracking_number || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        tracking_number: e.target.value,
+                      })
+                    }
+                    placeholder="Nomor resi pengiriman"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status || "pending"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        status: e.target.value as ResiFormData["status"],
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  >
+                    {RESI_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Catatan
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.notes || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    placeholder="Catatan tambahan (optional)"
+                    className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                  />
+                </div>
+              </div>
             </div>
           </form>
         </Modal>

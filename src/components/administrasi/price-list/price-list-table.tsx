@@ -223,7 +223,7 @@ export default function PriceListTable({ group }: PriceListTableProps) {
                 isOpen={showGroupPreview}
                 onClose={() => setShowGroupPreview(false)}
                 group={group}
-                items={filteredItems}
+                items={sortedItems}
             />
 
             <TableHeaderContent

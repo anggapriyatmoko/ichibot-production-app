@@ -15,6 +15,8 @@ export default async function InventoryPage({
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 20
     const search = typeof params.search === 'string' ? params.search : ''
+    const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'createdAt'
+    const order = typeof params.order === 'string' ? params.order : 'desc'
     const skip = (page - 1) * limit
 
     const where: any = search ? {
@@ -29,7 +31,7 @@ export default async function InventoryPage({
     const [products, totalCount] = await prisma.$transaction([
         prisma.product.findMany({
             where,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { [sortBy]: order },
             take: limit,
             skip: skip
         }),

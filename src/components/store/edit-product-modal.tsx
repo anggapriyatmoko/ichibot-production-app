@@ -222,8 +222,38 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     )}
                 </button>
             )}
+            footer={
+                <div className="flex items-center gap-3 w-full">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving || isDeleting}
+                        className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-all disabled:opacity-50"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="submit"
+                        form="edit-product-form"
+                        disabled={isSaving || isDeleting}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Menyimpan...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-4 h-4" />
+                                {isAddMode ? 'Tambah Produk' : 'Simpan Perubahan'}
+                            </>
+                        )}
+                    </button>
+                </div>
+            }
         >
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="edit-product-form" onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
                     <label className="text-xs font-bold text-muted-foreground uppercase">Nama Produk</label>
                     <input
@@ -343,7 +373,7 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2 gap-x-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Harga Reguler</label>
                         <input
@@ -400,34 +430,6 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                         className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all resize-none min-h-[100px]"
                         placeholder="Masukkan rincian produk..."
                     />
-                </div>
-
-                <div className="flex items-center gap-3 pt-4 border-t border-border mt-6">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={isSaving || isDeleting}
-                        className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-all disabled:opacity-50"
-                    >
-                        Batal
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={isSaving || isDeleting}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                        {isSaving ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Menyimpan...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="w-4 h-4" />
-                                {isAddMode ? 'Tambah Produk' : 'Simpan Perubahan'}
-                            </>
-                        )}
-                    </button>
                 </div>
             </form>
         </Modal>

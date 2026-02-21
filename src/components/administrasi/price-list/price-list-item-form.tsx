@@ -39,6 +39,14 @@ const parseNumber = (value: string) => {
     return value.replace(/\./g, '').replace(/[^0-9]/g, '')
 }
 
+const countWords = (html: string) => {
+    // Remove HTML tags, replace &nbsp;, and normalize whitespace
+    const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+    // Split by spaces and filter out empty strings to get actual words
+    const words = text ? text.split(/\s+/).filter(word => word.length > 0) : []
+    return words.length
+}
+
 export default function PriceListItemForm({ groupId, item, existingCategories = [], uncategorizedOrder = 0 }: PriceListItemFormProps) {
     const isEdit = !!item
     const [open, setOpen] = useState(false)
@@ -248,6 +256,17 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
             return
         }
 
+        const shortDescWordCount = countWords(shortDescription)
+        if (shortDescWordCount === 0) {
+            showError('Deskripsi Singkat wajib diisi')
+            return
+        }
+
+        if (shortDescWordCount > 200) {
+            showError('Deskripsi Singkat maksimal 200 kata')
+            return
+        }
+
         const p = parseFloat(price)
         const d = parseFloat(discount)
 
@@ -347,7 +366,12 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                            <Label>Deskripsi Singkat</Label>
+                            <div className="flex justify-between items-center">
+                                <Label>Deskripsi Singkat <span className="text-destructive">*</span></Label>
+                                <span className={`text-[10px] font-medium ${countWords(shortDescription) > 200 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                                    {countWords(shortDescription)} / 200 kata
+                                </span>
+                            </div>
                             <SimpleWysiwyg
                                 value={shortDescription}
                                 onChange={setShortDescription}

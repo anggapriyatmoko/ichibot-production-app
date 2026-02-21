@@ -538,9 +538,43 @@ export default function ItemManager({
                 : "Permintaan Baru"
           }
           maxWidth="lg"
+          footer={
+            <div className="flex justify-end gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setReorderingItem(null);
+                }}
+                className="px-5 py-2 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="item-form"
+                disabled={saving}
+                className={cn(
+                  "px-8 py-2 text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center gap-2",
+                  reorderingItem
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90",
+                )}
+              >
+                {saving && (
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                )}
+                {reorderingItem ? "Buat Order Baru" : "Simpan Permintaan"}
+              </button>
+            </div>
+          }
         >
-          <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          <form
+            id="item-form"
+            onSubmit={handleSubmit}
+            className="space-y-5"
+          >
+            <div className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase text-muted-foreground px-1">
@@ -739,49 +773,46 @@ export default function ItemManager({
                 ))}
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 mt-6 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3 rounded-b-2xl">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setReorderingItem(null);
-                }}
-                className="px-5 py-2.5 text-sm font-bold hover:bg-accent rounded-xl transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className={cn(
-                  "px-8 py-2.5 text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center gap-2",
-                  reorderingItem
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90",
-                )}
-              >
-                {saving && (
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                )}
-                {reorderingItem ? "Buat Order Baru" : "Simpan Permintaan"}
-              </button>
-            </div>
           </form>
         </Modal>
       )}
 
       {/* Mark Done Modal */}
-      {selectedItem && showDoneDialog && (
-        <Modal
-          isOpen={showDoneDialog}
-          onClose={() => setShowDoneDialog(false)}
-          title="Tandai Sudah Diorder"
-          maxWidth="md"
-        >
-          <div className="flex flex-col flex-1">
-            <div className="p-6 space-y-4">
+      {
+        selectedItem && showDoneDialog && (
+          <Modal
+            isOpen={showDoneDialog}
+            onClose={() => setShowDoneDialog(false)}
+            title="Tandai Sudah Diorder"
+            maxWidth="md"
+            footer={
+              <div className="flex justify-end gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => setShowDoneDialog(false)}
+                  className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMarkDone}
+                  disabled={markDoneLoading}
+                  className="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-bold shadow-lg shadow-emerald-600/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2 text-sm"
+                >
+                  {markDoneLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-sm" />
+                      Memproses...
+                    </>
+                  ) : (
+                    "Konfirmasi"
+                  )}
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase text-muted-foreground px-1">
                   Nama Barang
@@ -804,35 +835,8 @@ export default function ItemManager({
                 />
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 mt-2 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3 rounded-b-2xl">
-              <button
-                type="button"
-                onClick={() => setShowDoneDialog(false)}
-                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleMarkDone}
-                disabled={markDoneLoading}
-                className="px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-bold shadow-lg shadow-emerald-600/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-              >
-                {markDoneLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  "Konfirmasi"
-                )}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        )}
     </TableWrapper>
   );
 }

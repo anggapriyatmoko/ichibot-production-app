@@ -139,13 +139,43 @@ export default function SendResiModal({
       }
       maxWidth="lg"
       className="p-0"
+      footer={
+        <div className="flex justify-end gap-2 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            form="send-resi-form"
+            disabled={loading}
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Mengirim...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                Kirim Resi
+              </>
+            )}
+          </button>
+        </div>
+      }
     >
       {loadingDefaults ? (
         <div className="p-8 flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form id="send-resi-form" onSubmit={handleSubmit} className="flex flex-col h-full">
           <div className="p-4 space-y-4 flex-1">
             {/* Sender Section */}
             <div className="space-y-3">
@@ -264,33 +294,6 @@ export default function SendResiModal({
             </div>
 
             {/* Actions */}
-          </div>
-          <div className="p-4 border-t border-border flex justify-end gap-2 bg-muted/20 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Mengirim...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Kirim Resi
-                </>
-              )}
-            </button>
           </div>
         </form>
       )}

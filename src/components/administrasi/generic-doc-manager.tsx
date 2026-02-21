@@ -422,16 +422,39 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                 />
             </TableWrapper>
 
-            {/* Form Modal */}
             {isModalOpen && (
                 <Modal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     title={editingData ? `Edit ${title}` : `Tambah ${title}`}
                     maxWidth="2xl"
+                    footer={
+                        <div className="flex justify-end gap-3 w-full">
+                            <button
+                                type="button"
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="doc-form"
+                                disabled={saving}
+                                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2 text-sm"
+                            >
+                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {editingData ? 'Simpan Perubahan' : 'Tambah Data'}
+                            </button>
+                        </div>
+                    }
                 >
-                    <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-                        <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-4">
+                    <form
+                        id="doc-form"
+                        onSubmit={handleSubmit}
+                        className="space-y-4"
+                    >
+                        <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-muted-foreground mb-1">Tanggal</label>
@@ -553,23 +576,6 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                                     )}
                                 </div>
                             </div>
-                        </div>
-                        <div className="p-4 border-t border-border shrink-0 bg-muted/20 flex justify-end gap-3 rounded-b-2xl mt-4">
-                            <button
-                                type="button"
-                                onClick={() => setIsModalOpen(false)}
-                                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                {editingData ? 'Simpan Perubahan' : 'Tambah Data'}
-                            </button>
                         </div>
                     </form>
                 </Modal>

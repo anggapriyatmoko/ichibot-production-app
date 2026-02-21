@@ -615,8 +615,29 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                         onClose={() => setIsAdding(false)}
                         title={editingService ? 'Edit Service' : 'Tambah Service Baru'}
                         maxWidth="2xl"
+                        footer={
+                            <div className="flex justify-end gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAdding(false)}
+                                    disabled={saving}
+                                    className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg transition-colors font-medium border border-border"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    form="service-robot-form"
+                                    disabled={saving}
+                                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold disabled:opacity-50 flex items-center gap-2 hover:shadow-lg transition-all"
+                                >
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {editingService ? 'Update' : 'Simpan'}
+                                </button>
+                            </div>
+                        }
                     >
-                        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
+                        <form id="service-robot-form" onSubmit={handleSubmit} className="flex flex-col flex-1">
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -842,24 +863,6 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border bg-card">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsAdding(false)}
-                                    disabled={saving}
-                                    className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg transition-colors font-medium border border-border"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-bold disabled:opacity-50 flex items-center gap-2 hover:shadow-lg transition-all"
-                                >
-                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    {editingService ? 'Update' : 'Simpan'}
-                                </button>
-                            </div>
                         </form>
                     </Modal>
                 )}

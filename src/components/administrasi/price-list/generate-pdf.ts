@@ -30,11 +30,34 @@ const getBase64ImageFromUrl = async (imageUrl: string) => {
     }
 }
 
+const addImageWithAspectRatio = (doc: any, imgData: string, type: string, x: number, y: number, maxW: number, maxH: number, center = true) => {
+    try {
+        const props = doc.getImageProperties(imgData)
+        const ratio = props.width / props.height
+        let targetW = maxW
+        let targetH = targetW / ratio
+
+        if (targetH > maxH) {
+            targetH = maxH
+            targetW = targetH * ratio
+        }
+
+        const finalX = center ? x + (maxW - targetW) / 2 : x
+        const finalY = center ? y + (maxH - targetH) / 2 : y
+
+        doc.addImage(imgData, type, finalX, finalY, targetW, targetH, undefined, 'FAST')
+        return { x: finalX, y: finalY, width: targetW, height: targetH }
+    } catch (e) {
+        doc.addImage(imgData, type, x, y, maxW, maxH, undefined, 'FAST')
+        return { x, y, width: maxW, height: maxH }
+    }
+}
+
 const initPdfWithFonts = async () => {
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4'
+        format: [210, 330]
     });
 
     try {
@@ -82,74 +105,23 @@ const cleanHtml = (html: string) => {
     return text || '';
 }
 
-export const generateProductPdf = async (item: any, returnBlob = false) => {
-    const doc = await initPdfWithFonts()
-    let logoBase64: string | null = null
-    try {
-        logoBase64 = await getBase64ImageFromUrl(window.location.origin + '/uploads/ichibot-text-logo.png')
-    } catch (e) { }
-
-    const date = new Date().toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    })
-
-    const pw = doc.internal.pageSize.getWidth()
-    const ph = doc.internal.pageSize.getHeight()
-    let pageNum = 1
-
+const renderProductDetail = async (doc: any, item: any, currentY: number, pw: number, ph: number, sequenceNumber?: number) => {
     const formatRupiah = (val: number) => new Intl.NumberFormat('id-ID', {
         style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
     }).format(val)
 
-    const addHeaderFooter = (page: number) => {
-        if (logoBase64) {
-            const props = doc.getImageProperties(logoBase64)
-            const logoHeight = 6
-            const logoWidth = (props.width * logoHeight) / props.height
-            doc.addImage(logoBase64, 'PNG', 14, 10, logoWidth, logoHeight)
-        }
-        doc.setFontSize(8)
-        doc.setTextColor(102, 102, 102)
-        doc.setFont('Manrope', 'normal')
-        doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
-        doc.text('www.ichibot.id', 14, 26)
-
-        doc.setFontSize(16)
-        doc.setTextColor(37, 99, 235)
-        doc.setFont('Manrope', 'bold')
-        doc.text(`DETAIL PRODUK`, pw - 14, 16, { align: 'right' })
-
-        doc.setFontSize(10)
-        doc.setTextColor(102, 102, 102)
-        doc.setFont('Manrope', 'normal')
-        doc.text(date, pw - 14, 22, { align: 'right' })
-
-        doc.setDrawColor(37, 99, 235)
-        doc.setLineWidth(0.5)
-        doc.line(14, 30, pw - 14, 30)
-
-        doc.setDrawColor(229, 231, 235)
-        doc.setLineWidth(0.2)
-        doc.line(14, ph - 15, pw - 14, ph - 15)
-        doc.setFontSize(8)
-        doc.setTextColor(156, 163, 175)
-        doc.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 14, ph - 10)
-        doc.text(`Halaman ${page}`, pw - 14, ph - 10, { align: 'right' })
-    }
-
-    const checkPageBreak = (neededHeight: number, currentY: number): number => {
-        if (currentY + neededHeight > ph - 25) {
+    const checkPageBreak = (neededHeight: number, y: number): number => {
+        if (y + neededHeight > ph - 25) {
             doc.addPage()
-            pageNum++
-            addHeaderFooter(pageNum)
+            // We don't call addHeaderFooter here because it should be handled by the caller or a global listener
+            // But in the existing code, it was called manually. 
+            // I'll assume the caller provides a way to add header/footer on new page if needed, 
+            // OR I'll pass the addHeaderFooter function.
+            // Let's pass it.
             return 35
         }
-        return currentY
+        return y
     }
-
-    addHeaderFooter(1)
 
     // ==========================================
     // SECTION 1: Product Name (full width, above image)
@@ -157,16 +129,24 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
     doc.setFontSize(18)
     doc.setTextColor(17, 24, 39)
     doc.setFont('Manrope', 'bold')
-    const titleLines = doc.splitTextToSize(item.name, pw - 28)
-    doc.text(titleLines, 14, 40)
 
-    const titleEndY = 40 + (titleLines.length * 7) + 4
+    const displayTitle = sequenceNumber ? `${sequenceNumber}. ${item.name}` : item.name
+    const titleLines = doc.splitTextToSize(displayTitle, pw - 28)
+
+    // Ensure title fits on page or starts on new page
+    if (currentY + (titleLines.length * 6) > ph - 40) {
+        doc.addPage()
+        currentY = 35
+    }
+
+    doc.text(titleLines, 14, currentY + 5)
+    currentY += 5 + (titleLines.length * 6)
 
     // ==========================================
     // SECTION 2: Image (left) + Deskripsi Singkat (right)
     // ==========================================
     const leftWidth = 70
-    const imageStartY = titleEndY
+    const imageStartY = currentY
     let imageBase64 = null
     if (item.image) {
         try {
@@ -174,129 +154,122 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
         } catch (e) { }
     }
 
+    let actualImageHeight = 0
+    let actualImageWidth = 0
     if (imageBase64) {
-        doc.setDrawColor(229, 231, 235)
-        doc.roundedRect(14, imageStartY, leftWidth, leftWidth, 2, 2)
         const type = imageBase64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
-        doc.addImage(imageBase64, type, 16, imageStartY + 2, leftWidth - 4, leftWidth - 4, undefined, 'FAST')
+        const dims = addImageWithAspectRatio(doc, imageBase64, type, 14, imageStartY, leftWidth, leftWidth, false)
+        actualImageHeight = dims.height
+        actualImageWidth = dims.width
     } else {
-        doc.setDrawColor(229, 231, 235)
-        doc.setFillColor(249, 250, 251)
-        doc.roundedRect(14, imageStartY, leftWidth, leftWidth, 2, 2, 'FD')
+        actualImageHeight = 20
+        actualImageWidth = 0
         doc.setFontSize(10)
         doc.setTextColor(156, 163, 175)
-        doc.text('Tanpa Gambar', 14 + leftWidth / 2, imageStartY + leftWidth / 2, { align: 'center', baseline: 'middle' })
+        doc.text('Tanpa Gambar', 14 + leftWidth / 2, imageStartY + actualImageHeight / 2, { align: 'center', baseline: 'middle' })
     }
 
     const imageGap = 6
-    const rightX = 14 + leftWidth + imageGap
+    const rightX = 14 + (actualImageWidth || leftWidth) + imageGap
     const rightWidth = pw - rightX - 14
 
-    let currentY = imageStartY + imageGap
+    let textY = imageStartY + 2
 
-    // Deskripsi Singkat (right side, next to image — overflow continues below)
     const rawShortDesc = cleanHtml(item.shortDescription).replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim()
     if (rawShortDesc) {
-        // Title
         doc.setFontSize(10)
         doc.setTextColor(107, 114, 128)
         doc.setFont('Manrope', 'bold')
-        doc.text('Deskripsi Singkat', rightX, currentY)
-        currentY += 6
+        doc.text('Deskripsi Singkat', rightX, textY)
+        textY += 6
 
         doc.setFontSize(10)
         doc.setTextColor(107, 114, 128)
         doc.setFont('Manrope', 'normal')
 
         const shortDescLines = doc.splitTextToSize(rawShortDesc, rightWidth)
-        const imageBottomY = imageStartY + leftWidth
+        const imageBottomY = imageStartY + actualImageHeight + imageGap
         let overflowStartIndex = -1
 
-        // Draw lines that fit next to the image
         for (let i = 0; i < shortDescLines.length; i++) {
-            if (currentY < imageBottomY) {
-                doc.text(shortDescLines[i], rightX, currentY)
-                currentY += 5
+            if (textY < imageBottomY) {
+                doc.text(shortDescLines[i], rightX, textY)
+                textY += 5
             } else {
                 overflowStartIndex = i
                 break
             }
         }
 
-        // If there are overflow lines, continue below the image at full width
         if (overflowStartIndex >= 0) {
-            currentY = imageBottomY + imageGap
+            textY = imageBottomY + imageGap
             const remainingText = shortDescLines.slice(overflowStartIndex).join(' ')
             const fullWidthLines = doc.splitTextToSize(remainingText, pw - 28)
             for (const line of fullWidthLines) {
-                currentY = checkPageBreak(6, currentY)
-                doc.text(line, 14, currentY)
-                currentY += 5
+                if (textY + 6 > ph - 25) {
+                    doc.addPage()
+                    textY = 35
+                }
+                doc.text(line, 14, textY)
+                textY += 5
             }
         }
-        currentY += 2
+        textY += 2
     }
 
-    // Legacy single price (shown in the right section next to image)
     const prices = item.prices && item.prices.length > 0 ? item.prices : null
     if (!prices) {
-        // Show legacy single price
         const discount = item.discount || 0
         const hasDiscount = discount > 0 && discount < item.price
         const finalPrice = hasDiscount ? discount : item.price
 
         doc.setFontSize(22)
         doc.setTextColor(37, 99, 235)
-        doc.text(formatRupiah(finalPrice), rightX, currentY)
+        doc.text(formatRupiah(finalPrice), rightX, textY)
 
         if (hasDiscount) {
             doc.setFontSize(12)
             doc.setTextColor(220, 38, 38)
             const discText = `DISKON ${Math.round((1 - discount / item.price) * 100)}%`
-            doc.text(discText, rightX + doc.getTextWidth(formatRupiah(finalPrice)) + 4, currentY - 2)
+            doc.text(discText, rightX + doc.getTextWidth(formatRupiah(finalPrice)) + 4, textY - 2)
 
-            currentY += 8
+            textY += 8
             doc.setFontSize(12)
             doc.setTextColor(156, 163, 175)
             doc.setFont('Manrope', 'normal')
             const origPrice = formatRupiah(item.price)
-            doc.text(origPrice, rightX, currentY)
+            doc.text(origPrice, rightX, textY)
             const w = doc.getTextWidth(origPrice)
             doc.setDrawColor(156, 163, 175)
-            doc.line(rightX, currentY - 1, rightX + w, currentY - 1)
+            doc.line(rightX, textY - 1, rightX + w, textY - 1)
         }
 
-        currentY += 10
+        textY += 10
         if (item.quantity) {
             doc.setFontSize(10)
             doc.setTextColor(107, 114, 128)
             doc.setFont('Manrope', 'normal')
-            doc.text(`Qty / Satuan: ${item.quantity}`, rightX, currentY)
+            doc.text(`Qty / Satuan: ${item.quantity}`, rightX, textY)
         }
     }
 
-    // Move below the image area
-    currentY = Math.max(currentY + 3, imageStartY + leftWidth + 3)
+    currentY = Math.max(textY + 0.5, imageStartY + actualImageHeight + 0.5)
 
     // ==========================================
     // SECTION 3: Deskripsi / Keterangan (2 columns, rich text)
     // ==========================================
     if (item.description && item.description.trim()) {
-        currentY = checkPageBreak(20, currentY)
+        currentY += 0.5
+        if (currentY + 20 > ph - 25) {
+            doc.addPage()
+            currentY = 35
+        }
 
         doc.setDrawColor(229, 231, 235)
         doc.setLineWidth(0.2)
         doc.line(14, currentY, pw - 14, currentY)
-        currentY += 6
+        currentY += 5
 
-        // Title - match deskripsi singkat style
-        doc.setFontSize(10)
-        doc.setTextColor(107, 114, 128)
-        doc.setFont('Manrope', 'bold')
-        doc.text('Deskripsi / Spesifikasi', 14, currentY)
-        currentY += 6
-
-        // Parse HTML into rich text segments
         type RichSegment = { text: string; bold: boolean; italic: boolean }
         type RichLine = RichSegment[]
 
@@ -304,7 +277,6 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
             const lines: RichLine[] = []
             let currentLine: RichSegment[] = []
 
-            // Split by block-level elements (p, div, br, li)
             const blocks = html
                 .replace(/<br\s*\/?>/gi, '\n')
                 .replace(/<\/p>/gi, '\n')
@@ -316,12 +288,9 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                 .replace(/<p[^>]*>/gi, '')
                 .replace(/<div[^>]*>/gi, '')
 
-            // Process inline formatting
             const processInline = (text: string, inheritBold: boolean, inheritItalic: boolean) => {
-                // Handle <b>, <strong>, <i>, <em> tags
                 let remaining = text
                 while (remaining.length > 0) {
-                    // Find the next formatting tag
                     const boldMatch = remaining.match(/<(b|strong)>/i)
                     const italicMatch = remaining.match(/<(i|em)>/i)
 
@@ -336,7 +305,6 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                     }
 
                     if (!nextTag) {
-                        // No more tags, add remaining text
                         const clean = remaining.replace(/<[^>]*>/g, '').replace(/&nbsp;/ig, ' ').replace(/&amp;/ig, '&').replace(/&lt;/ig, '<').replace(/&gt;/ig, '>')
                         if (clean) {
                             currentLine.push({ text: clean, bold: inheritBold, italic: inheritItalic })
@@ -344,13 +312,11 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                         break
                     }
 
-                    // Add text before the tag
                     const before = remaining.substring(0, nextTag.index).replace(/<[^>]*>/g, '').replace(/&nbsp;/ig, ' ').replace(/&amp;/ig, '&')
                     if (before) {
                         currentLine.push({ text: before, bold: inheritBold, italic: inheritItalic })
                     }
 
-                    // Find closing tag
                     const closingTag = nextTag.type === 'bold' ? /<\/(b|strong)>/i : /<\/(i|em)>/i
                     const afterOpen = remaining.substring(nextTag.index + nextTag.tag.length)
                     const closeMatch = afterOpen.match(closingTag)
@@ -362,7 +328,6 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                         processInline(innerContent, newBold, newItalic)
                         remaining = afterOpen.substring(closeMatch.index + closeMatch[0].length)
                     } else {
-                        // No closing tag, treat rest as formatted
                         const newBold = nextTag.type === 'bold' ? true : inheritBold
                         const newItalic = nextTag.type === 'italic' ? true : inheritItalic
                         processInline(afterOpen, newBold, newItalic)
@@ -371,7 +336,6 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                 }
             }
 
-            // Split into lines first
             const rawLines = blocks.split('\n')
             for (const rawLine of rawLines) {
                 currentLine = []
@@ -381,7 +345,6 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                 }
             }
 
-            // Remove trailing empty lines
             while (lines.length > 0 && lines[lines.length - 1].length === 1 && lines[lines.length - 1][0].text === '') {
                 lines.pop()
             }
@@ -391,7 +354,6 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
 
         const richLines = parseHtmlToRichLines(item.description)
 
-        // Render rich lines in 2-column layout
         const colGap = 8
         const colWidth = (pw - 28 - colGap) / 2
         const midPoint = Math.ceil(richLines.length / 2)
@@ -402,34 +364,30 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
         const col2X = 14 + colWidth + colGap
 
         const renderRichLine = (segments: RichSegment[], x: number, y: number, maxWidth: number): number => {
-            // Flatten segments into a single text, then word-wrap
-            // For each line, render segments with proper styling
             doc.setFontSize(10)
             doc.setTextColor(107, 114, 128)
 
             if (segments.length === 1 && segments[0].text === '') {
-                return y + 3 // Empty line = small gap
+                return y + 5
             }
 
-            // Simple approach: render each segment inline
             let curX = x
             for (const seg of segments) {
                 if (!seg.text) continue
 
-                const style = seg.bold && seg.italic ? 'bolditalic' : seg.bold ? 'bold' : seg.italic ? 'italic' : 'normal'
-                // jsPDF Manrope may not have italic, use normal as fallback
                 const fontStyle = seg.bold ? 'bold' : 'normal'
                 doc.setFont('Manrope', fontStyle)
 
-                // Word wrap within column
                 const words = seg.text.split(' ')
                 for (const word of words) {
                     if (!word) continue
                     const wordWidth = doc.getTextWidth(word + ' ')
                     if (curX + wordWidth > x + maxWidth && curX > x) {
-                        // Wrap to next line
                         y += 5
-                        y = checkPageBreak(6, y)
+                        if (y + 6 > ph - 25) {
+                            doc.addPage()
+                            y = 35
+                        }
                         curX = x
                     }
                     doc.text(word, curX, y)
@@ -441,17 +399,21 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
 
         const startDescY = currentY
 
-        // Draw column 1
         let col1Y = startDescY
         for (const line of col1Lines) {
-            col1Y = checkPageBreak(6, col1Y)
+            if (col1Y + 6 > ph - 25) {
+                doc.addPage()
+                col1Y = 35
+            }
             col1Y = renderRichLine(line, col1X, col1Y, colWidth)
         }
 
-        // Draw column 2
         let col2Y = startDescY
         for (const line of col2Lines) {
-            col2Y = checkPageBreak(6, col2Y)
+            if (col2Y + 6 > ph - 25) {
+                doc.addPage()
+                col2Y = 35
+            }
             col2Y = renderRichLine(line, col2X, col2Y, colWidth)
         }
 
@@ -462,34 +424,38 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
     // SECTION 4: Variant Prices (dynamic columns)
     // ==========================================
     if (prices && prices.length > 0) {
-        currentY += 5
-        currentY = checkPageBreak(30, currentY)
+        currentY += 0.5
+        if (currentY + 30 > ph - 25) {
+            doc.addPage()
+            currentY = 35
+        }
 
         doc.setDrawColor(229, 231, 235)
         doc.setLineWidth(0.2)
         doc.line(14, currentY, pw - 14, currentY)
-        currentY += 6
+        currentY += 5
+        currentY += 2
 
-        doc.setFontSize(10)
-        doc.setTextColor(107, 114, 128)
-        doc.setFont('Manrope', 'bold')
-        doc.text('Harga', 14, currentY)
-        currentY += 8
-
-        const numCols = Math.min(prices.length, 4) // max 4 cols
+        const numCols = Math.min(prices.length, 4)
         const colGap = 6
         const totalGap = colGap * (numCols - 1)
         const colW = (pw - 28 - totalGap) / numCols
 
-        // Calculate dynamic card heights
+        const cardPad = 3
         const calcCardHeight = (p: any) => {
-            let h = 38 // base height for label + price + qty
+            let h = cardPad
+            h += 4
+            h += 8
+            const hasDisc = p.discount > 0 && p.discount < p.price
+            if (hasDisc) h += 5
+            if (p.qty) h += 5
             if (p.description) {
                 doc.setFontSize(8)
                 doc.setFont('Manrope', 'normal')
                 const descLines = doc.splitTextToSize(p.description, colW - 8)
-                h += descLines.length * 4 + 4
+                h += 0.5 + descLines.length * 4
             }
+            h += 2
             return h
         }
 
@@ -498,33 +464,31 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
             const colIndex = i % numCols
             const colX = 14 + colIndex * (colW + colGap)
 
-            // Calculate max card height for this row
-            let rowMaxH = 38
+            let rowMaxH = 20
             for (let j = i - colIndex; j < Math.min(i - colIndex + numCols, prices.length); j++) {
                 rowMaxH = Math.max(rowMaxH, calcCardHeight(prices[j]))
             }
 
-            // Start a new row if we've filled all columns
             if (i > 0 && colIndex === 0) {
-                currentY += rowMaxH + 6
-                currentY = checkPageBreak(rowMaxH + 6, currentY)
+                currentY += rowMaxH + 4
+                if (currentY + rowMaxH + 4 > ph - 25) {
+                    doc.addPage()
+                    currentY = 35
+                }
             }
 
             const cardY = currentY
 
-            // Card background
             doc.setFillColor(245, 247, 250)
             doc.setDrawColor(229, 231, 235)
             doc.roundedRect(colX, cardY, colW, rowMaxH, 2, 2, 'FD')
 
-            // Label
             doc.setFontSize(9)
             doc.setTextColor(107, 114, 128)
             doc.setFont('Manrope', 'bold')
             const labelText = doc.splitTextToSize(p.label || `Varian ${i + 1}`, colW - 8)
-            doc.text(labelText, colX + 4, cardY + 6)
+            doc.text(labelText, colX + 4, cardY + 5)
 
-            // Price
             const hasDiscount = p.discount > 0 && p.discount < p.price
             const finalPrice = hasDiscount ? p.discount : p.price
 
@@ -532,17 +496,19 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
             doc.setTextColor(37, 99, 235)
             doc.setFont('Manrope', 'bold')
             const priceText = formatRupiah(finalPrice)
-            doc.text(priceText, colX + 4, cardY + 16)
+            doc.text(priceText, colX + 4, cardY + 12)
+
+            let contentY = cardY + 14
 
             if (hasDiscount) {
                 doc.setFontSize(9)
                 doc.setTextColor(156, 163, 175)
                 doc.setFont('Manrope', 'normal')
                 const origText = formatRupiah(p.price)
-                doc.text(origText, colX + 4, cardY + 22)
+                doc.text(origText, colX + 4, contentY + 3)
                 const tw = doc.getTextWidth(origText)
                 doc.setDrawColor(156, 163, 175)
-                doc.line(colX + 4, cardY + 21, colX + 4 + tw, cardY + 21)
+                doc.line(colX + 4, contentY + 2, colX + 4 + tw, contentY + 2)
 
                 const discPercent = Math.round((1 - p.discount / p.price) * 100)
                 const badgeText = `DISC ${discPercent}%`
@@ -551,35 +517,35 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                 doc.setFont('Manrope', 'bold')
                 const bw = doc.getTextWidth(badgeText) + 3
                 doc.setFillColor(220, 38, 38)
-                doc.roundedRect(colX + 4, cardY + 24, bw, 4.5, 0.5, 0.5, 'F')
-                doc.text(badgeText, colX + 5.5, cardY + 27.5)
+                doc.roundedRect(colX + 4 + tw + 2, contentY, bw, 4, 0.5, 0.5, 'F')
+                doc.text(badgeText, colX + 4 + tw + 3.5, contentY + 3)
+                contentY += 6
             }
 
-            // Qty
             if (p.qty) {
+                contentY += 2
                 doc.setFontSize(8)
                 doc.setTextColor(107, 114, 128)
                 doc.setFont('Manrope', 'normal')
-                doc.text(p.qty, colX + 4, cardY + 34)
+                doc.text(p.qty, colX + 4, contentY)
+                contentY += 4
             }
 
-            // Description/Keterangan
             if (p.description) {
+                contentY += 1
                 doc.setFontSize(8)
                 doc.setTextColor(107, 114, 128)
                 doc.setFont('Manrope', 'normal')
                 const descLines = doc.splitTextToSize(p.description, colW - 8)
-                let descY = cardY + 40
                 for (const line of descLines) {
-                    doc.text(line, colX + 4, descY)
-                    descY += 4
+                    doc.text(line, colX + 4, contentY)
+                    contentY += 4
                 }
             }
         }
 
-        // Advance past the last row of cards
         const lastRowStart = prices.length - (prices.length % numCols || numCols)
-        let lastRowH = 38
+        let lastRowH = 20
         for (let j = lastRowStart; j < prices.length; j++) {
             lastRowH = Math.max(lastRowH, calcCardHeight(prices[j]))
         }
@@ -598,28 +564,20 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
     })()
 
     if (additionalImages.length > 0) {
-        currentY += 5
-        currentY = checkPageBreak(40, currentY)
+        currentY += 2
 
-        doc.setFontSize(12)
-        doc.setTextColor(37, 99, 235)
-        doc.setFont('Manrope', 'bold')
-        doc.text('LAMPIRAN', 14, currentY)
-        doc.setDrawColor(229, 231, 235)
-        doc.line(14, currentY + 2, pw - 14, currentY + 2)
-        currentY += 10
+        const colGap = 6
+        const numCols = 4
+        const attachWidth = (pw - 28 - (colGap * (numCols - 1))) / numCols
 
         const imageChunks = [];
-        for (let i = 0; i < additionalImages.length; i += 2) {
-            imageChunks.push(additionalImages.slice(i, i + 2));
+        for (let i = 0; i < additionalImages.length; i += numCols) {
+            imageChunks.push(additionalImages.slice(i, i + numCols));
         }
 
-        const attachWidth = (pw - 28 - 10) / 2
         for (const chunk of imageChunks) {
-            if (currentY + attachWidth > ph - 25) {
+            if (currentY + attachWidth + 5 > ph - 25) {
                 doc.addPage()
-                pageNum++
-                addHeaderFooter(pageNum)
                 currentY = 35
             }
 
@@ -627,21 +585,93 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
                 try {
                     const imgB64 = await getBase64ImageFromUrl(chunk[i])
                     const type = imgB64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
-                    const ix = i === 0 ? 14 : 14 + attachWidth + 10
-                    doc.setDrawColor(229, 231, 235)
-                    doc.roundedRect(ix, currentY, attachWidth, attachWidth, 2, 2)
-                    doc.addImage(imgB64, type, ix + 2, currentY + 2, attachWidth - 4, attachWidth - 4, undefined, 'FAST')
+                    const ix = 14 + i * (attachWidth + colGap)
+                    addImageWithAspectRatio(doc, imgB64, type, ix, currentY, attachWidth, attachWidth)
                 } catch (e) { }
             }
-            currentY += attachWidth + 10
+            currentY += attachWidth + 5
         }
     }
 
+    return currentY
+}
+
+export const generateProductPdf = async (item: any, returnBlob = false) => {
+    const doc = await initPdfWithFonts()
+    let logoBase64: string | null = null
+    try {
+        logoBase64 = await getBase64ImageFromUrl(window.location.origin + '/uploads/ichibot-text-logo.png')
+    } catch (e) { }
+
+    const date = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    })
+
+    const pw = doc.internal.pageSize.getWidth()
+    const ph = doc.internal.pageSize.getHeight()
+
+    const addHeaderFooter = () => {
+        const totalPages = doc.getNumberOfPages()
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            if (logoBase64) {
+                const props = doc.getImageProperties(logoBase64)
+                const logoHeight = 6
+                const logoWidth = (props.width * logoHeight) / props.height
+                doc.addImage(logoBase64, 'PNG', 14, 10, logoWidth, logoHeight)
+            }
+            doc.setFontSize(8)
+            doc.setTextColor(102, 102, 102)
+            doc.setFont('Manrope', 'normal')
+            doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
+            doc.text('www.ichibot.id', 14, 26)
+
+            doc.setFontSize(16)
+            doc.setTextColor(37, 99, 235)
+            doc.setFont('Manrope', 'bold')
+            doc.text(`DETAIL PRODUK`, pw - 14, 16, { align: 'right' })
+
+            doc.setFontSize(10)
+            doc.setTextColor(102, 102, 102)
+            doc.setFont('Manrope', 'normal')
+            doc.text(date, pw - 14, 22, { align: 'right' })
+
+            doc.setDrawColor(37, 99, 235)
+            doc.setLineWidth(0.5)
+            doc.line(14, 30, pw - 14, 30)
+
+            doc.setDrawColor(229, 231, 235)
+            doc.setLineWidth(0.2)
+            doc.line(14, ph - 15, pw - 14, ph - 15)
+            doc.setFontSize(8)
+            doc.setTextColor(156, 163, 175)
+            doc.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 14, ph - 10)
+            doc.text(`Halaman ${i} dari ${totalPages}`, pw - 14, ph - 10, { align: 'right' })
+        }
+    }
+
+    await renderProductDetail(doc, item, 35, pw, ph)
+    addHeaderFooter()
+
     if (returnBlob) {
-        return doc.output('bloburl')
+        const blob = doc.output('blob')
+        const size = blob.size
+        const url = URL.createObjectURL(blob)
+        return { url, size, formattedSize: formatBytes(size) }
     } else {
         doc.save(`Detail-Produk-${item.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
     }
+}
+
+function formatBytes(bytes: number, decimals = 2) {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const dm = decimals < 0 ? 0 : decimals
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
 export const generatePriceListPdf = async (group: any, items: any[], returnBlob = false) => {
@@ -818,7 +848,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
                     const y = cell.y + 3 // Top padding
                     try {
                         const type = itemImages[ri].startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
-                        doc.addImage(itemImages[ri], type, x, y, dim, dim, undefined, 'FAST')
+                        addImageWithAspectRatio(doc, itemImages[ri], type, x, y, dim, dim)
                     } catch (e) { }
                 } else {
                     doc.setFontSize(8)
@@ -929,9 +959,90 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
         },
         margin: { top: 35, bottom: 20 }
     })
-
     if (returnBlob) {
         return doc.output('bloburl')
+    } else {
+        doc.save(`Daftar-Harga-${group.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
+    }
+}
+
+export const generatePriceListGroupDetailPdf = async (group: any, items: any[], returnBlob = false) => {
+    const doc = await initPdfWithFonts()
+    let logoBase64: string | null = null
+    try {
+        logoBase64 = await getBase64ImageFromUrl(window.location.origin + '/uploads/ichibot-text-logo.png')
+    } catch (e) { }
+
+    const date = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    })
+
+    const pw = doc.internal.pageSize.getWidth()
+    const ph = doc.internal.pageSize.getHeight()
+
+    const addHeaderFooter = () => {
+        const totalPages = doc.getNumberOfPages()
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            if (logoBase64) {
+                const props = doc.getImageProperties(logoBase64)
+                const logoHeight = 6
+                const logoWidth = (props.width * logoHeight) / props.height
+                doc.addImage(logoBase64, 'PNG', 14, 10, logoWidth, logoHeight)
+            }
+            doc.setFontSize(8)
+            doc.setTextColor(102, 102, 102)
+            doc.setFont('Manrope', 'normal')
+            doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
+            doc.text('www.ichibot.id', 14, 26)
+
+            doc.setFontSize(16)
+            doc.setTextColor(37, 99, 235)
+            doc.setFont('Manrope', 'bold')
+            doc.text(`DAFTAR HARGA`, pw - 14, 16, { align: 'right' })
+
+            doc.setFontSize(12)
+            doc.setTextColor(17, 24, 39)
+            doc.text(group.name.toUpperCase(), pw - 14, 22, { align: 'right' })
+
+            doc.setFontSize(10)
+            doc.setTextColor(102, 102, 102)
+            doc.setFont('Manrope', 'normal')
+            doc.text(date, pw - 14, 27, { align: 'right' })
+
+            doc.setDrawColor(37, 99, 235)
+            doc.setLineWidth(0.5)
+            doc.line(14, 31, pw - 14, 31)
+
+            doc.setDrawColor(229, 231, 235)
+            doc.setLineWidth(0.2)
+            doc.line(14, ph - 15, pw - 14, ph - 15)
+            doc.setFontSize(8)
+            doc.setTextColor(156, 163, 175)
+            doc.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 14, ph - 10)
+            doc.text(`Halaman ${i} dari ${totalPages}`, pw - 14, ph - 10, { align: 'right' })
+        }
+    }
+
+    let currentY = 35
+    for (let i = 0; i < items.length; i++) {
+        // Start each product on a new page if it's not the first one
+        if (i > 0) {
+            doc.addPage()
+            currentY = 35
+        }
+        currentY = await renderProductDetail(doc, items[i], currentY, pw, ph, i + 1)
+    }
+
+    addHeaderFooter()
+
+    if (returnBlob) {
+        const blob = doc.output('blob')
+        const size = blob.size
+        const url = URL.createObjectURL(blob)
+        return { url, size, formattedSize: formatBytes(size) }
     } else {
         doc.save(`Daftar-Harga-${group.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
     }

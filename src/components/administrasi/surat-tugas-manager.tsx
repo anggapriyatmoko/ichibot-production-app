@@ -552,214 +552,8 @@ export default function SuratTugasManager({
           onClose={() => setIsModalOpen(false)}
           title={editingST ? "Edit Surat Tugas" : "Buat Surat Tugas Baru"}
           maxWidth="4xl"
-        >
-          <div className="flex flex-col flex-1 h-full">
-            <form
-              onSubmit={handleSubmit}
-              className="flex-1 overflow-y-auto overscroll-contain p-8 custom-scrollbar"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Basic Info Section */}
-                <div className="space-y-6">
-                  <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-4">
-                    <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                      Detail Surat
-                    </h3>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                          Instansi
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {(["ICHI", "GAN"] as const).map((inst) => (
-                            <button
-                              key={inst}
-                              type="button"
-                              onClick={() =>
-                                setFormData({ ...formData, instansi: inst })
-                              }
-                              className={`py-2.5 rounded-xl font-bold text-sm transition-all border ${formData.instansi === inst
-                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                : "bg-white border-gray-200 text-gray-500 hover:border-blue-200 hover:bg-blue-50/50"
-                                }`}
-                            >
-                              {inst === "ICHI" ? "ICHIBOT" : "PT. GAN"}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                          Nomor Surat
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.letter_no}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              letter_no: e.target.value,
-                            })
-                          }
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-blue-600 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                          placeholder="Generating number..."
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Judul Agenda
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.title}
-                        onChange={(e) =>
-                          setFormData({ ...formData, title: e.target.value })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
-                        placeholder="Contoh: Training IoT Dasar"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Rincian Kegiatan
-                      </label>
-                      <textarea
-                        required
-                        value={formData.details}
-                        onChange={(e) =>
-                          setFormData({ ...formData, details: e.target.value })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none min-h-[100px] resize-none"
-                        placeholder="Detail penugasan yang diberikan..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Participants & Dates */}
-                <div className="space-y-6 flex flex-col h-full">
-                  <div className="space-y-4 flex flex-col flex-1 min-h-0">
-                    <div className="flex items-center justify-between ml-1 shrink-0">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                        Peserta Penugasan
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            peserta: [
-                              ...formData.peserta,
-                              { nama: "", jabatan: "" },
-                            ],
-                          })
-                        }
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest"
-                      >
-                        + Tambah Peserta
-                      </button>
-                    </div>
-
-                    <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                      {formData.peserta.map((p, idx) => (
-                        <div
-                          key={idx}
-                          className="group relative bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 transition-all hover:border-blue-200"
-                        >
-                          <input
-                            type="text"
-                            placeholder="Nama Lengkap"
-                            value={p.nama}
-                            onChange={(e) => {
-                              const newPeserta = [...formData.peserta];
-                              newPeserta[idx] = {
-                                ...newPeserta[idx],
-                                nama: e.target.value,
-                              };
-                              setFormData({ ...formData, peserta: newPeserta });
-                            }}
-                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-blue-500 transition-all"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Jabatan"
-                            value={p.jabatan}
-                            onChange={(e) => {
-                              const newPeserta = [...formData.peserta];
-                              newPeserta[idx] = {
-                                ...newPeserta[idx],
-                                jabatan: e.target.value,
-                              };
-                              setFormData({ ...formData, peserta: newPeserta });
-                            }}
-                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium outline-none focus:border-blue-500 transition-all"
-                          />
-                          {formData.peserta.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newPeserta = [...formData.peserta];
-                                newPeserta.splice(idx, 1);
-                                setFormData({
-                                  ...formData,
-                                  peserta: newPeserta,
-                                });
-                              }}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-red-100 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-red-50"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 shrink-0 pt-4 border-t border-gray-100">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Mulai
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.start_date}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            start_date: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Selesai
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.end_date}
-                        onChange={(e) =>
-                          setFormData({ ...formData, end_date: e.target.value })
-                        }
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </form>
-
-            {/* Footer */}
-            <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+          footer={
+            <div className="flex justify-end gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -768,7 +562,8 @@ export default function SuratTugasManager({
                 Batal
               </button>
               <button
-                onClick={handleSubmit}
+                type="submit"
+                form="st-form"
                 disabled={saving}
                 className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
@@ -776,20 +571,227 @@ export default function SuratTugasManager({
                 {editingST ? "Perbarui" : "Simpan"}
               </button>
             </div>
-          </div>
+          }
+        >
+          <form
+            id="st-form"
+            onSubmit={handleSubmit}
+            className="space-y-8"
+          >
+            <div className="space-y-8">
+              {/* Basic Info Section */}
+              <div className="space-y-6">
+                <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-4">
+                  <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                    Detail Surat
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Instansi
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["ICHI", "GAN"] as const).map((inst) => (
+                          <button
+                            key={inst}
+                            type="button"
+                            onClick={() =>
+                              setFormData({ ...formData, instansi: inst })
+                            }
+                            className={`py-2.5 rounded-xl font-bold text-sm transition-all border ${formData.instansi === inst
+                              ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20"
+                              : "bg-white border-gray-200 text-gray-500 hover:border-blue-200 hover:bg-blue-50/50"
+                              }`}
+                          >
+                            {inst === "ICHI" ? "ICHIBOT" : "PT. GAN"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Nomor Surat
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.letter_no}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            letter_no: e.target.value,
+                          })
+                        }
+                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-blue-600 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                        placeholder="Generating number..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Judul Agenda
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                      placeholder="Contoh: Training IoT Dasar"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Rincian Kegiatan
+                    </label>
+                    <textarea
+                      required
+                      value={formData.details}
+                      onChange={(e) =>
+                        setFormData({ ...formData, details: e.target.value })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none min-h-[100px] resize-none"
+                      placeholder="Detail penugasan yang diberikan..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Participants & Dates */}
+              <div className="space-y-6 flex flex-col h-full">
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
+                  <div className="flex items-center justify-between ml-1 shrink-0">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Peserta Penugasan
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          peserta: [
+                            ...formData.peserta,
+                            { nama: "", jabatan: "" },
+                          ],
+                        })
+                      }
+                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest"
+                    >
+                      + Tambah Peserta
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    {formData.peserta.map((p, idx) => (
+                      <div
+                        key={idx}
+                        className="group relative bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3 transition-all hover:border-blue-200"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Nama Lengkap"
+                          value={p.nama}
+                          onChange={(e) => {
+                            const newPeserta = [...formData.peserta];
+                            newPeserta[idx] = {
+                              ...newPeserta[idx],
+                              nama: e.target.value,
+                            };
+                            setFormData({ ...formData, peserta: newPeserta });
+                          }}
+                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-blue-500 transition-all"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Jabatan"
+                          value={p.jabatan}
+                          onChange={(e) => {
+                            const newPeserta = [...formData.peserta];
+                            newPeserta[idx] = {
+                              ...newPeserta[idx],
+                              jabatan: e.target.value,
+                            };
+                            setFormData({ ...formData, peserta: newPeserta });
+                          }}
+                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium outline-none focus:border-blue-500 transition-all"
+                        />
+                        {formData.peserta.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newPeserta = [...formData.peserta];
+                              newPeserta.splice(idx, 1);
+                              setFormData({
+                                ...formData,
+                                peserta: newPeserta,
+                              });
+                            }}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-red-100 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-red-50"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 shrink-0 pt-4 border-t border-gray-100">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Mulai
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          start_date: e.target.value,
+                        })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                      Selesai
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, end_date: e.target.value })
+                      }
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
         </Modal>
       )}
 
       {/* PDF Modal */}
-      {isPdfModalOpen && selectedSTForPdf && (
-        <PdfSignatureModal
-          isOpen={isPdfModalOpen}
-          onClose={() => setIsPdfModalOpen(false)}
-          onDownload={handlePdfDownload}
-          title="Unduh Surat Tugas"
-          variant={selectedSTForPdf.instansi === "GAN" ? "gan" : "ichibot"}
-        />
-      )}
+      {
+        isPdfModalOpen && selectedSTForPdf && (
+          <PdfSignatureModal
+            isOpen={isPdfModalOpen}
+            onClose={() => setIsPdfModalOpen(false)}
+            onDownload={handlePdfDownload}
+            title="Unduh Surat Tugas"
+            variant={selectedSTForPdf.instansi === "GAN" ? "gan" : "ichibot"}
+          />
+        )
+      }
     </div>
   );
 }

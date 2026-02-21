@@ -847,13 +847,37 @@ export default function CertificateManager({
           }
           maxWidth="full"
           className="max-w-6xl"
+          footer={
+            <div className="flex justify-end gap-4 w-full">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-2 bg-white border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="certificate-form"
+                disabled={saving}
+                className="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-100 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>
+                  {editingCertificate
+                    ? "Update Sertifikat"
+                    : "Simpan Sertifikat"}
+                </span>
+              </button>
+            </div>
+          }
         >
-          {/* Modal Body */}
           <form
+            id="certificate-form"
             onSubmit={handleSubmit}
-            className="flex flex-col flex-1"
+            className="space-y-6"
           >
-            <div className="p-6 overflow-y-auto overscroll-contain flex-1 space-y-6">
+            <div className="space-y-6">
               {/* Main Content - Two Column Layout */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="grid grid-cols-1 lg:grid-cols-2">
@@ -1436,29 +1460,6 @@ export default function CertificateManager({
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 mt-6 border-t border-border shrink-0 bg-emerald-50 flex justify-end gap-4 rounded-b-2xl">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-6 py-3 bg-white border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-100 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>
-                  {editingCertificate
-                    ? "Update Sertifikat"
-                    : "Simpan Sertifikat"}
-                </span>
-              </button>
             </div>
           </form>
         </Modal>

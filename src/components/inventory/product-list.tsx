@@ -123,8 +123,15 @@ export default function ProductList({
         return () => clearTimeout(timeoutId)
     }, [searchTerm, replace, pathname, searchParams])
 
-    // Sorting State (null = use server order, which is createdAt desc)
-    const [sortConfig, setSortConfig] = useState<SortConfig | null>(null)
+    // Sorting State (Sync with URL)
+    const [sortConfig, setSortConfig] = useState<SortConfig | null>(() => {
+        const sortBy = searchParams.get('sortBy') as keyof Product
+        const order = searchParams.get('order') as 'asc' | 'desc'
+        if (sortBy && order) {
+            return { key: sortBy, direction: order }
+        }
+        return null
+    })
 
     // Add Stock Modal State
     const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null)
@@ -338,28 +345,16 @@ export default function ProductList({
     }
 
     const handleSort = (key: keyof Product) => {
-        setSortConfig((current) => {
-            if (current?.key === key) {
-                return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-            }
-            return { key, direction: 'asc' }
-        })
+        const newDirection = sortConfig?.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
+        const params = new URLSearchParams(searchParams)
+        params.set('sortBy', key)
+        params.set('order', newDirection)
+        params.set('page', '1') // Reset to page 1 on sort
+        replace(`${pathname}?${params.toString()}`)
+        setSortConfig({ key, direction: newDirection })
     }
 
-    const filteredProducts = sortConfig
-        ? [...initialProducts].sort((a, b) => {
-            const { key, direction } = sortConfig
-            const aValue: any = a[key]
-            const bValue: any = b[key]
-
-            if (aValue === null || bValue === null) return 0
-            if (aValue === undefined || bValue === undefined) return 0
-
-            if (aValue < bValue) return direction === 'asc' ? -1 : 1
-            if (aValue > bValue) return direction === 'asc' ? 1 : -1
-            return 0
-        })
-        : initialProducts
+    const filteredProducts = initialProducts
 
     const handlePageChange = (newPage: number) => {
         const params = new URLSearchParams(searchParams)

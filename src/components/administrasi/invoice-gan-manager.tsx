@@ -674,12 +674,33 @@ export default function InvoiceGANManager({
             </span>
           }
           maxWidth="4xl"
+          footer={
+            <div className="flex justify-end gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="invoice-gan-form"
+                disabled={saving}
+                className="px-6 py-2 bg-orange-500 text-white rounded-lg font-bold shadow-lg shadow-orange-500/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2 text-sm"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {editingInvoice ? "Simpan Perubahan" : "Buat Invoice GAN"}
+              </button>
+            </div>
+          }
         >
           <form
+            id="invoice-gan-form"
             onSubmit={handleSubmit}
-            className="flex flex-col flex-1"
+            className="space-y-6"
           >
-            <div className="p-4 overflow-y-auto overscroll-contain flex-1 space-y-6">
+            <div className="space-y-6">
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -918,25 +939,6 @@ export default function InvoiceGANManager({
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 mt-6 border-t border-border shrink-0 bg-orange-50 flex justify-end gap-3 rounded-b-2xl">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm font-bold text-muted-foreground hover:bg-accent rounded-lg transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg font-bold shadow-lg shadow-orange-500/20 hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-              >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {editingInvoice ? "Simpan Perubahan" : "Buat Invoice GAN"}
-              </button>
             </div>
           </form>
         </Modal>

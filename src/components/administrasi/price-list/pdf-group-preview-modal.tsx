@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { X, Download, FileText, Printer } from "lucide-react"
-import { generatePriceListPdf } from "./generate-pdf"
+import { generatePriceListGroupDetailPdf } from "./generate-pdf"
 
 interface PdfModalProps {
     isOpen: boolean
@@ -20,6 +20,7 @@ export default function PriceListGroupPdfModal({
 }: PdfModalProps) {
     const [loading, setLoading] = useState(true)
     const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+    const [pdfSize, setPdfSize] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
@@ -34,8 +35,9 @@ export default function PriceListGroupPdfModal({
             // Generate PDF logic
             const generate = async () => {
                 try {
-                    const blobUrl = await generatePriceListPdf(group, items, true)
-                    setPdfUrl(blobUrl as unknown as string)
+                    const result = await generatePriceListGroupDetailPdf(group, items, true) as any
+                    setPdfUrl(result.url)
+                    setPdfSize(result.formattedSize)
                     setLoading(false)
                 } catch (error) {
                     console.error("Failed to generate PDF", error)
@@ -151,21 +153,27 @@ export default function PriceListGroupPdfModal({
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl shrink-0">
-                        <button
-                            onClick={onClose}
-                            className="px-5 py-2 text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors"
-                        >
-                            Tutup
-                        </button>
-                        <button
-                            onClick={handleDownload}
-                            disabled={loading}
-                            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                            <Download className="w-4 h-4" />
-                            Unduh PDF
-                        </button>
+                    <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl shrink-0">
+                        <div className="flex items-center gap-2 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>PDF Size: {pdfSize || '--'}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={onClose}
+                                className="px-5 py-2 text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors"
+                            >
+                                Tutup
+                            </button>
+                            <button
+                                onClick={handleDownload}
+                                disabled={loading}
+                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                <Download className="w-4 h-4" />
+                                Unduh PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
