@@ -1278,112 +1278,104 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                     />
                 </div>
                 {/* Status Update Modal */}
-                {statusModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <div className="bg-card w-full max-w-sm rounded-2xl border border-border shadow-lg flex flex-col">
-                            <div className="p-4 border-b border-border flex justify-between items-center">
-                                <h2 className="text-lg font-bold">Update Status</h2>
-                                <button onClick={() => setStatusModalOpen(false)} className="p-2 hover:bg-accent rounded-full">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="p-4 space-y-2">
-                                {statusOptions.map((option) => (
-                                    <button
-                                        key={option.value}
-                                        onClick={() => setTempStatus(option.value)}
-                                        className={cn(
-                                            "w-full flex items-center justify-between p-3 rounded-xl border transition-all",
-                                            tempStatus === option.value
-                                                ? "bg-primary/5 border-primary ring-1 ring-primary"
-                                                : "bg-background border-border hover:bg-accent"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn(
-                                                "w-4 h-4 rounded-full border flex items-center justify-center",
-                                                tempStatus === option.value ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
-                                            )}>
-                                                {tempStatus === option.value && <div className="w-2 h-2 rounded-full bg-white" />}
-                                            </div>
-                                            <span className="font-medium">{option.label}</span>
-                                        </div>
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded text-xs",
-                                            option.color
-                                        )}>
-                                            {option.label}
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="p-4 border-t border-border flex justify-end gap-3">
-                                <button
-                                    onClick={() => setStatusModalOpen(false)}
-                                    className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    onClick={handleSaveStatus}
-                                    disabled={saving}
-                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    Simpan Status
-                                </button>
-                            </div>
+                <Modal
+                    isOpen={statusModalOpen}
+                    onClose={() => setStatusModalOpen(false)}
+                    title="Update Status"
+                    maxWidth="sm"
+                    className="space-y-2"
+                    footer={
+                        <div className="flex justify-end gap-3 w-full">
+                            <button
+                                onClick={() => setStatusModalOpen(false)}
+                                className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleSaveStatus}
+                                disabled={saving}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                Simpan Status
+                            </button>
                         </div>
-                    </div>
-                )}
+                    }
+                >
+                    {statusOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            onClick={() => setTempStatus(option.value)}
+                            className={cn(
+                                "w-full flex items-center justify-between p-3 rounded-xl border transition-all",
+                                tempStatus === option.value
+                                    ? "bg-primary/5 border-primary ring-1 ring-primary"
+                                    : "bg-background border-border hover:bg-accent"
+                            )}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={cn(
+                                    "w-4 h-4 rounded-full border flex items-center justify-center",
+                                    tempStatus === option.value ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
+                                )}>
+                                    {tempStatus === option.value && <div className="w-2 h-2 rounded-full bg-white" />}
+                                </div>
+                                <span className="font-medium">{option.label}</span>
+                            </div>
+                            <span className={cn(
+                                "px-2 py-0.5 rounded text-xs",
+                                option.color
+                            )}>
+                                {option.label}
+                            </span>
+                        </button>
+                    ))}
+                </Modal>
                 {/* Solution Modal */}
-                {solutionModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <div className="bg-card w-full max-w-lg rounded-2xl border border-border shadow-lg flex flex-col max-h-[90vh]">
-                            <div className="p-4 border-b border-border flex justify-between items-center">
-                                <h2 className="text-lg font-bold">Penyelesaian Masalah</h2>
-                                <button onClick={() => setSolutionModalOpen(false)} className="p-2 hover:bg-accent rounded-full">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="p-4 space-y-4">
-                                <div className="bg-muted/50 p-3 rounded-lg border border-border">
-                                    <span className="text-xs font-medium text-muted-foreground block mb-1">Keluhan Pelanggan:</span>
-                                    <p className="text-sm text-foreground whitespace-pre-wrap">{currentSolutionService?.complaint}</p>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                        Cara Penyelesaian / Solusi
-                                    </label>
-                                    <textarea
-                                        value={solutionText}
-                                        onChange={(e) => setSolutionText(e.target.value)}
-                                        rows={6}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        placeholder="Jelaskan langkah-langkah penyelesaian..."
-                                        autoFocus
-                                    />
-                                </div>
-                            </div>
-                            <div className="p-4 border-t border-border flex justify-end gap-3">
-                                <button
-                                    onClick={() => setSolutionModalOpen(false)}
-                                    className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    onClick={handleSaveSolution}
-                                    disabled={saving}
-                                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                    Simpan Solusi
-                                </button>
-                            </div>
+                <Modal
+                    isOpen={solutionModalOpen}
+                    onClose={() => setSolutionModalOpen(false)}
+                    title="Penyelesaian Masalah"
+                    maxWidth="lg"
+                    className="space-y-4"
+                    footer={
+                        <div className="flex justify-end gap-3 w-full">
+                            <button
+                                onClick={() => setSolutionModalOpen(false)}
+                                className="px-4 py-2 text-muted-foreground hover:bg-accent rounded-lg"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleSaveSolution}
+                                disabled={saving}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                Simpan Solusi
+                            </button>
                         </div>
+                    }
+                >
+                    <div className="bg-muted/50 p-3 rounded-lg border border-border">
+                        <span className="text-xs font-medium text-muted-foreground block mb-1">Keluhan Pelanggan:</span>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{currentSolutionService?.complaint}</p>
                     </div>
-                )}
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                            Cara Penyelesaian / Solusi
+                        </label>
+                        <textarea
+                            value={solutionText}
+                            onChange={(e) => setSolutionText(e.target.value)}
+                            rows={6}
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            placeholder="Jelaskan langkah-langkah penyelesaian..."
+                            autoFocus
+                        />
+                    </div>
+                </Modal>
                 {/* Analysis Section */}
                 {analysisData && (
                     <div className="mt-8 grid gap-6 md:grid-cols-2">

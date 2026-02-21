@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Loader2, Save, X, Warehouse, ImageIcon, Box, Info, MapPin, Search } from 'lucide-react'
 import Image from 'next/image'
+import Modal from '@/components/ui/modal'
 import { getRacksWithUnusedDrawers, createRack, updateRack, deleteRack } from '@/app/actions/rack'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -260,71 +261,70 @@ export default function RackManager({ userRole }: RackManagerProps) {
 
             <div className="divide-y divide-border">
                 {/* Modals for Add/Edit */}
-                {(isAdding || editingId) && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelEdit} />
-                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md relative animate-in zoom-in-95 duration-200 shadow-2xl">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2 bg-primary/10 rounded-lg">
-                                    <Warehouse className="w-5 h-5 text-primary" />
-                                </div>
-                                <h3 className="text-xl font-bold text-foreground">
-                                    {isAdding ? 'Tambah Rak Baru' : 'Edit Rak'}
-                                </h3>
+                <Modal
+                    isOpen={isAdding || !!editingId}
+                    onClose={cancelEdit}
+                    title={
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                                <Warehouse className="w-5 h-5 text-primary" />
                             </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Nama Rak</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Contoh: RAK-A"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Jumlah Laci</label>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        placeholder="0"
-                                        value={formData.drawerCount || ''}
-                                        onChange={e => setFormData({ ...formData, drawerCount: parseInt(e.target.value) || 0 })}
-                                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Keterangan (Opsional)</label>
-                                    <textarea
-                                        placeholder="Keterangan laci atau lokasi..."
-                                        value={formData.description}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] transition-all resize-none"
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
-                                    <button
-                                        onClick={cancelEdit}
-                                        className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        onClick={isAdding ? handleAdd : handleUpdate}
-                                        className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20"
-                                    >
-                                        <Save className="w-4 h-4" />
-                                        {isAdding ? 'Simpan Rak' : 'Update Rak'}
-                                    </button>
-                                </div>
-                            </div>
+                            <span>{isAdding ? 'Tambah Rak Baru' : 'Edit Rak'}</span>
+                        </div>
+                    }
+                    maxWidth="md"
+                    footer={
+                        <div className="flex justify-end gap-3 w-full">
+                            <button
+                                onClick={cancelEdit}
+                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={isAdding ? handleAdd : handleUpdate}
+                                className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20"
+                            >
+                                <Save className="w-4 h-4" />
+                                {isAdding ? 'Simpan Rak' : 'Update Rak'}
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Nama Rak</label>
+                            <input
+                                type="text"
+                                placeholder="Contoh: RAK-A"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                autoFocus
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Jumlah Laci</label>
+                            <input
+                                type="number"
+                                min={0}
+                                placeholder="0"
+                                value={formData.drawerCount || ''}
+                                onChange={e => setFormData({ ...formData, drawerCount: parseInt(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Keterangan (Opsional)</label>
+                            <textarea
+                                placeholder="Keterangan laci atau lokasi..."
+                                value={formData.description}
+                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] transition-all resize-none"
+                            />
                         </div>
                     </div>
-                )}
+                </Modal>
 
                 {/* Loading */}
                 {isLoading ? (
