@@ -12,7 +12,7 @@ export default async function SuratPenawaranPage() {
     const data = await getDocs('surat-penawaran')
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-8">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Surat Penawaran</h1>
                 <p className="text-muted-foreground">Kelola data surat penawaran ke instansi atau pelanggan.</p>

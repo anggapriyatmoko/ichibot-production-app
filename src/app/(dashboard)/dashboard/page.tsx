@@ -170,7 +170,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     })
 
     return (
-        <div className="w-[98%] max-w-[98%] mx-auto space-y-8">
+        <div className="space-y-8">
             <div className="flex flex-col text-left items-start justify-between w-full">
                 <div className="w-full text-left">
                     <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Dashboard</h1>

@@ -20,10 +20,10 @@ export default async function StoreSettingsPage() {
     ])
 
     return (
-        <div className="p-4 md:p-6 space-y-8 max-w-7xl mx-auto">
+        <div className="space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-foreground">Pengaturan Toko</h1>
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Pengaturan Toko</h1>
                 <p className="text-muted-foreground">Kelola data supplier dan konfigurasi mata uang</p>
             </div>
 

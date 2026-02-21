@@ -13,7 +13,7 @@ export default async function PriceListPage() {
     const initialGroups = await getPriceListGroups()
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
+        <div className="space-y-8">
 
             <Suspense fallback={<div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
                 <PriceListManager initialGroups={initialGroups} />

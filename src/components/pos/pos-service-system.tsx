@@ -90,7 +90,7 @@ export default function POSServiceSystem({
     const [loading, setLoading] = useState(false)
     const [showReceipt, setShowReceipt] = useState(false)
     const [receiptData, setReceiptData] = useState<any>(null)
-    const [activeTab, setActiveTab] = useState<'products' | 'cart'>('products')
+    const [mobileTab, setMobileTab] = useState<'products' | 'cart'>('products')
     const [showHistory, setShowHistory] = useState(false)
     const [orderHistory, setOrderHistory] = useState<OrderHistoryItem[]>([])
     const [historyLoading, setHistoryLoading] = useState(false)
@@ -716,8 +716,42 @@ export default function POSServiceSystem({
     }, [showHistory])
 
     return (
-        <div className="flex h-[calc(100dvh-120px)] md:h-[calc(100vh-160px)] bg-card border border-border rounded-2xl overflow-hidden relative shadow-sm">
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex flex-col lg:flex-row h-[calc(100dvh-120px)] md:h-[calc(100vh-160px)] bg-card border border-border rounded-2xl overflow-hidden relative shadow-sm">
+            {/* Mobile Tab Bar */}
+            <div className="lg:hidden shrink-0 flex items-center border-b border-border bg-card">
+                <button
+                    onClick={() => setMobileTab('products')}
+                    className={cn(
+                        "flex-1 py-3 text-sm font-bold border-b-2 transition-colors",
+                        mobileTab === 'products'
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    Produk
+                </button>
+                <button
+                    onClick={() => setMobileTab('cart')}
+                    className={cn(
+                        "flex-1 py-3 text-sm font-bold border-b-2 transition-colors relative",
+                        mobileTab === 'cart'
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    Keranjang
+                    {cart.length > 0 && (
+                        <span className="absolute top-1 right-2 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[1.25rem] shadow-sm animate-in zoom-in duration-300">
+                            {cart.length}
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            <div className={cn(
+                "flex-1 flex flex-col min-w-0 overflow-hidden",
+                mobileTab === 'cart' ? 'hidden lg:flex' : 'flex'
+            )}>
                 {/* Header */}
                 <header className="flex-shrink-0 bg-card border-b border-border px-4 py-4 flex items-center justify-between z-20">
                     <div className="flex items-center gap-4">
@@ -746,14 +780,14 @@ export default function POSServiceSystem({
                         />
                         <button
                             onClick={handleExport}
-                            className="p-2 hover:bg-accent rounded-full transition-colors relative group"
+                            className="hidden md:flex p-2 hover:bg-accent rounded-full transition-colors relative group"
                             title="Export Produk"
                         >
                             <Download className="w-5 h-5" />
                         </button>
                         <button
                             onClick={() => importInputRef.current?.click()}
-                            className="p-2 hover:bg-accent rounded-full transition-colors relative group"
+                            className="hidden md:flex p-2 hover:bg-accent rounded-full transition-colors relative group"
                             title="Import Produk"
                         >
                             <Upload className="w-5 h-5" />
@@ -782,10 +816,25 @@ export default function POSServiceSystem({
                             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-bold active:scale-95 transition-all shadow-lg shadow-primary/20"
                         >
                             <PlusCircle className="w-5 h-5" />
-                            Tambah Barang
+                            <span className="hidden md:inline">Tambah Barang</span>
+                            <span className="md:hidden">Tambah</span>
                         </button>
                     </div>
                 </header>
+
+                {/* Mobile Search */}
+                <div className="md:hidden p-3 border-b border-border bg-card">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Cari sparepart service..."
+                            className="w-full bg-muted/50 border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-muted/10 relative">
@@ -875,9 +924,12 @@ export default function POSServiceSystem({
                 </main>
             </div>
 
-            {/* Sidebar Cart - Desktop */}
-            <aside className="hidden lg:flex w-96 flex-col bg-card border-l border-border">
-                <div className="p-4 border-b border-border flex items-center justify-between">
+            {/* Cart Panel - Desktop sidebar + Mobile full width */}
+            <div className={cn(
+                "bg-card border-l border-border flex flex-col shadow-xl z-20 transition-all overflow-hidden",
+                mobileTab === 'products' ? 'hidden lg:flex w-96' : 'flex-1 w-full lg:w-96'
+            )}>
+                <div className="hidden lg:flex p-4 border-b border-border items-center justify-between">
                     <h2 className="font-medium flex items-center gap-2">
                         <ShoppingCart className="w-5 h-5 text-primary" />
                         Keranjang
@@ -950,7 +1002,7 @@ export default function POSServiceSystem({
                     )}
                 </div>
 
-                <div className="p-6 bg-muted/5 border-t border-border space-y-4">
+                <div className="p-4 md:p-6 bg-muted/5 border-t border-border space-y-3 md:space-y-4">
                     <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border shadow-sm">
                         <span className="text-sm font-bold text-muted-foreground">Total Bayar</span>
                         <span className="text-lg font-bold text-primary">Rp {formatNumber(cartTotal)}</span>
@@ -974,28 +1026,6 @@ export default function POSServiceSystem({
                         </button>
                     </div>
                 </div>
-            </aside>
-
-            {/* Mobile Bottom Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border shadow-2xl z-40">
-                <button
-                    onClick={() => setActiveTab('cart')}
-                    className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black flex items-center justify-between px-6 shadow-xl shadow-primary/20"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="bg-white/20 p-2 rounded-lg">
-                            <ShoppingCart className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                            <p className="text-[10px] opacity-70 uppercase tracking-widest">Total Belanja</p>
-                            <p className="text-lg leading-none">Rp {formatNumber(cartTotal)}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="bg-white/20 px-3 py-1 rounded-full text-xs">{cart.length} Item</span>
-                        <ChevronRight className="w-5 h-5" />
-                    </div>
-                </button>
             </div>
 
             {/* Product Edit/Add Modal */}

@@ -9,7 +9,7 @@ export default async function CertificatePage() {
 
 
   return (
-    <div className="max-width-7xl mx-auto px-4 sm:px-0">
+    <div className="space-y-8">
       <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
         Certificate
       </h1>

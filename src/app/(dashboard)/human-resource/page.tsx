@@ -10,7 +10,7 @@ export default async function HumanResourcePage() {
 
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="space-y-8">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Human Resource</h1>
                 <p className="text-muted-foreground">Kelola data sumber daya manusia.</p>

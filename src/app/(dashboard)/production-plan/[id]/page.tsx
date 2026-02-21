@@ -109,7 +109,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
     })
 
     return (
-        <div className="max-w-[1600px] mx-auto">
+        <div className="space-y-8">
             <div className="mb-6">
                 <Link href={`/production-plan?month=${plan.month}&year=${plan.year}`} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
                     <ArrowLeft className="w-4 h-4 mr-1" />

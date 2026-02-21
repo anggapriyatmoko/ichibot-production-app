@@ -5,8 +5,15 @@ import { Plus, Pencil, Trash2, Loader2, Save, X, Warehouse, ImageIcon, Box, Info
 import Image from 'next/image'
 import Modal from '@/components/ui/modal'
 import { getRacksWithUnusedDrawers, createRack, updateRack, deleteRack } from '@/app/actions/rack'
+import { getStoreProductBySku } from '@/app/actions/store-product'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
+import ProductDetailModal from '@/components/shared/product-detail-modal'
+import { createProduct } from '@/app/actions/product'
+import { createSparepartProject } from '@/app/actions/sparepart-project'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { FolderOpen, Package } from 'lucide-react'
 
 interface RackWithDrawers {
     id: string
@@ -43,11 +50,14 @@ interface DrawerItemProps {
             sku: string
             stock: number
             image: string | null
+            source?: string
         }
     }
+    onSelectSku: (sku: string) => void
+    onSelectEmpty: (code: string) => void
 }
 
-function DrawerItem({ drawer }: DrawerItemProps) {
+function DrawerItem({ drawer, onSelectSku, onSelectEmpty }: DrawerItemProps) {
     const [align, setAlign] = useState<'left' | 'right' | 'center'>('center')
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -76,12 +86,21 @@ function DrawerItem({ drawer }: DrawerItemProps) {
             ref={containerRef}
             className="relative group/tooltip"
             onMouseEnter={handleMouseEnter}
+            onClick={() => {
+                if (drawer.isUsed && drawer.details) {
+                    onSelectSku(drawer.details.sku)
+                } else {
+                    onSelectEmpty(drawer.code)
+                }
+            }}
         >
             <span className={cn(
-                "px-2 py-1 rounded text-[10px] font-medium shadow-sm transition-colors block cursor-default",
+                "px-2 py-1 rounded text-[10px] font-medium shadow-sm transition-all block",
                 drawer.isUsed
-                    ? "bg-emerald-500 text-white cursor-help"
-                    : "bg-orange-500 text-white"
+                    ? (drawer.details?.source === 'sparepart'
+                        ? "bg-blue-500 text-white cursor-pointer hover:bg-blue-600 hover:scale-110 active:scale-95 shadow-blue-200/50"
+                        : "bg-orange-500 text-white cursor-pointer hover:bg-orange-600 hover:scale-110 active:scale-95 shadow-orange-200/50")
+                    : "bg-gray-100 text-muted-foreground border border-border/50 cursor-pointer hover:bg-gray-200 hover:scale-110 active:scale-95 hover:text-foreground shadow-sm"
             )}>
                 {drawer.code}
             </span>
@@ -148,6 +167,8 @@ export default function RackManager({ userRole }: RackManagerProps) {
     const [isAdding, setIsAdding] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [formData, setFormData] = useState({ name: '', drawerCount: 0, description: '' })
+    const [selectedProduct, setSelectedProduct] = useState<any>(null)
+    const [emptyDrawerCode, setEmptyDrawerCode] = useState<string | null>(null)
     const { showConfirmation } = useConfirmation()
     const { showError, showAlert } = useAlert()
 
@@ -236,6 +257,19 @@ export default function RackManager({ userRole }: RackManagerProps) {
         setFormData({ name: '', drawerCount: 0, description: '' })
     }
 
+    async function handleSelectSku(sku: string) {
+        try {
+            const product = await getStoreProductBySku(sku)
+            if (product) {
+                setSelectedProduct(product)
+            } else {
+                showError('Data produk tidak ditemukan')
+            }
+        } catch (error) {
+            showError('Gagal memuat detail produk')
+        }
+    }
+
     return (
         <div className="border border-border rounded-xl bg-card overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
@@ -245,7 +279,21 @@ export default function RackManager({ userRole }: RackManagerProps) {
                     </div>
                     <div>
                         <h3 className="font-semibold text-lg">Rak Sparepart</h3>
-                        <p className="text-xs text-muted-foreground">Kelola daftar rak penyimpanan sparepart</p>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-0.5">
+                            <p className="text-xs text-muted-foreground mr-1">Status Laci:</p>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-sm bg-orange-500 shadow-sm" />
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Production</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 shadow-sm" />
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Project</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-sm bg-gray-200 border border-border/50" />
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Tersedia</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 {isAdmin && !isAdding && !editingId && (
@@ -342,7 +390,15 @@ export default function RackManager({ userRole }: RackManagerProps) {
                                 {/* Rack Header */}
                                 <div className="flex items-start justify-between mb-3">
                                     <div>
-                                        <h4 className="font-bold text-lg text-foreground">{rack.name}</h4>
+                                        <div className="flex items-center gap-3">
+                                            <h4 className="font-bold text-lg text-foreground">{rack.name}</h4>
+                                            {rack.unusedDrawersCount === 0 && (
+                                                <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-500/20 flex items-center gap-1">
+                                                    <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                                    Semua laci sudah dipakai ✓
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-sm text-muted-foreground">
                                             {rack.drawerCount} laci total • {rack.description || 'Tidak ada keterangan'}
                                         </p>
@@ -366,21 +422,256 @@ export default function RackManager({ userRole }: RackManagerProps) {
                                     </p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {(rack.allDrawers || []).map(drawer => (
-                                            <DrawerItem key={drawer.code} drawer={drawer} />
+                                            <DrawerItem
+                                                key={drawer.code}
+                                                drawer={drawer}
+                                                onSelectSku={handleSelectSku}
+                                                onSelectEmpty={(code) => setEmptyDrawerCode(code)}
+                                            />
                                         ))}
                                     </div>
-                                    {rack.unusedDrawersCount === 0 && (
-                                        <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 mt-3 pt-3 border-t border-border/50">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                            Semua laci sudah dipakai ✓
-                                        </p>
-                                    )}
                                 </div>
                             </div>
                         </div>
                     ))
                 )}
             </div>
+
+            <ProductDetailModal
+                isOpen={!!selectedProduct}
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
+                onSuccess={loadRacks}
+            />
+
+            <AddProductFromRackModal
+                isOpen={!!emptyDrawerCode}
+                onClose={() => setEmptyDrawerCode(null)}
+                drawerCode={emptyDrawerCode || ''}
+                onSuccess={() => {
+                    setEmptyDrawerCode(null)
+                    loadRacks()
+                }}
+            />
         </div>
+    )
+}
+
+interface AddProductFromRackModalProps {
+    isOpen: boolean
+    onClose: () => void
+    drawerCode: string
+    onSuccess: () => void
+}
+
+function AddProductFromRackModal({ isOpen, onClose, drawerCode, onSuccess }: AddProductFromRackModalProps) {
+    const [activeTab, setActiveTab] = useState<'production' | 'project'>('production')
+    const [isLoading, setIsLoading] = useState(false)
+    const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const { showError, showAlert } = useAlert()
+
+    const [formData, setFormData] = useState({
+        name: '',
+        sku: drawerCode,
+        stock: 0,
+        lowStockThreshold: 10,
+        notes: '',
+        image: null as File | null
+    })
+
+    useEffect(() => {
+        if (isOpen) {
+            setFormData(prev => ({ ...prev, sku: drawerCode, name: '', stock: 0, notes: '', image: null }))
+            setImagePreview(null)
+        }
+    }, [isOpen, drawerCode])
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setFormData({ ...formData, image: file })
+            const reader = new FileReader()
+            reader.onloadend = () => setImagePreview(reader.result as string)
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!formData.name) {
+            showError('Nama barang harus diisi')
+            return
+        }
+
+        setIsLoading(true)
+        try {
+            const data = new FormData()
+            data.append('name', formData.name)
+            data.append('sku', formData.sku)
+            data.append('stock', formData.stock.toString())
+            data.append('notes', formData.notes)
+            if (formData.image) data.append('image', formData.image)
+
+            if (activeTab === 'production') {
+                data.append('lowStockThreshold', formData.lowStockThreshold.toString())
+                data.append('drawerLocation', drawerCode)
+                const result = await createProduct(data)
+                if (result.error) throw new Error(result.error)
+            } else {
+                const result = await createSparepartProject(data)
+                if (result.error) throw new Error(result.error)
+            }
+
+            showAlert(`Berhasil menambahkan barang ke ${drawerCode}`)
+            onSuccess()
+        } catch (error: any) {
+            showError(error.message || 'Gagal menambahkan barang')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={`Tambah Barang ke Laci ${drawerCode}`}
+            maxWidth="xl"
+            footer={(
+                <div className="flex justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                    >
+                        Batal
+                    </button>
+                    <button
+                        type="submit"
+                        form="add-product-form"
+                        disabled={isLoading}
+                        className={cn(
+                            "flex items-center gap-2 px-6 py-2 text-sm font-bold text-white rounded-lg transition-all shadow-md shadow-primary/20",
+                            activeTab === 'production' ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-500 hover:bg-blue-600",
+                            isLoading && "opacity-50 cursor-not-allowed"
+                        )}
+                    >
+                        {isLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Save className="w-4 h-4" />
+                        )}
+                        Simpan Barang
+                    </button>
+                </div>
+            )}
+        >
+            <div className="space-y-6">
+                {/* Tabs */}
+                <div className="flex bg-muted/50 p-1 rounded-xl">
+                    <button
+                        onClick={() => setActiveTab('production')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
+                            activeTab === 'production'
+                                ? "bg-background text-orange-600 shadow-sm ring-1 ring-border"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/30"
+                        )}
+                    >
+                        <Package className="w-4 h-4" />
+                        Production
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('project')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
+                            activeTab === 'project'
+                                ? "bg-background text-blue-600 shadow-sm ring-1 ring-border"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/30"
+                        )}
+                    >
+                        <FolderOpen className="w-4 h-4" />
+                        Project
+                    </button>
+                </div>
+
+                <form id="add-product-form" onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Nama Barang</Label>
+                            <Input
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="Masukkan nama barang"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>SKU / Kode (Otomatis)</Label>
+                            <Input
+                                value={formData.sku}
+                                onChange={e => setFormData({ ...formData, sku: e.target.value })}
+                                placeholder="SKU"
+                                readOnly
+                                className="bg-muted opacity-80"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Stok Awal</Label>
+                            <Input
+                                type="number"
+                                value={formData.stock}
+                                onChange={e => setFormData({ ...formData, stock: parseFloat(e.target.value) || 0 })}
+                                min="0"
+                            />
+                        </div>
+                        {activeTab === 'production' && (
+                            <div className="space-y-2">
+                                <Label>Batas Stok Menipis</Label>
+                                <Input
+                                    type="number"
+                                    value={formData.lowStockThreshold}
+                                    onChange={e => setFormData({ ...formData, lowStockThreshold: parseFloat(e.target.value) || 0 })}
+                                    min="0"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Keterangan</Label>
+                        <textarea
+                            value={formData.notes}
+                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] transition-all resize-none"
+                            placeholder="Catatan tambahan..."
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Gambar (Opsional)</Label>
+                        <div className="flex items-start gap-4">
+                            <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted flex-shrink-0">
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1.5">Maks. 1MB (JPG, PNG, WEBP)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </Modal>
     )
 }

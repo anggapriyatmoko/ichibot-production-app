@@ -26,7 +26,7 @@ export default async function StoreLowStockPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="space-y-8">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Produk Stok Rendah Store</h1>
                 <p className="text-muted-foreground">Monitoring stok produk WooCommerce yang menipis</p>

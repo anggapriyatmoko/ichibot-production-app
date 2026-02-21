@@ -16,7 +16,7 @@ export default async function InvoiceIDPage() {
 
 
   return (
-    <div className="max-width-7xl mx-auto px-4 sm:px-0">
+    <div className="space-y-8">
       <div className="mb-8 text-left">
         <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
           Invoice (ID)

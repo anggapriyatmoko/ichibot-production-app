@@ -51,7 +51,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
     const session: any = await getServerSession(authOptions)
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-8">
             <Link href="/catalogue" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Back to Produk

@@ -133,7 +133,7 @@ export default async function ServiceRobotPage({
     analysisData.totalServices = (statusStats as any[]).reduce((acc, curr) => acc + curr._count.serviceStatus, 0)
 
     return (
-        <div className="max-width-7xl mx-auto px-4 sm:px-0">
+        <div className="space-y-8">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Service Robot</h1>
                 <p className="text-muted-foreground">Kelola service dan maintenance robot.</p>

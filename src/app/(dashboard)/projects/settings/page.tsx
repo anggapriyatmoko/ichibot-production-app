@@ -9,7 +9,7 @@ export default async function ProjectSettingsPage() {
     const categories = await getProjectCategories()
 
     return (
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+        <div className="space-y-8">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-foreground">Setting Project</h1>
                 <p className="text-muted-foreground mt-1">Kelola kategori untuk pengorganisasian project.</p>

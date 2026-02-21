@@ -216,7 +216,7 @@ export default async function AttendancePage({
     })
 
     return (
-        <div className="max-w-full mx-auto">
+        <div className="space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Absensi</h1>

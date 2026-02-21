@@ -27,7 +27,7 @@ export default async function HRSettingsPage() {
     ])
 
     return (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-8">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Setting HR</h1>
                 <p className="text-muted-foreground">Pengaturan jam kerja dan jadwal karyawan.</p>

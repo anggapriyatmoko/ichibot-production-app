@@ -8,7 +8,7 @@ export default async function UsersPage() {
     const users = await getUsers()
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2 flex items-center gap-3">
                     <Users className="w-8 h-8 text-primary" />

@@ -143,7 +143,7 @@ export default function HROtherDataPage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-8">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Data Lainnya</h1>
                 <p className="text-muted-foreground">Info data diri karyawan.</p>

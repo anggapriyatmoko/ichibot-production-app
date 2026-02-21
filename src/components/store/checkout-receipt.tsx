@@ -24,6 +24,10 @@ type OrderDetails = {
     total: number
     paymentMethod: string
     cashierName?: string
+    shippingCost?: number
+    note?: string
+    amountPaid?: number
+    change?: number
 }
 
 const RANDOM_QUOTES = [
@@ -109,21 +113,21 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                     </div>
 
                     <ul className="order-details">
-                        <li className="order">
-                            No Nota: <strong>#{order.number}</strong>
-                        </li>
-                        <li className="date">
-                            Tanggal: <strong>{order.date}</strong>
+                        <li className="date-order" style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                            <span>Tanggal: <strong>{order.date}</strong></span>
+                            <span>No Nota: <strong>#{order.number}</strong></span>
                         </li>
                         <li className="cashier">
                             Pelanggan: <strong>{order.customerName}</strong>
                         </li>
-                        <li className="method">
-                            Pembayaran: <strong>{order.paymentMethod}</strong>
-                        </li>
                         {order.cashierName && (
                             <li className="cashier">
                                 Kasir: <strong>{order.cashierName}</strong>
+                            </li>
+                        )}
+                        {order.note && order.note.trim() !== "" && (
+                            <li className="note">
+                                Note: <strong>{order.note}</strong>
                             </li>
                         )}
                     </ul>
@@ -163,18 +167,34 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                             ))}
                         </tbody>
                         <tfoot>
-                            <tr>
-                                <th colSpan={3}>Total</th>
-                                <td>{formatCurrency(order.total)}</td>
+                            {order.shippingCost && order.shippingCost > 0 ? (
+                                <>
+                                    <tr className="footer-row">
+                                        <td colSpan={2}></td>
+                                        <th>Subtotal</th>
+                                        <td>{formatCurrency(order.total - order.shippingCost)}</td>
+                                    </tr>
+                                    <tr className="footer-row">
+                                        <td colSpan={2}></td>
+                                        <th>Ongkos Kirim</th>
+                                        <td>{formatCurrency(order.shippingCost)}</td>
+                                    </tr>
+                                </>
+                            ) : null}
+                            <tr className="footer-row font-bold">
+                                <td colSpan={2}></td>
+                                <th style={{ borderTop: '1px solid black', paddingTop: '2px' }}>Total</th>
+                                <td style={{ borderTop: '1px solid black', paddingTop: '2px' }}>{formatCurrency(order.total)}</td>
                             </tr>
-                            {/* Assuming cash payment for now based on previous context, user can handle change logic later if needed */}
-                            <tr>
-                                <th colSpan={3}>Dibayarkan</th>
-                                <td>{formatCurrency(order.total)}</td>
+                            <tr className="footer-row">
+                                <td colSpan={2}></td>
+                                <th>Dibayarkan</th>
+                                <td>{formatCurrency(order.amountPaid || order.total)}</td>
                             </tr>
-                            <tr>
-                                <th colSpan={3}>Kembalian</th>
-                                <td>{formatCurrency(0)}</td>
+                            <tr className="footer-row">
+                                <td colSpan={2}></td>
+                                <th>Kembalian</th>
+                                <td>{formatCurrency(order.change || 0)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -191,12 +211,6 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
                             Cek katalog dan stock produk di <b><em>www.store.ichibot.id</em></b>
                             <hr />
                             Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan
-                            <hr />
-                            Instagram : @team.ichibot<br />
-                            Tokopedia : ICHIBOT<br />
-                            Shopee : ichibot<br />
-                            Youtube : ICHIBOT<br />
-                            Tiktok : @team.ichibot
                             <hr />
                         </center>
                     </div>
@@ -255,16 +269,24 @@ export default function CheckoutReceipt({ order, onClose }: { order: OrderDetail
 
                 table thead tr th,
                 table tbody tr td,
-                table tfoot tr td {
+                table tfoot tr td,
+                table tfoot tr th {
                     border: none;
-                    padding: 5px;
+                    padding: 2px 5px;
                     text-align: left;
+                    line-height: 1.2;
+                }
+
+                .footer-row td, .footer-row th {
+                    padding: 0px 5px !important;
+                    line-height: 1.1;
                 }
 
                 table thead tr th {
                     border-top: 2px solid #000;
                     font-weight: bold;
                     border-bottom: 2px solid #000;
+                    padding: 5px;
                 }
 
                 table tbody tr td {

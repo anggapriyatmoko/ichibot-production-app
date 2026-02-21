@@ -21,7 +21,10 @@ type CreateOrderParams = {
         email: string
         phone: string
     }
-    cashierName?: string // New parameter
+    cashierName?: string
+    shippingCost?: number
+    amountPaid?: number
+    change?: number
 }
 
 export async function createWooCommerceOrder(params: CreateOrderParams) {
@@ -48,12 +51,18 @@ export async function createWooCommerceOrder(params: CreateOrderParams) {
                 })
             })),
             status: 'processing',
-            meta_data: params.cashierName ? [
+            shipping_lines: params.shippingCost && params.shippingCost > 0 ? [
                 {
-                    key: '_pos_cashier_name',
-                    value: params.cashierName
+                    method_id: 'flat_rate',
+                    method_title: 'Ongkos Kirim',
+                    total: params.shippingCost.toString()
                 }
-            ] : []
+            ] : [],
+            meta_data: [
+                ...(params.cashierName ? [{ key: '_pos_cashier_name', value: params.cashierName }] : []),
+                ...(params.amountPaid !== undefined ? [{ key: '_pos_amount_paid', value: params.amountPaid.toString() }] : []),
+                ...(params.change !== undefined ? [{ key: '_pos_change', value: params.change.toString() }] : [])
+            ]
         }
 
         const response = await fetch(url, {

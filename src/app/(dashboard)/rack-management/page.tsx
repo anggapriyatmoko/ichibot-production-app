@@ -14,7 +14,7 @@ export default async function RackManagementPage() {
     const userRole = session?.user?.role
 
     return (
-        <div className="container mx-auto max-w-5xl">
+        <div className="space-y-8">
             <h1 className="text-3xl font-bold mb-8">Rack Management</h1>
             <RackManager userRole={userRole} />
         </div>

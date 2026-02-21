@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   await requireAdmin();
 
   return (
-    <div className="container mx-auto max-w-7xl">
+    <div className="space-y-8">
       <h1 className="text-3xl font-bold mb-8">System Settings</h1>
 
       <div className="mb-10">

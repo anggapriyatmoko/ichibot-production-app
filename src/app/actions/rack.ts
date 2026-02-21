@@ -116,16 +116,16 @@ export async function getRacksWithUnusedDrawers() {
     })
 
     // Map by SKU for quick lookup
-    const drawerDetails = new Map<string, { name: string; sku: string; stock: number; image: string | null }>()
+    const drawerDetails = new Map<string, { name: string; sku: string; stock: number; image: string | null; source: string }>()
 
     products.forEach(p => {
-        if (p.sku) drawerDetails.set(p.sku, { name: p.name, sku: p.sku, stock: p.stock, image: p.image })
+        if (p.sku) drawerDetails.set(p.sku, { name: p.name, sku: p.sku, stock: p.stock, image: p.image, source: 'internal' })
     })
     sparepartProjects.forEach((sp: any) => {
-        if (sp.sku) drawerDetails.set(sp.sku, { name: sp.name, sku: sp.sku, stock: sp.stock, image: sp.image })
+        if (sp.sku) drawerDetails.set(sp.sku, { name: sp.name, sku: sp.sku, stock: sp.stock, image: sp.image, source: 'sparepart' })
     })
     serviceProducts.forEach((sv: any) => {
-        if (sv.sku) drawerDetails.set(sv.sku, { name: sv.name, sku: sv.sku, stock: sv.stock, image: sv.image })
+        if (sv.sku) drawerDetails.set(sv.sku, { name: sv.name, sku: sv.sku, stock: sv.stock, image: sv.image, source: 'service' })
     })
 
     // Calculate details for each rack

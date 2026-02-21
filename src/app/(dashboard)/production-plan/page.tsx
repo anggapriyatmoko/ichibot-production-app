@@ -160,7 +160,7 @@ export default async function ProductionPlanPage({
     const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i)
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="space-y-8">
             <div className="mb-8 text-left w-full">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Production Plan</h1>
                 <p className="text-muted-foreground">Manage production schedule and track progress.</p>

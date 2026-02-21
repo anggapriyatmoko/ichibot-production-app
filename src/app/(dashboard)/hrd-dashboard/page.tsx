@@ -155,7 +155,7 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
 
         return (
             <ConfidentialAccess>
-                <div className="max-w-6xl mx-auto">
+                <div className="space-y-8">
                     <div className="mb-8 text-left">
                         <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">HRD Dashboard</h1>
                         <p className="text-muted-foreground">Monitoring dan statistik karyawan.</p>

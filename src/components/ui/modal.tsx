@@ -5,6 +5,15 @@ import { X } from 'lucide-react'
 import Portal from './portal'
 import { cn } from '@/lib/utils'
 
+/**
+ * Modal Component
+ * 
+ * IMPORTANT: To ensure action buttons (Save/Cancel) do not ikut ke-scroll (always visible),
+ * place them in the 'footer' prop instead of inside 'children'.
+ * 
+ * If you have a form inside 'children', give it an id (e.g., id="my-form") 
+ * and use form="my-form" on the submit button in the footer.
+ */
 interface ModalProps {
     isOpen: boolean
     onClose: () => void

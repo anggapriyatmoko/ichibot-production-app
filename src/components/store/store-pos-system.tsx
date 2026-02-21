@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, ShoppingCart, Minus, Plus, Trash2, Package, Eye, X, ChevronLeft, ChevronRight, User, Check, Edit2, Home, Store, Clock } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, Package, Eye, X, ChevronLeft, ChevronRight, User, Check, Edit2, Home, Store, Clock, StickyNote } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatNumber } from '@/utils/format'
@@ -13,6 +13,7 @@ import { createWooCommerceOrder } from '@/app/actions/store-order'
 import CheckoutReceipt from '@/components/store/checkout-receipt'
 import POSOrderHistory from '@/components/store/pos-order-history'
 import { Loader2, History, List } from 'lucide-react'
+import ProductDetailModal from '@/components/shared/product-detail-modal'
 
 type WooCommerceProduct = {
     id: number
@@ -60,6 +61,11 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const [lastOrder, setLastOrder] = useState<any>(null)
     const [activeTab, setActiveTab] = useState<'cart' | 'orders'>('cart')
     const [mobileTab, setMobileTab] = useState<'products' | 'cart'>('products')
+    const [shippingCost, setShippingCost] = useState(0)
+    const [orderNote, setOrderNote] = useState('')
+    const [showNotePopup, setShowNotePopup] = useState(false)
+    const [amountPaid, setAmountPaid] = useState(0)
+    const [showPaymentModal, setShowPaymentModal] = useState(false)
 
     const lastSearchedRef = useRef('')
     const lastPageRef = useRef(1)
@@ -79,6 +85,10 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         if (savedCustomer) {
             setCustomerName(savedCustomer)
         }
+        const savedShipping = localStorage.getItem('pos-shipping')
+        const savedNote = localStorage.getItem('pos-note')
+        if (savedShipping) setShippingCost(Number(savedShipping) || 0)
+        if (savedNote) setOrderNote(savedNote)
         isInitialMount.current = false
     }, [])
 
@@ -87,8 +97,10 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         if (!isInitialMount.current) {
             localStorage.setItem('pos-cart', JSON.stringify(cart))
             localStorage.setItem('pos-customer', customerName)
+            localStorage.setItem('pos-shipping', shippingCost.toString())
+            localStorage.setItem('pos-note', orderNote)
         }
-    }, [cart, customerName])
+    }, [cart, customerName, shippingCost, orderNote])
 
     const handleSearch = useCallback(async (query: string, pageNum: number = 1) => {
         const trimmedQuery = query.trim()
@@ -197,69 +209,83 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
 
     const handleCheckout = async () => {
         if (cart.length === 0) return
-
-        showConfirmation({
-            title: 'Konfirmasi Checkout',
-            message: 'Apakah Anda yakin ingin memproses pesanan ini? Stok akan otomatis berkurang.',
-            confirmLabel: 'Proses Pesanan',
-            cancelLabel: 'Batal',
-            action: async () => {
-                setIsCheckingOut(true)
-                try {
-                    const { success, order, error } = await createWooCommerceOrder({
-                        items: cart.map(item => ({
-                            product_id: item.parentId || item.id,
-                            variation_id: item.parentId ? item.id : undefined,
-                            quantity: item.quantity,
-                            price: item.price
-                        })),
-                        customerNote: `POS Order by ${userName}`,
-                        paymentMethod: 'bacs',
-                        paymentMethodTitle: 'Transfer Bank',
-                        setPaid: true,
-                        cashierName: userName, // Pass cashier name
-                        billing: {
-                            first_name: customerName,
-                            last_name: '(POS)',
-                            email: 'guest@pos.ichibot.id',
-                            phone: '-'
-                        }
-                    })
-
-                    if (success && order) {
-                        setLastOrder({
-                            id: order.id,
-                            number: order.number || `ORD-${order.id}`,
-                            customerName: customerName,
-                            date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                            items: cart.map(item => ({
-                                name: item.name,
-                                quantity: item.quantity,
-                                price: item.price,
-                                total: item.price * item.quantity,
-                                attributes: item.attributes,
-                                sku: item.sku,
-                                barcode: item.barcode
-                            })),
-                            total: total,
-                            paymentMethod: 'Cash',
-                            cashierName: userName
-                        })
-                        setCart([]) // Clear cart
-                        setCustomerName('Guest') // Reset customer
-                    } else {
-                        showError(error || 'Gagal memproses pesanan')
-                    }
-                } catch (error) {
-                    showError('Terjadi kesalahan saat checkout')
-                } finally {
-                    setIsCheckingOut(false)
-                }
-            }
-        })
+        setAmountPaid(0)
+        setShowPaymentModal(true)
     }
 
-    const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
+    const processCheckout = async () => {
+        setIsCheckingOut(true)
+        setShowPaymentModal(false)
+        try {
+            const currentTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost
+            const finalAmountPaid = amountPaid || currentTotal
+            const change = Math.max(0, finalAmountPaid - currentTotal)
+
+            const { success, order, error } = await createWooCommerceOrder({
+                items: cart.map(item => ({
+                    product_id: item.parentId || item.id,
+                    variation_id: item.parentId ? item.id : undefined,
+                    quantity: item.quantity,
+                    price: item.price
+                })),
+                customerNote: orderNote || `POS Order by ${userName}`,
+                paymentMethod: 'bacs',
+                paymentMethodTitle: 'Transfer Bank',
+                setPaid: true,
+                cashierName: userName,
+                shippingCost: shippingCost,
+                amountPaid: finalAmountPaid,
+                change: change,
+                billing: {
+                    first_name: customerName,
+                    last_name: '(POS)',
+                    email: 'guest@pos.ichibot.id',
+                    phone: '-'
+                }
+            })
+
+            if (success && order) {
+                setLastOrder({
+                    id: order.id,
+                    number: order.number || `ORD-${order.id}`,
+                    customerName: customerName,
+                    date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    items: cart.map(item => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        total: item.price * item.quantity,
+                        attributes: item.attributes,
+                        sku: item.sku,
+                        barcode: item.barcode
+                    })),
+                    total: currentTotal,
+                    shippingCost: shippingCost,
+                    note: orderNote,
+                    paymentMethod: 'Tunai',
+                    cashierName: userName,
+                    amountPaid: finalAmountPaid,
+                    change: change
+                })
+
+                setCart([])
+                setCustomerName('Guest')
+                setShippingCost(0)
+                setOrderNote('')
+                setAmountPaid(0)
+            } else {
+                showError(error || 'Gagal memproses pesanan')
+            }
+        } catch (error) {
+            console.error('Checkout error:', error)
+            showError('Terjadi kesalahan saat checkout')
+        } finally {
+            setIsCheckingOut(false)
+        }
+    }
+
+    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0)
+    const total = subtotal + shippingCost
 
     const nextImage = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -652,13 +678,23 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                             </div>
                         </div>
                         {cart.length > 0 && (
-                            <button
-                                onClick={clearCart}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Hapus Keranjang</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setShowNotePopup(true)}
+                                    className="relative flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                    title={orderNote || 'Tambah catatan'}
+                                >
+                                    <StickyNote className="w-3.5 h-3.5" />
+                                    {orderNote && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full" />}
+                                </button>
+                                <button
+                                    onClick={clearCart}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Hapus Keranjang</span>
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -814,6 +850,8 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                 .map((m: any) => ({ name: m.key, option: m.value }))
                                         })),
                                         total: parseFloat(order.total),
+                                        shippingCost: parseFloat(order.shipping_total || '0'),
+                                        note: order.customer_note || '',
                                         paymentMethod: order.payment_method_title || 'Cash',
                                         cashierName: order.meta_data?.find((m: any) => m.key === '_pos_cashier_name')?.value
                                     };
@@ -826,10 +864,33 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
 
                 {activeTab === 'cart' && (
                     <div className="p-4 md:p-6 border-t border-border bg-muted/30 space-y-3 md:space-y-4 animate-in slide-in-from-bottom-4 duration-300">
+
                         <div className="space-y-1 md:space-y-2">
                             <div className="flex justify-between text-muted-foreground text-xs md:text-base">
                                 <span>Total Item</span>
                                 <span>{cart.reduce((acc, item) => acc + item.quantity, 0)}</span>
+                            </div>
+                            <div className="flex justify-between text-muted-foreground text-xs md:text-sm">
+                                <span>Subtotal</span>
+                                <span>{formatCurrency(subtotal)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-muted-foreground text-xs md:text-sm">
+                                <span>Ongkos Kirim</span>
+                                <div className="flex items-center gap-0">
+                                    <span className="text-xs">Rp</span>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={shippingCost ? shippingCost.toLocaleString('id-ID') : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '')
+                                            setShippingCost(Number(val) || 0)
+                                        }}
+                                        placeholder="0"
+                                        style={{ width: `${Math.max(1, (shippingCost ? shippingCost.toLocaleString('id-ID').length : 1)) + 1}ch` }}
+                                        className="h-6 px-0.5 text-xs text-right bg-transparent outline-none"
+                                    />
+                                </div>
                             </div>
                             <div className="flex justify-between text-lg md:text-xl font-black">
                                 <span>TOTAL</span>
@@ -849,194 +910,177 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
             </div>
 
             {/* Product Detail Modal */}
-            {selectedProduct && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedProduct(null)}>
-                    <div
-                        className="bg-card border border-border rounded-2xl w-full max-w-4xl shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Modal Header */}
-                        <div className="p-4 md:p-6 border-b border-border flex items-center justify-between shrink-0 bg-muted/30">
-                            <h3 className="text-xl font-bold">{selectedProduct.name}</h3>
-                            <button
-                                onClick={() => setSelectedProduct(null)}
-                                className="p-2 hover:bg-muted rounded-full transition-colors"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {/* Modal Content - Scrollable */}
-                        <div className="overflow-y-auto flex-1 p-0">
-                            <div className="grid grid-cols-1 md:grid-cols-2">
-                                {/* Left side: Image Gallery */}
-                                <div className="bg-muted/50 aspect-square relative group">
-                                    {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                                        <>
-                                            <Image
-                                                src={
-                                                    typeof selectedProduct.images[currentImageIndex] === 'string'
-                                                        ? selectedProduct.images[currentImageIndex] as string
-                                                        : (selectedProduct.images[currentImageIndex] as any)?.src || '/placeholder.png'
-                                                }
-                                                alt={selectedProduct.name}
-                                                fill
-                                                className="object-contain p-4"
-                                            />
-
-                                            {selectedProduct.images.length > 1 && (
-                                                <>
-                                                    <button
-                                                        onClick={prevImage}
-                                                        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 rounded-full hover:bg-primary hover:text-white transition-all shadow-md opacity-0 group-hover:opacity-100"
-                                                    >
-                                                        <ChevronLeft className="w-6 h-6" />
-                                                    </button>
-                                                    <button
-                                                        onClick={nextImage}
-                                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-background/80 rounded-full hover:bg-primary hover:text-white transition-all shadow-md opacity-0 group-hover:opacity-100"
-                                                    >
-                                                        <ChevronRight className="w-6 h-6" />
-                                                    </button>
-
-                                                    {/* Dots */}
-                                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 p-2 bg-background/20 backdrop-blur rounded-full">
-                                                        {selectedProduct.images.map((_, i) => (
-                                                            <div
-                                                                key={i}
-                                                                className={cn(
-                                                                    "w-2 h-2 rounded-full transition-all",
-                                                                    i === currentImageIndex ? "bg-primary w-4" : "bg-primary/30"
-                                                                )}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full min-h-[400px]">
-                                            <Package className="w-20 h-20 mb-4 opacity-20" />
-                                            <p>No images available</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Right side: Details */}
-                                <div className="p-6 md:p-8 space-y-6 flex flex-col h-full">
-                                    <div>
-                                        <div className="flex flex-col gap-1 mb-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">SKU: {selectedProduct.sku || '-'}</span>
-                                                <span className={cn(
-                                                    "text-xs px-2 py-1 rounded font-bold",
-                                                    selectedProduct.stockQuantity <= 0
-                                                        ? "bg-destructive/10 text-destructive"
-                                                        : "bg-emerald-500/10 text-emerald-600"
-                                                )}>
-                                                    Stok: {selectedProduct.stockQuantity}
-                                                </span>
-                                            </div>
-                                            {selectedProduct.barcode && (
-                                                <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full w-fit">
-                                                    Gudang: {selectedProduct.barcode}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="text-3xl font-black text-primary">
-                                            {formatCurrency(selectedProduct.price)}
-                                        </div>
-                                        {selectedProduct.regularPrice > selectedProduct.price && (
-                                            <div className="text-sm text-muted-foreground line-through mt-1">
-                                                {formatCurrency(selectedProduct.regularPrice)}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-                                        {selectedProduct.type === 'variable' ? (
-                                            <>
-                                                <h4 className="font-bold border-b border-border pb-2 shrink-0">Pilih Variasi</h4>
-                                                <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
-                                                    {loadingVariations ? (
-                                                        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                                                            <Loader2 className="w-8 h-8 animate-spin mb-2 outline-none" />
-                                                            <p className="text-xs">Mengambil variasi...</p>
-                                                        </div>
-                                                    ) : variations.length > 0 ? (
-                                                        variations.map((v) => (
-                                                            <button
-                                                                key={v.id}
-                                                                onClick={() => {
-                                                                    if (selectedProduct) {
-                                                                        addToCart({ ...v, name: selectedProduct.name })
-                                                                        setSelectedProduct(null)
-                                                                    }
-                                                                }}
-                                                                className="w-full p-3 bg-muted/50 border border-border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center justify-between group/variant"
-                                                            >
-                                                                <div className="flex flex-col gap-1">
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {v.attributes.map((attr: any) => (
-                                                                            <span key={attr.name} className="px-1.5 py-0.5 rounded bg-background text-[10px] font-bold border border-border">
-                                                                                {attr.name}: {attr.option}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                    <span className="text-[10px] text-muted-foreground uppercase tracking-tight">SKU: {v.sku || '-'} • Stok: {v.stockQuantity}</span>
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <div className="font-bold text-primary group-hover/variant:scale-105 transition-transform">{formatCurrency(v.price)}</div>
-                                                                    {v.regularPrice > v.price && (
-                                                                        <div className="text-[10px] text-muted-foreground line-through">{formatCurrency(v.regularPrice)}</div>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-center py-8 text-muted-foreground text-sm italic">Produk ini tidak memiliki variasi aktif.</p>
-                                                    )}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <h4 className="font-bold border-b border-border pb-2">Deskripsi Produk</h4>
-                                                <div
-                                                    className="text-sm text-muted-foreground prose prose-sm max-w-none prose-invert overflow-y-auto max-h-[300px] scrollbar-thin"
-                                                    dangerouslySetInnerHTML={{ __html: selectedProduct.description }}
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {selectedProduct.type !== 'variable' && (
-                                        <div className="pt-6 mt-auto shrink-0">
-                                            <button
-                                                onClick={() => {
-                                                    if (selectedProduct) {
-                                                        addToCart(selectedProduct)
-                                                        setSelectedProduct(null)
-                                                    }
-                                                }}
-                                                className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <ShoppingCart className="w-5 h-5" />
-                                                Tambah ke Keranjang
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ProductDetailModal
+                isOpen={!!selectedProduct}
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
+                onAddToCart={(product) => addToCart(product)}
+            />
 
             {lastOrder && (
                 <CheckoutReceipt
                     order={lastOrder}
                     onClose={() => setLastOrder(null)}
                 />
+            )}
+
+            {/* Payment Modal */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowPaymentModal(false)}>
+                    <div
+                        className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
+                            <h4 className="font-bold text-base flex items-center gap-2">Konfirmasi Pembayaran</h4>
+                            <button onClick={() => setShowPaymentModal(false)} className="p-1 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
+                            {/* Summary */}
+                            <div className="p-4 rounded-xl bg-muted/50 space-y-2">
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                    <span>Subtotal</span>
+                                    <span>{formatCurrency(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0))}</span>
+                                </div>
+                                {shippingCost > 0 && (
+                                    <div className="flex justify-between text-sm text-muted-foreground">
+                                        <span>Ongkos Kirim</span>
+                                        <span>{formatCurrency(shippingCost)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-lg font-black pt-2 border-t border-border">
+                                    <span>TOTAL</span>
+                                    <span className="text-primary">{formatCurrency(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost)}</span>
+                                </div>
+                            </div>
+
+                            {/* Amount Paid Input */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-bold text-foreground">Uang Dibayarkan</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground text-lg">Rp</span>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoFocus
+                                        value={amountPaid ? amountPaid.toLocaleString('id-ID') : ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '')
+                                            setAmountPaid(Number(val) || 0)
+                                        }}
+                                        className="w-full pl-12 pr-12 py-4 text-2xl font-black bg-background border-2 border-primary/20 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-2xl transition-all outline-none"
+                                        placeholder={(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost).toLocaleString('id-ID')}
+                                    />
+                                    {amountPaid > 0 && (
+                                        <button
+                                            onClick={() => setAmountPaid(0)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground transition-all"
+                                            title="Hapus"
+                                        >
+                                            <X className="w-6 h-6" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Denomination Shortcuts */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cepat Tambah</label>
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                    {[100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000].map((denom) => (
+                                        <button
+                                            key={denom}
+                                            onClick={() => setAmountPaid(prev => prev + denom)}
+                                            className="py-2.5 px-2 text-xs font-bold border border-border rounded-xl hover:bg-primary/5 hover:border-primary/30 transition-all active:scale-95"
+                                        >
+                                            +{denom.toLocaleString('id-ID')}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setAmountPaid(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost)}
+                                        className="col-span-2 sm:col-span-2 py-2.5 px-2 text-xs font-black border border-primary/20 bg-primary/5 text-primary rounded-xl hover:bg-primary/10 transition-all active:scale-95"
+                                    >
+                                        Uang Pas
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Change Calculation */}
+                            <div className="flex justify-between items-center p-4 rounded-xl bg-primary/5 border border-primary/10">
+                                <span className="font-bold text-sm">Kembalian</span>
+                                <span className={cn(
+                                    "text-xl font-black",
+                                    (amountPaid - (cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost)) < 0 ? "text-destructive" : "text-emerald-600"
+                                )}>
+                                    {formatCurrency(Math.max(0, amountPaid - (cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost)))}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-muted/30 border-t border-border flex gap-3">
+                            <button
+                                onClick={() => setShowPaymentModal(false)}
+                                className="flex-1 py-3.5 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={processCheckout}
+                                disabled={(amountPaid !== 0 && amountPaid < (cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost)) || isCheckingOut}
+                                className="flex-[2] py-3.5 bg-primary text-primary-foreground text-sm font-black rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:grayscale transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                            >
+                                {isCheckingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Proses Pesanan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Note Popup */}
+            {showNotePopup && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowNotePopup(false)}>
+                    <div
+                        className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
+                            <h4 className="font-bold text-sm flex items-center gap-2"><StickyNote className="w-4 h-4" /> Catatan Order</h4>
+                            <button onClick={() => setShowNotePopup(false)} className="p-1 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <textarea
+                                value={orderNote}
+                                onChange={(e) => setOrderNote(e.target.value)}
+                                placeholder="Tulis catatan order di sini..."
+                                rows={4}
+                                autoFocus
+                                className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                            />
+                            <div className="flex gap-2">
+                                {orderNote && (
+                                    <button
+                                        onClick={() => { setOrderNote(''); setShowNotePopup(false) }}
+                                        className="flex-1 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                                    >
+                                        Hapus
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowNotePopup(false)}
+                                    className="flex-1 py-2 text-sm font-bold bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all"
+                                >
+                                    Simpan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Small Variation Picker Popup */}

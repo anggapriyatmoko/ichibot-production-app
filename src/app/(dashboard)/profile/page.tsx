@@ -121,7 +121,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-8">
             <div>
                 <h1 className="text-3xl font-bold text-foreground tracking-tight">Your Profile</h1>
                 <p className="text-muted-foreground">Manage your account settings and preferences.</p>

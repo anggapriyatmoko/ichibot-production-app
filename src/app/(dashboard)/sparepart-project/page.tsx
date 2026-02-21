@@ -39,7 +39,7 @@ export default async function SparepartProjectPage({
     const totalPages = Math.ceil(totalCount / limit)
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="space-y-8">
             <div className="mb-8 text-left">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Sparepart Project</h1>
                 <p className="text-muted-foreground">Manage spare parts for projects.</p>

@@ -461,7 +461,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto w-full">
+    <div className="space-y-8 w-full">
       <div className="flex flex-col xl:flex-row gap-6">
         {/* Left Column: Calendar */}
         <section className="bg-card shadow-sm border border-border rounded-2xl p-6 flex-1 min-w-0">

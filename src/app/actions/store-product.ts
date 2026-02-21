@@ -654,7 +654,8 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
             description: p.description || '',
             barcode: p.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode' || m.key === '_barcode' || m.key === 'barcode')?.value || null,
             backupGudang: p.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
-            slug: p.slug
+            slug: p.slug,
+            source: 'store'
         })).sort((a: any, b: any) => {
             const aName = a.name.toLowerCase()
             const bName = b.name.toLowerCase()
@@ -743,7 +744,8 @@ export async function getProductVariations(productId: number) {
             description: v.description || '',
             barcode: v.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode' || m.key === '_barcode' || m.key === 'barcode')?.value || null,
             backupGudang: v.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
-            slug: v.slug
+            slug: v.slug,
+            source: 'store'
         }))
     } catch (error) {
         console.error(`Error fetching variations for product ${productId}:`, error)
@@ -1196,5 +1198,77 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
     } catch (error: any) {
         console.error(`Error syncing product ${wcId}:`, error.message)
         return { success: false, error: error.message }
+    }
+}
+export async function getStoreProductBySku(sku: string) {
+    try {
+        // 1. Try to find in StoreProduct (WooCommerce) first, by SKU or backupGudang (location)
+        let product = await prisma.storeProduct.findFirst({
+            where: {
+                OR: [
+                    { sku: sku },
+                    { backupGudang: sku }
+                ]
+            }
+        })
+
+        if (product) {
+            let images = []
+            try {
+                if (product.images) images = JSON.parse(product.images)
+            } catch (e) { }
+
+            let categories = []
+            try {
+                if (product.categories) categories = JSON.parse(product.categories)
+            } catch (e) { }
+
+            let attributes = []
+            try {
+                if (product.attributes) attributes = JSON.parse(product.attributes)
+            } catch (e) { }
+
+            return {
+                ...product,
+                images,
+                categories,
+                attributes,
+                source: 'store'
+            }
+        }
+
+        // 2. Fallback: Try to find in internal Product table
+        const internalProduct = await prisma.product.findFirst({
+            where: { sku: sku }
+        })
+
+        if (internalProduct) {
+            return {
+                ...internalProduct,
+                source: 'internal',
+                // Map to common fields for the modal
+                images: internalProduct.image ? [internalProduct.image] : [],
+                description: internalProduct.notes
+            }
+        }
+
+        // 3. Fallback: Try to find in sparepartProject
+        const sparepart = await (prisma as any).sparepartProject.findFirst({
+            where: { sku: sku }
+        })
+
+        if (sparepart) {
+            return {
+                ...sparepart,
+                source: 'sparepart',
+                images: sparepart.image ? [sparepart.image] : [],
+                description: sparepart.notes
+            }
+        }
+
+        return null
+    } catch (error) {
+        console.error('Error fetching product by SKU:', error)
+        return null
     }
 }
