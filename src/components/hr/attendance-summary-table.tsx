@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useRef } from 'react'
-import { ClipboardList, Clock, XCircle, FileWarning, AlertCircle, Loader2, CalendarDays, Download, Users } from 'lucide-react'
+import { ClipboardList, Clock, XCircle, FileWarning, AlertCircle, Loader2, CalendarDays, Calendar, Download, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { getPayrollPeriodAttendanceSummary } from '@/app/actions/attendance'
@@ -346,62 +346,75 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                 }
             />
 
-            <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
-                <span className="text-xs font-bold text-foreground">Filter :</span>
-                <div className="flex flex-wrap items-center gap-2">
-                    {ROLE_FILTERS.map((f) => {
-                        const isSelected = filterRoles.includes(f.id)
-                        const colorMap: Record<string, string> = {
-                            red: isSelected ? 'bg-red-500/10 border-red-500/30 text-red-600' : '',
-                            purple: isSelected ? 'bg-purple-500/10 border-purple-500/30 text-purple-600' : '',
-                            blue: isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' : '',
-                            cyan: isSelected ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600' : '',
-                            orange: isSelected ? 'bg-orange-500/10 border-orange-500/30 text-orange-600' : '',
-                            gray: isSelected ? 'bg-gray-500/10 border-gray-500/30 text-gray-600' : '',
-                            emerald: isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : '',
-                        }
-                        const dotMap: Record<string, string> = {
-                            red: isSelected ? 'bg-red-500 ring-red-500/20' : '',
-                            purple: isSelected ? 'bg-purple-500 ring-purple-500/20' : '',
-                            blue: isSelected ? 'bg-blue-500 ring-blue-500/20' : '',
-                            cyan: isSelected ? 'bg-cyan-500 ring-cyan-500/20' : '',
-                            orange: isSelected ? 'bg-orange-500 ring-orange-500/20' : '',
-                            gray: isSelected ? 'bg-gray-500 ring-gray-500/20' : '',
-                            emerald: isSelected ? 'bg-emerald-500 ring-emerald-500/20' : '',
-                        }
-                        return (
-                            <button
-                                key={f.id}
-                                onClick={() => {
-                                    setFilterRoles(prev => isSelected ? prev.filter(r => r !== f.id) : [...prev, f.id])
-                                    setPage(1)
-                                }}
-                                className={cn(
-                                    'flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all',
-                                    isSelected ? colorMap[f.color] : 'bg-background border-border text-muted-foreground/50 hover:bg-muted'
-                                )}
-                            >
-                                <div className={cn(
-                                    'w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent',
-                                    isSelected ? dotMap[f.color] : 'bg-muted-foreground/20 ring-transparent'
-                                )} />
-                                {f.label}
-                            </button>
-                        )
-                    })}
+            <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                    <span className="text-xs font-bold text-foreground">Filter :</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {ROLE_FILTERS.map((f) => {
+                            const isSelected = filterRoles.includes(f.id)
+                            const colorMap: Record<string, string> = {
+                                red: isSelected ? 'bg-red-500/10 border-red-500/30 text-red-600' : '',
+                                purple: isSelected ? 'bg-purple-500/10 border-purple-500/30 text-purple-600' : '',
+                                blue: isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' : '',
+                                cyan: isSelected ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600' : '',
+                                orange: isSelected ? 'bg-orange-500/10 border-orange-500/30 text-orange-600' : '',
+                                gray: isSelected ? 'bg-gray-500/10 border-gray-500/30 text-gray-600' : '',
+                                emerald: isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : '',
+                            }
+                            const dotMap: Record<string, string> = {
+                                red: isSelected ? 'bg-red-500 ring-red-500/20' : '',
+                                purple: isSelected ? 'bg-purple-500 ring-purple-500/20' : '',
+                                blue: isSelected ? 'bg-blue-500 ring-blue-500/20' : '',
+                                cyan: isSelected ? 'bg-cyan-500 ring-cyan-500/20' : '',
+                                orange: isSelected ? 'bg-orange-500 ring-orange-500/20' : '',
+                                gray: isSelected ? 'bg-gray-500 ring-gray-500/20' : '',
+                                emerald: isSelected ? 'bg-emerald-500 ring-emerald-500/20' : '',
+                            }
+                            return (
+                                <button
+                                    key={f.id}
+                                    onClick={() => {
+                                        setFilterRoles(prev => isSelected ? prev.filter(r => r !== f.id) : [...prev, f.id])
+                                        setPage(1)
+                                    }}
+                                    className={cn(
+                                        'flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all',
+                                        isSelected ? colorMap[f.color] : 'bg-background border-border text-muted-foreground/50 hover:bg-muted'
+                                    )}
+                                >
+                                    <div className={cn(
+                                        'w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent',
+                                        isSelected ? dotMap[f.color] : 'bg-muted-foreground/20 ring-transparent'
+                                    )} />
+                                    {f.label}
+                                </button>
+                            )
+                        })}
 
-                    <div className="h-4 w-[1px] bg-border mx-1" />
+                        <div className="h-4 w-[1px] bg-border mx-1" />
 
-                    <button
-                        onClick={() => {
-                            setFilterRoles(prev => prev.length === ALL_ROLE_IDS.length ? [] : [...ALL_ROLE_IDS])
-                            setPage(1)
-                        }}
-                        className="text-[10px] font-bold text-primary hover:underline px-2"
-                    >
-                        {filterRoles.length === ALL_ROLE_IDS.length ? 'Unselect All' : 'Select All'}
-                    </button>
+                        <button
+                            onClick={() => {
+                                setFilterRoles(prev => prev.length === ALL_ROLE_IDS.length ? [] : [...ALL_ROLE_IDS])
+                                setPage(1)
+                            }}
+                            className="text-[10px] font-bold text-primary hover:underline px-2"
+                        >
+                            {filterRoles.length === ALL_ROLE_IDS.length ? 'Unselect All' : 'Select All'}
+                        </button>
+                    </div>
                 </div>
+
+                {period && (
+                    <div className="px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg border border-blue-500/20 text-[10px] font-bold flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>
+                            {new Date(period.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {' '} - {' '}
+                            {new Date(period.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                    </div>
+                )}
             </div>
 
             <TableScrollArea>

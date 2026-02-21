@@ -357,11 +357,13 @@ export async function getUserOvertimeOrders() {
     try {
         const allData = await (prisma as any).overtimeleave.findMany({
             where: { userId: session.user.id },
-            orderBy: { createdAt: 'desc' },
-            take: 20
+            orderBy: { id: 'desc' },
+            take: 50
         })
 
         const decrypted = allData.map(decryptOvertimeLeave)
+
+        decrypted.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
         const orders = decrypted.filter((item: any) =>
             item.type === 'OVERTIME' &&
@@ -383,20 +385,21 @@ export async function getUserStatusUpdates() {
             where: {
                 userId: session.user.id,
             },
-            orderBy: { updatedAt: 'desc' },
-            take: 20
+            orderBy: { id: 'desc' },
+            take: 50
         })
 
         const decrypted = allData.map(decryptOvertimeLeave)
 
-        // Filter for items that are APPROVED or REJECTED recently?
-        // Or we just return the latest updates and let frontend filter/display/handle "read" state
-        // For this specific request: "if submitted... and accepted or rejected... notification"
+        decrypted.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+
         // We will return items that are NOT PENDING (i.e. APPROVED/REJECTED)
-        // And maybe filter by time? For now, we return specific statuses.
+        // And we do not include Perintah Lembur (requesterName is truthy) because
+        // the user themselves is the one accepting/rejecting it, so they don't need a status update.
 
         const updates = decrypted.filter((item: any) =>
-            ['APPROVED', 'REJECTED'].includes(item.status)
+            ['APPROVED', 'REJECTED'].includes(item.status) &&
+            !item.requesterName
         ).slice(0, 5)
 
         return { success: true, data: updates }
@@ -438,6 +441,88 @@ export async function respondToOvertimeOrder(id: string, response: 'ACCEPT' | 'R
         revalidatePath('/overtime-leave')
         revalidatePath('/hrd-dashboard')
         return { success: true }
+    } catch (error: any) {
+        return { error: error.message }
+    }
+}
+
+export async function getOvertimeRecapSequence(month: number, year: number, payrollDay: number = 25) {
+    await requireAdmin()
+    try {
+        // Calculate the Date Range
+        let startDate = new Date(year, month - 2, payrollDay) // Previous month, on payroll day
+        let endDate = new Date(year, month - 1, payrollDay - 1) // Current month, on payroll day - 1
+
+        // Cover edge case where payroll day is 1 (start from 1st of current month to end of current month)
+        if (payrollDay === 1) {
+            startDate = new Date(year, month - 1, 1)
+            endDate = new Date(year, month, 0) // last day of current month
+        }
+
+        // Add time boundaries
+        startDate.setHours(0, 0, 0, 0)
+        endDate.setHours(23, 59, 59, 999)
+
+        // Query all Overtime
+        const allData = await (prisma as any).overtimeleave.findMany({
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        nameEnc: true,
+                        usernameEnc: true,
+                        roleEnc: true,
+                        departmentEnc: true
+                    }
+                }
+            },
+            orderBy: { id: 'desc' }
+        })
+
+        const decryptedData = allData.map(decryptOvertimeLeave)
+
+        // Filter valid targets
+        const filteredData = decryptedData.filter((item: any) => {
+            if (item.type !== 'OVERTIME') return false
+            if (item.status !== 'APPROVED') return false
+            if (!item.amount || item.amount <= 0) return false
+
+            const itemDate = new Date(item.date)
+            if (itemDate < startDate || itemDate > endDate) return false
+
+            return true
+        })
+
+        // Group by user
+        const grouped: Record<string, any> = {}
+
+        filteredData.forEach((item: any) => {
+            const userId = item.user.id
+            if (!grouped[userId]) {
+                grouped[userId] = {
+                    userId: userId,
+                    name: item.user.name,
+                    username: item.user.username,
+                    role: item.user.role,
+                    totalOvertime: 0,
+                    totalNominal: 0
+                }
+            }
+            grouped[userId].totalOvertime += 1
+            grouped[userId].totalNominal += item.amount
+        })
+
+        const result = Object.values(grouped).sort((a: any, b: any) => b.totalNominal - a.totalNominal)
+
+        return {
+            success: true,
+            data: result,
+            period: {
+                start: startDate.toISOString(),
+                end: endDate.toISOString()
+            }
+        }
+
     } catch (error: any) {
         return { error: error.message }
     }

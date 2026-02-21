@@ -1,58 +1,250 @@
 import jsPDF from 'jspdf'
-import { toPng } from 'html-to-image'
+import autoTable from 'jspdf-autotable'
 
-const waitForImages = async (container: HTMLElement) => {
-    const images = Array.from(container.getElementsByTagName('img'))
-    await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve()
-        return new Promise(resolve => {
-            img.onload = resolve
-            img.onerror = resolve
+const getBase64ImageFromUrl = async (imageUrl: string) => {
+    try {
+        const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' })
+        const blob = await res.blob()
+        return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(blob)
         })
-    }))
+    } catch (e) {
+        return new Promise<string>((resolve, reject) => {
+            const img = new Image()
+            img.crossOrigin = 'Anonymous'
+            img.onload = () => {
+                const canvas = document.createElement('canvas')
+                canvas.width = img.width
+                canvas.height = img.height
+                const ctx = canvas.getContext('2d')
+                if (!ctx) return reject('No ctx')
+                ctx.drawImage(img, 0, 0)
+                resolve(canvas.toDataURL('image/png'))
+            }
+            img.onerror = reject
+            img.src = imageUrl
+        })
+    }
+}
+
+const initPdfWithFonts = async () => {
+    const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    try {
+        const fetchAndAddFont = async (url: string, filename: string, style: string) => {
+            const res = await fetch(url)
+            if (!res.ok) throw new Error(`Failed to fetch font: ${res.statusText}`)
+            const blob = await res.blob()
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve((reader.result as string).split(',')[1])
+                reader.readAsDataURL(blob)
+            })
+            doc.addFileToVFS(filename, base64)
+            doc.addFont(filename, 'Manrope', style)
+        }
+
+        await fetchAndAddFont('/fonts/Manrope-Regular.ttf', 'Manrope-Regular.ttf', 'normal')
+        await fetchAndAddFont('/fonts/Manrope-Bold.ttf', 'Manrope-Bold.ttf', 'bold')
+
+        doc.setFont('Manrope')
+    } catch (error) {
+        console.error('Failed to load local fonts, falling back to standard', error)
+        doc.setFont('helvetica') // fallback
+    }
+
+    return doc
+}
+
+const cleanHtml = (html: string) => {
+    if (!html) return '';
+    let text = html
+        .replace(/<li[^>]*>/gi, '\n\u2022 ')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/?p[^>]*>/gi, '\n')
+        .replace(/<\/?div[^>]*>/gi, '\n')
+        .replace(/<[^>]*>?/gm, '') // Strip remaining tags
+        .replace(/&nbsp;/ig, ' ')  // Convert non-breaking spaces
+        .replace(/&amp;/ig, '&')
+        .replace(/&lt;/ig, '<')
+        .replace(/&gt;/ig, '>')
+        .replace(/\r/g, '')        // Remove carriage returns
+        .replace(/^[ \t]+|[ \t]+$/gm, '') // Strip leading/trailing spaces on each line
+        .replace(/\n{2,}/g, '\n')  // Collapse multiple newlines into one
+        .trim();
+    return text || '';
 }
 
 export const generateProductPdf = async (item: any, returnBlob = false) => {
-    // Create a temporary container for the PDF content
-    const container = document.createElement('div')
-    container.style.position = 'fixed'
-    container.style.top = '0'
-    container.style.left = '0'
-    container.style.width = '210mm'
-    container.style.minHeight = '297mm'
-    container.style.backgroundColor = '#ffffff'
-    container.style.padding = '20mm'
-    container.style.fontFamily = 'Arial, sans-serif'
-    container.style.boxSizing = 'border-box'
-    container.style.zIndex = '-9999'
+    const doc = await initPdfWithFonts()
+    let logoBase64: string | null = null
+    try {
+        logoBase64 = await getBase64ImageFromUrl(window.location.origin + '/uploads/ichibot-text-logo.png')
+    } catch (e) { }
 
-    // Format Prices
-    const discount = item.discount || 0
-    const hasDiscount = discount > 0 && discount < item.price
-    const finalPrice = hasDiscount ? discount : item.price
-
-    const formattedPrice = new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(finalPrice)
-
-    const formattedOriginalPrice = new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(item.price)
-
-    // Current Date
     const date = new Date().toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
     })
 
-    // Process additional images
+    const pw = doc.internal.pageSize.getWidth()
+    const ph = doc.internal.pageSize.getHeight()
+
+    const addHeaderFooter = (page: number) => {
+        if (logoBase64) {
+            const props = doc.getImageProperties(logoBase64)
+            const logoHeight = 6
+            const logoWidth = (props.width * logoHeight) / props.height
+            doc.addImage(logoBase64, 'PNG', 14, 10, logoWidth, logoHeight)
+        }
+        doc.setFontSize(8)
+        doc.setTextColor(102, 102, 102)
+        doc.setFont('Manrope', 'normal')
+        doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
+        doc.text('www.ichibot.id', 14, 26)
+
+        doc.setFontSize(16)
+        doc.setTextColor(37, 99, 235)
+        doc.setFont('Manrope', 'bold')
+        doc.text(`DETAIL PRODUK`, pw - 14, 16, { align: 'right' })
+
+        doc.setFontSize(10)
+        doc.setTextColor(102, 102, 102)
+        doc.setFont('Manrope', 'normal')
+        doc.text(date, pw - 14, 22, { align: 'right' })
+
+        doc.setDrawColor(37, 99, 235)
+        doc.setLineWidth(0.5)
+        doc.line(14, 30, pw - 14, 30)
+
+        doc.setDrawColor(229, 231, 235)
+        doc.setLineWidth(0.2)
+        doc.line(14, ph - 15, pw - 14, ph - 15)
+        doc.setFontSize(8)
+        doc.setTextColor(156, 163, 175)
+        doc.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 14, ph - 10)
+        doc.text(`Halaman ${page}`, pw - 14, ph - 10, { align: 'right' })
+    }
+
+    addHeaderFooter(1)
+
+    doc.setFontSize(16)
+    doc.setTextColor(17, 24, 39)
+    doc.setFont('Manrope', 'bold')
+
+    const leftWidth = 70
+
+    let imageBase64 = null
+    if (item.image) {
+        try {
+            imageBase64 = await getBase64ImageFromUrl(item.image)
+        } catch (e) { }
+    }
+
+    if (imageBase64) {
+        doc.setDrawColor(229, 231, 235)
+        doc.roundedRect(14, 35, leftWidth, leftWidth, 2, 2)
+        const type = imageBase64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
+        doc.addImage(imageBase64, type, 16, 37, leftWidth - 4, leftWidth - 4, undefined, 'FAST')
+    } else {
+        doc.setDrawColor(229, 231, 235)
+        doc.setFillColor(249, 250, 251)
+        doc.roundedRect(14, 35, leftWidth, leftWidth, 2, 2, 'FD')
+        doc.setFontSize(10)
+        doc.setTextColor(156, 163, 175)
+        doc.text('Tanpa Gambar', 14 + leftWidth / 2, 35 + leftWidth / 2, { align: 'center', baseline: 'middle' })
+    }
+
+    const rightX = 14 + leftWidth + 10
+
+    doc.setFontSize(18)
+    doc.setTextColor(17, 24, 39)
+    doc.setFont('Manrope', 'bold')
+    const titleLines = doc.splitTextToSize(item.name, pw - rightX - 14)
+    doc.text(titleLines, rightX, 42)
+
+    let currentY = 42 + (titleLines.length * 7) + 4
+
+    const discount = item.discount || 0
+    const hasDiscount = discount > 0 && discount < item.price
+    const finalPrice = hasDiscount ? discount : item.price
+
+    const formattedPrice = new Intl.NumberFormat('id-ID', {
+        style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
+    }).format(finalPrice)
+
+    doc.setFontSize(22)
+    doc.setTextColor(37, 99, 235)
+    doc.text(formattedPrice, rightX, currentY)
+
+    if (hasDiscount) {
+        doc.setFontSize(12)
+        doc.setTextColor(220, 38, 38)
+        const discText = `DISKON ${Math.round((1 - discount / item.price) * 100)}%`
+        doc.text(discText, rightX + doc.getTextWidth(formattedPrice) + 4, currentY - 2)
+
+        currentY += 8
+        const formattedOriginalPrice = new Intl.NumberFormat('id-ID', {
+            style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
+        }).format(item.price)
+        doc.setFontSize(12)
+        doc.setTextColor(156, 163, 175)
+        doc.setFont('Manrope', 'normal')
+        doc.text(formattedOriginalPrice, rightX, currentY)
+        const w = doc.getTextWidth(formattedOriginalPrice)
+        doc.setDrawColor(156, 163, 175)
+        doc.line(rightX, currentY - 1, rightX + w, currentY - 1)
+    }
+
+    currentY += 10
+    if (item.quantity) {
+        doc.setFontSize(10)
+        doc.setTextColor(107, 114, 128)
+        doc.setFont('Manrope', 'normal')
+        doc.text(`Qty / Satuan: ${item.quantity}`, rightX, currentY)
+    }
+
+    currentY = Math.max(currentY + 10, 35 + leftWidth + 10)
+
+    doc.setDrawColor(229, 231, 235)
+    doc.setLineWidth(0.2)
+    doc.line(14, currentY, pw - 14, currentY)
+    currentY += 10
+
+    doc.setFontSize(12)
+    doc.setTextColor(107, 114, 128)
+    doc.setFont('Manrope', 'bold')
+    doc.text('DESKRIPSI / SPESIFIKASI', 14, currentY)
+    currentY += 8
+
+    doc.setFontSize(10)
+    doc.setTextColor(55, 65, 81)
+    doc.setFont('Manrope', 'normal')
+
+    const rawDesc = cleanHtml(item.description)
+    const descLines = doc.splitTextToSize(rawDesc, pw - 28)
+
+    let pageNum = 1
+
+    for (const line of descLines) {
+        if (currentY > ph - 25) {
+            doc.addPage()
+            pageNum++
+            addHeaderFooter(pageNum)
+            currentY = 35
+        }
+        doc.text(line, 14, currentY)
+        currentY += 5
+    }
+
     const additionalImages = (() => {
         try {
             return item.additionalImages ? JSON.parse(item.additionalImages) : []
@@ -61,248 +253,64 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
         }
     })()
 
-    // Chunk images into pairs for 2-column layout
-    const imageChunks = [];
-    for (let i = 0; i < additionalImages.length; i += 2) {
-        imageChunks.push(additionalImages.slice(i, i + 2));
+    if (additionalImages.length > 0) {
+        currentY += 10
+        if (currentY > ph - 40) {
+            doc.addPage()
+            pageNum++
+            addHeaderFooter(pageNum)
+            currentY = 35
+        }
+
+        doc.setFontSize(12)
+        doc.setTextColor(37, 99, 235)
+        doc.setFont('Manrope', 'bold')
+        doc.text('LAMPIRAN', 14, currentY)
+        doc.setDrawColor(229, 231, 235)
+        doc.line(14, currentY + 2, pw - 14, currentY + 2)
+        currentY += 10
+
+        const imageChunks = [];
+        for (let i = 0; i < additionalImages.length; i += 2) {
+            imageChunks.push(additionalImages.slice(i, i + 2));
+        }
+
+        const attachWidth = (pw - 28 - 10) / 2
+        for (const chunk of imageChunks) {
+            if (currentY + attachWidth > ph - 25) {
+                doc.addPage()
+                pageNum++
+                addHeaderFooter(pageNum)
+                currentY = 35
+            }
+
+            for (let i = 0; i < chunk.length; i++) {
+                try {
+                    const imgB64 = await getBase64ImageFromUrl(chunk[i])
+                    const type = imgB64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
+                    const ix = i === 0 ? 14 : 14 + attachWidth + 10
+                    doc.setDrawColor(229, 231, 235)
+                    doc.roundedRect(ix, currentY, attachWidth, attachWidth, 2, 2)
+                    doc.addImage(imgB64, type, ix + 2, currentY + 2, attachWidth - 4, attachWidth - 4, undefined, 'FAST')
+                } catch (e) { }
+            }
+            currentY += attachWidth + 10
+        }
     }
 
-    // Process Description: Split into paragraphs for better pagination
-    const parser = new DOMParser()
-    const descDoc = parser.parseFromString(item.description || '<p>Tidak ada deskripsi tersedia.</p>', 'text/html')
-    const descNodes = Array.from(descDoc.body.childNodes)
-
-    // We convert nodes back to HTML strings, wrapping each in a div to be a pagination block
-    const descBlocks = descNodes.map(node => {
-        if (node.nodeType === Node.TEXT_NODE && !node.textContent?.trim()) return ''
-        const el = node as HTMLElement
-        return node.nodeType === Node.ELEMENT_NODE
-            ? el.outerHTML
-            : `<div>${node.textContent}</div>`
-    }).filter(Boolean)
-
-    // Main Product Content (Header + Details)
-    const mainContentHtml = `
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 20px;">
-                <div style="white-space: nowrap;">
-                    <img src="${window.location.origin}/uploads/ichibot-text-logo.png" alt="Ichibot" style="height: 50px; object-fit: contain;" />
-                    <div style="margin-top: 5px; font-size: 12px; color: #666; white-space: nowrap;">
-                        ICHIBOT - Platform Edukasi AI untuk Project IoT<br/>
-                        www.ichibot.id
-                    </div>
-                </div>
-                <div style="text-align: right;">
-                    <h1 style="margin: 0; color: #2563eb; font-size: 24px;">DETAIL PRODUK</h1>
-                    <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${date}</p>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div style="display: flex; gap: 30px; flex-grow: 1;">
-                <!-- Left: Image -->
-                <div style="width: 40%;">
-                    <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; padding: 10px; background-color: #f9fafb; display: flex; align-items: center; justify-content: center; min-height: 200px;">
-                        ${item.image
-            ? `<img src="${item.image}" alt="${item.name}" style="width: 100%; height: auto; object-fit: cover; display: block;" />`
-            : `<div style="text-align: center; color: #9ca3af;">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                                </svg>
-                                <div style="margin-top: 8px; font-size: 12px;">Tanpa Gambar</div>
-                               </div>`
-        }
-                    </div>
-                </div>
-
-                <!-- Right: Details -->
-                <div style="width: 60%;">
-                    <h2 style="margin: 0 0 10px; font-size: 22px; color: #111827;">${item.name}</h2>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span style="font-size: 28px; font-weight: bold; color: #2563eb;">${formattedPrice}</span>
-                            ${hasDiscount ? `
-                                <span style="display: inline-flex; align-items: center; background-color: #fee2e2; color: #dc2626; font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 4px; border: 1px solid #fecaca;">
-                                    DISKON ${Math.round((1 - discount / item.price) * 100)}%
-                                </span>
-                            ` : ''}
-                        </div>
-                        
-                        ${hasDiscount ? `
-                            <div style="font-size: 16px; text-decoration: line-through; color: #9ca3af; margin-top: 4px;">
-                                ${formattedOriginalPrice}
-                            </div>
-                        ` : ''}
-
-                        ${item.quantity ? `<div style="font-size: 14px; color: #6b7280; margin-top: 8px;">Qty / Satuan: ${item.quantity}</div>` : ''}
-                    </div>
-                </div>
-            </div>
-    `
-
-    // Wrapper for Main Content
-    container.innerHTML = `
-        <style>
-            .pdf-container { width: 100%; display: flex; flex-direction: column; }
-            .pdf-block { margin-bottom: 10px; }
-            .pdf-header { margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
-            .pdf-main-info { display: flex; gap: 30px; margin-bottom: 20px; }
-            .pdf-attachment-row { display: flex; gap: 20px; margin-bottom: 20px; }
-            .pdf-attachment-item { flex: 1; border: 1px solid #e5e7eb; padding: 10px; border-radius: 8px; }
-            p { margin: 0 0 4px 0; line-height: 1.3; text-align: justify; }
-            ul, ol { margin: 0 0 8px 0; padding-left: 20px; }
-            li { margin-bottom: 4px; }
-        </style>
-        <div class="pdf-container">
-            <div class="pdf-block pdf-main-content">
-                ${mainContentHtml}
-            </div>
-
-            <!-- Description Title (Block) -->
-            <div class="pdf-block" style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                <h3 style="margin: 0 0 10px; font-size: 14px; text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em;">Deskripsi / Spesifikasi</h3>
-            </div>
-
-            <!-- Description Blocks (Paragraphs) -->
-            <div class="pdf-description-container" style="font-size: 14px; color: #374151;">
-                ${descBlocks.map(blockHtml => `<div class="pdf-block">${blockHtml}</div>`).join('')}
-            </div>
-
-            ${imageChunks.length > 0 ? `
-                <div class="pdf-block pdf-attachments-title" style="margin-top: 40px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 20px;">
-                    <h2 style="margin: 0; color: #2563eb; font-size: 18px; text-transform: uppercase;">LAMPIRAN</h2>
-                </div>
-                ${imageChunks.map((chunk) => `
-                    <div class="pdf-block pdf-attachment-row">
-                        ${chunk.map((img: string) => `
-                            <div class="pdf-attachment-item">
-                                <img src="${img}" style="width: 100%; height: auto; display: block;" />
-                            </div>
-                        `).join('')}
-                        ${chunk.length === 1 ? '<div class="pdf-attachment-item" style="border: none;"></div>' : ''}
-                    </div>
-                `).join('')}
-            ` : ''}
-        </div>
-    `
-
-    document.body.appendChild(container)
-
-    try {
-        await waitForImages(container)
-
-        // Calculate Pagination
-        const pageHeightPx = (297 * 96) / 25.4 // A4 height in pixels ~1122px
-        const marginT = (20 * 96) / 25.4
-        const marginB = (20 * 96) / 25.4 // space for footer
-
-        const containerRect = container.getBoundingClientRect() // Fixed container
-        const contentContainer = container.querySelector('.pdf-container')!
-
-        const blocks = Array.from(contentContainer.querySelectorAll('.pdf-block'))
-
-        for (let i = 0; i < blocks.length; i++) {
-            const block = blocks[i] as HTMLElement;
-            const blockRect = block.getBoundingClientRect()
-            const blockTop = blockRect.top - containerRect.top
-            const blockHeight = blockRect.height
-            const blockBottom = blockTop + blockHeight
-
-            // Check if this block crosses a page boundary
-            const pageIndex = Math.floor(blockTop / pageHeightPx)
-            const pageBottomLimit = ((pageIndex + 1) * pageHeightPx) - marginB
-
-            // Special Force Break for Attachments
-            const isAttachmentTitle = block.classList.contains('pdf-attachments-title')
-            const blockTopInPage = blockTop % pageHeightPx
-            const isAtTop = blockTopInPage < (marginT + 50)
-            const forceBreak = isAttachmentTitle && !isAtTop
-
-            if (blockBottom > pageBottomLimit || forceBreak) {
-                const nextPageTop = (pageIndex + 1) * pageHeightPx + marginT
-                const gap = nextPageTop - blockTop
-
-                const spacer = document.createElement('div')
-                spacer.style.height = `${gap}px`
-                spacer.style.width = '100%'
-                block.parentNode?.insertBefore(spacer, block)
-            }
-        }
-
-        const dataUrl = await toPng(container, {
-            pixelRatio: 2,
-            backgroundColor: '#ffffff',
-            cacheBust: true
-        })
-
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-        })
-
-        const pdfWidth = pdf.internal.pageSize.getWidth()
-        const pdfHeight = pdf.internal.pageSize.getHeight() // 297mm
-        const imgProps = pdf.getImageProperties(dataUrl)
-        const totalHeightMm = (imgProps.height * pdfWidth) / imgProps.width
-
-        let position = 0
-        let pageNum = 1
-        const totalPages = Math.ceil(totalHeightMm / pdfHeight)
-
-        while (position < totalHeightMm) {
-            if (pageNum > 1) pdf.addPage()
-
-            // addImage(imageData, format, x, y, w, h)
-            pdf.addImage(dataUrl, 'PNG', 0, -position, pdfWidth, totalHeightMm)
-
-            // White Cover for Footer Area (Bottom 20mm) - optional but cleaner
-            pdf.setFillColor(255, 255, 255)
-            pdf.rect(0, 280, 210, 20, 'F')
-
-            // Footer
-            pdf.setFontSize(8)
-            pdf.setTextColor(156, 163, 175) // #9ca3af
-            pdf.setDrawColor(229, 231, 235) // #e5e7eb
-            pdf.line(20, 285, 190, 285)
-            pdf.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 20, 290)
-            pdf.text(`Halaman ${pageNum} dari ${totalPages}`, 190, 290, { align: 'right' })
-
-            position += pdfHeight
-            pageNum++
-        }
-
-        if (returnBlob) {
-            return pdf.output('bloburl')
-        } else {
-            pdf.save(`Detail-Produk-${item.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
-        }
-
-    } catch (error) {
-        console.error('Error generating PDF:', error)
-        throw error
-    } finally {
-        if (container.parentNode) {
-            document.body.removeChild(container)
-        }
+    if (returnBlob) {
+        return doc.output('bloburl')
+    } else {
+        doc.save(`Detail-Produk-${item.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
     }
 }
 
 export const generatePriceListPdf = async (group: any, items: any[], returnBlob = false) => {
-    // 1. Setup the beautiful container
-    const container = document.createElement('div')
-    container.style.position = 'fixed'
-    container.style.top = '0'
-    container.style.left = '0'
-    container.style.width = '210mm'
-    container.style.backgroundColor = '#ffffff'
-    container.style.padding = '20mm'
-    container.style.fontFamily = 'Arial, sans-serif'
-    container.style.display = 'flex'
-    container.style.flexDirection = 'column'
-    container.style.boxSizing = 'border-box'
-    container.style.zIndex = '-9999'
+    const doc = await initPdfWithFonts()
+    let logoBase64: string | null = null
+    try {
+        logoBase64 = await getBase64ImageFromUrl(window.location.origin + '/uploads/ichibot-text-logo.png')
+    } catch (e) { }
 
     const date = new Date().toLocaleDateString('id-ID', {
         day: 'numeric',
@@ -310,231 +318,282 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
         year: 'numeric'
     })
 
-    const rows = items.map((item, index) => {
-        const discount = item.discount || 0
-        const hasDiscount = discount > 0 && discount < item.price
-        const finalPrice = hasDiscount ? discount : item.price
+    const pw = doc.internal.pageSize.getWidth()
+    // Fixed column widths: No(15) + Foto(30) + Qty(20) + Harga(35) = 100
+    // Desc column cell width = page width - margins(28) - other columns(100)
+    const descCellWidth = pw - 28 - 15 - 30 - 20 - 35
+    const descColWidth = descCellWidth - 10 // 10 is padding left/right
 
-        const formattedPrice = new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(finalPrice)
+    const bodyData = items.map((item, index) => {
+        const cleanDesc = item.description ? cleanHtml(item.description) : ''
+        const fullContent = cleanDesc ? `${item.name}\n${cleanDesc}` : item.name
 
-        const formattedOriginalPrice = new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(item.price)
+        // Calculate the ACTUAL height needed for our custom rendering
+        // (bold name at fontSize 10 + description at fontSize 9)
+        const ptToMm = 0.3528
+        const cellPadding = 5
 
+        // Calculate name height (bold, fontSize 10)
+        doc.setFont('Manrope', 'bold')
+        doc.setFontSize(10)
+        const nameLines = doc.splitTextToSize(item.name, descColWidth)
+        const nameLineHeight = doc.getLineHeight() * ptToMm
+        const nameHeight = nameLines.length * nameLineHeight
 
+        // Calculate description height (normal, fontSize 9)
+        let descHeight = 0
+        if (cleanDesc) {
+            doc.setFont('Manrope', 'normal')
+            doc.setFontSize(9)
+            const descLines = doc.splitTextToSize(cleanDesc, descColWidth)
+            const descLineHeight = doc.getLineHeight() * ptToMm
+            descHeight = descLines.length * descLineHeight
+        }
 
-        return `
-            <tr class="product-row" style="border-bottom: 1px solid #e5e7eb;">
-                <td style="padding: 10px; text-align: center; width: 5%; vertical-align: top;">${index + 1}</td>
-                <td style="padding: 10px; width: 15%; vertical-align: top;">
-                    <div style="border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden; background-color: #f9fafb; display: flex; align-items: center; justify-content: center; min-height: 50px;">
-                        ${item.image
-                ? `<img src="${item.image}" alt="${item.name}" style="width: 100%; height: auto; object-fit: contain; display: block;" />`
-                : `<div style="text-align: center; color: #9ca3af;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                                </svg>
-                               </div>`
+        // Total height = name + description + padding top/bottom + extra spacing
+        const totalContentHeight = nameHeight + descHeight + (cellPadding * 2) + 6
+
+        return [
+            (index + 1).toString(),
+            '',
+            {
+                content: fullContent,
+                styles: { minCellHeight: Math.max(30, totalContentHeight) }
+            },
+            item.quantity || '-',
+            {
+                content: '', // Price drawn natively
+                styles: { minCellHeight: 30 }
             }
-                    </div>
-                </td>
-                <td style="padding: 10px; width: 45%; vertical-align: top;">
-                    <div style="font-weight: bold; color: #111827; margin-bottom: 4px;">${item.name}</div>
-                    ${item.description ? `<div class="pdf-description" style="font-size: 10px; color: #4b5563; line-height: 1.4;">${item.description}</div>` : ''}
-                </td>
-                <td style="padding: 10px; width: 10%; text-align: center; vertical-align: top;">${item.quantity || '-'}</td>
-                <td style="padding: 10px; width: 25%; text-align: right; vertical-align: top;">
-                    <div style="font-weight: bold; color: #2563eb;">
-                        ${hasDiscount ? `
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <span>${formattedPrice}</span>
-                                    <span style="display: inline-block; background-color: #fee2e2; color: #dc2626; font-size: 7px; font-weight: bold; padding: 1px 3px; border-radius: 2px; border: 1px solid #fecaca;">
-                                        ${Math.round((1 - item.discount / item.price) * 100)}%
-                                    </span>
-                                </div>
-                                <div style="font-size: 8px; color: #9ca3af; text-decoration: line-through;">${formattedOriginalPrice}</div>
-                            </div>
-                        ` : formattedPrice}
-                    </div>
-                </td>
-            </tr>
-        `
-    }).join('')
+        ]
+    })
 
-    container.innerHTML = `
-        <style>
-            .pdf-container { width: 100%; display: flex; flex-direction: column; }
-            .pdf-description p { margin: 0; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 20px; }
-            th { background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb; padding: 12px; }
-        </style>
-        <div class="pdf-container">
-            <!-- Header Page 1 -->
-            <div id="pdf-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px;">
-                <div style="white-space: nowrap;">
-                    <img src="${window.location.origin}/uploads/ichibot-text-logo.png" alt="Ichibot" style="height: 40px; object-fit: contain;" />
-                    <div style="margin-top: 5px; font-size: 10px; color: #666; white-space: nowrap;">
-                        ICHIBOT - Platform Edukasi AI untuk Project IoT<br/>
-                        www.ichibot.id
-                    </div>
-                </div>
-                <div style="text-align: right;">
-                    <h1 style="margin: 0; color: #2563eb; font-size: 18px; text-transform: uppercase;">DAFTAR HARGA: ${group.name}</h1>
-                    <p style="margin: 5px 0 0; color: #666; font-size: 12px;">${date}</p>
-                </div>
-            </div>
+    const itemImages: Record<number, string> = {}
 
-            <div style="flex-grow: 1;">
-                <table id="main-table">
-                    <thead>
-                        <tr class="table-header-row">
-                            <th style="text-align: center; width: 5%;">No</th>
-                            <th style="text-align: left; width: 15%;">Foto</th>
-                            <th style="text-align: left; width: 45%;">Nama Barang & Deskripsi</th>
-                            <th style="text-align: center; width: 10%;">Qty</th>
-                            <th style="text-align: right; width: 25%;">Harga</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `
+    // Tracking for multi-page rows
+    const rowLineOffsets = new Map<number, number>();
+    const rowFirstPageDrawn = new Set<number>();
 
-    document.body.appendChild(container)
-    await waitForImages(container)
-
-    // Helper for sub-headers on Page 2+
-    const createSubHeaderHtml = () => `
-        <div class="repeated-header" style="padding-top: 30mm; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end;">
-            <div style="font-size: 12px; color: #3b82f6; font-weight: bold; text-transform: uppercase;">
-                Daftar Harga: ${group.name} (Lanjutan)
-            </div>
-            <img src="${window.location.origin}/uploads/ichibot-text-logo.png" alt="Ichibot" style="height: 20px; object-fit: contain;" />
-        </div>
-    `;
-
-    const createTableHeaderHtml = () => `
-        <tr class="repeated-table-header" style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-            <th style="padding: 12px; text-align: center; width: 5%; font-size: 12px;">No</th>
-            <th style="padding: 12px; text-align: left; width: 15%; font-size: 12px;">Foto</th>
-            <th style="padding: 12px; text-align: left; width: 45%; font-size: 12px;">Nama Barang & Deskripsi</th>
-            <th style="padding: 12px; text-align: center; width: 10%; font-size: 12px;">Qty</th>
-            <th style="padding: 12px; text-align: right; width: 25%; font-size: 12px;">Harga</th>
-        </tr>
-    `;
-
-    // 2. Smart Spacers & Repeating Headers Logic
-    const pageHeightPx = (297 * 96) / 25.4 // A4 height in pixels
-    const tbody = container.querySelector('tbody')!
-    const trs = Array.from(tbody.querySelectorAll('.product-row'))
-    const containerTop = container.getBoundingClientRect().top
-
-    for (let i = 0; i < trs.length; i++) {
-        const tr = trs[i] as HTMLElement;
-        const rect = tr.getBoundingClientRect()
-        const trTop = rect.top - containerTop
-        const trHeight = rect.height
-        const trBottom = trTop + trHeight
-
-        const pageOfTop = Math.floor(trTop / pageHeightPx)
-        const pageOfBottom = Math.floor((trBottom + 10) / pageHeightPx)
-
-        if (pageOfTop !== pageOfBottom) {
-            const nextBoundary = (pageOfTop + 1) * pageHeightPx
-            const gap = nextBoundary - trTop
-
-            // 1. Insert Spacer to push row to next page
-            const spacer = document.createElement('tr')
-            spacer.innerHTML = `<td colspan="5" style="height: ${gap}px; border: none;"></td>`
-            tbody.insertBefore(spacer, tr)
-
-            // 2. Insert Repeating Header (on Page 2+)
-            // We use a div for the sub-header but we need to wrap it or use a row
-            // Actually, inserting a sub-header outside the table or using a special row is tricky.
-            // Let's use a special "header-row" inside the table for simplicity.
-
-            const headerRow = document.createElement('tr')
-            headerRow.innerHTML = `
-                <td colspan="5" style="padding: 0; border: none;">
-                    ${createSubHeaderHtml()}
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            ${createTableHeaderHtml()}
-                        </thead>
-                    </table>
-                </td>
-            `
-            tbody.insertBefore(headerRow, tr)
+    // Process base64 concurrently
+    await Promise.all(items.map(async (item, i) => {
+        if (item.image) {
+            try {
+                itemImages[i] = await getBase64ImageFromUrl(item.image)
+            } catch (e) { }
         }
-    }
+    }))
 
-    try {
-        const dataUrl = await toPng(container, {
-            pixelRatio: 2,
-            backgroundColor: '#ffffff',
-            cacheBust: true
-        })
 
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-        })
+    // Set global line height for consistent height calculation
+    doc.setLineHeightFactor(1.15)
 
-        const pdfWidth = pdf.internal.pageSize.getWidth()
-        const pdfHeight = pdf.internal.pageSize.getHeight()
-        const imgProps = pdf.getImageProperties(dataUrl)
-        const totalHeightMm = (imgProps.height * pdfWidth) / imgProps.width
+    // Temporary storage for column 2 text lines saved by willDrawCell
+    let col2SavedLines: string[] = [];
 
-        let position = 0
-        let pageNum = 1
-        const totalPages = Math.ceil(totalHeightMm / pdfHeight)
+    autoTable(doc, {
+        startY: 35,
+        theme: 'plain',
+        headStyles: { fillColor: [243, 244, 246], textColor: [17, 24, 39], font: 'Manrope', fontStyle: 'bold', cellPadding: 3 },
+        bodyStyles: { font: 'Manrope', valign: 'top', fillColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [255, 255, 255] },
+        styles: {
+            cellPadding: 5,
+            lineColor: [229, 231, 235],
+            lineWidth: { bottom: 0.2 },
+            overflow: 'linebreak'
+        },
+        rowPageBreak: 'auto',
+        showHead: 'everyPage',
+        head: [['No', 'Foto', 'Nama Barang & Deskripsi', 'Qty', 'Harga']],
+        body: bodyData,
+        columnStyles: {
+            0: { halign: 'center', cellWidth: 15 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: descCellWidth, fontSize: 10 }, // Fixed width for proper height calc
+            3: { halign: 'center', cellWidth: 20 },
+            4: { halign: 'right', cellWidth: 35, fontStyle: 'bold', textColor: [37, 99, 235] }
+        },
+        willDrawCell: (data) => {
+            // Intercept column 2 text: save the lines for this page segment,
+            // then suppress autoTable's default rendering.
+            // Row height and splitting are already calculated at this point.
+            if (data.section === 'body' && data.column.index === 2) {
+                col2SavedLines = [...data.cell.text];
+                data.cell.text = []; // Prevent default text rendering
+            }
+        },
+        didDrawCell: (data) => {
+            const rowIdx = data.row.index
+            // isFirstPage: true until column 4 (last col) marks it as rendered.
+            // This ensures ALL columns on the same page see the same isFirstPage value.
+            const isFirstPage = !rowFirstPageDrawn.has(rowIdx)
 
-        while (position < totalHeightMm) {
-            if (pageNum > 1) pdf.addPage()
+            if (data.section === 'body' && data.column.index === 2) {
+                const item = items[rowIdx]
+                if (!item) return;
 
-            pdf.addImage(dataUrl, 'PNG', 0, - (pageNum - 1) * pdfHeight, pdfWidth, totalHeightMm)
+                const cell = data.cell
+                const padding = data.cell.styles.cellPadding as number || 5
+                const textWidth = cell.width - (padding * 2)
+                const ptToMm = 0.3528
+                const nameLinesOffset = rowLineOffsets.get(rowIdx) || 0
 
-            // White Cover for Footer Area
-            pdf.setFillColor(255, 255, 255)
-            pdf.rect(0, 280, 210, 20, 'F')
+                // Use saved lines from willDrawCell (the lines for THIS page segment)
+                const lines = col2SavedLines
 
-            // Footer
-            pdf.setFontSize(8)
-            pdf.setTextColor(156, 163, 175)
-            pdf.setDrawColor(229, 231, 235)
-            pdf.line(20, 285, 190, 285)
-            pdf.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 20, 290)
-            pdf.text(`Halaman ${pageNum} dari ${totalPages}`, 190, 290, { align: 'right' })
+                // Calculate where the bold name ends in the FULL content
+                const nameOnlyLines = doc.splitTextToSize(item.name, textWidth)
+                const nameLinesCount = nameOnlyLines.length
 
-            position += pdfHeight
-            pageNum++
-        }
+                let currentY = cell.y + padding + 3
 
-        if (returnBlob) {
-            return pdf.output('bloburl')
-        } else {
-            pdf.save(`Daftar-Harga-${group.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
-        }
+                lines.forEach((line, i) => {
+                    const absoluteLineIndex = nameLinesOffset + i
 
-    } catch (error) {
-        console.error('Error generating PDF:', error)
-        throw error
-    } finally {
-        if (container.parentNode) {
-            document.body.removeChild(container)
-        }
+                    // Style based on absolute position in the full text
+                    if (absoluteLineIndex < nameLinesCount) {
+                        doc.setFont('Manrope', 'bold')
+                        doc.setFontSize(10)
+                        doc.setTextColor(17, 24, 39)
+                    } else {
+                        doc.setFont('Manrope', 'normal')
+                        doc.setFontSize(9)
+                        doc.setTextColor(107, 114, 128)
+                    }
+
+                    doc.text(line, cell.x + padding, currentY)
+                    currentY += doc.getLineHeight() * ptToMm
+                })
+
+                // Update offset for the NEXT page of this SAME row
+                rowLineOffsets.set(rowIdx, nameLinesOffset + lines.length)
+            }
+
+            // Only draw image and price on the FIRST page of a split row
+            if (data.section === 'body' && data.column.index === 1 && isFirstPage) {
+                const ri = data.row.index
+                if (itemImages[ri]) {
+                    const cell = data.cell
+                    const dim = 24
+                    const x = cell.x + (cell.width - dim) / 2
+                    const y = cell.y + 3 // Top padding
+                    try {
+                        const type = itemImages[ri].startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
+                        doc.addImage(itemImages[ri], type, x, y, dim, dim, undefined, 'FAST')
+                    } catch (e) { }
+                } else {
+                    doc.setFontSize(8)
+                    doc.setTextColor(156, 163, 175)
+                    const cell = data.cell
+                    doc.text('Tanpa Gambar', cell.x + cell.width / 2, cell.y + 15, { align: 'center', baseline: 'middle' })
+                }
+            }
+
+            // Draw Price in Column 4 (Price) - ONLY on the first page of a split row
+            if (data.section === 'body' && data.column.index === 4 && isFirstPage) {
+                const item = items[data.row.index]
+                if (!item) return;
+                const discount = item.discount || 0
+                const hasDiscount = discount > 0 && discount < item.price
+                const finalPrice = hasDiscount ? discount : item.price
+                const cell = data.cell
+                const padding = data.cell.styles.cellPadding as number || 5
+
+                const formattedPrice = new Intl.NumberFormat('id-ID', {
+                    style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
+                }).format(finalPrice)
+
+                doc.setFont('Manrope', 'bold')
+                doc.setFontSize(10)
+                doc.setTextColor(37, 99, 235) // Blue-600
+                doc.text(formattedPrice, cell.x + cell.width - padding, cell.y + padding + 3.5, { align: 'right' })
+
+                if (hasDiscount) {
+                    const formattedOriginalPrice = new Intl.NumberFormat('id-ID', {
+                        style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
+                    }).format(item.price)
+
+                    doc.setFont('Manrope', 'normal')
+                    doc.setFontSize(8)
+                    doc.setTextColor(55, 65, 81) // Gray-700
+                    const yPosOrig = cell.y + padding + 8.5
+                    const xPosOrig = cell.x + cell.width - padding
+                    doc.text(formattedOriginalPrice, xPosOrig, yPosOrig, { align: 'right' })
+
+                    // Draw strikethrough
+                    const textWidth = doc.getTextWidth(formattedOriginalPrice)
+                    doc.setDrawColor(55, 65, 81)
+                    doc.setLineWidth(0.2)
+                    doc.line(xPosOrig - textWidth, yPosOrig - 0.8, xPosOrig, yPosOrig - 0.8)
+
+                    // Draw Discount Badge below strikethrough
+                    const discPercent = Math.round((1 - item.discount / item.price) * 100)
+                    const badgeText = `DISC ${discPercent}%`
+
+                    doc.setFontSize(8)
+                    doc.setTextColor(255, 255, 255)
+                    doc.setFont('Manrope', 'bold')
+
+                    const badgeWidth = doc.getTextWidth(badgeText) + 3
+                    const badgeHeight = 5
+                    const bx = xPosOrig - badgeWidth
+                    const by = yPosOrig + 2
+
+                    doc.setFillColor(220, 38, 38) // Red-600
+                    doc.roundedRect(bx, by, badgeWidth, badgeHeight, 0.5, 0.5, 'F')
+                    doc.text(badgeText, bx + 1.5, by + 3.8)
+                }
+            }
+
+            // Mark row as rendered AFTER the last column (4) is processed.
+            // This ensures all columns on the same page see consistent isFirstPage.
+            if (data.section === 'body' && data.column.index === 4) {
+                rowFirstPageDrawn.add(rowIdx)
+            }
+        },
+        didDrawPage: (data) => {
+            if (logoBase64) {
+                const props = doc.getImageProperties(logoBase64)
+                const logoHeight = 6
+                const logoWidth = (props.width * logoHeight) / props.height
+                doc.addImage(logoBase64, 'PNG', 14, 10, logoWidth, logoHeight)
+            }
+            doc.setFontSize(8)
+            doc.setTextColor(102, 102, 102)
+            doc.setFont('Manrope', 'normal')
+            doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
+            doc.text('www.ichibot.id', 14, 26)
+
+            doc.setFontSize(14)
+            doc.setTextColor(37, 99, 235)
+            doc.setFont('Manrope', 'bold')
+            doc.text('DAFTAR HARGA', pw - 14, 16, { align: 'right' })
+
+            doc.setFontSize(12)
+            doc.setTextColor(17, 24, 39)
+            doc.text(group.name.toUpperCase(), pw - 14, 22, { align: 'right' })
+
+            doc.setFontSize(10)
+            doc.setTextColor(102, 102, 102)
+            doc.setFont('Manrope', 'normal')
+            doc.text(date, pw - 14, 27, { align: 'right' })
+
+            const pageHeight = doc.internal.pageSize.getHeight()
+            doc.setDrawColor(229, 231, 235)
+            doc.setLineWidth(0.2)
+            doc.line(14, pageHeight - 15, pw - 14, pageHeight - 15)
+            doc.setFontSize(8)
+            doc.setTextColor(156, 163, 175)
+            doc.text('Dokumen ini dibuat secara otomatis oleh sistem Ichibot.', 14, pageHeight - 10)
+            const str = 'Halaman ' + doc.getNumberOfPages()
+            doc.text(str, pw - 14, pageHeight - 10, { align: 'right' })
+        },
+        margin: { top: 35, bottom: 20 }
+    })
+
+    if (returnBlob) {
+        return doc.output('bloburl')
+    } else {
+        doc.save(`Daftar-Harga-${group.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`)
     }
 }

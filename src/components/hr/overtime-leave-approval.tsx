@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Check, X, Clock, FileText, User as UserIcon, Calendar, Loader2, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getOvertimeLeaves, updateOvertimeLeaveStatus, createOvertimeOrder, deleteOvertimeLeave, updateOvertimeLeave } from '@/app/actions/overtime-leave'
+import { getOvertimeLeaves, updateOvertimeLeaveStatus, createOvertimeOrder, deleteOvertimeLeave, updateOvertimeLeave, getOvertimeRecapSequence } from '@/app/actions/overtime-leave'
 import { getUsers } from '@/app/actions/user'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table'
 
 export default function OvertimeLeaveApproval() {
+    const [activeTab, setActiveTab] = useState<'list' | 'recap'>('list')
     const [requests, setRequests] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [processingId, setProcessingId] = useState<string | null>(null)
@@ -91,14 +92,33 @@ export default function OvertimeLeaveApproval() {
     const { showAlert, showError } = useAlert()
     const { showConfirmation } = useConfirmation()
 
+    // Recap Tab State
+    const [recapMonth, setRecapMonth] = useState(new Date().getMonth() + 1)
+    const [recapYear, setRecapYear] = useState(new Date().getFullYear())
+    const [recapData, setRecapData] = useState<any[]>([])
+    const [recapPeriod, setRecapPeriod] = useState<{ start: string, end: string } | null>(null)
+    const [payrollDay, setPayrollDay] = useState(25)
+
+    useEffect(() => {
+        const saved = localStorage.getItem('salaryCalculationDay')
+        if (saved) setPayrollDay(parseInt(saved))
+    }, [])
+
     const fetchRequests = async () => {
         setIsLoading(true)
-        const res = await getOvertimeLeaves(page, itemsPerPage, filterTypes, false, startDate, endDate)
-        if (res.success) {
-            setRequests(res.data || [])
-            setTotalPages(res.pages || 1)
-            setTotalItems(res.total || 0)
-
+        if (activeTab === 'list') {
+            const res = await getOvertimeLeaves(page, itemsPerPage, filterTypes, false, startDate, endDate)
+            if (res.success) {
+                setRequests(res.data || [])
+                setTotalPages(res.pages || 1)
+                setTotalItems(res.total || 0)
+            }
+        } else {
+            const res = await getOvertimeRecapSequence(recapMonth, recapYear, payrollDay)
+            if (res.success) {
+                setRecapData(res.data || [])
+                setRecapPeriod(res.period)
+            }
         }
         setIsLoading(false)
     }
@@ -106,7 +126,7 @@ export default function OvertimeLeaveApproval() {
     useEffect(() => {
         fetchRequests()
         loadUsers()
-    }, [page, filterTypes, startDate, endDate, itemsPerPage])
+    }, [page, filterTypes, startDate, endDate, itemsPerPage, activeTab, recapMonth, recapYear, payrollDay])
 
     // Reset page on filter change
     useEffect(() => {
@@ -251,29 +271,32 @@ export default function OvertimeLeaveApproval() {
     return (
         <TableWrapper className="mb-10" loading={isLoading}>
             <TableHeaderContent
-                title="Rekap Izin & Lembur"
+                title="Sistem Izin & Lembur"
                 description="Monitoring pengajuan izin dan lembur karyawan."
                 icon={<Clock className="w-5 h-5 font-bold text-primary" />}
                 actions={
                     <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <label className="text-[10px] font-bold text-muted-foreground">Dari:</label>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                            <label className="text-[10px] font-bold text-muted-foreground">Sampai:</label>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
+                        <div className="flex bg-muted p-1 rounded-lg">
+                            <button
+                                onClick={() => setActiveTab('list')}
+                                className={cn(
+                                    "px-4 py-1.5 text-xs font-bold rounded-md transition-all",
+                                    activeTab === 'list' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                                )}
+                            >
+                                Daftar Pengajuan
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('recap')}
+                                className={cn(
+                                    "px-4 py-1.5 text-xs font-bold rounded-md transition-all",
+                                    activeTab === 'recap' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                                )}
+                            >
+                                Rekap Lembur Nominal
+                            </button>
                         </div>
-
-                        {pendingCount > 0 && (
+                        {pendingCount > 0 && activeTab === 'list' && (
                             <div className="px-3 py-1 bg-amber-500 text-white rounded-full text-[10px] font-bold animate-bounce shadow-lg shadow-amber-500/20">
                                 {pendingCount} Pending
                             </div>
@@ -290,220 +313,352 @@ export default function OvertimeLeaveApproval() {
                 }
             />
 
-            <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
-                <span className="text-xs font-bold text-foreground">Filter :</span>
-                <div className="flex flex-wrap items-center gap-2">
-                    {[
-                        { id: 'ORDER', label: 'Perintah Lembur', color: 'emerald' },
-                        { id: 'OVERTIME_SUBMISSION', label: 'Pengajuan Lembur', color: 'purple' },
-                        { id: 'LEAVE', label: 'Pengajuan Izin', color: 'blue' },
-                        { id: 'VACATION', label: 'Pengajuan Cuti', color: 'orange' },
-                    ].map((f) => {
-                        const isSelected = filterTypes.includes(f.id);
-                        return (
-                            <button
-                                key={f.id}
-                                onClick={() => {
-                                    setFilterTypes(prev =>
-                                        isSelected
-                                            ? prev.filter(t => t !== f.id)
-                                            : [...prev, f.id]
-                                    )
-                                }}
-                                className={cn(
-                                    "flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all",
-                                    isSelected
-                                        ? {
-                                            emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-600",
-                                            purple: "bg-purple-500/10 border-purple-500/30 text-purple-600",
-                                            blue: "bg-blue-500/10 border-blue-500/30 text-blue-600",
-                                            orange: "bg-orange-500/10 border-orange-500/30 text-orange-600",
-                                        }[f.color]
-                                        : "bg-background border-border text-muted-foreground/50 hover:bg-muted"
-                                )}
-                            >
-                                <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent",
-                                    isSelected
-                                        ? {
-                                            emerald: "bg-emerald-500 ring-emerald-500/20",
-                                            purple: "bg-purple-500 ring-purple-500/20",
-                                            blue: "bg-blue-500 ring-blue-500/20",
-                                            orange: "bg-orange-500 ring-orange-500/20",
-                                        }[f.color]
-                                        : "bg-muted-foreground/20 ring-transparent"
-                                )} />
-                                {f.label}
-                            </button>
-                        )
-                    })}
-
-                    <div className="h-4 w-[1px] bg-border mx-1" />
-
-                    <button
-                        onClick={() => {
-                            if (filterTypes.length === 4) setFilterTypes([])
-                            else setFilterTypes(['ORDER', 'OVERTIME_SUBMISSION', 'LEAVE', 'VACATION'])
-                        }}
-                        className="text-[10px] font-bold text-primary hover:underline px-2"
-                    >
-                        {filterTypes.length === 4 ? 'Unselect All' : 'Select All'}
-                    </button>
-                </div>
-            </div>
-
-            <TableScrollArea>
-                <Table>
-                    <TableHeader>
-                        <TableRow hoverable={false} className="bg-muted/50">
-                            <TableHead>Karyawan</TableHead>
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Tipe</TableHead>
-                            <TableHead>Pekerjaan / Alasan</TableHead>
-                            <TableHead>Pemberi Tugas / Catatan</TableHead>
-                            <TableHead align="right">Nominal</TableHead>
-                            <TableHead align="center">Lampiran</TableHead>
-                            <TableHead align="center">Status</TableHead>
-                            <TableHead align="right">Aksi Pola</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {requests.length === 0 ? (
-                            <TableEmpty
-                                colSpan={9}
-                                message="Tidak ada data pengajuan dalam riwayat."
-                                icon={<Clock className="w-12 h-12 opacity-20" />}
+            {activeTab === 'list' ? (
+                <>
+                    <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2 mr-4">
+                            <label className="text-[10px] font-bold text-muted-foreground">Dari:</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
-                        ) : (
-                            requests.map((req) => (
-                                <TableRow key={req.id} className={cn(
-                                    req.status === 'PENDING' ? "bg-amber-500/[0.02]" : ""
-                                )}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs border border-border">
-                                                {req.user?.name?.[0] || req.user?.username?.[0]?.toUpperCase() || '?'}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-sm text-foreground">{req.user?.name || req.user?.username || 'Unknown'}</p>
-                                                <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-tight">
-                                                    {req.user?.role || 'USER'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-xs font-medium text-foreground">
-                                        {req.date ? new Date(req.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap",
-                                            req.type === 'LEAVE' ? "bg-blue-500/10 text-blue-600" :
-                                                req.type === 'VACATION' ? "bg-orange-500/10 text-orange-600" :
-                                                    req.requesterName ? "bg-emerald-500/10 text-emerald-600" : "bg-purple-500/10 text-purple-600"
-                                        )}>
-                                            {req.type === 'LEAVE' ? 'Pengajuan Izin' :
-                                                req.type === 'VACATION' ? 'Pengajuan Cuti' :
-                                                    req.requesterName ? 'Perintah Lembur' : 'Pengajuan Lembur'}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="text-xs italic text-foreground whitespace-pre-wrap" title={req.job || req.reason}>
-                                            {req.job ? req.job : `"${req.reason}"`}
-                                        </p>
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="text-xs text-muted-foreground">
-                                            {req.requesterName || '-'}
-                                        </p>
-                                        {req.adminNote && (
-                                            <p className="text-[10px] text-primary italic mt-1 bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
-                                                Note: {req.adminNote}
-                                            </p>
+                            <label className="text-[10px] font-bold text-muted-foreground">Sampai:</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+
+                        <span className="text-xs font-bold text-foreground">Filter :</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {[
+                                { id: 'ORDER', label: 'Perintah Lembur', color: 'emerald' },
+                                { id: 'OVERTIME_SUBMISSION', label: 'Pengajuan Lembur', color: 'purple' },
+                                { id: 'LEAVE', label: 'Pengajuan Izin', color: 'blue' },
+                                { id: 'VACATION', label: 'Pengajuan Cuti', color: 'orange' },
+                            ].map((f) => {
+                                const isSelected = filterTypes.includes(f.id);
+                                return (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => {
+                                            setFilterTypes(prev =>
+                                                isSelected
+                                                    ? prev.filter(t => t !== f.id)
+                                                    : [...prev, f.id]
+                                            )
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all",
+                                            isSelected
+                                                ? {
+                                                    emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-600",
+                                                    purple: "bg-purple-500/10 border-purple-500/30 text-purple-600",
+                                                    blue: "bg-blue-500/10 border-blue-500/30 text-blue-600",
+                                                    orange: "bg-orange-500/10 border-orange-500/30 text-orange-600",
+                                                }[f.color]
+                                                : "bg-background border-border text-muted-foreground/50 hover:bg-muted"
                                         )}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <p className="text-xs font-bold text-foreground">
-                                            {req.amount ? `Rp ${req.amount.toLocaleString('id-ID')}` : '-'}
-                                        </p>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        {req.attachment ? (
-                                            <a
-                                                href={req.attachment}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all border border-border"
-                                            >
-                                                <FileText className="w-4 h-4" />
-                                            </a>
-                                        ) : (
-                                            <span className="text-[10px] text-muted-foreground italic">No File</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell align="center">
+                                    >
                                         <div className={cn(
-                                            "inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold",
-                                            getStatusBadge(req.status)
-                                        )}>
-                                            {getStatusText(req.status)}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <div className="flex justify-end gap-2">
-                                            {req.status === 'PENDING' && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleAction(req.id, 'REJECTED')}
-                                                        disabled={processingId === req.id}
-                                                        className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20 disabled:opacity-50"
-                                                        title="Tolak"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAction(req.id, 'APPROVED')}
-                                                        disabled={processingId === req.id}
-                                                        className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all border border-emerald-500/20 disabled:opacity-50"
-                                                        title="Terima"
-                                                    >
-                                                        <Check className="w-4 h-4" />
-                                                    </button>
-                                                </>
-                                            )}
+                                            "w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent",
+                                            isSelected
+                                                ? {
+                                                    emerald: "bg-emerald-500 ring-emerald-500/20",
+                                                    purple: "bg-purple-500 ring-purple-500/20",
+                                                    blue: "bg-blue-500 ring-blue-500/20",
+                                                    orange: "bg-orange-500 ring-orange-500/20",
+                                                }[f.color]
+                                                : "bg-muted-foreground/20 ring-transparent"
+                                        )} />
+                                        {f.label}
+                                    </button>
+                                )
+                            })}
 
-                                            <button
-                                                onClick={() => startEdit(req)}
-                                                className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all border border-blue-500/20"
-                                                title="Edit"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(req.id)}
-                                                className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20"
-                                                title="Hapus"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </TableCell>
+                            <div className="h-4 w-[1px] bg-border mx-1" />
+
+                            <button
+                                onClick={() => {
+                                    if (filterTypes.length === 4) setFilterTypes([])
+                                    else setFilterTypes(['ORDER', 'OVERTIME_SUBMISSION', 'LEAVE', 'VACATION'])
+                                }}
+                                className="text-[10px] font-bold text-primary hover:underline px-2"
+                            >
+                                {filterTypes.length === 4 ? 'Unselect All' : 'Select All'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <TableScrollArea>
+                        <Table>
+                            <TableHeader>
+                                <TableRow hoverable={false} className="bg-muted/50">
+                                    <TableHead>Karyawan</TableHead>
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>Tipe</TableHead>
+                                    <TableHead>Pekerjaan / Alasan</TableHead>
+                                    <TableHead>Pemberi Tugas / Catatan</TableHead>
+                                    <TableHead align="right">Nominal</TableHead>
+                                    <TableHead align="center">Lampiran</TableHead>
+                                    <TableHead align="center">Status</TableHead>
+                                    <TableHead align="right">Aksi Pola</TableHead>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </TableScrollArea>
+                            </TableHeader>
+                            <TableBody>
+                                {requests.length === 0 ? (
+                                    <TableEmpty
+                                        colSpan={9}
+                                        message="Tidak ada data pengajuan dalam riwayat."
+                                        icon={<Clock className="w-12 h-12 opacity-20" />}
+                                    />
+                                ) : (
+                                    requests.map((req) => (
+                                        <TableRow key={req.id} className={cn(
+                                            req.status === 'PENDING' ? "bg-amber-500/[0.02]" : ""
+                                        )}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs border border-border">
+                                                        {req.user?.name?.[0] || req.user?.username?.[0]?.toUpperCase() || '?'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm text-foreground">{req.user?.name || req.user?.username || 'Unknown'}</p>
+                                                        <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-tight">
+                                                            {req.user?.role || 'USER'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-xs font-medium text-foreground">
+                                                {req.date ? new Date(req.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className={cn(
+                                                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap",
+                                                    req.type === 'LEAVE' ? "bg-blue-500/10 text-blue-600" :
+                                                        req.type === 'VACATION' ? "bg-orange-500/10 text-orange-600" :
+                                                            req.requesterName ? "bg-emerald-500/10 text-emerald-600" : "bg-purple-500/10 text-purple-600"
+                                                )}>
+                                                    {req.type === 'LEAVE' ? 'Pengajuan Izin' :
+                                                        req.type === 'VACATION' ? 'Pengajuan Cuti' :
+                                                            req.requesterName ? 'Perintah Lembur' : 'Pengajuan Lembur'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <p className="text-xs italic text-foreground whitespace-pre-wrap" title={req.job || req.reason}>
+                                                    {req.job ? req.job : `"${req.reason}"`}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {req.requesterName || '-'}
+                                                </p>
+                                                {req.adminNote && (
+                                                    <p className="text-[10px] text-primary italic mt-1 bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
+                                                        Note: {req.adminNote}
+                                                    </p>
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <p className="text-xs font-bold text-foreground">
+                                                    {req.amount ? `Rp ${req.amount.toLocaleString('id-ID')}` : '-'}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                {req.attachment ? (
+                                                    <a
+                                                        href={req.attachment}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex p-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all border border-border"
+                                                    >
+                                                        <FileText className="w-4 h-4" />
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-[10px] text-muted-foreground italic">No File</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <div className={cn(
+                                                    "inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold",
+                                                    getStatusBadge(req.status)
+                                                )}>
+                                                    {getStatusText(req.status)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <div className="flex justify-end gap-2">
+                                                    {req.status === 'PENDING' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleAction(req.id, 'REJECTED')}
+                                                                disabled={processingId === req.id}
+                                                                className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20 disabled:opacity-50"
+                                                                title="Tolak"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAction(req.id, 'APPROVED')}
+                                                                disabled={processingId === req.id}
+                                                                className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all border border-emerald-500/20 disabled:opacity-50"
+                                                                title="Terima"
+                                                            >
+                                                                <Check className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
 
-            {/* Pagination Controls */}
-            <TablePagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                itemsPerPage={itemsPerPage}
-                onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
-                totalCount={totalItems}
-            />
+                                                    <button
+                                                        onClick={() => startEdit(req)}
+                                                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all border border-blue-500/20"
+                                                        title="Edit"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(req.id)}
+                                                        className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20"
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableScrollArea>
+
+                    {/* Pagination Controls */}
+                    <TablePagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        itemsPerPage={itemsPerPage}
+                        onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                        totalCount={totalItems}
+                    />
+                </>
+            ) : (
+                <>
+                    <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs font-bold text-foreground">Bulan Rekap :</span>
+                            <div className="flex items-center gap-2">
+                                <select
+                                    value={recapMonth}
+                                    onChange={(e) => setRecapMonth(parseInt(e.target.value))}
+                                    className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                >
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                        <option key={m} value={m}>
+                                            {new Date(2000, m - 1, 1).toLocaleDateString('id-ID', { month: 'long' })}
+                                        </option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={recapYear}
+                                    onChange={(e) => setRecapYear(parseInt(e.target.value))}
+                                    className="bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                >
+                                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {recapPeriod && (
+                            <div className="px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg border border-blue-500/20 text-[10px] font-bold flex items-center gap-2">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>
+                                    {new Date(recapPeriod.start).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {' '} - {' '}
+                                    {new Date(recapPeriod.end).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    <TableScrollArea>
+                        <Table>
+                            <TableHeader>
+                                <TableRow hoverable={false} className="bg-muted/50">
+                                    <TableHead>Karyawan</TableHead>
+                                    <TableHead align="center">Total Tugas Lembur</TableHead>
+                                    <TableHead align="right">Total Akumulasi Nominal</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {recapData.length === 0 ? (
+                                    <TableEmpty
+                                        colSpan={3}
+                                        message={`Tidak ada rekap lembur ` + (recapPeriod ? `pada periode terpilih (${payrollDay} ${new Date(2000, recapMonth - 2, 1).toLocaleDateString('id-ID', { month: 'long' })} - ${payrollDay - 1} ${new Date(2000, recapMonth - 1, 1).toLocaleDateString('id-ID', { month: 'long' })})` : '')}
+                                        icon={<UserIcon className="w-12 h-12 opacity-20" />}
+                                    />
+                                ) : (
+                                    <>
+                                        {recapData.map((data) => (
+                                            <TableRow key={data.userId}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold text-xs border border-emerald-500/20">
+                                                            {data.name?.[0] || data.username?.[0]?.toUpperCase() || '?'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-sm text-foreground">{data.name || data.username || 'Unknown'}</p>
+                                                            <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-tight">
+                                                                {data.role || 'USER'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-full text-xs font-bold">
+                                                        {data.totalOvertime}x Lembur
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <p className="text-sm font-bold text-foreground">
+                                                        Rp {data.totalNominal.toLocaleString('id-ID')}
+                                                    </p>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+
+                                        {/* Total Summary Row */}
+                                        <TableRow hoverable={false} className="bg-muted/30 border-t-2 border-border/50">
+                                            <TableCell>
+                                                <p className="font-bold text-sm text-foreground uppercase tracking-wider text-right">
+                                                    Total Keseluruhan
+                                                </p>
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <span className="text-xs font-bold text-muted-foreground">
+                                                    {recapData.reduce((acc, curr) => acc + curr.totalOvertime, 0)} Total Tugas
+                                                </span>
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <p className="text-base font-black text-primary">
+                                                    Rp {recapData.reduce((acc, curr) => acc + curr.totalNominal, 0).toLocaleString('id-ID')}
+                                                </p>
+                                            </TableCell>
+                                        </TableRow>
+                                    </>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableScrollArea>
+                </>
+            )}
             {/* Perintah Lembur Modal */}
             {isAddingOrder && (
                 <Modal
