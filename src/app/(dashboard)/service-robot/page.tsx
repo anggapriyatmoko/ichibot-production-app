@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isAllowedForPage } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
@@ -21,8 +21,9 @@ export default async function ServiceRobotPage({
     const params = await searchParams
     const session: any = await getServerSession(authOptions)
 
-    // Only allow ADMIN and TEKNISI
-    if (!['ADMIN', 'TEKNISI'].includes(session?.user?.role)) {
+    // Only allow those configured in RBAC, fallback to ADMIN/TEKNISI
+    const isAllowed = await isAllowedForPage('/service-robot', ['ADMIN', 'TEKNISI'])
+    if (!isAllowed) {
         redirect('/dashboard')
     }
 
@@ -146,7 +147,7 @@ export default async function ServiceRobotPage({
                 products={robotTypes}
                 customers={customers}
                 analysisData={analysisData}
-                isAdmin={['ADMIN', 'HRD'].includes(session?.user?.role)}
+                isAdmin={await isAllowedForPage('/service-robot', ['ADMIN', 'HRD'])}
             />
         </div>
     )

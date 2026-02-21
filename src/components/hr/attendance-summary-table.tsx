@@ -302,7 +302,7 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i)
 
     return (
-        <TableWrapper ref={tableRef} className="mt-8" loading={loading || isPending}>
+        <TableWrapper ref={tableRef} loading={loading || isPending}>
             <TableHeaderContent
                 title="Rekap Absensi Periode Gaji"
                 description={period ? `${formatDate(period.startDate)} - ${formatDate(period.endDate)}` : "Rekap data absensi karyawan."}

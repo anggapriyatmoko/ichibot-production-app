@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
+import { requireAuth, requirePageAccess } from '@/lib/auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
 import { encrypt, decrypt, hash } from '@/lib/crypto'
@@ -57,11 +58,8 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
 
 // Get all users for HRD dashboard
 export async function getAllUsersForHRD() {
-    const session: any = await getServerSession(authOptions)
-
-    if (!session?.user || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requireAuth()
+    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
 
     const users = await prisma.user.findMany({
         select: {
@@ -100,11 +98,8 @@ export async function getAllUsersForHRD() {
 
 // Get single user for editing
 export async function getUserForEdit(userId: string) {
-    const session: any = await getServerSession(authOptions)
-
-    if (!session?.user || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requireAuth()
+    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
 
     const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -144,10 +139,8 @@ export async function getUserForEdit(userId: string) {
 // Update user data (encrypts sensitive fields)
 export async function updateUserData(formData: FormData) {
     const session: any = await getServerSession(authOptions)
-
-    if (!session?.user || !['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requireAuth()
+    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
 
     const userId = formData.get('userId') as string
     const name = formData.get('name') as string

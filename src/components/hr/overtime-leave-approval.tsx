@@ -269,7 +269,7 @@ export default function OvertimeLeaveApproval() {
     }
 
     return (
-        <TableWrapper className="mb-10" loading={isLoading}>
+        <TableWrapper loading={isLoading}>
             <TableHeaderContent
                 title="Sistem Izin & Lembur"
                 description="Monitoring pengajuan izin dan lembur karyawan."

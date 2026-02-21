@@ -7,6 +7,7 @@ import UserAttendanceSummary from '@/components/attendance/user-attendance-summa
 import AttendanceHeader from '@/components/attendance/attendance-header'
 
 import { decrypt, decryptDate } from '@/lib/crypto'
+import { isAllowedForPage } from '@/lib/auth'
 
 export const metadata = {
     title: 'Absensi | Ichibot Production',
@@ -26,7 +27,7 @@ export default async function AttendancePage({
         redirect('/login')
     }
 
-    const isAdmin = ['ADMIN', 'HRD'].includes(session?.user?.role)
+    const isAdmin = await isAllowedForPage('/attendance', ['ADMIN', 'HRD'])
     const currentUserId = session.user.id
 
     const params = await searchParams

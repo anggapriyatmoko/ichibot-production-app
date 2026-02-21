@@ -111,7 +111,7 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
     const employeesWithPayroll = filteredData.filter(d => d.hasPayroll).length
 
     return (
-        <TableWrapper className="mt-8" loading={isPending}>
+        <TableWrapper loading={isPending}>
             <TableHeaderContent
                 title="Rekapitulasi Gaji"
                 description={

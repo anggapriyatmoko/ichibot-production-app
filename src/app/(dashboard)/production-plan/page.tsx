@@ -10,6 +10,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import ImportPlanModal from './components/import-plan-modal'
 import { ExportButton } from './components/export-button'
 import DeletePlanButton from './components/delete-plan-button'
+import { isAllowedForPage } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,9 @@ export default async function ProductionPlanPage({
     const session: any = await getServerSession(authOptions)
     const currentMonth = sp.month ? parseInt(sp.month) : today.getMonth() + 1
     const currentYear = sp.year ? parseInt(sp.year) : today.getFullYear()
+
+    // Evaluate if user has admin privileges for this module via dynamic RBAC
+    const isAdmin = await isAllowedForPage('/production-plan', ['ADMIN', 'HRD'])
 
     // Fetch recipes for the add form
     const recipes = await prisma.recipe.findMany({
@@ -198,7 +202,7 @@ export default async function ProductionPlanPage({
                 </form>
 
                 {/* Action Buttons Row */}
-                {['ADMIN', 'HRD'].includes(session?.user?.role) && (
+                {isAdmin && (
                     <div className="flex gap-3">
                         <ImportPlanModal month={currentMonth} year={currentYear} />
                         <ExportButton month={currentMonth} year={currentYear} />
@@ -335,7 +339,7 @@ export default async function ProductionPlanPage({
                                                                 <Link href={`/production-plan/${plan.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
                                                                     <Eye className="w-4 h-4" />
                                                                 </Link>
-                                                                {['ADMIN', 'HRD'].includes(session?.user?.role) && (
+                                                                {isAdmin && (
                                                                     <DeletePlanButton id={plan.id} name={plan.recipe.name} />
                                                                 )}
                                                             </div>

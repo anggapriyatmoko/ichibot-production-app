@@ -135,9 +135,9 @@ export const TableHeaderContent = ({
                     <div>
                         <h3 className="text-lg font-bold text-foreground leading-tight tracking-tight">{title}</h3>
                         {description && (
-                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
+                            <div className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2 sm:line-clamp-none">
                                 {description}
-                            </p>
+                            </div>
                         )}
                     </div>
                 </div>

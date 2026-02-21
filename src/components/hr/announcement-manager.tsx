@@ -169,7 +169,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
 
             {/* List */}
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">

@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requirePageAccess } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import * as XLSX from 'xlsx'
@@ -40,10 +40,7 @@ export async function getValidUserIds() {
 
 export async function getAttendanceTemplate() {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
 
     const users = await prisma.user.findMany({
         orderBy: { id: 'asc' },
@@ -83,10 +80,7 @@ export async function getAttendanceTemplate() {
 
 export async function importRawAttendance(formData: FormData) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
 
     const file = formData.get('file') as File
     if (!file) throw new Error('Missing file')
@@ -218,10 +212,7 @@ export async function importRawAttendance(formData: FormData) {
 
 export async function exportRawAttendance(month?: number, year?: number) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
 
     let whereClause = {}
     if (month && year) {

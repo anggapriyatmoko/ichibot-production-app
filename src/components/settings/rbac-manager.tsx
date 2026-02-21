@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Shield, Save, Loader2 } from 'lucide-react'
 import { getRbacConfig, saveRbacConfig, type RbacConfig } from '@/app/actions/rbac'
 import { navigationGroups, dashboardItem } from '@/components/layout/sidebar'
@@ -172,7 +172,7 @@ export default function RbacManager() {
 
                     <TableBody>
                         {Object.entries(groupedPages).map(([groupName, groupPages]) => (
-                            <>
+                            <React.Fragment key={groupName}>
                                 {/* Group header row */}
                                 <TableRow key={`group-${groupName}`} hoverable={false}>
                                     <TableCell
@@ -217,7 +217,7 @@ export default function RbacManager() {
                                         ))}
                                     </TableRow>
                                 ))}
-                            </>
+                            </React.Fragment>
                         ))}
                     </TableBody>
 

@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requirePageAccess } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
@@ -42,12 +42,7 @@ export async function getWorkSchedules() {
 // Update work schedule
 export async function updateWorkSchedule(formData: FormData) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Only ADMIN and HRD can update
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hr-settings', ['ADMIN', 'HRD'])
 
     const dayOfWeek = parseInt(formData.get('dayOfWeek') as string)
     const startTime = formData.get('startTime') as string | null
@@ -81,12 +76,7 @@ export async function getCustomWorkSchedules() {
 // Create a new custom work schedule
 export async function createCustomWorkSchedule(formData: FormData) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Only ADMIN and HRD can create
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hr-settings', ['ADMIN', 'HRD'])
 
     const startDate = new Date(formData.get('startDate') as string)
     const endDate = new Date(formData.get('endDate') as string)
@@ -111,12 +101,7 @@ export async function createCustomWorkSchedule(formData: FormData) {
 // Update custom work schedule
 export async function updateCustomWorkSchedule(formData: FormData) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Only ADMIN and HRD can update
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hr-settings', ['ADMIN', 'HRD'])
 
     const id = formData.get('id') as string
     const startDate = new Date(formData.get('startDate') as string)
@@ -143,12 +128,7 @@ export async function updateCustomWorkSchedule(formData: FormData) {
 // Delete custom work schedule
 export async function deleteCustomWorkSchedule(id: string) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Only ADMIN and HRD can delete
-    if (!['ADMIN', 'HRD'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hr-settings', ['ADMIN', 'HRD'])
 
     await prisma.customWorkSchedule.delete({
         where: { id }

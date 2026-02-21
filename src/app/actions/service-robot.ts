@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requirePageAccess } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { writeFile, unlink, mkdir } from 'fs/promises'
@@ -12,9 +12,7 @@ import path from 'path'
 async function requireServiceAccess() {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
-    if (!['ADMIN', 'TEKNISI'].includes(session?.user?.role)) {
-        throw new Error('Forbidden: Access denied')
-    }
+    await requirePageAccess('/service-robot', ['ADMIN', 'TEKNISI'])
     return session
 }
 

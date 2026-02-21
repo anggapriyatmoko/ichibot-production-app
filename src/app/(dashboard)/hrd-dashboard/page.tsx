@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
+import { isAllowedForPage } from '@/lib/auth'
 import { Users, Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react'
 import UserManagementTable from '@/components/hr/user-management-table'
 import OvertimeLeaveApproval from '@/components/hr/overtime-leave-approval'
@@ -14,6 +15,8 @@ import { getSalaryComponents } from '@/app/actions/salary-settings'
 import { getMonthlyPayrollRecap } from '@/app/actions/payroll'
 import { getHRDocuments } from '@/app/actions/hr-document'
 import ConfidentialAccess from '@/components/auth/confidential-access'
+import HRDTabs from '@/components/hr/hrd-tabs'
+import { Wallet, FileText } from 'lucide-react'
 
 export const metadata = {
     title: 'HRD Dashboard | Ichibot Production',
@@ -30,8 +33,9 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
         redirect('/login')
     }
 
-    // Only ADMIN can access
-    if (session?.user?.role !== 'ADMIN') {
+    // Evaluate access using dynamic RBAC, fallback to ADMIN
+    const isAllowed = await isAllowedForPage('/hrd-dashboard', ['ADMIN'])
+    if (!isAllowed) {
         redirect('/dashboard')
     }
 
@@ -66,6 +70,89 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
 
         const recapData = await getMonthlyPayrollRecap(month, year)
 
+        const attendanceTabContent = (
+            <div className="fade-in">
+                <OvertimeLeaveApproval />
+            </div>
+        )
+
+        const attendanceRecapTabContent = (
+            <div className="fade-in">
+                <AttendanceSummaryTable
+                    currentMonth={attMonth}
+                    currentYear={attYear}
+                />
+            </div>
+        )
+
+        const payrollTabContent = (
+            <div className="space-y-8 fade-in">
+                <PayrollRecapTable
+                    data={recapData.success ? (recapData.data as any[]) : []}
+                    currentMonth={month}
+                    currentYear={year}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <SalaryComponentList
+                        title="Komponen Pemotongan Gaji"
+                        type="DEDUCTION"
+                        initialData={deductionComponents.data || []}
+                    />
+                    <SalaryComponentList
+                        title="Komponen Penambahan Gaji"
+                        type="ADDITION"
+                        initialData={additionComponents.data || []}
+                    />
+                </div>
+            </div>
+        )
+
+        const documentTabContent = (
+            <div className="space-y-8 fade-in">
+                <AnnouncementManager allUsers={allUsers} />
+                <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
+            </div>
+        )
+
+        const employeesTabContent = (
+            <div className="fade-in">
+                <UserManagementTable userRole={session.user.role} />
+            </div>
+        )
+
+        const tabs = [
+            {
+                id: 'attendance-recap',
+                label: 'Rekap Absensi',
+                icon: <Calendar className="w-4 h-4" />,
+                content: attendanceRecapTabContent
+            },
+            {
+                id: 'attendance',
+                label: 'Izin & Lembur',
+                icon: <Clock className="w-4 h-4" />,
+                content: attendanceTabContent
+            },
+            {
+                id: 'payroll',
+                label: 'Penggajian',
+                icon: <Wallet className="w-4 h-4" />,
+                content: payrollTabContent
+            },
+            {
+                id: 'documents',
+                label: 'Dokumen & Info',
+                icon: <FileText className="w-4 h-4" />,
+                content: documentTabContent
+            },
+            {
+                id: 'employees',
+                label: 'Karyawan',
+                icon: <Users className="w-4 h-4" />,
+                content: employeesTabContent
+            }
+        ]
+
         return (
             <ConfidentialAccess>
                 <div className="max-w-6xl mx-auto">
@@ -74,45 +161,7 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
                         <p className="text-muted-foreground">Monitoring dan statistik karyawan.</p>
                     </div>
 
-                    <div className="mb-8">
-                        <OvertimeLeaveApproval />
-                        <div className="mb-8">
-                            <AnnouncementManager allUsers={allUsers} />
-                        </div>
-                        <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
-                    </div>
-
-                    {/* Salary Components Settings */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                        <SalaryComponentList
-                            title="Komponen Pemotongan Gaji"
-                            type="DEDUCTION"
-                            initialData={deductionComponents.data || []}
-                        />
-                        <SalaryComponentList
-                            title="Komponen Penambahan Gaji"
-                            type="ADDITION"
-                            initialData={additionComponents.data || []}
-                        />
-                    </div>
-
-                    {/* Payroll Recap Table */}
-                    <PayrollRecapTable
-                        data={recapData.success ? (recapData.data as any[]) : []}
-                        currentMonth={month}
-                        currentYear={year}
-                    />
-
-                    {/* Attendance Summary Table */}
-                    <AttendanceSummaryTable
-                        currentMonth={attMonth}
-                        currentYear={attYear}
-                    />
-
-                    {/* User Management Table */}
-                    <div className="mt-8">
-                        <UserManagementTable userRole={session.user.role} />
-                    </div>
+                    <HRDTabs tabs={tabs} defaultTab="attendance-recap" />
                 </div>
             </ConfidentialAccess>
         )

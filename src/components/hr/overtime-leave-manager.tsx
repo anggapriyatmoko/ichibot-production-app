@@ -16,6 +16,8 @@ import {
     TableCell,
     TableEmpty,
     TableHeaderContent,
+    TablePagination,
+    TableScrollArea
 } from '@/components/ui/table'
 
 export default function OvertimeLeaveManager({ userRole }: { userRole: string }) {
@@ -34,18 +36,29 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
     const { showConfirmation } = useConfirmation()
 
     const [filterTypes, setFilterTypes] = useState<string[]>(['ORDER', 'OVERTIME_SUBMISSION', 'LEAVE', 'VACATION'])
+    const [page, setPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalItems, setTotalItems] = useState(0)
 
     const fetchRequests = async () => {
         setIsLoading(true)
-        const res = await getOvertimeLeaves(1, 100, filterTypes, true)
+        const res = await getOvertimeLeaves(page, itemsPerPage, filterTypes, true)
         if (res.success) {
             setRequests(res.data || [])
+            setTotalPages(res.pages || 1)
+            setTotalItems(res.total || 0)
         }
         setIsLoading(false)
     }
 
     useEffect(() => {
         fetchRequests()
+    }, [filterTypes, page, itemsPerPage])
+
+    // Reset page on filter change
+    useEffect(() => {
+        setPage(1)
     }, [filterTypes])
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -314,122 +327,133 @@ export default function OvertimeLeaveManager({ userRole }: { userRole: string })
                     </div>
                 </div>
 
-                <Table>
-                    <TableHeader>
-                        <TableRow hoverable={false} className="bg-muted/50">
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Tipe</TableHead>
-                            <TableHead>Pekerjaan / Alasan</TableHead>
-                            <TableHead>Pemberi Tugas / Catatan</TableHead>
-                            <TableHead align="right">Nominal</TableHead>
-                            <TableHead align="center">Lampiran</TableHead>
-                            <TableHead align="center">Status</TableHead>
-                            <TableHead align="right">Aksi</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {requests.length === 0 ? (
-                            <TableEmpty
-                                colSpan={8}
-                                message="Belum ada data pengajuan."
-                                icon={<Clock className="w-12 h-12 opacity-20" />}
-                            />
-                        ) : (
-                            requests.map((req) => (
-                                <TableRow key={req.id}>
-                                    <TableCell className="font-medium">
-                                        {req.date ? new Date(req.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap",
-                                            req.type === 'LEAVE' ? "bg-blue-500/10 text-blue-600" :
-                                                req.type === 'VACATION' ? "bg-orange-500/10 text-orange-600" :
-                                                    req.requesterName ? "bg-emerald-500/10 text-emerald-600" : "bg-purple-500/10 text-purple-600"
-                                        )}>
-                                            {req.type === 'LEAVE' ? 'Pengajuan Izin' :
-                                                req.type === 'VACATION' ? 'Pengajuan Cuti' :
-                                                    req.requesterName ? 'Perintah Lembur' : 'Pengajuan Lembur'}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="text-xs italic text-foreground whitespace-pre-wrap" title={req.job || req.reason}>
-                                            {req.job ? req.job : `"${req.reason}"`}
-                                        </p>
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="text-xs text-muted-foreground">
-                                            {req.requesterName || '-'}
-                                        </p>
-                                        {req.adminNote && (
-                                            <p className="text-[10px] text-primary italic mt-1 bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
-                                                Note: {req.adminNote}
+                <TableScrollArea>
+                    <Table>
+                        <TableHeader>
+                            <TableRow hoverable={false} className="bg-muted/50">
+                                <TableHead>Tanggal</TableHead>
+                                <TableHead>Tipe</TableHead>
+                                <TableHead>Pekerjaan / Alasan</TableHead>
+                                <TableHead>Pemberi Tugas / Catatan</TableHead>
+                                <TableHead align="right">Nominal</TableHead>
+                                <TableHead align="center">Lampiran</TableHead>
+                                <TableHead align="center">Status</TableHead>
+                                <TableHead align="right">Aksi</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {requests.length === 0 ? (
+                                <TableEmpty
+                                    colSpan={8}
+                                    message="Belum ada data pengajuan."
+                                    icon={<Clock className="w-12 h-12 opacity-20" />}
+                                />
+                            ) : (
+                                requests.map((req) => (
+                                    <TableRow key={req.id}>
+                                        <TableCell className="font-medium">
+                                            {req.date ? new Date(req.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap",
+                                                req.type === 'LEAVE' ? "bg-blue-500/10 text-blue-600" :
+                                                    req.type === 'VACATION' ? "bg-orange-500/10 text-orange-600" :
+                                                        req.requesterName ? "bg-emerald-500/10 text-emerald-600" : "bg-purple-500/10 text-purple-600"
+                                            )}>
+                                                {req.type === 'LEAVE' ? 'Pengajuan Izin' :
+                                                    req.type === 'VACATION' ? 'Pengajuan Cuti' :
+                                                        req.requesterName ? 'Perintah Lembur' : 'Pengajuan Lembur'}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-xs italic text-foreground whitespace-pre-wrap" title={req.job || req.reason}>
+                                                {req.job ? req.job : `"${req.reason}"`}
                                             </p>
-                                        )}
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <p className="text-xs font-bold text-foreground">
-                                            {req.amount ? `Rp ${req.amount.toLocaleString('id-ID')}` : '-'}
-                                        </p>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        {req.attachment ? (
-                                            <a
-                                                href={req.attachment}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-[10px] font-bold transition-all border border-border"
-                                            >
-                                                <FileText className="w-3.5 h-3.5" />
-                                                Lihat
-                                            </a>
-                                        ) : (
-                                            <span className="text-[10px] text-muted-foreground italic">No File</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <div className={cn(
-                                            "inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold",
-                                            getStatusColor(req.status)
-                                        )}>
-                                            {getStatusText(req.status)}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        {req.status === 'MANDATE' ? (
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleRespond(req.id, 'ACCEPT')}
-                                                    className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all border border-emerald-500/20"
-                                                    title="Terima Perintah Lembur"
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="text-xs text-muted-foreground">
+                                                {req.requesterName || '-'}
+                                            </p>
+                                            {req.adminNote && (
+                                                <p className="text-[10px] text-primary italic mt-1 bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
+                                                    Note: {req.adminNote}
+                                                </p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <p className="text-xs font-bold text-foreground">
+                                                {req.amount ? `Rp ${req.amount.toLocaleString('id-ID')}` : '-'}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            {req.attachment ? (
+                                                <a
+                                                    href={req.attachment}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-[10px] font-bold transition-all border border-border"
                                                 >
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleRespond(req.id, 'REJECT')}
-                                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20"
-                                                    title="Tolak Perintah Lembur"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                    Lihat
+                                                </a>
+                                            ) : (
+                                                <span className="text-[10px] text-muted-foreground italic">No File</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            <div className={cn(
+                                                "inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold",
+                                                getStatusColor(req.status)
+                                            )}>
+                                                {getStatusText(req.status)}
                                             </div>
-                                        ) : req.status === 'PENDING' ? (
-                                            <button
-                                                onClick={() => handleDelete(req.id)}
-                                                className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-border"
-                                                title="Hapus"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        ) : (
-                                            <span className="text-[10px] text-muted-foreground italic">-</span>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {req.status === 'MANDATE' ? (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleRespond(req.id, 'ACCEPT')}
+                                                        className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all border border-emerald-500/20"
+                                                        title="Terima Perintah Lembur"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRespond(req.id, 'REJECT')}
+                                                        className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-rose-500/20"
+                                                        title="Tolak Perintah Lembur"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : req.status === 'PENDING' ? (
+                                                <button
+                                                    onClick={() => handleDelete(req.id)}
+                                                    className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all border border-border"
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            ) : (
+                                                <span className="text-[10px] text-muted-foreground italic">-</span>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableScrollArea>
+
+                <TablePagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
+                    totalCount={totalItems}
+                />
             </TableWrapper>
         </div>
     )

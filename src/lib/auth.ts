@@ -112,3 +112,14 @@ export async function isAllowedForPage(pathname: string, legacyAllowedRoles?: st
     }
     return true
 }
+
+/**
+ * Throw an error if a user lacks access to the required route. 
+ * Designed to replace hardcoded roles in Server Actions.
+ */
+export async function requirePageAccess(pathname: string, legacyAllowedRoles?: string[]) {
+    const isAllowed = await isAllowedForPage(pathname, legacyAllowedRoles)
+    if (!isAllowed) {
+        throw new Error('Forbidden: Akses ditolak')
+    }
+}

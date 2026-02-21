@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requirePageAccess } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { revalidatePath } from 'next/cache'
@@ -64,12 +64,7 @@ async function saveFile(file: File, oldPath?: string | null): Promise<string> {
 
 export async function getHRDocuments() {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Allow ADMIN, HRD, USER, TEKNISI, and ADMINISTRASI to access
-    if (!['ADMIN', 'HRD', 'USER', 'TEKNISI', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'USER', 'TEKNISI', 'ADMINISTRASI'])
 
     const docs = await prisma.hRDocument.findMany({
         orderBy: { createdAt: 'desc' }
@@ -88,12 +83,7 @@ export async function getHRDocuments() {
 
 export async function upsertHRDocument(formData: FormData) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Only ADMIN, HRD and ADMINISTRASI can modify
-    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
 
     const id = formData.get('id') as string | null
     const name = formData.get('name') as string
@@ -164,12 +154,7 @@ export async function upsertHRDocument(formData: FormData) {
 
 export async function deleteHRDocument(id: string) {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-
-    // Only ADMIN, HRD and ADMINISTRASI can access
-    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Unauthorized')
-    }
+    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
 
     try {
         const doc = await prisma.hRDocument.findUnique({ where: { id } })

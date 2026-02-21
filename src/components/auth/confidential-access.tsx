@@ -196,10 +196,10 @@ export default function ConfidentialAccess({ children }: { children: React.React
                                     </p>
                                 )}
                                 {code.length === 6 && !hasError && (
-                                    <p className="text-xs text-primary flex items-center gap-1">
+                                    <div className="text-xs text-primary flex items-center gap-1">
                                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                                         Memvalidasi...
-                                    </p>
+                                    </div>
                                 )}
                             </div>
                         </div>

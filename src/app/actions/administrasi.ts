@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, requirePageAccess } from '@/lib/auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { writeFile, unlink, mkdir } from 'fs/promises'
@@ -12,11 +12,7 @@ import { encrypt, decrypt } from '@/lib/crypto'
 // Helper to check if user can access administrasi
 async function requireAdministrasiAccess() {
     await requireAuth()
-    const session: any = await getServerSession(authOptions)
-    if (!['ADMIN', 'HRD', 'ADMINISTRASI'].includes(session?.user?.role)) {
-        throw new Error('Forbidden: Access denied')
-    }
-    return session
+    await requirePageAccess('/administrasi', ['ADMIN', 'HRD', 'ADMINISTRASI'])
 }
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'public/uploads/administrasi')
