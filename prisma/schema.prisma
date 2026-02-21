@@ -733,6 +733,7 @@ model PriceListItem {
   groupId     String
   categoryId  String?        // Relation FK
   name        String         @db.Text
+  shortDescription String?   @db.LongText
   quantity    String? // Flexible quantity (e.g. "1 pcs", "1 box")
   price       Float          @default(0)
   discount    Float          @default(0)
@@ -744,8 +745,24 @@ model PriceListItem {
   updatedAt   DateTime       @updatedAt
   group       PriceListGroup @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "fk_pli_group_unique")
   categoryRel PriceListCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  prices      PriceListPrice[]
 
   @@index([groupId], map: "idx_pli_group_unique")
   @@index([categoryId])
   @@map("PriceListItem")
+}
+
+model PriceListPrice {
+  id       String        @id @default(cuid())
+  itemId   String
+  label    String        // e.g. "Online", "Offline", "Dalam Kota"
+  price    Float         @default(0)
+  discount Float         @default(0)
+  qty      String?       // e.g. "1 pcs", "Per Orang"
+  description String?    @db.Text // Keterangan varian
+  order    Int           @default(0)
+  item     PriceListItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("PriceListPrice")
 }

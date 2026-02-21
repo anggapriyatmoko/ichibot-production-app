@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Pencil, Upload, Image as ImageIcon, X, Check } from 'lucide-react'
+import { Plus, Pencil, Upload, Image as ImageIcon, X, Check, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Modal from '@/components/ui/modal'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,14 @@ interface PriceListItemFormProps {
     item?: any
     existingCategories?: any[]
     uncategorizedOrder?: number
+}
+
+interface PriceEntry {
+    label: string
+    price: string
+    discount: string
+    qty: string
+    description: string
 }
 
 // Helper for number formatting
@@ -45,6 +53,10 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
     const [price, setPrice] = useState(item?.price?.toString() || '')
     const [discount, setDiscount] = useState(item?.discount?.toString() || '0')
     const [description, setDescription] = useState(item?.description || '')
+    const [shortDescription, setShortDescription] = useState(item?.shortDescription || '')
+
+    // Multi-price variant state
+    const [prices, setPrices] = useState<PriceEntry[]>([])
 
     // UI State
     const [openCategoryInput, setOpenCategoryInput] = useState(false)
@@ -95,6 +107,7 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
             setPrice(item.price.toString())
             setDiscount(item.discount?.toString() || '0')
             setDescription(item.description || '')
+            setShortDescription(item.shortDescription || '')
             // Ensure current category is available in dropdown
             const validCategories = existingCategories?.map((c: any) => typeof c === 'string' ? c : c.name) || []
             let currentCategories = [...validCategories]
@@ -120,6 +133,24 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
             setAdditionalImages([])
             setAdditionalImagePreviews([])
             setRemovedAdditionalImages([])
+            // Init prices from item
+            if (item.prices && item.prices.length > 0) {
+                setPrices(item.prices.map((p: any) => ({
+                    label: p.label || '',
+                    price: p.price?.toString() || '0',
+                    discount: p.discount?.toString() || '0',
+                    qty: p.qty || '',
+                    description: p.description || ''
+                })))
+            } else {
+                setPrices([{
+                    label: 'Harga',
+                    price: item.price?.toString() || '0',
+                    discount: item.discount?.toString() || '0',
+                    qty: item.quantity || '',
+                    description: ''
+                }])
+            }
         } else {
             setName('')
             setCategory('')
@@ -129,6 +160,8 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
             setPrice('')
             setDiscount('0')
             setDescription('')
+            setShortDescription('')
+            setPrices([{ label: 'Harga', price: '', discount: '0', qty: '', description: '' }])
             setOpenCategoryInput(availableCategories.length === 0)
             setImagePreview(null)
             setSelectedFile(null)
@@ -193,6 +226,22 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
         }
     }
 
+    // --- Price variant handlers ---
+    const addPriceEntry = () => {
+        setPrices([...prices, { label: '', price: '', discount: '0', qty: '', description: '' }])
+    }
+
+    const removePriceEntry = (index: number) => {
+        if (prices.length <= 1) return
+        setPrices(prices.filter((_, i) => i !== index))
+    }
+
+    const updatePriceEntry = (index: number, field: keyof PriceEntry, value: string) => {
+        const updated = [...prices]
+        updated[index] = { ...updated[index], [field]: value }
+        setPrices(updated)
+    }
+
     const handleSubmit = async () => {
         if (!name.trim()) {
             showError('Nama barang wajib diisi')
@@ -220,10 +269,21 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
 
         formData.append('name', name)
         formData.append('category', category)
-        formData.append('quantity', quantity)
-        formData.append('price', price)
-        formData.append('discount', discount)
+        formData.append('quantity', prices[0]?.qty || quantity)
+        formData.append('price', (parseFloat(prices[0]?.price || '0') || 0).toString())
+        formData.append('discount', (parseFloat(prices[0]?.discount || '0') || 0).toString())
         formData.append('description', description)
+        formData.append('shortDescription', shortDescription)
+
+        // Serialize variant prices
+        const pricesPayload = prices.map(p => ({
+            label: p.label,
+            price: parseFloat(p.price || '0') || 0,
+            discount: parseFloat(p.discount || '0') || 0,
+            qty: p.qty,
+            description: p.description
+        }))
+        formData.append('prices', JSON.stringify(pricesPayload))
 
         if (selectedFile) {
             formData.append('image', selectedFile)
@@ -284,6 +344,22 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Contoh: Service Ringan"
+                            />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label>Deskripsi Singkat</Label>
+                            <SimpleWysiwyg
+                                value={shortDescription}
+                                onChange={setShortDescription}
+                                className="min-h-[100px]"
+                            />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label>Keterangan</Label>
+                            <SimpleWysiwyg
+                                value={description}
+                                onChange={setDescription}
+                                className="min-h-[150px]"
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -405,42 +481,83 @@ export default function PriceListItemForm({ groupId, item, existingCategories = 
                                 />
                             )}
                         </div>
-                        <div className="space-y-2">
-                            <Label>Harga (IDR)</Label>
-                            <Input
-                                type="text"
-                                value={formatNumber(price)}
-                                onChange={(e) => setPrice(parseNumber(e.target.value))}
-                                placeholder="0"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Harga Diskon (IDR)</Label>
-                            <Input
-                                type="text"
-                                value={formatNumber(discount)}
-                                onChange={(e) => setDiscount(parseNumber(e.target.value))}
-                                placeholder="0"
-                            />
-                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>Qty / Satuan</Label>
-                        <Input
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            placeholder="Contoh: 1 pcs, 1 box, Per Jam"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Keterangan</Label>
-                        <SimpleWysiwyg
-                            value={description}
-                            onChange={setDescription}
-                            className="min-h-[150px]"
-                        />
+                    {/* Varian Harga */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-base font-semibold">Varian Harga</Label>
+                            <Button type="button" size="sm" variant="outline" onClick={addPriceEntry}>
+                                <Plus className="w-3 h-3 mr-1" />
+                                Tambah Varian
+                            </Button>
+                        </div>
+                        <div className="space-y-3">
+                            {prices.map((entry, index) => (
+                                <div key={index} className="relative border rounded-lg p-4 bg-muted/30">
+                                    {prices.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removePriceEntry(index)}
+                                            className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-destructive transition-colors"
+                                            title="Hapus varian"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div className="space-y-1 col-span-2 md:col-span-4">
+                                            <Label className="text-xs text-muted-foreground">Label Varian</Label>
+                                            <Input
+                                                value={entry.label}
+                                                onChange={(e) => updatePriceEntry(index, 'label', e.target.value)}
+                                                placeholder="Contoh: Online, Offline, Dalam Kota"
+                                                className="h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-muted-foreground">Harga (IDR)</Label>
+                                            <Input
+                                                type="text"
+                                                value={formatNumber(entry.price)}
+                                                onChange={(e) => updatePriceEntry(index, 'price', parseNumber(e.target.value))}
+                                                placeholder="0"
+                                                className="h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-muted-foreground">Harga Diskon (IDR)</Label>
+                                            <Input
+                                                type="text"
+                                                value={formatNumber(entry.discount)}
+                                                onChange={(e) => updatePriceEntry(index, 'discount', parseNumber(e.target.value))}
+                                                placeholder="0"
+                                                className="h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1 col-span-2">
+                                            <Label className="text-xs text-muted-foreground">Qty / Satuan</Label>
+                                            <Input
+                                                value={entry.qty}
+                                                onChange={(e) => updatePriceEntry(index, 'qty', e.target.value)}
+                                                placeholder="Contoh: 1 pcs, Per Orang"
+                                                className="h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1 col-span-2 md:col-span-4">
+                                            <Label className="text-xs text-muted-foreground">Keterangan</Label>
+                                            <textarea
+                                                value={entry.description}
+                                                onChange={(e) => updatePriceEntry(index, 'description', e.target.value)}
+                                                placeholder="Keterangan tambahan untuk varian ini"
+                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[60px] resize-none"
+                                                rows={2}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="space-y-2">

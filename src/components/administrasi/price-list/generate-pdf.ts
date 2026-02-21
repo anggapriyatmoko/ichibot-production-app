@@ -97,6 +97,11 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
 
     const pw = doc.internal.pageSize.getWidth()
     const ph = doc.internal.pageSize.getHeight()
+    let pageNum = 1
+
+    const formatRupiah = (val: number) => new Intl.NumberFormat('id-ID', {
+        style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
+    }).format(val)
 
     const addHeaderFooter = (page: number) => {
         if (logoBase64) {
@@ -134,14 +139,34 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
         doc.text(`Halaman ${page}`, pw - 14, ph - 10, { align: 'right' })
     }
 
+    const checkPageBreak = (neededHeight: number, currentY: number): number => {
+        if (currentY + neededHeight > ph - 25) {
+            doc.addPage()
+            pageNum++
+            addHeaderFooter(pageNum)
+            return 35
+        }
+        return currentY
+    }
+
     addHeaderFooter(1)
 
-    doc.setFontSize(16)
+    // ==========================================
+    // SECTION 1: Product Name (full width, above image)
+    // ==========================================
+    doc.setFontSize(18)
     doc.setTextColor(17, 24, 39)
     doc.setFont('Manrope', 'bold')
+    const titleLines = doc.splitTextToSize(item.name, pw - 28)
+    doc.text(titleLines, 14, 40)
 
+    const titleEndY = 40 + (titleLines.length * 7) + 4
+
+    // ==========================================
+    // SECTION 2: Image (left) + Deskripsi Singkat (right)
+    // ==========================================
     const leftWidth = 70
-
+    const imageStartY = titleEndY
     let imageBase64 = null
     if (item.image) {
         try {
@@ -151,100 +176,419 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
 
     if (imageBase64) {
         doc.setDrawColor(229, 231, 235)
-        doc.roundedRect(14, 35, leftWidth, leftWidth, 2, 2)
+        doc.roundedRect(14, imageStartY, leftWidth, leftWidth, 2, 2)
         const type = imageBase64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG'
-        doc.addImage(imageBase64, type, 16, 37, leftWidth - 4, leftWidth - 4, undefined, 'FAST')
+        doc.addImage(imageBase64, type, 16, imageStartY + 2, leftWidth - 4, leftWidth - 4, undefined, 'FAST')
     } else {
         doc.setDrawColor(229, 231, 235)
         doc.setFillColor(249, 250, 251)
-        doc.roundedRect(14, 35, leftWidth, leftWidth, 2, 2, 'FD')
+        doc.roundedRect(14, imageStartY, leftWidth, leftWidth, 2, 2, 'FD')
         doc.setFontSize(10)
         doc.setTextColor(156, 163, 175)
-        doc.text('Tanpa Gambar', 14 + leftWidth / 2, 35 + leftWidth / 2, { align: 'center', baseline: 'middle' })
+        doc.text('Tanpa Gambar', 14 + leftWidth / 2, imageStartY + leftWidth / 2, { align: 'center', baseline: 'middle' })
     }
 
-    const rightX = 14 + leftWidth + 10
+    const imageGap = 6
+    const rightX = 14 + leftWidth + imageGap
+    const rightWidth = pw - rightX - 14
 
-    doc.setFontSize(18)
-    doc.setTextColor(17, 24, 39)
-    doc.setFont('Manrope', 'bold')
-    const titleLines = doc.splitTextToSize(item.name, pw - rightX - 14)
-    doc.text(titleLines, rightX, 42)
+    let currentY = imageStartY + imageGap
 
-    let currentY = 42 + (titleLines.length * 7) + 4
+    // Deskripsi Singkat (right side, next to image — overflow continues below)
+    const rawShortDesc = cleanHtml(item.shortDescription).replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim()
+    if (rawShortDesc) {
+        // Title
+        doc.setFontSize(10)
+        doc.setTextColor(107, 114, 128)
+        doc.setFont('Manrope', 'bold')
+        doc.text('Deskripsi Singkat', rightX, currentY)
+        currentY += 6
 
-    const discount = item.discount || 0
-    const hasDiscount = discount > 0 && discount < item.price
-    const finalPrice = hasDiscount ? discount : item.price
-
-    const formattedPrice = new Intl.NumberFormat('id-ID', {
-        style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
-    }).format(finalPrice)
-
-    doc.setFontSize(22)
-    doc.setTextColor(37, 99, 235)
-    doc.text(formattedPrice, rightX, currentY)
-
-    if (hasDiscount) {
-        doc.setFontSize(12)
-        doc.setTextColor(220, 38, 38)
-        const discText = `DISKON ${Math.round((1 - discount / item.price) * 100)}%`
-        doc.text(discText, rightX + doc.getTextWidth(formattedPrice) + 4, currentY - 2)
-
-        currentY += 8
-        const formattedOriginalPrice = new Intl.NumberFormat('id-ID', {
-            style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
-        }).format(item.price)
-        doc.setFontSize(12)
-        doc.setTextColor(156, 163, 175)
-        doc.setFont('Manrope', 'normal')
-        doc.text(formattedOriginalPrice, rightX, currentY)
-        const w = doc.getTextWidth(formattedOriginalPrice)
-        doc.setDrawColor(156, 163, 175)
-        doc.line(rightX, currentY - 1, rightX + w, currentY - 1)
-    }
-
-    currentY += 10
-    if (item.quantity) {
         doc.setFontSize(10)
         doc.setTextColor(107, 114, 128)
         doc.setFont('Manrope', 'normal')
-        doc.text(`Qty / Satuan: ${item.quantity}`, rightX, currentY)
-    }
 
-    currentY = Math.max(currentY + 10, 35 + leftWidth + 10)
+        const shortDescLines = doc.splitTextToSize(rawShortDesc, rightWidth)
+        const imageBottomY = imageStartY + leftWidth
+        let overflowStartIndex = -1
 
-    doc.setDrawColor(229, 231, 235)
-    doc.setLineWidth(0.2)
-    doc.line(14, currentY, pw - 14, currentY)
-    currentY += 10
-
-    doc.setFontSize(12)
-    doc.setTextColor(107, 114, 128)
-    doc.setFont('Manrope', 'bold')
-    doc.text('DESKRIPSI / SPESIFIKASI', 14, currentY)
-    currentY += 8
-
-    doc.setFontSize(10)
-    doc.setTextColor(55, 65, 81)
-    doc.setFont('Manrope', 'normal')
-
-    const rawDesc = cleanHtml(item.description)
-    const descLines = doc.splitTextToSize(rawDesc, pw - 28)
-
-    let pageNum = 1
-
-    for (const line of descLines) {
-        if (currentY > ph - 25) {
-            doc.addPage()
-            pageNum++
-            addHeaderFooter(pageNum)
-            currentY = 35
+        // Draw lines that fit next to the image
+        for (let i = 0; i < shortDescLines.length; i++) {
+            if (currentY < imageBottomY) {
+                doc.text(shortDescLines[i], rightX, currentY)
+                currentY += 5
+            } else {
+                overflowStartIndex = i
+                break
+            }
         }
-        doc.text(line, 14, currentY)
-        currentY += 5
+
+        // If there are overflow lines, continue below the image at full width
+        if (overflowStartIndex >= 0) {
+            currentY = imageBottomY + imageGap
+            const remainingText = shortDescLines.slice(overflowStartIndex).join(' ')
+            const fullWidthLines = doc.splitTextToSize(remainingText, pw - 28)
+            for (const line of fullWidthLines) {
+                currentY = checkPageBreak(6, currentY)
+                doc.text(line, 14, currentY)
+                currentY += 5
+            }
+        }
+        currentY += 2
     }
 
+    // Legacy single price (shown in the right section next to image)
+    const prices = item.prices && item.prices.length > 0 ? item.prices : null
+    if (!prices) {
+        // Show legacy single price
+        const discount = item.discount || 0
+        const hasDiscount = discount > 0 && discount < item.price
+        const finalPrice = hasDiscount ? discount : item.price
+
+        doc.setFontSize(22)
+        doc.setTextColor(37, 99, 235)
+        doc.text(formatRupiah(finalPrice), rightX, currentY)
+
+        if (hasDiscount) {
+            doc.setFontSize(12)
+            doc.setTextColor(220, 38, 38)
+            const discText = `DISKON ${Math.round((1 - discount / item.price) * 100)}%`
+            doc.text(discText, rightX + doc.getTextWidth(formatRupiah(finalPrice)) + 4, currentY - 2)
+
+            currentY += 8
+            doc.setFontSize(12)
+            doc.setTextColor(156, 163, 175)
+            doc.setFont('Manrope', 'normal')
+            const origPrice = formatRupiah(item.price)
+            doc.text(origPrice, rightX, currentY)
+            const w = doc.getTextWidth(origPrice)
+            doc.setDrawColor(156, 163, 175)
+            doc.line(rightX, currentY - 1, rightX + w, currentY - 1)
+        }
+
+        currentY += 10
+        if (item.quantity) {
+            doc.setFontSize(10)
+            doc.setTextColor(107, 114, 128)
+            doc.setFont('Manrope', 'normal')
+            doc.text(`Qty / Satuan: ${item.quantity}`, rightX, currentY)
+        }
+    }
+
+    // Move below the image area
+    currentY = Math.max(currentY + 3, imageStartY + leftWidth + 3)
+
+    // ==========================================
+    // SECTION 3: Deskripsi / Keterangan (2 columns, rich text)
+    // ==========================================
+    if (item.description && item.description.trim()) {
+        currentY = checkPageBreak(20, currentY)
+
+        doc.setDrawColor(229, 231, 235)
+        doc.setLineWidth(0.2)
+        doc.line(14, currentY, pw - 14, currentY)
+        currentY += 6
+
+        // Title - match deskripsi singkat style
+        doc.setFontSize(10)
+        doc.setTextColor(107, 114, 128)
+        doc.setFont('Manrope', 'bold')
+        doc.text('Deskripsi / Spesifikasi', 14, currentY)
+        currentY += 6
+
+        // Parse HTML into rich text segments
+        type RichSegment = { text: string; bold: boolean; italic: boolean }
+        type RichLine = RichSegment[]
+
+        const parseHtmlToRichLines = (html: string): RichLine[] => {
+            const lines: RichLine[] = []
+            let currentLine: RichSegment[] = []
+
+            // Split by block-level elements (p, div, br, li)
+            const blocks = html
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<\/div>/gi, '\n')
+                .replace(/<li[^>]*>/gi, '\n• ')
+                .replace(/<\/li>/gi, '')
+                .replace(/<\/?ul[^>]*>/gi, '')
+                .replace(/<\/?ol[^>]*>/gi, '')
+                .replace(/<p[^>]*>/gi, '')
+                .replace(/<div[^>]*>/gi, '')
+
+            // Process inline formatting
+            const processInline = (text: string, inheritBold: boolean, inheritItalic: boolean) => {
+                // Handle <b>, <strong>, <i>, <em> tags
+                let remaining = text
+                while (remaining.length > 0) {
+                    // Find the next formatting tag
+                    const boldMatch = remaining.match(/<(b|strong)>/i)
+                    const italicMatch = remaining.match(/<(i|em)>/i)
+
+                    let nextTag: { index: number; tag: string; type: 'bold' | 'italic' } | null = null
+                    if (boldMatch && boldMatch.index !== undefined) {
+                        nextTag = { index: boldMatch.index, tag: boldMatch[0], type: 'bold' }
+                    }
+                    if (italicMatch && italicMatch.index !== undefined) {
+                        if (!nextTag || italicMatch.index < nextTag.index) {
+                            nextTag = { index: italicMatch.index, tag: italicMatch[0], type: 'italic' }
+                        }
+                    }
+
+                    if (!nextTag) {
+                        // No more tags, add remaining text
+                        const clean = remaining.replace(/<[^>]*>/g, '').replace(/&nbsp;/ig, ' ').replace(/&amp;/ig, '&').replace(/&lt;/ig, '<').replace(/&gt;/ig, '>')
+                        if (clean) {
+                            currentLine.push({ text: clean, bold: inheritBold, italic: inheritItalic })
+                        }
+                        break
+                    }
+
+                    // Add text before the tag
+                    const before = remaining.substring(0, nextTag.index).replace(/<[^>]*>/g, '').replace(/&nbsp;/ig, ' ').replace(/&amp;/ig, '&')
+                    if (before) {
+                        currentLine.push({ text: before, bold: inheritBold, italic: inheritItalic })
+                    }
+
+                    // Find closing tag
+                    const closingTag = nextTag.type === 'bold' ? /<\/(b|strong)>/i : /<\/(i|em)>/i
+                    const afterOpen = remaining.substring(nextTag.index + nextTag.tag.length)
+                    const closeMatch = afterOpen.match(closingTag)
+
+                    if (closeMatch && closeMatch.index !== undefined) {
+                        const innerContent = afterOpen.substring(0, closeMatch.index)
+                        const newBold = nextTag.type === 'bold' ? true : inheritBold
+                        const newItalic = nextTag.type === 'italic' ? true : inheritItalic
+                        processInline(innerContent, newBold, newItalic)
+                        remaining = afterOpen.substring(closeMatch.index + closeMatch[0].length)
+                    } else {
+                        // No closing tag, treat rest as formatted
+                        const newBold = nextTag.type === 'bold' ? true : inheritBold
+                        const newItalic = nextTag.type === 'italic' ? true : inheritItalic
+                        processInline(afterOpen, newBold, newItalic)
+                        break
+                    }
+                }
+            }
+
+            // Split into lines first
+            const rawLines = blocks.split('\n')
+            for (const rawLine of rawLines) {
+                currentLine = []
+                processInline(rawLine, false, false)
+                if (currentLine.length > 0 || lines.length > 0) {
+                    lines.push(currentLine.length > 0 ? currentLine : [{ text: '', bold: false, italic: false }])
+                }
+            }
+
+            // Remove trailing empty lines
+            while (lines.length > 0 && lines[lines.length - 1].length === 1 && lines[lines.length - 1][0].text === '') {
+                lines.pop()
+            }
+
+            return lines
+        }
+
+        const richLines = parseHtmlToRichLines(item.description)
+
+        // Render rich lines in 2-column layout
+        const colGap = 8
+        const colWidth = (pw - 28 - colGap) / 2
+        const midPoint = Math.ceil(richLines.length / 2)
+        const col1Lines = richLines.slice(0, midPoint)
+        const col2Lines = richLines.slice(midPoint)
+
+        const col1X = 14
+        const col2X = 14 + colWidth + colGap
+
+        const renderRichLine = (segments: RichSegment[], x: number, y: number, maxWidth: number): number => {
+            // Flatten segments into a single text, then word-wrap
+            // For each line, render segments with proper styling
+            doc.setFontSize(10)
+            doc.setTextColor(107, 114, 128)
+
+            if (segments.length === 1 && segments[0].text === '') {
+                return y + 3 // Empty line = small gap
+            }
+
+            // Simple approach: render each segment inline
+            let curX = x
+            for (const seg of segments) {
+                if (!seg.text) continue
+
+                const style = seg.bold && seg.italic ? 'bolditalic' : seg.bold ? 'bold' : seg.italic ? 'italic' : 'normal'
+                // jsPDF Manrope may not have italic, use normal as fallback
+                const fontStyle = seg.bold ? 'bold' : 'normal'
+                doc.setFont('Manrope', fontStyle)
+
+                // Word wrap within column
+                const words = seg.text.split(' ')
+                for (const word of words) {
+                    if (!word) continue
+                    const wordWidth = doc.getTextWidth(word + ' ')
+                    if (curX + wordWidth > x + maxWidth && curX > x) {
+                        // Wrap to next line
+                        y += 5
+                        y = checkPageBreak(6, y)
+                        curX = x
+                    }
+                    doc.text(word, curX, y)
+                    curX += wordWidth
+                }
+            }
+            return y + 5
+        }
+
+        const startDescY = currentY
+
+        // Draw column 1
+        let col1Y = startDescY
+        for (const line of col1Lines) {
+            col1Y = checkPageBreak(6, col1Y)
+            col1Y = renderRichLine(line, col1X, col1Y, colWidth)
+        }
+
+        // Draw column 2
+        let col2Y = startDescY
+        for (const line of col2Lines) {
+            col2Y = checkPageBreak(6, col2Y)
+            col2Y = renderRichLine(line, col2X, col2Y, colWidth)
+        }
+
+        currentY = Math.max(col1Y, col2Y)
+    }
+
+    // ==========================================
+    // SECTION 4: Variant Prices (dynamic columns)
+    // ==========================================
+    if (prices && prices.length > 0) {
+        currentY += 5
+        currentY = checkPageBreak(30, currentY)
+
+        doc.setDrawColor(229, 231, 235)
+        doc.setLineWidth(0.2)
+        doc.line(14, currentY, pw - 14, currentY)
+        currentY += 6
+
+        doc.setFontSize(10)
+        doc.setTextColor(107, 114, 128)
+        doc.setFont('Manrope', 'bold')
+        doc.text('Harga', 14, currentY)
+        currentY += 8
+
+        const numCols = Math.min(prices.length, 4) // max 4 cols
+        const colGap = 6
+        const totalGap = colGap * (numCols - 1)
+        const colW = (pw - 28 - totalGap) / numCols
+
+        // Calculate dynamic card heights
+        const calcCardHeight = (p: any) => {
+            let h = 38 // base height for label + price + qty
+            if (p.description) {
+                doc.setFontSize(8)
+                doc.setFont('Manrope', 'normal')
+                const descLines = doc.splitTextToSize(p.description, colW - 8)
+                h += descLines.length * 4 + 4
+            }
+            return h
+        }
+
+        for (let i = 0; i < prices.length; i++) {
+            const p = prices[i]
+            const colIndex = i % numCols
+            const colX = 14 + colIndex * (colW + colGap)
+
+            // Calculate max card height for this row
+            let rowMaxH = 38
+            for (let j = i - colIndex; j < Math.min(i - colIndex + numCols, prices.length); j++) {
+                rowMaxH = Math.max(rowMaxH, calcCardHeight(prices[j]))
+            }
+
+            // Start a new row if we've filled all columns
+            if (i > 0 && colIndex === 0) {
+                currentY += rowMaxH + 6
+                currentY = checkPageBreak(rowMaxH + 6, currentY)
+            }
+
+            const cardY = currentY
+
+            // Card background
+            doc.setFillColor(245, 247, 250)
+            doc.setDrawColor(229, 231, 235)
+            doc.roundedRect(colX, cardY, colW, rowMaxH, 2, 2, 'FD')
+
+            // Label
+            doc.setFontSize(9)
+            doc.setTextColor(107, 114, 128)
+            doc.setFont('Manrope', 'bold')
+            const labelText = doc.splitTextToSize(p.label || `Varian ${i + 1}`, colW - 8)
+            doc.text(labelText, colX + 4, cardY + 6)
+
+            // Price
+            const hasDiscount = p.discount > 0 && p.discount < p.price
+            const finalPrice = hasDiscount ? p.discount : p.price
+
+            doc.setFontSize(14)
+            doc.setTextColor(37, 99, 235)
+            doc.setFont('Manrope', 'bold')
+            const priceText = formatRupiah(finalPrice)
+            doc.text(priceText, colX + 4, cardY + 16)
+
+            if (hasDiscount) {
+                doc.setFontSize(9)
+                doc.setTextColor(156, 163, 175)
+                doc.setFont('Manrope', 'normal')
+                const origText = formatRupiah(p.price)
+                doc.text(origText, colX + 4, cardY + 22)
+                const tw = doc.getTextWidth(origText)
+                doc.setDrawColor(156, 163, 175)
+                doc.line(colX + 4, cardY + 21, colX + 4 + tw, cardY + 21)
+
+                const discPercent = Math.round((1 - p.discount / p.price) * 100)
+                const badgeText = `DISC ${discPercent}%`
+                doc.setFontSize(7)
+                doc.setTextColor(255, 255, 255)
+                doc.setFont('Manrope', 'bold')
+                const bw = doc.getTextWidth(badgeText) + 3
+                doc.setFillColor(220, 38, 38)
+                doc.roundedRect(colX + 4, cardY + 24, bw, 4.5, 0.5, 0.5, 'F')
+                doc.text(badgeText, colX + 5.5, cardY + 27.5)
+            }
+
+            // Qty
+            if (p.qty) {
+                doc.setFontSize(8)
+                doc.setTextColor(107, 114, 128)
+                doc.setFont('Manrope', 'normal')
+                doc.text(p.qty, colX + 4, cardY + 34)
+            }
+
+            // Description/Keterangan
+            if (p.description) {
+                doc.setFontSize(8)
+                doc.setTextColor(107, 114, 128)
+                doc.setFont('Manrope', 'normal')
+                const descLines = doc.splitTextToSize(p.description, colW - 8)
+                let descY = cardY + 40
+                for (const line of descLines) {
+                    doc.text(line, colX + 4, descY)
+                    descY += 4
+                }
+            }
+        }
+
+        // Advance past the last row of cards
+        const lastRowStart = prices.length - (prices.length % numCols || numCols)
+        let lastRowH = 38
+        for (let j = lastRowStart; j < prices.length; j++) {
+            lastRowH = Math.max(lastRowH, calcCardHeight(prices[j]))
+        }
+        currentY += lastRowH + 6
+    }
+
+    // ==========================================
+    // SECTION 5: Additional Images (Lampiran)
+    // ==========================================
     const additionalImages = (() => {
         try {
             return item.additionalImages ? JSON.parse(item.additionalImages) : []
@@ -254,13 +598,8 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
     })()
 
     if (additionalImages.length > 0) {
-        currentY += 10
-        if (currentY > ph - 40) {
-            doc.addPage()
-            pageNum++
-            addHeaderFooter(pageNum)
-            currentY = 35
-        }
+        currentY += 5
+        currentY = checkPageBreak(40, currentY)
 
         doc.setFontSize(12)
         doc.setTextColor(37, 99, 235)

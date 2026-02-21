@@ -309,6 +309,14 @@ export default function PriceListTable({ group }: PriceListTableProps) {
                                         <div>
                                             {item.name}
                                         </div>
+                                        {item.shortDescription && (
+                                            <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                                                <SimpleWysiwygDisplay
+                                                    content={item.shortDescription}
+                                                    className="[&_p]:inline [&_p]:mr-1 [&_div]:inline [&_div]:mr-1 [&_br]:hidden"
+                                                />
+                                            </div>
+                                        )}
                                         <div className="mt-1 flex items-center">
                                             <Tag className="w-3 h-3 mr-1 text-muted-foreground/70" />
                                             <span className="text-[10px] text-muted-foreground">
@@ -317,10 +325,38 @@ export default function PriceListTable({ group }: PriceListTableProps) {
                                         </div>
                                     </TableCell>
                                     <TableCell className="align-top py-4 text-muted-foreground">
-                                        {item.quantity || '-'}
+                                        {item.prices && item.prices.length > 0
+                                            ? item.prices[0]?.qty || item.quantity || '-'
+                                            : item.quantity || '-'}
                                     </TableCell>
                                     <TableCell className="align-top py-4 font-medium">
-                                        {item.discount > 0 ? (
+                                        {item.prices && item.prices.length > 0 ? (
+                                            <div className="flex flex-col gap-2">
+                                                {item.prices.map((p: any, pi: number) => (
+                                                    <div key={pi} className="flex flex-col">
+                                                        {item.prices.length > 1 && (
+                                                            <span className="text-[10px] text-muted-foreground font-normal mb-0.5">
+                                                                {p.label}
+                                                                {p.qty ? ` · ${p.qty}` : ''}
+                                                            </span>
+                                                        )}
+                                                        {p.discount > 0 ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-blue-600 font-bold text-sm">{formatRupiah(p.discount)}</span>
+                                                                <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-600 border border-red-200">
+                                                                    {Math.round((1 - p.discount / p.price) * 100)}%
+                                                                </span>
+                                                                <span className="text-[10px] text-muted-foreground line-through decoration-red-400">
+                                                                    {formatRupiah(p.price)}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-sm">{formatRupiah(p.price)}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : item.discount > 0 ? (
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-blue-600 font-bold">{formatRupiah(item.discount)}</span>

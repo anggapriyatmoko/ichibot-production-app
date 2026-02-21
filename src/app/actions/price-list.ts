@@ -88,7 +88,10 @@ export async function getPriceListGroups() {
                     { price: 'asc' }
                 ],
                 include: {
-                    categoryRel: true
+                    categoryRel: true,
+                    prices: {
+                        orderBy: { order: 'asc' }
+                    }
                 } as any
             }
         } as any,
@@ -300,6 +303,8 @@ export async function createPriceListItem(formData: FormData) {
     const price = parseFloat(formData.get('price') as string)
     const discount = parseFloat(formData.get('discount') as string) || 0
     const description = formData.get('description') as string
+    const shortDescription = formData.get('shortDescription') as string
+    const pricesJson = formData.get('prices') as string
     const imageFile = formData.get('image') as File | null
     const additionalImageFiles = formData.getAll('additionalImages') as File[]
 
@@ -356,6 +361,12 @@ export async function createPriceListItem(formData: FormData) {
             categoryId = cat.id
         }
 
+        // Parse variant prices
+        let pricesData: { label: string; price: number; discount: number; qty: string; description: string }[] = []
+        try {
+            if (pricesJson) pricesData = JSON.parse(pricesJson)
+        } catch { }
+
         await prisma.priceListItem.create({
             data: {
                 groupId,
@@ -366,8 +377,19 @@ export async function createPriceListItem(formData: FormData) {
                 price: isNaN(price) ? 0 : price,
                 discount: isNaN(discount) ? 0 : discount,
                 description: description || null,
+                shortDescription: shortDescription || null,
                 image: imagePath,
-                additionalImages: JSON.stringify(additionalImages)
+                additionalImages: JSON.stringify(additionalImages),
+                prices: pricesData.length > 0 ? {
+                    create: pricesData.map((p, i) => ({
+                        label: p.label,
+                        price: p.price || 0,
+                        discount: p.discount || 0,
+                        qty: p.qty || null,
+                        description: p.description || null,
+                        order: i
+                    }))
+                } : undefined
             } as any
         })
         revalidatePath('/administrasi/daftar-harga')
@@ -386,6 +408,8 @@ export async function updatePriceListItem(formData: FormData) {
     const price = parseFloat(formData.get('price') as string)
     const discount = parseFloat(formData.get('discount') as string) || 0
     const description = formData.get('description') as string
+    const shortDescription = formData.get('shortDescription') as string
+    const pricesJson = formData.get('prices') as string
     const imageFile = formData.get('image') as File | null
     const removeImage = formData.get('removeImage') === 'true'
     const additionalImageFiles = formData.getAll('additionalImages') as File[]
@@ -461,6 +485,15 @@ export async function updatePriceListItem(formData: FormData) {
             categoryId = null
         }
 
+        // Parse variant prices
+        let pricesData: { label: string; price: number; discount: number; qty: string; description: string }[] = []
+        try {
+            if (pricesJson) pricesData = JSON.parse(pricesJson)
+        } catch { }
+
+        // Delete existing prices and recreate
+        await (prisma as any).priceListPrice.deleteMany({ where: { itemId: id } })
+
         await prisma.priceListItem.update({
             where: { id },
             data: {
@@ -471,8 +504,19 @@ export async function updatePriceListItem(formData: FormData) {
                 price: isNaN(price) ? 0 : price,
                 discount: isNaN(discount) ? 0 : discount,
                 description: description || null,
+                shortDescription: shortDescription || null,
                 image: imagePath,
-                additionalImages: JSON.stringify(currentAdditionalImages)
+                additionalImages: JSON.stringify(currentAdditionalImages),
+                prices: pricesData.length > 0 ? {
+                    create: pricesData.map((p, i) => ({
+                        label: p.label,
+                        price: p.price || 0,
+                        discount: p.discount || 0,
+                        qty: p.qty || null,
+                        description: p.description || null,
+                        order: i
+                    }))
+                } : undefined
             } as any
         })
 
