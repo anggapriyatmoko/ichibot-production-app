@@ -76,6 +76,7 @@ export default function StoreProductList({
         price: 'all', // all, with, without
         weight: 'all', // all, with, without
         backup: 'all', // all, with, without
+        missing: 'all', // all, with, without
         minPrice: '',
         maxPrice: ''
     })
@@ -307,6 +308,10 @@ export default function StoreProductList({
             if (filters.backup === 'with' && !hasBackup) return false
             if (filters.backup === 'without' && hasBackup) return false
 
+            // Missing from WooCommerce Filter
+            if (filters.missing === 'with' && !p.isMissingFromWoo) return false
+            if (filters.missing === 'without' && p.isMissingFromWoo) return false
+
             // Price Range Filter
             const price = p.price || 0
             if (filters.minPrice && price < parseFloat(filters.minPrice.replace(/\./g, ''))) return false
@@ -493,6 +498,7 @@ export default function StoreProductList({
                                         price: 'all',
                                         weight: 'all',
                                         backup: 'all',
+                                        missing: 'all',
                                         minPrice: '',
                                         maxPrice: ''
                                     })
@@ -613,6 +619,22 @@ export default function StoreProductList({
                                     <option value="all">Semua</option>
                                     <option value="with">Ada Backup</option>
                                     <option value="without">Tidak Ada</option>
+                                </select>
+                            </div>
+
+                            {/* Missing Filter */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1.5">
+                                    <RefreshCw className="w-3 h-3" /> Status Produk
+                                </label>
+                                <select
+                                    value={filters.missing}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, missing: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-primary transition-all shadow-sm"
+                                >
+                                    <option value="all">Semua Status</option>
+                                    <option value="with">Tdk ada di Woo</option>
+                                    <option value="without">Normal (Ada di Woo)</option>
                                 </select>
                             </div>
 
