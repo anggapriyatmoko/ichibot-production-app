@@ -400,31 +400,25 @@ export default function ProductList({
                             </div>
                             <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide w-full sm:w-auto">
                                 <div className="flex items-center gap-2">
-                                    {userRole === 'ADMIN' && (
-                                        <>
-                                            <button
-                                                onClick={handleExport}
-                                                disabled={isLoading}
-                                                className="h-9 w-9 flex items-center justify-center border border-border hover:bg-muted text-foreground rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                                                title="Export"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                            </button>
-                                            <div className="h-9 flex items-center">
-                                                <ImportProductModal />
-                                            </div>
-                                        </>
-                                    )}
-                                    {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
-                                        <button
-                                            onClick={() => setIsAdding(!isAdding)}
-                                            className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
-                                            title="Add Product"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            Tambah
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={handleExport}
+                                        disabled={isLoading}
+                                        className="h-9 w-9 flex items-center justify-center border border-border hover:bg-muted text-foreground rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                        title="Export"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </button>
+                                    <div className="h-9 flex items-center">
+                                        <ImportProductModal />
+                                    </div>
+                                    <button
+                                        onClick={() => setIsAdding(!isAdding)}
+                                        className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                        title="Add Product"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Tambah
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1263,19 +1257,17 @@ export default function ProductList({
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                {['ADMIN', 'HRD', 'USER', 'TEKNISI'].includes(userRole || '') && (
-                                    <button
-                                        onClick={() => {
-                                            setEditSkuValue(mobileActionItem.sku || '')
-                                            setEditingProduct(mobileActionItem)
-                                            setMobileActionItem(null)
-                                        }}
-                                        className="flex flex-col items-center justify-center gap-2 p-3 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-colors border border-blue-500/20 text-sm font-medium"
-                                    >
-                                        <Edit className="w-5 h-5" />
-                                        Edit
-                                    </button>
-                                )}
+                                <button
+                                    onClick={() => {
+                                        setEditSkuValue(mobileActionItem.sku || '')
+                                        setEditingProduct(mobileActionItem)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="flex flex-col items-center justify-center gap-2 p-3 text-blue-500 hover:bg-blue-500/10 rounded-xl transition-colors border border-blue-500/20 text-sm font-medium"
+                                >
+                                    <Edit className="w-5 h-5" />
+                                    Edit
+                                </button>
                                 <button
                                     onClick={() => {
                                         setStockModalProduct(mobileActionItem)
@@ -1286,32 +1278,26 @@ export default function ProductList({
                                     <PackagePlus className="w-5 h-5" />
                                     Restock
                                 </button>
-                                {['ADMIN', 'HRD'].includes(userRole || '') && (
-                                    <>
-                                        {userRole === 'ADMIN' && (
-                                            <button
-                                                onClick={() => {
-                                                    handleMoveToProject(mobileActionItem)
-                                                    setMobileActionItem(null)
-                                                }}
-                                                className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-colors border border-orange-500/20 text-sm font-medium"
-                                            >
-                                                <FolderKanban className="w-5 h-5" />
-                                                Move to Project
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => {
-                                                handleDelete(mobileActionItem.id)
-                                                setMobileActionItem(null)
-                                            }}
-                                            className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-muted-foreground hover:text-white hover:bg-destructive rounded-xl transition-colors border border-border hover:border-destructive text-sm font-medium"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                            Delete Product
-                                        </button>
-                                    </>
-                                )}
+                                <button
+                                    onClick={() => {
+                                        handleMoveToProject(mobileActionItem)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-orange-500 hover:bg-orange-500/10 rounded-xl transition-colors border border-orange-500/20 text-sm font-medium"
+                                >
+                                    <FolderKanban className="w-5 h-5" />
+                                    Move to Project
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleDelete(mobileActionItem.id)
+                                        setMobileActionItem(null)
+                                    }}
+                                    className="col-span-2 flex flex-row items-center justify-center gap-2 p-3 text-muted-foreground hover:text-white hover:bg-destructive rounded-xl transition-colors border border-border hover:border-destructive text-sm font-medium"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                    Delete Product
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1420,18 +1406,16 @@ export default function ProductList({
                                             </TableCell>
                                             <TableCell align="right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {['ADMIN', 'HRD', 'USER'].includes(userRole || '') && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditSkuValue(product.sku || '')
-                                                                setEditingProduct(product)
-                                                            }}
-                                                            className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
-                                                            title="Edit Product"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditSkuValue(product.sku || '')
+                                                            setEditingProduct(product)
+                                                        }}
+                                                        className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
+                                                        title="Edit Product"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
                                                     <button
                                                         onClick={() => setStockModalProduct(product)}
                                                         className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20"
@@ -1439,24 +1423,20 @@ export default function ProductList({
                                                     >
                                                         <PackagePlus className="w-4 h-4" />
                                                     </button>
-                                                    {userRole === 'ADMIN' && (
-                                                        <button
-                                                            onClick={() => handleMoveToProject(product)}
-                                                            className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors border border-orange-500/20"
-                                                            title="Move to Sparepart Project"
-                                                        >
-                                                            <FolderKanban className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
-                                                        <button
-                                                            onClick={() => handleDelete(product.id)}
-                                                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                                                            title="Delete Product"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={() => handleMoveToProject(product)}
+                                                        className="p-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors border border-orange-500/20"
+                                                        title="Move to Sparepart Project"
+                                                    >
+                                                        <FolderKanban className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(product.id)}
+                                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                                        title="Delete Product"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
