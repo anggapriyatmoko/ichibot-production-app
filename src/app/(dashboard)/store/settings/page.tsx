@@ -2,6 +2,7 @@ import { getStoreSuppliers } from '@/app/actions/store-supplier'
 import { getSystemSetting } from '@/app/actions/settings'
 import StoreSupplierManager from '@/components/store/store-supplier-manager'
 import CurrencyConversionManager from '@/components/store/currency-conversion-manager'
+import StoreFeeManager from '@/components/store/store-fee-manager'
 import { redirect } from 'next/navigation'
 import { getUserRole } from '@/lib/auth'
 
@@ -13,10 +14,11 @@ export default async function StoreSettingsPage() {
         redirect('/dashboard')
     }
 
-    const [suppliers, kursYuan, kursUsd] = await Promise.all([
+    const [suppliers, kursYuan, kursUsd, additionalFee] = await Promise.all([
         getStoreSuppliers(),
         getSystemSetting('KURS_YUAN'),
-        getSystemSetting('KURS_USD')
+        getSystemSetting('KURS_USD'),
+        getSystemSetting('STORE_ADDITIONAL_FEE')
     ])
 
     return (
@@ -28,17 +30,23 @@ export default async function StoreSettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column - Suppliers */}
-                <div className="lg:col-span-12 space-y-6">
+                {/* Content */}
+                <div className="lg:col-span-12 space-y-8">
                     <section>
                         <StoreSupplierManager initialSuppliers={suppliers} />
                     </section>
 
                     <hr className="border-border" />
 
-                    <section>
-                        <CurrencyConversionManager initialRates={{ KURS_YUAN: kursYuan, KURS_USD: kursUsd }} />
-                    </section>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <section>
+                            <CurrencyConversionManager initialRates={{ KURS_YUAN: kursYuan, KURS_USD: kursUsd }} />
+                        </section>
+
+                        <section>
+                            <StoreFeeManager initialFee={additionalFee} />
+                        </section>
+                    </div>
                 </div>
             </div>
         </div>

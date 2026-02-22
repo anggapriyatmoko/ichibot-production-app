@@ -45,6 +45,32 @@ export async function deleteRack(id: string) {
     return { success: true }
 }
 
+// Helper to get row label (A, B... Z, AA, BB... ZZ)
+export async function getRowLabel(rowIndex: number) {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (rowIndex < 26) {
+        return letters[rowIndex];
+    } else {
+        const char = letters[rowIndex % 26];
+        const repeat = Math.floor(rowIndex / 26) + 1;
+        return char.repeat(repeat);
+    }
+}
+
+// Helper to get drawer code based on rack mode
+export async function getDrawerCode(rackName: string, index: number, rows?: number | null, cols?: number | null) {
+    if (rows && cols) {
+        const r = Math.floor(index / cols);
+        const c = (index % cols) + 1;
+        const rowLabel = await getRowLabel(r);
+        const colLabel = c.toString().padStart(2, '0');
+        return `${rackName}-${rowLabel}${colLabel}`;
+    } else {
+        const drawerNum = (index + 1).toString().padStart(2, '0');
+        return `${rackName}-${drawerNum}`;
+    }
+}
+
 // Get unused drawer codes for a rack
 export async function getUnusedDrawers(rackName: string, drawerCount: number) {
     await requireAdmin()
@@ -153,4 +179,31 @@ export async function getRacksWithUnusedDrawers() {
             unusedDrawersList: allDrawers.filter(d => !d.isUsed).map(d => d.code) // Keep for backward compatibility if needed
         }
     })
+}
+// Helper to get drawer index from code
+export async function getDrawerIndex(rackName: string, code: string, rows?: number | null, cols?: number | null) {
+    if (!code.startsWith(`${rackName}-`)) return -1;
+    const suffix = code.replace(`${rackName}-`, '');
+    if (rows && cols) {
+        // Grid format: rowLabel + colLabel (e.g., A01)
+        // colLabel is always the last 2 digits according to getDrawerCode
+        if (suffix.length < 3) return -1;
+        const colLabel = suffix.slice(-2);
+        const rowLabel = suffix.slice(0, -2);
+
+        const col = parseInt(colLabel) - 1;
+
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const char = rowLabel[0];
+        const repeat = rowLabel.length;
+        const charIndex = letters.indexOf(char);
+        if (charIndex === -1) return -1;
+        const row = (repeat - 1) * 26 + charIndex;
+
+        return row * cols + col;
+    } else {
+        // Sequential: 01
+        const index = parseInt(suffix) - 1;
+        return isNaN(index) ? -1 : index;
+    }
 }

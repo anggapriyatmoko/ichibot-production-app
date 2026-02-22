@@ -9,13 +9,15 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 export const dynamic = 'force-dynamic'
 
 async function StorePurchasedContent({ userRole }: { userRole: string }) {
-    const [products, kursYuanStr, kursUsdStr] = await Promise.all([
+    const [products, kursYuanStr, kursUsdStr, additionalFeeStr] = await Promise.all([
         getStorePurchasedProducts(),
         getSystemSetting('KURS_YUAN'),
-        getSystemSetting('KURS_USD')
+        getSystemSetting('KURS_USD'),
+        getSystemSetting('STORE_ADDITIONAL_FEE')
     ]);
     const kursYuan = kursYuanStr ? parseFloat(kursYuanStr) : undefined
     const kursUsd = kursUsdStr ? parseFloat(kursUsdStr) : undefined
+    const additionalFee = additionalFeeStr ? parseFloat(additionalFeeStr) : 0
 
     return (
         <StoreProductList
@@ -27,6 +29,7 @@ async function StorePurchasedContent({ userRole }: { userRole: string }) {
             showPurchaseColumns={true}
             kursYuan={kursYuan}
             kursUsd={kursUsd}
+            additionalFee={additionalFee}
         />
     );
 }

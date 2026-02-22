@@ -171,7 +171,7 @@ export const TableHeaderContent = ({
             {/* Mobile Actions: Always visible, stacked vertically below title section */}
             {/* Mobile Actions: Hidden by default, toggled via button */}
             {actions && isMobileActionsOpen && (
-                <div className="sm:hidden flex flex-row items-center gap-3 overflow-x-auto pb-1 scrollbar-hide animate-in slide-in-from-top-2 duration-200">
+                <div className="sm:hidden flex flex-col gap-3 mt-4 animate-in slide-in-from-top-2 duration-200">
                     {actions}
                 </div>
             )}

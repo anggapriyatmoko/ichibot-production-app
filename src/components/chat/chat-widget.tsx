@@ -100,7 +100,7 @@ export default function ChatWidget() {
 
             // Fade in and out for smoother sound
             gainNode.gain.setValueAtTime(0, ctx.currentTime)
-            gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.02)
+            gainNode.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 0.02)
             gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15)
 
             oscillator.start(ctx.currentTime)

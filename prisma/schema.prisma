@@ -397,6 +397,22 @@ model rack {
   @@map("Rack")
 }
 
+model StoreRack {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  drawerCount   Int      @default(0)
+  rows          Int?
+  cols          Int?
+  drawerColors     Json?    // Per-drawer colors
+  drawerNotes      Json?    // Per-drawer custom notes
+  drawerNoteColors Json?    // Per-drawer note indicator colors
+  description      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("StoreRack")
+}
+
 model receipt {
   id             String   @id @default(cuid())
   date           DateTime @default(now())

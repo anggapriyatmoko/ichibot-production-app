@@ -81,8 +81,8 @@ export default function CurrencyConversionManager({
     const isAnyBusy = Object.values(saving).some(Boolean) || Object.values(fetching).some(Boolean)
 
     return (
-        <div className="space-y-6">
-            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="h-full">
+            <div className="bg-card border border-border rounded-xl p-6 shadow-sm h-full flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -90,7 +90,7 @@ export default function CurrencyConversionManager({
                         </div>
                         <div>
                             <h2 className="text-lg font-semibold text-foreground">Kurs Mata Uang</h2>
-                            <p className="text-sm text-muted-foreground">Atur kurs konversi mata uang asing ke Rupiah (IDR)</p>
+                            <p className="text-sm text-muted-foreground">Atur kurs konversi mata uang ke Rupiah</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">

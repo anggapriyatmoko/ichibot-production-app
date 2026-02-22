@@ -164,7 +164,7 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
                         disabled={isPending}
                     >
                         <Plus className="w-4 h-4" />
-                        <span className="hidden md:inline">Tambah Dokumen</span>
+                        <span className="hidden md:inline">Tambah</span>
                     </button>
                 )}
             />

@@ -44,7 +44,8 @@ export default function StoreProductList({
     showSyncButton = true,
     showPurchaseColumns = false,
     kursYuan,
-    kursUsd
+    kursUsd,
+    additionalFee = 0
 }: {
     initialProducts: any[],
     showPurchasedStyles?: boolean,
@@ -54,7 +55,8 @@ export default function StoreProductList({
     showSyncButton?: boolean,
     showPurchaseColumns?: boolean,
     kursYuan?: number,
-    kursUsd?: number
+    kursUsd?: number,
+    additionalFee?: number
 }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
@@ -244,6 +246,20 @@ export default function StoreProductList({
                         priceInIdr = (p.purchasePrice || 0) * kursUsd
                     }
                     return acc + (priceInIdr * paket) // Total = Harga * Paket
+                }, 0),
+            totalPurchaseValueInclFee: physicalProducts
+                .filter(p => p.purchased && p.purchasePrice && p.purchaseQty)
+                .reduce((acc, p) => {
+                    const paket = p.purchasePackage || 1
+                    let priceInIdr = p.purchasePrice || 0
+                    const currency = p.purchaseCurrency || 'IDR'
+                    if (currency === 'CNY' && kursYuan) {
+                        priceInIdr = (p.purchasePrice || 0) * kursYuan
+                    } else if (currency === 'USD' && kursUsd) {
+                        priceInIdr = (p.purchasePrice || 0) * kursUsd
+                    }
+                    const total = priceInIdr * paket
+                    return acc + (total * (1 + (additionalFee || 0) / 100))
                 }, 0),
             published: physicalProducts.filter(p => p.status === 'publish').length,
             draft: physicalProducts.filter(p => p.status === 'draft').length,
@@ -1104,20 +1120,34 @@ export default function StoreProductList({
                         </div>
                     )}
 
-                    <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Publish</p>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.published)}</p>
-                            <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                    {showPurchaseColumns ? (
+                        <div className="p-4 rounded-xl bg-orange-50/50 border border-orange-100/50 md:col-span-2">
+                            <p className="text-xs font-semibold text-orange-600/70 uppercase tracking-wider mb-1">Total Pembelian (IDR) include additional fee</p>
+                            <div className="flex flex-col">
+                                <p className="text-2xl font-bold text-orange-600">{formatCurrency(analysis.totalPurchaseValueInclFee)}</p>
+                                <p className="text-[10px] text-orange-600/60 font-medium mt-1 italic">
+                                    * Sudah termasuk tambahan fee sebesar {additionalFee}%
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Draft</p>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.draft)}</p>
-                            <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
-                        </div>
-                    </div>
+                    ) : (
+                        <>
+                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Publish</p>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.published)}</p>
+                                    <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                                </div>
+                            </div>
+                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Draft</p>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.draft)}</p>
+                                    <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
                     <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                             {showPurchaseColumns ? 'Produk QTY Beli >1' : 'Produk Varian'}

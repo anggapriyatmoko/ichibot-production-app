@@ -183,7 +183,7 @@ export function AnnouncementManager({ allUsers }: AnnouncementManagerProps) {
                         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-bold shadow-sm text-sm"
                     >
                         <Plus className="w-4 h-4" />
-                        <span>Buat Pengumuman</span>
+                        <span>Tambah</span>
                     </button>
                 </div>
 

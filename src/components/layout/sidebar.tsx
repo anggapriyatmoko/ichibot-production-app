@@ -81,15 +81,22 @@ export const navigationGroups = [
     label: "Store",
     excludeRoles: ["EXTERNAL"],
     items: [
-      { name: "Store Product", href: "/store/product", icon: Package },
       { name: "POS Store", href: "/store/pos", icon: Store },
       {
-        name: "Low Stock",
-        href: "/store/low-stock",
-        icon: AlertTriangle,
-        adminOnly: true,
+        name: "Store Product",
+        icon: Package,
+        children: [
+          { name: "Daftar Produk", href: "/store/product", icon: Package },
+          {
+            name: "Low Stock",
+            href: "/store/low-stock",
+            icon: AlertTriangle,
+            adminOnly: true,
+          },
+          { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
+          { name: "Rak Management", href: "/store/rack-management", icon: Warehouse },
+        ],
       },
-      { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
       {
         name: "Setting",
         href: "/store/settings",
@@ -442,6 +449,21 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
               </div>
             );
           })}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className={cn(
+          "p-4 border-t border-white/10 transition-all duration-300",
+          !isOpen && "opacity-0 invisible overflow-hidden h-0 p-0"
+        )}>
+          <div className="flex flex-col gap-1">
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest leading-tight">
+              Sistem Integrasi Manajerial & Administrasi ICHIBOT
+            </p>
+            <p className="text-[10px] font-medium text-white/60 italic">
+              Powered by Ichibot 2026
+            </p>
+          </div>
         </div>
       </aside>
     </>
