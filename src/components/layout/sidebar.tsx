@@ -355,13 +355,15 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
       )}
       <aside
         className={cn(
-          "bg-[#2563eb] border-r border-[#2563eb] transition-all duration-300 flex flex-col h-full",
-          // Mobile state
+          "bg-blue-600 border-r border-blue-600 transition-all duration-300 flex flex-col h-full shrink-0",
+          // Mobile state: fixed and hidden by default using translate
           "fixed inset-y-0 left-0 z-50",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop state
-          "md:relative md:translate-x-0 md:z-60",
-          isOpen ? "w-64" : "w-20",
+          // Desktop state: force translate-x-0 and change to relative positioning
+          "md:relative md:translate-x-0 md:z-40",
+          // Responsive width
+          "w-64",
+          isOpen ? "md:w-64" : "md:w-20",
           "overflow-hidden"
         )}
       >
