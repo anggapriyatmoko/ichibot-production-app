@@ -359,8 +359,9 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
           // Mobile state
           "fixed inset-y-0 left-0 z-50",
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop state - z-60 ensures sidebar stays above modal overlays (z-50)
+          // Desktop state
           "md:relative md:translate-x-0 md:z-60",
+          isOpen ? "w-64" : "w-20",
           "overflow-hidden"
         )}
       >
