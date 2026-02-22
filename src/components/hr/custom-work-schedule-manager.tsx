@@ -7,6 +7,7 @@ import { createCustomWorkSchedule, updateCustomWorkSchedule, deleteCustomWorkSch
 import { cn } from '@/lib/utils'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
+import Modal from '@/components/ui/modal'
 
 interface CustomSchedule {
     id: string
@@ -194,137 +195,125 @@ export default function CustomWorkScheduleManager({ schedules }: Props) {
             </div>
 
             {/* Add/Edit Modal */}
-            {(isAddModalOpen || editingSchedule) && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="p-4 border-b border-border flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-foreground">
-                                {editingSchedule ? 'Edit Jadwal Custom' : 'Tambah Jadwal Custom'}
-                            </h3>
-                            <button
-                                onClick={closeModal}
-                                className="p-1 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Form */}
-                        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-                            {/* Date Range */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                        Dari Tanggal
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={formData.startDate}
-                                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                                        required
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                        Sampai Tanggal
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={formData.endDate}
-                                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                        required
-                                        min={formData.startDate}
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Time Range */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                        Jam Masuk
-                                    </label>
-                                    <input
-                                        type="time"
-                                        value={formData.startTime}
-                                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                                        required
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                        Jam Pulang
-                                    </label>
-                                    <input
-                                        type="time"
-                                        value={formData.endTime}
-                                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                                        required
-                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Reason */}
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                    Keterangan
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.reason}
-                                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                                    required
-                                    placeholder="Contoh: Jam Ramadan, Event Khusus, dll"
-                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                                />
-                            </div>
-
-                            {/* Warning Info */}
-                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex gap-3">
-                                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                                <div className="text-xs text-amber-800 dark:text-amber-300">
-                                    <p className="font-medium mb-1">Peringatan</p>
-                                    <p>Jadwal custom akan menimpa jadwal kerja reguler pada tanggal yang telah ditentukan. Perhitungan keterlambatan dan pulang cepat akan menggunakan jam yang diset di sini.</p>
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    disabled={saving}
-                                    className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            Menyimpan...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="w-4 h-4" />
-                                            Simpan
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </form>
+            <Modal
+                isOpen={isAddModalOpen || !!editingSchedule}
+                onClose={closeModal}
+                title={editingSchedule ? 'Edit Jadwal Custom' : 'Tambah Jadwal Custom'}
+                maxWidth="md"
+                footer={(
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={closeModal}
+                            disabled={saving}
+                            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            form="custom-schedule-form"
+                            disabled={saving}
+                            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-orange-500/20"
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    Simpan
+                                </>
+                            )}
+                        </button>
                     </div>
-                </div>
-            )}
+                )}
+            >
+                <form id="custom-schedule-form" onSubmit={handleSubmit} className="space-y-4">
+                    {/* Date Range */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                Dari Tanggal
+                            </label>
+                            <input
+                                type="date"
+                                value={formData.startDate}
+                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                Sampai Tanggal
+                            </label>
+                            <input
+                                type="date"
+                                value={formData.endDate}
+                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                required
+                                min={formData.startDate}
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Time Range */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                Jam Masuk
+                            </label>
+                            <input
+                                type="time"
+                                value={formData.startTime}
+                                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                Jam Pulang
+                            </label>
+                            <input
+                                type="time"
+                                value={formData.endTime}
+                                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                                required
+                                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Reason */}
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                            Keterangan
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.reason}
+                            onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                            required
+                            placeholder="Contoh: Jam Ramadan, Event Khusus, dll"
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                        />
+                    </div>
+
+                    {/* Warning Info */}
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 flex gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-amber-800 dark:text-amber-300">
+                            <p className="font-medium mb-1">Peringatan</p>
+                            <p>Jadwal custom akan menimpa jadwal kerja reguler pada tanggal yang telah ditentukan. Perhitungan keterlambatan dan pulang cepat akan menggunakan jam yang diset di sini.</p>
+                        </div>
+                    </div>
+                </form>
+            </Modal>
         </>
     )
 }

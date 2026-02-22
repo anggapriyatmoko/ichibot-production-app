@@ -112,6 +112,8 @@ model hRDocument {
   filePathEnc    String?  @db.Text
   linkEnc        String?  @db.Text
   nameEnc        String   @db.Text
+  isForAll       Boolean  @default(true)
+  targetUsers    user[]   @relation("HRDocumentTargetUsers")
 
   @@map("HRDocument")
 }
@@ -587,6 +589,7 @@ model user {
   overtimeLeaves        overtimeleave[]
   serviceOrders         serviceOrder[]
   targetedAnnouncements announcement[]    @relation("targetedusers")
+  targetedDocuments     hRDocument[]      @relation("HRDocumentTargetUsers")
 
   @@map("User")
 }

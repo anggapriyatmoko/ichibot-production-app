@@ -3,9 +3,9 @@
 import { SessionProvider as NextAuthSessionProvider } from 'next-auth/react'
 import { IdleTimeoutProvider } from './idle-timeout-provider'
 
-export function SessionProvider({ children }: { children: React.ReactNode }) {
+export function SessionProvider({ children, session }: { children: React.ReactNode, session?: any }) {
     return (
-        <NextAuthSessionProvider>
+        <NextAuthSessionProvider session={session}>
             <IdleTimeoutProvider>
                 {children}
             </IdleTimeoutProvider>

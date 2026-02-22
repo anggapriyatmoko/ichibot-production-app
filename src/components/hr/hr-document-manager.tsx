@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { FileText, Plus, Trash2, Edit, ExternalLink, Download, File, Loader2, AlertCircle } from 'lucide-react'
+import { FileText, Plus, Trash2, Edit, ExternalLink, Download, File, Loader2, AlertCircle, Users, Check, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { upsertHRDocument, deleteHRDocument } from '@/app/actions/hr-document'
 import {
@@ -24,16 +25,26 @@ interface HRDocument {
     description: string | null
     link: string | null
     filePath: string | null
+    isForAll: boolean
+    targetUsers: { id: string, name: string | null, username: string }[]
     createdAt: Date
     updatedAt: Date
 }
 
+interface User {
+    id: string
+    name: string | null
+    username: string
+    role: string
+}
+
 interface Props {
     documents: HRDocument[]
+    allUsers?: User[]
     readOnly?: boolean
 }
 
-export default function HRDocumentManager({ documents, readOnly = false }: Props) {
+export default function HRDocumentManager({ documents, allUsers = [], readOnly = false }: Props) {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -41,8 +52,11 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        link: ''
+        link: '',
+        isForAll: true
     })
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+    const [userSearch, setUserSearch] = useState('')
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [error, setError] = useState('')
 
@@ -56,12 +70,15 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
             setFormData({
                 name: doc.name,
                 description: doc.description || '',
-                link: doc.link || ''
+                link: doc.link || '',
+                isForAll: doc.isForAll
             })
+            setSelectedUserIds(doc.targetUsers.map(u => u.id))
             setRemoveFile(false)
         } else {
             setEditingDoc(null)
-            setFormData({ name: '', description: '', link: '' })
+            setFormData({ name: '', description: '', link: '', isForAll: true })
+            setSelectedUserIds([])
             setRemoveFile(false)
         }
         setSelectedFile(null)
@@ -87,6 +104,8 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
         if (formData.link) data.append('link', formData.link)
         if (selectedFile) data.append('file', selectedFile)
         if (removeFile) data.append('removeFile', 'true')
+        data.append('isForAll', formData.isForAll.toString())
+        data.append('targetUserIds', JSON.stringify(selectedUserIds))
 
         startTransition(async () => {
             const result = await upsertHRDocument(data)
@@ -130,7 +149,7 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
         }
     }
 
-    const colCount = readOnly ? 4 : 5
+    const colCount = readOnly ? 5 : 6
 
     return (
         <TableWrapper className="mb-8" loading={isPending}>
@@ -155,8 +174,9 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                     <TableHeader>
                         <TableRow hoverable={false} className="bg-muted/50">
                             <TableHead className="w-1/4">Nama Dokumen</TableHead>
-                            <TableHead className="w-1/3">Keterangan</TableHead>
+                            <TableHead className="w-1/4">Keterangan</TableHead>
                             <TableHead>Tipe</TableHead>
+                            <TableHead>Dapat Dilihat Oleh</TableHead>
                             <TableHead>Aksi</TableHead>
                             {!readOnly && <TableHead align="center" className="w-20">Edit/Hapus</TableHead>}
                         </TableRow>
@@ -188,6 +208,25 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                                             </span>
                                         ) : (
                                             <span className="text-xs text-muted-foreground">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="align-top">
+                                        {doc.isForAll ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 text-[10px] font-bold border border-emerald-500/20">
+                                                <Users className="w-3 h-3" /> Semua User
+                                            </span>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                                {doc.targetUsers.length > 0 ? (
+                                                    doc.targetUsers.map(u => (
+                                                        <span key={u.id} className="px-1.5 py-0.5 bg-primary/5 text-primary text-[9px] font-medium rounded border border-primary/10">
+                                                            {u.name || u.username}
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-[10px] text-muted-foreground italic">Tidak ada user</span>
+                                                )}
+                                            </div>
                                         )}
                                     </TableCell>
                                     <TableCell className="align-top">
@@ -348,6 +387,93 @@ export default function HRDocumentManager({ documents, readOnly = false }: Props
                                         >
                                             Batalkan
                                         </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Visibility Settings */}
+                            <div className="space-y-4 pt-4 border-t border-border">
+                                <h3 className="text-sm font-bold text-foreground">Pengaturan Visibilitas</h3>
+
+                                <div className="flex flex-col gap-3">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div
+                                            onClick={() => setFormData({ ...formData, isForAll: true })}
+                                            className={cn(
+                                                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                                formData.isForAll ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                                            )}
+                                        >
+                                            {formData.isForAll && <div className="w-2 h-2 rounded-full bg-white" />}
+                                        </div>
+                                        <span className="text-sm font-medium">Tampilkan untuk semua user <span className="text-[10px] text-muted-foreground font-normal">(Termasuk user baru di masa depan)</span></span>
+                                    </label>
+
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div
+                                            onClick={() => setFormData({ ...formData, isForAll: false })}
+                                            className={cn(
+                                                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                                                !formData.isForAll ? "border-primary bg-primary" : "border-muted-foreground group-hover:border-primary"
+                                            )}
+                                        >
+                                            {!formData.isForAll && <div className="w-2 h-2 rounded-full bg-white" />}
+                                        </div>
+                                        <span className="text-sm font-medium">Tampilkan untuk user tertentu saja</span>
+                                    </label>
+                                </div>
+
+                                {!formData.isForAll && (
+                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                            <input
+                                                type="text"
+                                                placeholder="Cari user..."
+                                                value={userSearch}
+                                                onChange={(e) => setUserSearch(e.target.value)}
+                                                className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2 text-xs focus:border-primary outline-none"
+                                            />
+                                        </div>
+                                        <div className="border border-border rounded-lg max-h-[200px] overflow-y-auto divide-y divide-border bg-background">
+                                            {allUsers.filter(u =>
+                                                (u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+                                                    u.username.toLowerCase().includes(userSearch.toLowerCase())) &&
+                                                u.role !== 'SYSTEM'
+                                            ).length === 0 ? (
+                                                <div className="p-4 text-center text-xs text-muted-foreground">Tidak ada user ditemukan</div>
+                                            ) : (
+                                                allUsers.filter(u =>
+                                                    (u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+                                                        u.username.toLowerCase().includes(userSearch.toLowerCase())) &&
+                                                    u.role !== 'SYSTEM'
+                                                ).map(user => (
+                                                    <div
+                                                        key={user.id}
+                                                        onClick={() => {
+                                                            setSelectedUserIds(prev =>
+                                                                prev.includes(user.id) ? prev.filter(id => id !== user.id) : [...prev, user.id]
+                                                            )
+                                                        }}
+                                                        className={cn(
+                                                            "flex items-center gap-3 p-3 cursor-pointer transition-colors hover:bg-accent/50",
+                                                            selectedUserIds.includes(user.id) ? "bg-primary/5" : ""
+                                                        )}
+                                                    >
+                                                        <div className={cn(
+                                                            "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                                                            selectedUserIds.includes(user.id) ? "bg-primary border-primary" : "border-muted-foreground"
+                                                        )}>
+                                                            {selectedUserIds.includes(user.id) && <Check className="w-3 h-3 text-white" />}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-medium leading-none">{user.name || user.username}</p>
+                                                            <p className="text-[10px] text-muted-foreground mt-0.5 uppercase">{user.role}</p>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

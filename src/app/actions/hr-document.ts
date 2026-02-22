@@ -63,21 +63,50 @@ async function saveFile(file: File, oldPath?: string | null): Promise<string> {
 }
 
 export async function getHRDocuments() {
-    await requireAuth()
-    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'USER', 'TEKNISI', 'ADMINISTRASI'])
+    try {
+        await requireAuth()
+        await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'USER', 'TEKNISI', 'ADMINISTRASI'])
 
-    const docs = await prisma.hRDocument.findMany({
-        orderBy: { createdAt: 'desc' }
-    })
-    return {
-        success: true,
-        data: docs.map(doc => ({
-            ...doc,
-            name: decrypt(doc.nameEnc) || '',
-            description: decrypt(doc.descriptionEnc) || '',
-            link: decrypt(doc.linkEnc) || '',
-            filePath: decrypt(doc.filePathEnc) || ''
-        }))
+        const session = await getServerSession(authOptions)
+        const user = (session as any)?.user
+        const isAdminOrHRD = ['ADMIN', 'HRD'].includes(user?.role)
+
+        const docs = await (prisma.hRDocument as any).findMany({
+            where: isAdminOrHRD ? {} : {
+                OR: [
+                    { isForAll: true },
+                    { targetUsers: { some: { id: user?.id || '' } } }
+                ]
+            },
+            include: {
+                targetUsers: {
+                    select: { id: true, nameEnc: true, usernameEnc: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+
+        return {
+            success: true,
+            data: docs.map((doc: any) => ({
+                id: doc.id,
+                name: decrypt(doc.nameEnc) || '',
+                description: decrypt(doc.descriptionEnc) || '',
+                link: decrypt(doc.linkEnc) || '',
+                filePath: decrypt(doc.filePathEnc) || '',
+                isForAll: doc.isForAll ?? true,
+                targetUsers: (doc.targetUsers || []).map((u: any) => ({
+                    id: u.id,
+                    name: decrypt(u.nameEnc) || '',
+                    username: decrypt(u.usernameEnc) || 'Unknown'
+                })),
+                createdAt: doc.createdAt,
+                updatedAt: doc.updatedAt
+            }))
+        }
+    } catch (error) {
+        console.error('Error in getHRDocuments:', error)
+        return { success: false, error: 'Gagal memuat dokumen' }
     }
 }
 
@@ -91,6 +120,9 @@ export async function upsertHRDocument(formData: FormData) {
     const link = formData.get('link') as string | null
     const file = formData.get('file') as File | null
     const removeFile = formData.get('removeFile') === 'true'
+    const isForAll = formData.get('isForAll') === 'true'
+    const targetUserIdsStr = formData.get('targetUserIds') as string | null
+    const targetUserIds = targetUserIdsStr ? JSON.parse(targetUserIdsStr) : []
 
     if (!name) {
         return { success: false, error: 'Nama dokumen wajib diisi' }
@@ -123,24 +155,25 @@ export async function upsertHRDocument(formData: FormData) {
             filePath = null
         }
 
+        const data: any = {
+            nameEnc: encrypt(name) || '',
+            descriptionEnc: encrypt(description || ''),
+            linkEnc: encrypt(link || ''),
+            filePathEnc: encrypt(filePath || ''),
+            isForAll: isForAll,
+            targetUsers: {
+                [id ? 'set' : 'connect']: targetUserIds.map((userId: string) => ({ id: userId }))
+            }
+        }
+
         if (id && existingDoc) {
-            await prisma.hRDocument.update({
+            await (prisma.hRDocument as any).update({
                 where: { id },
-                data: {
-                    nameEnc: encrypt(name) || '',
-                    descriptionEnc: encrypt(description || ''),
-                    linkEnc: encrypt(link || ''),
-                    filePathEnc: encrypt(filePath || '')
-                }
+                data
             })
         } else {
-            await prisma.hRDocument.create({
-                data: {
-                    nameEnc: encrypt(name) || '',
-                    descriptionEnc: encrypt(description || ''),
-                    linkEnc: encrypt(link || ''),
-                    filePathEnc: encrypt(filePath || '')
-                }
+            await (prisma.hRDocument as any).create({
+                data
             })
         }
 

@@ -40,7 +40,6 @@ export default function CalendarPage() {
   const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [currentTitle, setCurrentTitle] = useState("");
-  const [currentView, setCurrentView] = useState("dayGridMonth");
   const [currentEvents, setCurrentEvents] = useState<IchibotEvent[]>([]);
 
   // Check if user can perform CRUD operations
@@ -412,7 +411,6 @@ export default function CalendarPage() {
         events: [],
         datesSet: async (info: { startStr: string; endStr: string; view: any }) => {
           setCurrentTitle(calendar.view.title);
-          setCurrentView(calendar.view.type);
 
           // Update dropdown states to match the current view's centered date
           const currentViewDate = calendar.view.currentStart;
@@ -446,10 +444,6 @@ export default function CalendarPage() {
   const handlePrev = () => calendarRef.current?.prev();
   const handleNext = () => calendarRef.current?.next();
   const handleToday = () => calendarRef.current?.today();
-  const handleViewChange = (view: string) => {
-    calendarRef.current?.changeView(view);
-    setCurrentView(view);
-  };
 
   // Jump to selected month/year
   const handleJumpToDate = () => {
@@ -466,22 +460,23 @@ export default function CalendarPage() {
         {/* Left Column: Calendar */}
         <section className="bg-card shadow-sm border border-border rounded-2xl p-6 flex-1 min-w-0">
           {/* Custom Toolbar */}
+          {/* Modern Combined Toolbar */}
           {!isLoading && (
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-              {/* Left Box: Nav & Create */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex bg-muted p-1 rounded-xl">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 bg-muted/30 p-4 rounded-2xl border border-border/50">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Navigation */}
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-background border border-border p-1 rounded-xl shadow-sm">
                     <button
                       onClick={handlePrev}
-                      className="p-2 hover:bg-background rounded-lg transition-all text-foreground hover:shadow-sm"
+                      className="p-1.5 hover:bg-muted rounded-lg transition-all text-foreground"
                       title="Sebelumnya"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
                       onClick={handleNext}
-                      className="p-2 hover:bg-background rounded-lg transition-all text-foreground hover:shadow-sm"
+                      className="p-1.5 hover:bg-muted rounded-lg transition-all text-foreground"
                       title="Berikutnya"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -489,181 +484,129 @@ export default function CalendarPage() {
                   </div>
                   <button
                     onClick={handleToday}
-                    className="px-4 py-2 bg-muted hover:bg-background text-foreground font-semibold text-sm rounded-xl transition-all border border-transparent hover:border-border hover:shadow-sm"
+                    className="px-4 py-2 bg-background border border-border hover:bg-muted text-foreground font-bold text-sm rounded-xl transition-all shadow-sm"
                   >
                     Hari Ini
                   </button>
                 </div>
 
-                {/* Only show add button for authorized roles */}
-                {canEdit && (
-                  <>
-                    <div className="h-8 w-px bg-border mx-1 hidden md:block" />
+                <div className="h-6 w-px bg-border hidden sm:block" />
 
+                {/* Title */}
+                <h2 className="text-xl font-bold text-foreground tracking-tight capitalize min-w-[150px]">
+                  {currentTitle}
+                </h2>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                {/* Compact Jump to Date */}
+                <div className="flex items-center gap-2 bg-background border border-border p-1 rounded-xl shadow-sm">
+                  {/* Month */}
+                  <div className="relative" ref={monthDropdownRef}>
                     <button
-                      onClick={() => {
-                        setFormData({
-                          kegiatan: "",
-                          jenis: "kegiatan",
-                          tanggal: new Date().toISOString().split("T")[0],
-                          waktu_mulai: "",
-                          waktu_selesai: "",
-                          detail: "",
-                        });
-                        setIsEdit(false);
-                        setIsModalOpen(true);
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setIsMonthDropdownOpen(!isMonthDropdownOpen);
+                        setIsYearDropdownOpen(false);
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-bold text-sm rounded-xl hover:opacity-90 transition-all shadow-sm active:scale-95"
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 min-w-[120px] text-xs font-bold text-foreground hover:bg-muted rounded-lg transition-all"
                     >
-                      <Plus className="w-4 h-4" />
-                      Tambah Agenda
+                      <span>{monthNames[selectedMonth]}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMonthDropdownOpen ? "rotate-180" : ""}`} />
                     </button>
-                  </>
-                )}
-              </div>
-
-              {/* Title */}
-              <h2 className="text-2xl font-semibold text-foreground tracking-tight capitalize">
-                {currentTitle}
-              </h2>
-
-              {/* View Switcher */}
-              <div className="flex bg-muted p-1 rounded-xl">
-                {[
-                  { id: "dayGridMonth", label: "Bulan" },
-                  { id: "timeGridWeek", label: "Minggu" },
-                  { id: "timeGridDay", label: "Hari" },
-                ].map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => handleViewChange(v.id)}
-                    className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${currentView === v.id
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                      }`}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Jump to Date Section */}
-          {!isLoading && (
-            <div className="flex flex-wrap items-center gap-3 mb-6 pb-6 border-b border-border relative z-20">
-              {/* Month Dropdown */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Bulan:
-                </span>
-                <div className="relative" ref={monthDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setIsMonthDropdownOpen(!isMonthDropdownOpen);
-                      setIsYearDropdownOpen(false);
-                    }}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5 min-w-40 bg-background border border-border rounded-xl text-sm font-semibold text-foreground hover:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                  >
-                    <span>{monthNames[selectedMonth]}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-muted-foreground transition-transform ${isMonthDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {isMonthDropdownOpen && (
-                    <div
-                      className="absolute top-full left-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-lg z-[100] max-h-70 overflow-y-auto"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="p-1">
-                        {monthNames.map((month, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedMonth(index);
-                              setIsMonthDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer ${selectedMonth === index
-                              ? "bg-primary/10 text-primary"
-                              : "text-foreground hover:bg-muted"
-                              }`}
-                          >
-                            {month}
-                          </button>
-                        ))}
+                    {isMonthDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-xl z-[100] max-h-70 overflow-y-auto">
+                        <div className="p-1">
+                          {monthNames.map((month, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => {
+                                setSelectedMonth(index);
+                                setIsMonthDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg transition-all ${selectedMonth === index ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"}`}
+                            >
+                              {month}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    )}
+                  </div>
 
-              {/* Year Dropdown */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Tahun:
-                </span>
-                <div className="relative" ref={yearDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setIsYearDropdownOpen(!isYearDropdownOpen);
-                      setIsMonthDropdownOpen(false);
-                    }}
-                    className="flex items-center justify-between gap-3 px-4 py-2.5 min-w-30 bg-background border border-border rounded-xl text-sm font-semibold text-foreground hover:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                  >
-                    <span>{selectedYear}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-muted-foreground transition-transform ${isYearDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {isYearDropdownOpen && (
-                    <div
-                      className="absolute top-full left-0 mt-2 w-30 bg-card border border-border rounded-xl shadow-lg z-100 max-h-70 overflow-y-auto"
-                      onClick={(e) => e.stopPropagation()}
+                  {/* Year */}
+                  <div className="relative" ref={yearDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setIsYearDropdownOpen(!isYearDropdownOpen);
+                        setIsMonthDropdownOpen(false);
+                      }}
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 min-w-[80px] text-xs font-bold text-foreground hover:bg-muted rounded-lg transition-all"
                     >
-                      <div className="p-1">
-                        {Array.from({ length: 10 }, (_, i) => 2026 + i).map(
-                          (year) => (
+                      <span>{selectedYear}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isYearDropdownOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {isYearDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-2 w-28 bg-card border border-border rounded-xl shadow-xl z-[100] max-h-70 overflow-y-auto">
+                        <div className="p-1">
+                          {Array.from({ length: 10 }, (_, i) => 2026 + i).map((year) => (
                             <button
                               key={year}
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 setSelectedYear(year);
                                 setIsYearDropdownOpen(false);
                               }}
-                              className={`w-full text-left px-4 py-2.5 text-sm font-medium rounded-lg transition-all cursor-pointer ${selectedYear === year
-                                ? "bg-primary/10 text-primary"
-                                : "text-foreground hover:bg-muted"
-                                }`}
+                              className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg transition-all ${selectedYear === year ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-muted"}`}
                             >
                               {year}
                             </button>
-                          ),
-                        )}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                    )}
+                  </div>
 
-              {/* Jump Button */}
-              <button
-                onClick={handleJumpToDate}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-semibold text-sm rounded-xl hover:opacity-90 transition-all shadow-sm active:scale-95"
-              >
-                <ArrowRight className="w-4 h-4" />
-                Loncat
-              </button>
+                  <button
+                    onClick={handleJumpToDate}
+                    className="p-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground rounded-lg transition-all"
+                    title="Loncat ke Tanggal"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Add Button */}
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setFormData({
+                        kegiatan: "",
+                        jenis: "kegiatan",
+                        tanggal: new Date().toISOString().split("T")[0],
+                        waktu_mulai: "",
+                        waktu_selesai: "",
+                        detail: "",
+                      });
+                      setIsEdit(false);
+                      setIsModalOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground font-bold text-sm rounded-xl hover:opacity-90 transition-all shadow-md shadow-primary/20 active:scale-95 ml-auto lg:ml-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tambah</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
+
 
           {/* Loading */}
           {isLoading && (

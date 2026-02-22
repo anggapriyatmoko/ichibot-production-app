@@ -47,7 +47,7 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
             getSalaryComponents('DEDUCTION'),
             getSalaryComponents('ADDITION'),
             getHRDocuments(),
-            prisma.user.findMany({
+            (prisma.user as any).findMany({
                 select: { id: true, nameEnc: true, usernameEnc: true, roleEnc: true },
                 orderBy: { createdAt: 'desc' }
             })
@@ -110,7 +110,10 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
         const documentTabContent = (
             <div className="space-y-8 fade-in">
                 <AnnouncementManager allUsers={allUsers} />
-                <HRDocumentManager documents={hrDocs.success ? (hrDocs.data as any[]) : []} />
+                <HRDocumentManager
+                    documents={hrDocs.success ? (hrDocs.data as any[]) : []}
+                    allUsers={allUsers}
+                />
             </div>
         )
 

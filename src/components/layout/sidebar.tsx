@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Package,
@@ -236,7 +235,6 @@ export const navigationGroups = [
 ];
 
 export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; rbacConfig?: RbacConfig | null }) {
-  const { data: session } = useSession();
   const { isOpen, isMobileOpen, setIsMobileOpen } = useSidebar();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const pathname = usePathname();
@@ -363,6 +361,7 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
           isMobileOpen ? "translate-x-0" : "-translate-x-full",
           // Desktop state - z-60 ensures sidebar stays above modal overlays (z-50)
           "md:relative md:translate-x-0 md:z-60",
+          "overflow-hidden"
         )}
       >
         <div

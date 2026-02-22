@@ -8,6 +8,7 @@ import { getUsers } from '@/app/actions/user'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import Modal from '@/components/ui/modal'
+import { Combobox } from '@/components/ui/combobox'
 import {
     TableWrapper,
     TableScrollArea,
@@ -696,17 +697,17 @@ export default function OvertimeLeaveApproval() {
                         <form id="createOrderForm" onSubmit={handleCreateOrder} className="space-y-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Pilih Karyawan</label>
-                                <select
+                                <Combobox
+                                    options={users.map(u => ({
+                                        id: u.id,
+                                        label: u.name || u.username || 'Unknown',
+                                        subtext: `${u.role} ${u.username ? `(${u.username})` : ''}`
+                                    }))}
                                     value={orderForm.userId}
-                                    onChange={e => setOrderForm({ ...orderForm, userId: e.target.value })}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                    onChange={val => setOrderForm({ ...orderForm, userId: val })}
+                                    placeholder="Cari & Pilih Karyawan..."
                                     required
-                                >
-                                    <option value="">-- Pilih Karyawan --</option>
-                                    {users.map(u => (
-                                        <option key={u.id} value={u.id}>{u.name || u.username} ({u.role})</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
 
                             <div className="space-y-1">
