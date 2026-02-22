@@ -526,8 +526,6 @@ export default function CertificateManager({
 
   return (
     <div className="space-y-6">
-      <TableAnalysis cards={analysisCards} />
-
       <TableWrapper>
         <TableHeaderContent
           title="Sertifikat"
@@ -819,6 +817,8 @@ export default function CertificateManager({
           totalCount={total}
         />
       </TableWrapper>
+
+      <TableAnalysis cards={analysisCards} />
 
 
       {/* Modal */}

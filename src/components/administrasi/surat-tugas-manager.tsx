@@ -300,8 +300,6 @@ export default function SuratTugasManager({
 
   return (
     <div className="space-y-6">
-      <TableAnalysis cards={analysisCards} />
-
       <TableWrapper>
         <TableHeaderContent
           title="Surat Tugas"
@@ -429,6 +427,8 @@ export default function SuratTugasManager({
           )}
         </TableScrollArea>
       </TableWrapper>
+
+      <TableAnalysis cards={analysisCards} />
 
       {/* Mobile/Tablet Card View - Premium List */}
       <div className="md:hidden space-y-4">

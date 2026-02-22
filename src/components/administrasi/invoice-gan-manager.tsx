@@ -394,8 +394,6 @@ export default function InvoiceGANManager({
 
   return (
     <div className="space-y-6">
-      <TableAnalysis cards={analysisCards} />
-
       <TableWrapper>
         <TableHeaderContent
           title="Invoice GAN"
@@ -555,6 +553,8 @@ export default function InvoiceGANManager({
           )}
         </TableScrollArea>
       </TableWrapper>
+
+      <TableAnalysis cards={analysisCards} />
 
       {/* Mobile/Tablet Card View - Premium List */}
       <div className="md:hidden space-y-4">

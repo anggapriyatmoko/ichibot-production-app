@@ -236,8 +236,6 @@ export default function GenericDocManager({ type, title, initialData, labels = {
 
     return (
         <div className="space-y-6">
-            <TableAnalysis cards={analysisCards} />
-
             <TableWrapper>
                 <TableHeaderContent
                     title={title}
@@ -421,6 +419,8 @@ export default function GenericDocManager({ type, title, initialData, labels = {
                     totalCount={filteredData.length}
                 />
             </TableWrapper>
+
+            <TableAnalysis cards={analysisCards} />
 
             {isModalOpen && (
                 <Modal

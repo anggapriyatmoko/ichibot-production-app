@@ -396,8 +396,6 @@ export default function InvoiceEnglishManager({
 
   return (
     <div className="space-y-6">
-      <TableAnalysis cards={analysisCards} />
-
       <TableWrapper>
         <TableHeaderContent
           title="English Invoices"
@@ -557,6 +555,8 @@ export default function InvoiceEnglishManager({
           )}
         </TableScrollArea>
       </TableWrapper>
+
+      <TableAnalysis cards={analysisCards} />
 
       {/* Mobile/Tablet Card View - Premium List */}
       <div className="md:hidden space-y-4" >

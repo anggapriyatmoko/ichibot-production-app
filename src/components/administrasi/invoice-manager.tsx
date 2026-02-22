@@ -389,8 +389,6 @@ export default function InvoiceManager({
 
   return (
     <div className="space-y-6">
-      <TableAnalysis cards={analysisCards} />
-
       {/* Table Section */}
       <TableWrapper>
         <TableHeaderContent
@@ -646,6 +644,8 @@ export default function InvoiceManager({
           totalCount={total}
         />
       </TableWrapper>
+
+      <TableAnalysis cards={analysisCards} />
 
       {/* Modal - Full Page on Mobile, Modal on Desktop */}
       {isModalOpen && (
