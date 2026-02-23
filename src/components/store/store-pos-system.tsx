@@ -268,6 +268,25 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                     change: change
                 })
 
+                // UPDATE LOCAL STATE FOR IMMEDIATE FEEDBACK
+                // 1. Update main products list
+                setProducts(prev => prev.map(p => {
+                    const cartItem = cart.find(item => item.id === p.id)
+                    if (cartItem) {
+                        return { ...p, stockQuantity: Math.max(0, (p.stockQuantity || 0) - cartItem.quantity) }
+                    }
+                    return p
+                }))
+
+                // 2. Update variations list if any are currently loaded
+                setVariations(prev => prev.map(v => {
+                    const cartItem = cart.find(item => item.id === v.id)
+                    if (cartItem) {
+                        return { ...v, stockQuantity: Math.max(0, (v.stockQuantity || 0) - cartItem.quantity) }
+                    }
+                    return v
+                }))
+
                 setCart([])
                 setCustomerName('Guest')
                 setShippingCost(0)

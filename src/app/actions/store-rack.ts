@@ -16,6 +16,7 @@ export async function createStoreRack(data: { name: string; drawerCount: number;
             drawerColors: data.drawerColors || {},
             drawerNotes: data.drawerNotes || {},
             drawerNoteColors: data.drawerNoteColors || {},
+            drawerUpdatedTimes: {}, // Initialize drawerUpdatedTimes
             description: data.description || null
         }
     })
@@ -23,7 +24,7 @@ export async function createStoreRack(data: { name: string; drawerCount: number;
     return rack
 }
 
-export async function updateStoreRack(id: string, data: { name: string; drawerCount: number; rows?: number; cols?: number; drawerColors?: any; drawerNotes?: any; drawerNoteColors?: any; description?: string }) {
+export async function updateStoreRack(id: string, data: { name: string; drawerCount: number; rows?: number; cols?: number; drawerColors?: any; drawerNotes?: any; drawerNoteColors?: any; drawerUpdatedTimes?: any; description?: string }) {
     await requireAdmin()
 
     // Get existing rack to preserve/migrate data
@@ -33,6 +34,7 @@ export async function updateStoreRack(id: string, data: { name: string; drawerCo
     let drawerColors = data.drawerColors !== undefined ? data.drawerColors : existingRack.drawerColors
     let drawerNotes = data.drawerNotes !== undefined ? data.drawerNotes : existingRack.drawerNotes
     let drawerNoteColors = data.drawerNoteColors !== undefined ? data.drawerNoteColors : existingRack.drawerNoteColors
+    let drawerUpdatedTimes = data.drawerUpdatedTimes !== undefined ? data.drawerUpdatedTimes : (existingRack.drawerUpdatedTimes || {})
 
     // Handle renaming or layout changes - migrate keys in JSON objects
     const nameChanged = existingRack.name !== data.name
@@ -68,6 +70,7 @@ export async function updateStoreRack(id: string, data: { name: string; drawerCo
         drawerColors = await migrateAllKeys(drawerColors)
         drawerNotes = await migrateAllKeys(drawerNotes)
         drawerNoteColors = await migrateAllKeys(drawerNoteColors)
+        drawerUpdatedTimes = await migrateAllKeys(drawerUpdatedTimes) // Migrate drawerUpdatedTimes
     }
 
     const rack = await (prisma as any).storeRack.update({
@@ -80,6 +83,7 @@ export async function updateStoreRack(id: string, data: { name: string; drawerCo
             drawerColors: drawerColors || {},
             drawerNotes: drawerNotes || {},
             drawerNoteColors: drawerNoteColors || {},
+            drawerUpdatedTimes: drawerUpdatedTimes || {}, // Update drawerUpdatedTimes
             description: data.description !== undefined ? data.description : existingRack.description
         }
     })
@@ -103,11 +107,19 @@ export async function getStoreRacksWithDetails() {
 
     // Get all Store products - check SKU for drawer codes
     const storeProducts = await prisma.storeProduct.findMany({
-        select: { name: true, sku: true, stockQuantity: true, images: true, wcId: true, backupGudang: true }
+        select: { name: true, sku: true, stockQuantity: true, images: true, wcId: true, backupGudang: true, updatedAt: true }
     });
 
     // Map store products by SKU for quick lookup
-    const drawerDetails = new Map<string, { name: string; sku: string; stock: number; image: string | null; wcId: number; backupGudang: string | null }>();
+    const drawerDetails = new Map<string, {
+        name: string;
+        sku: string;
+        stock: number;
+        image: string | null;
+        wcId: number;
+        backupGudang: string | null;
+        updatedAt: Date;
+    }>();
 
     storeProducts.forEach(product => {
         if (product.sku) {
@@ -130,7 +142,8 @@ export async function getStoreRacksWithDetails() {
                 stock: product.stockQuantity || 0,
                 image: imageUrl,
                 wcId: product.wcId,
-                backupGudang: product.backupGudang || null
+                backupGudang: product.backupGudang || null,
+                updatedAt: product.updatedAt
             });
         }
     });
@@ -149,6 +162,7 @@ export async function getStoreRacksWithDetails() {
                 source: string;
                 wcId: number;
                 backupGudang: string | null;
+                updatedAt: Date;
             }
         }> = [];
 

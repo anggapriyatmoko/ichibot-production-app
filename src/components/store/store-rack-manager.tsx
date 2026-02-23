@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Save, X, Warehouse, ImageIcon, Box, Info, MapPin, Search, RefreshCw, Download, Upload } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Save, X, Warehouse, ImageIcon, Box, Info, MapPin, Search, RefreshCw, Download, Upload, Clock } from 'lucide-react'
 import Image from 'next/image'
 import Modal from '@/components/ui/modal'
 import { getStoreRacksWithDetails, createStoreRack, updateStoreRack, deleteStoreRack, exportStoreRacks } from '@/app/actions/store-rack'
-import { getStoreProductBySku } from '@/app/actions/store-product'
+import { getStoreProductBySku, syncSingleStoreProduct } from '@/app/actions/store-product'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import * as XLSX from 'xlsx'
@@ -26,6 +26,7 @@ interface RackWithDrawers {
     drawerColors: any | null
     drawerNotes: any | null
     drawerNoteColors: any | null
+    drawerUpdatedTimes: any | null
     unusedDrawersList: string[]
     unusedDrawersCount: number
     allDrawers: Array<{
@@ -39,6 +40,7 @@ interface RackWithDrawers {
             source: string
             wcId: number
             backupGudang: string | null
+            updatedAt?: Date | string
         }
     }>
 }
@@ -76,6 +78,7 @@ interface DrawerItemProps {
     drawerColors?: any
     drawerNotes?: any
     drawerNoteColors?: any
+    drawerUpdatedTimes?: any // Added this line
     onClick: () => void
 }
 
@@ -530,7 +533,7 @@ export default function StoreRackManager({ userRole }: { userRole?: string }) {
             </Modal>
 
             <RackDetailsModal
-                rack={selectedRack}
+                rack={racks.find(r => r.id === selectedRack?.id) || selectedRack}
                 drawerCode={selectedDrawerCode}
                 isOpen={!!selectedRack && !!selectedDrawerCode}
                 onClose={() => {
@@ -554,6 +557,11 @@ export default function StoreRackManager({ userRole }: { userRole?: string }) {
                             [selectedDrawerCode]: noteColor
                         }
 
+                        const newDrawerUpdatedTimes = {
+                            ...(selectedRack.drawerUpdatedTimes as any || {}),
+                            [selectedDrawerCode]: new Date().toISOString()
+                        }
+
                         await updateStoreRack(selectedRack.id, {
                             name: selectedRack.name,
                             drawerCount: selectedRack.drawerCount,
@@ -562,7 +570,8 @@ export default function StoreRackManager({ userRole }: { userRole?: string }) {
                             description: selectedRack.description || undefined,
                             drawerColors: newDrawerColors,
                             drawerNotes: newDrawerNotes,
-                            drawerNoteColors: newDrawerNoteColors
+                            drawerNoteColors: newDrawerNoteColors,
+                            drawerUpdatedTimes: newDrawerUpdatedTimes
                         } as any)
 
                         loadRacks(true)
@@ -613,12 +622,16 @@ function RackDetailsModal({ rack, drawerCode, isOpen, onClose, onSave, onRefresh
     const currentColorTemplate = RACK_COLORS.find(c => c.value === color) || null
 
     const handleSync = async () => {
-        if (!drawer?.details?.sku) return
+        if (!drawer?.details?.wcId) return
         setIsSyncing(true)
         try {
-            await getStoreProductBySku(drawer.details.sku)
-            showAlert('Data sudah diperbarui sesuai dengan data di Woocomerce')
-            onRefresh()
+            const result = await syncSingleStoreProduct(drawer.details.wcId)
+            if (result.success) {
+                showAlert('Data sudah diperbarui sesuai dengan data di Woocomerce')
+                onRefresh()
+            } else {
+                showError(result.error || 'Gagal sinkronisasi data')
+            }
         } catch (error) {
             showError('Gagal sinkronisasi data')
         } finally {
@@ -746,6 +759,20 @@ function RackDetailsModal({ rack, drawerCode, isOpen, onClose, onSave, onRefresh
                         className="w-full min-h-[80px] bg-background border border-border rounded-lg p-3 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
                     />
                 </div>
+
+                {/* LAST UPDATE TIMESTAMP */}
+                {rack?.drawerUpdatedTimes?.[drawerCode] && (
+                    <div className="px-1 flex items-center gap-1.5 text-muted-foreground/50">
+                        <Clock className="w-3 h-3" />
+                        <span className="text-[9px] font-bold tracking-tight">
+                            LAST UPDATE : <span className="font-medium lowercase">
+                                {new Date(rack.drawerUpdatedTimes[drawerCode]).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).toLowerCase()}
+                                {' '}pukul{' '}
+                                {new Date(rack.drawerUpdatedTimes[drawerCode]).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.')}
+                            </span>
+                        </span>
+                    </div>
+                )}
 
                 {/* Product Detail */}
                 <div className="bg-background border border-border rounded-xl overflow-hidden">

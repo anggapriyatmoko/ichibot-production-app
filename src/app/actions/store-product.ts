@@ -51,19 +51,20 @@ export async function uploadStoreProductImages(files: File[]) {
  * Fetch products from WooCommerce API
  * Includes 'status=any' to get drafts and private products if needed
  */
-async function fetchWooCommerceProducts() {
+async function fetchWooCommerceProducts(onLog?: (msg: string) => void) {
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
     const WC_KEY = process.env.WC_CONSUMER_KEY
     const WC_SECRET = process.env.WC_CONSUMER_SECRET
 
-    console.log('Fetching products from WooCommerce...');
+    const log = (msg: string) => {
+        console.log(msg);
+        if (onLog) onLog(msg);
+    };
+
+    log('Fetching products from WooCommerce...');
 
     if (!WC_URL || !WC_KEY || !WC_SECRET) {
-        console.error('Missing credentials:', {
-            WC_URL: !!WC_URL,
-            WC_KEY: !!WC_KEY,
-            WC_SECRET: !!WC_SECRET
-        });
+        log('Missing credentials error.');
         throw new Error('WooCommerce API credentials are not configured in .env')
     }
 
@@ -72,14 +73,11 @@ async function fetchWooCommerceProducts() {
     let page = 1
     const perPage = 100
 
-    // Standardize URL to remove trailing slash if exists
     const baseUrl = WC_URL.replace(/\/$/, '')
-    console.log(`Using base URL: ${baseUrl}`);
 
     while (true) {
-        // status=any included to fetch all products regardless of publishing status
-        const url = `${baseUrl}/wp-json/wc/v3/products?per_page=${perPage}&page=${page}&status=any`;
-        console.log(`Fetching page ${page}: ${url}`);
+        const url = `${baseUrl}/wp-json/wc/v3/products?per_page=${perPage}&page=${page}&status=any&orderby=id&order=asc`;
+        log(`Fetching page ${page}...`);
 
         try {
             const response = await fetch(url, {
@@ -87,37 +85,34 @@ async function fetchWooCommerceProducts() {
                     'Authorization': `Basic ${auth}`
                 },
                 next: { revalidate: 0 },
-                signal: AbortSignal.timeout(60000) // Increased timeout to 60s for stability
+                signal: AbortSignal.timeout(60000)
             })
-
-            console.log(`Response status: ${response.status} ${response.statusText}`);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('API Error details:', errorData);
+                log(`API Error page ${page}: ${response.status} ${response.statusText}`);
                 throw new Error(`Failed to fetch products page ${page}: ${response.status} ${response.statusText}. ${errorData.message || ''}`)
             }
 
             const products = await response.json()
-            console.log(`Received ${Array.isArray(products) ? products.length : 'non-array'} products on page ${page}.`);
+            const count = Array.isArray(products) ? products.length : 0;
+            log(`Received ${count} products on page ${page}.`);
 
-            if (!Array.isArray(products) || products.length === 0) break
+            if (count === 0) break
 
             allProducts = [...allProducts, ...products]
 
-            // Check total pages header as a backup for safety
             const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0');
             if (totalPages > 0 && page >= totalPages) {
-                console.log(`Reached last page (${page}/${totalPages}) based on X-WP-TotalPages header.`);
+                log(`Final page reached (${page}/${totalPages}).`);
                 break;
             }
 
-            // Fallback: if we got less than perPage, we're likely at the end (standard WP behavior)
-            if (products.length < perPage) break
+            if (count < perPage) break
 
             page++
         } catch (fetchError: any) {
-            console.error(`Error during fetch (page ${page}):`, fetchError.message);
+            log(`Fetch error (page ${page}): ${fetchError.message}`);
             throw fetchError;
         }
     }
@@ -176,22 +171,34 @@ export async function getWooCommerceCategories() {
 }
 
 export async function syncStoreProducts() {
-    console.log('Starting syncStoreProducts...');
+    return performStoreSync();
+}
+
+/**
+ * Shared logic for synchronization
+ */
+export async function performStoreSync(onLog?: (msg: string) => void) {
+    const log = (msg: string) => {
+        console.log(msg);
+        if (onLog) onLog(msg);
+    };
+
+    log('--- Sinkronisasi Dimulai ---');
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
     const WC_KEY = process.env.WC_CONSUMER_KEY
     const WC_SECRET = process.env.WC_CONSUMER_SECRET
 
     if (!WC_URL || !WC_KEY || !WC_SECRET) {
-        console.error('WooCommerce API credentials are not configured')
+        log('Error: WooCommerce API credentials are not configured');
         return { success: false, error: 'WooCommerce API credentials are not configured' }
     }
 
     try {
-        const wcProducts = await fetchWooCommerceProducts();
-        console.log(`Total items fetched from WooCommerce: ${wcProducts.length}`);
+        const wcProducts = await fetchWooCommerceProducts(onLog);
+        log(`Total produk induk terambil: ${wcProducts.length}`);
 
         if (wcProducts.length === 0) {
-            console.log('No products found in WooCommerce.');
+            log('Tidak ada produk ditemukan di WooCommerce.');
             return { success: true, count: 0 };
         }
 
@@ -199,6 +206,8 @@ export async function syncStoreProducts() {
         let syncedCount = 0;
         let errorCount = 0;
         const fetchedWcIds: number[] = [];
+
+        log('Memproses data ke database...');
 
         for (const product of wcProducts) {
             fetchedWcIds.push(product.id);
@@ -251,7 +260,7 @@ export async function syncStoreProducts() {
 
                 // If variable product, fetch and sync variations with pagination
                 if (product.type === 'variable') {
-                    console.log(`Product ${product.id} is variable, fetching variations...`);
+                    log(`Sync variasi untuk: ${product.name}...`);
                     const baseUrl = WC_URL.replace(/\/$/, '');
                     const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64');
 
@@ -259,8 +268,7 @@ export async function syncStoreProducts() {
                     const varPerPage = 100;
 
                     while (true) {
-                        const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=${varPerPage}&page=${varPage}`;
-                        console.log(`Fetching variations for ${product.name} (ID: ${product.id}) page ${varPage} from ${varUrl}`);
+                        const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=${varPerPage}&page=${varPage}&orderby=id&order=asc`;
 
                         try {
                             const varResponse = await fetch(varUrl, {
@@ -270,8 +278,6 @@ export async function syncStoreProducts() {
 
                             if (varResponse.ok) {
                                 const variations = await varResponse.json();
-                                console.log(`Found ${variations.length} variations on page ${varPage} for product ${product.id}`);
-
                                 if (!Array.isArray(variations) || variations.length === 0) break;
 
                                 for (const variation of variations) {
@@ -279,7 +285,7 @@ export async function syncStoreProducts() {
                                     await prisma.storeProduct.upsert({
                                         where: { wcId: variation.id },
                                         update: {
-                                            name: product.name, // Parents name for base
+                                            name: product.name,
                                             slug: variation.slug,
                                             sku: variation.sku,
                                             type: 'variation',
@@ -324,47 +330,142 @@ export async function syncStoreProducts() {
                                 if (variations.length < varPerPage) break;
                                 varPage++;
                             } else {
-                                console.error(`Error response fetching variations for ${product.id}: ${varResponse.status}`);
+                                log(`Gagal ambil variasi ID ${product.id} (Status: ${varResponse.status})`);
                                 break;
                             }
                         } catch (varError: any) {
-                            console.error(`Error syncing variations for product ${product.id} on page ${varPage}:`, varError.message);
+                            log(`Error variasi ID ${product.id}: ${varError.message}`);
                             break;
                         }
                     }
                 }
             } catch (upsertError: any) {
                 errorCount++;
-                console.error(`Failed to upsert product ID ${product.id} (${product.name}):`, upsertError.message);
+                log(`Gagal update produk ${product.id}: ${upsertError.message}`);
             }
         }
 
         // Mark products as missing if they were not in the fetched list
-        // ONLY if sync was fully completed without major fetch errors
-        if (fetchedWcIds.length > 500) { // Safety: Don't mark everything as missing if we only fetched a few items
-            console.log(`Checking for products to mark as missing. Fetched IDs count: ${fetchedWcIds.length}`);
-            await prisma.storeProduct.updateMany({
+        if (fetchedWcIds.length > 500) {
+            log(`Mengecek item yang hilang (Total terambil: ${fetchedWcIds.length})...`);
+
+            // Phase 1: Identify local products not in the fetched list
+            const localProducts = await prisma.storeProduct.findMany({
                 where: {
                     wcId: { notIn: fetchedWcIds },
                     isMissingFromWoo: false
                 },
-                data: {
-                    isMissingFromWoo: true
-                }
+                select: { wcId: true, name: true }
             });
+
+            if (localProducts.length > 0) {
+                log(`Ditemukan ${localProducts.length} produk berpotensi hilang. Melakukan verifikasi ulang...`);
+
+                const confirmedMissingIds: number[] = [];
+                const batchSize = 100;
+                const baseUrl = WC_URL.replace(/\/$/, '');
+                const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64');
+
+                for (let i = 0; i < localProducts.length; i += batchSize) {
+                    const batch = localProducts.slice(i, i + batchSize);
+                    const batchIds = batch.map(p => p.wcId);
+
+                    log(`Verifikasi batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(localProducts.length / batchSize)}...`);
+
+                    try {
+                        const verifyUrl = `${baseUrl}/wp-json/wc/v3/products?include=${batchIds.join(',')}&per_page=${batchSize}&status=any`;
+                        const response = await fetch(verifyUrl, {
+                            headers: { 'Authorization': `Basic ${auth}` },
+                            next: { revalidate: 0 }
+                        });
+
+                        if (response.ok) {
+                            const foundProducts = await response.json();
+                            const foundIds = Array.isArray(foundProducts) ? foundProducts.map((p: any) => p.id) : [];
+
+                            // Products in batchIds but NOT in foundIds are truly missing
+                            const missingInBatch = batchIds.filter(id => !foundIds.includes(id));
+                            confirmedMissingIds.push(...missingInBatch);
+
+                            if (foundProducts.length > 0) {
+                                log(`  - ${foundProducts.length} produk ditemukan (hidden dari daftar massal). Mengupdate database...`);
+                                for (const p of foundProducts) {
+                                    await prisma.storeProduct.upsert({
+                                        where: { wcId: p.id },
+                                        update: {
+                                            name: p.name,
+                                            slug: p.slug,
+                                            sku: p.sku,
+                                            type: p.type,
+                                            status: p.status,
+                                            description: p.description,
+                                            shortDescription: p.short_description,
+                                            price: parseFloat(p.price) || 0,
+                                            regularPrice: parseFloat(p.regular_price) || 0,
+                                            salePrice: parseFloat(p.sale_price) || 0,
+                                            stockQuantity: p.stock_quantity || 0,
+                                            stockStatus: p.stock_status,
+                                            weight: parseFloat(p.weight) || 0,
+                                            images: JSON.stringify(p.images),
+                                            categories: JSON.stringify(p.categories),
+                                            updatedAt: new Date(),
+                                            isMissingFromWoo: false,
+                                            backupGudang: p.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                                        },
+                                        create: {
+                                            wcId: p.id,
+                                            name: p.name,
+                                            slug: p.slug,
+                                            sku: p.sku,
+                                            type: p.type,
+                                            status: p.status,
+                                            description: p.description,
+                                            shortDescription: p.short_description,
+                                            price: parseFloat(p.price) || 0,
+                                            regularPrice: parseFloat(p.regular_price) || 0,
+                                            salePrice: parseFloat(p.sale_price) || 0,
+                                            stockQuantity: p.stock_quantity || 0,
+                                            stockStatus: p.stock_status,
+                                            weight: parseFloat(p.weight) || 0,
+                                            images: JSON.stringify(p.images),
+                                            categories: JSON.stringify(p.categories),
+                                            isMissingFromWoo: false,
+                                            backupGudang: p.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                                        }
+                                    });
+                                }
+                            }
+                        } else {
+                            log(`  - Gagal verifikasi batch (Status: ${response.status}). Menganggap semua di batch ini tetap ada untuk keamanan.`);
+                        }
+                    } catch (err: any) {
+                        log(`  - Error verifikasi batch: ${err.message}`);
+                    }
+                }
+
+                if (confirmedMissingIds.length > 0) {
+                    log(`Mengonfirmasi ${confirmedMissingIds.length} produk benar-benar dihapus dari WooCommerce.`);
+                    await prisma.storeProduct.updateMany({
+                        where: { wcId: { in: confirmedMissingIds } },
+                        data: { isMissingFromWoo: true }
+                    });
+                } else {
+                    log('Semua produk berpotensi hilang ternyata masih ada di WooCommerce (hidden).');
+                }
+            } else {
+                log('Tidak ada produk baru yang hilang.');
+            }
         } else {
-            console.warn(`Sync potentially incomplete (only ${fetchedWcIds.length} items fetched). skipping mark as missing.`);
+            log(`Warning: Skip check deleted items (Fetched only ${fetchedWcIds.length}).`);
         }
 
-        console.log(`Sync complete. Success: ${syncedCount}, Errors: ${errorCount}`);
+        log(`Sinkronisasi selesai. Sukses: ${syncedCount}, Error: ${errorCount}`);
 
         try {
             revalidatePath('/store/product')
             revalidatePath('/store/low-stock')
             revalidatePath('/store/purchased')
-        } catch (e) {
-            console.log('revalidatePath skipped (non-next context)');
-        }
+        } catch (e) { }
 
         return {
             success: true,
@@ -373,8 +474,8 @@ export async function syncStoreProducts() {
             total: wcProducts.length
         };
     } catch (error: any) {
-        console.error('Critical sync error:', error.message);
-        return { success: false, error: error.message };
+        log(`CRITICAL ERROR: ${error.message}`);
+        return { success: false, error: error.message || 'Gagal sinkronisasi' };
     }
 }
 
@@ -1164,9 +1265,12 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
             productData.attributes = JSON.stringify(product.attributes)
         }
 
-        await prisma.storeProduct.upsert({
+        const syncedProduct = await prisma.storeProduct.upsert({
             where: { wcId: product.id },
-            update: productData,
+            update: {
+                ...productData,
+                updatedAt: new Date()
+            },
             create: {
                 ...productData,
                 wcId: product.id,
@@ -1177,7 +1281,7 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
         // If variable product and NOT a variation itself, sync its variations too
         if (!parentId && product.type === 'variable') {
             console.log(`Product ${product.id} is variable, syncing variations...`)
-            const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=100`
+            const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=100&orderby=id&order=asc`
             const varResponse = await fetch(varUrl, {
                 headers: { 'Authorization': `Basic ${auth}` },
                 next: { revalidate: 0 }
@@ -1220,7 +1324,32 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
         }
 
         revalidatePath('/store/product')
-        return { success: true }
+        revalidatePath('/store/rack-management')
+        revalidatePath('/store/purchased')
+        revalidatePath('/store/pos')
+
+        // Parse JSON fields for frontend consistency
+        const result = {
+            ...syncedProduct,
+            images: [],
+            categories: [],
+            attributes: []
+        };
+
+        try {
+            if (syncedProduct.images) result.images = JSON.parse(syncedProduct.images);
+        } catch (e) { }
+        try {
+            if (syncedProduct.categories) result.categories = JSON.parse(syncedProduct.categories);
+        } catch (e) { }
+        try {
+            if (syncedProduct.attributes) result.attributes = JSON.parse(syncedProduct.attributes);
+        } catch (e) { }
+
+        return {
+            success: true,
+            product: result
+        }
     } catch (error: any) {
         console.error(`Error syncing product ${wcId}:`, error.message)
         return { success: false, error: error.message }

@@ -406,6 +406,7 @@ model StoreRack {
   drawerColors     Json?    // Per-drawer colors
   drawerNotes      Json?    // Per-drawer custom notes
   drawerNoteColors Json?    // Per-drawer note indicator colors
+  drawerUpdatedTimes Json?   // Per-drawer last update timestamps
   description      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

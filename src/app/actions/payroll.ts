@@ -245,7 +245,11 @@ export async function getPayroll(userId: string, month: number, year: number) {
             salarySlip: decrypt(payroll.salarySlipEnc),
             items: payroll.payrollitem.map((item: any) => ({
                 ...item,
-                component: item.salarycomponent,
+                component: {
+                    ...item.salarycomponent,
+                    name: decrypt(item.salarycomponent.nameEnc),
+                    type: decrypt(item.salarycomponent.typeEnc)
+                },
                 amount: decryptNumber(item.amountEnc)
             }))
         }
@@ -348,11 +352,11 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
 
             if (payroll) {
                 payroll.payrollitem.forEach((item: any) => {
-                    // Decrypt the amount
                     const decryptedAmount = decryptNumber(item.amountEnc)
-                    if (item.component.type === 'DEDUCTION') {
+                    const componentType = decrypt(item.salarycomponent.typeEnc)
+                    if (componentType === 'DEDUCTION') {
                         totalDeductions += decryptedAmount
-                    } else if (item.component.type === 'ADDITION') {
+                    } else if (componentType === 'ADDITION') {
                         totalAdditions += decryptedAmount
                     }
                 })
@@ -370,9 +374,14 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
                 totalAdditions,
                 netSalary: payroll ? decryptNumber(payroll.netSalaryEnc) : 0,
                 salarySlip: payroll?.salarySlipEnc ? decrypt(payroll.salarySlipEnc) : null,
-                items: payroll?.items?.map((item: any) => ({
+                items: payroll?.payrollitem?.map((item: any) => ({
                     ...item,
-                    amount: decryptNumber(item.amountEnc)
+                    amount: decryptNumber(item.amountEnc),
+                    component: {
+                        ...item.salarycomponent,
+                        name: decrypt(item.salarycomponent.nameEnc),
+                        type: decrypt(item.salarycomponent.typeEnc)
+                    }
                 })) || []
             }
         })

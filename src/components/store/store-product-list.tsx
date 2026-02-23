@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
-import { syncStoreProducts, toggleStoreProductPurchased, syncSingleStoreProduct } from '@/app/actions/store-product'
+import { syncStoreProducts, toggleStoreProductPurchased, syncSingleStoreProduct, getStoreProducts } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -12,6 +12,7 @@ import KeteranganEdit from './keterangan-edit'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import EditProductModal from './edit-product-modal'
 import PurchaseInputModal from './purchase-input-modal'
+import SyncLogModal from './sync-log-modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -88,6 +89,13 @@ export default function StoreProductList({
     })
     const [syncingItems, setSyncingItems] = useState<Set<number>>(new Set())
     const [finishedItems, setFinishedItems] = useState<Set<number>>(new Set())
+
+    // Sync Log Modal States
+    const [showSyncModal, setShowSyncModal] = useState(false)
+    const [syncLogs, setSyncLogs] = useState<{ message: string, timestamp: string }[]>([])
+    const [isSyncComplete, setIsSyncComplete] = useState(false)
+    const [hasSyncError, setHasSyncError] = useState(false)
+
     const { showConfirmation } = useConfirmation()
     const { showAlert, showError } = useAlert()
     const router = useRouter()
@@ -104,22 +112,58 @@ export default function StoreProductList({
 
     const handleSync = async () => {
         setIsSyncing(true)
+        setShowSyncModal(true)
+        setSyncLogs([])
+        setIsSyncComplete(false)
+        setHasSyncError(false)
+
         try {
-            const result = await syncStoreProducts()
-            if (result.success) {
-                if (result.count === 0 && (result.total || 0) === 0) {
-                    showAlert('Tidak ada produk yang ditemukan di WooCommerce.', 'Informasi')
-                } else if ((result.errors || 0) > 0) {
-                    showAlert(`Sinkronisasi selesai dengan beberapa masalah. Berhasil: ${result.count}, Gagal: ${result.errors} dari total ${result.total} produk.`, 'Selesai Parsial')
-                } else {
-                    showAlert(`Berhasil sinkronisasi ${result.count} produk dari WooCommerce Ichibot Store.`, 'Sinkronisasi Berhasil')
+            const response = await fetch('/api/store/sync')
+            if (!response.ok) throw new Error('Gagal memulai sinkronisasi.')
+
+            const reader = response.body?.getReader()
+            if (!reader) throw new Error('Stream reader tidak tersedia.')
+
+            const decoder = new TextDecoder()
+            let partialData = ''
+
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                const chunk = decoder.decode(value, { stream: true })
+                partialData += chunk
+
+                const lines = partialData.split('\n\n')
+                partialData = lines.pop() || ''
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6))
+                            setSyncLogs(prev => [...prev, data])
+                            if (data.message.startsWith('Gagal') || data.message.includes('ERROR')) {
+                                setHasSyncError(true)
+                            }
+                        } catch (e) {
+                            console.error('Error parsing sync log:', e)
+                        }
+                    }
                 }
-                router.refresh()
-            } else {
-                showError(result.error || 'Gagal sinkronisasi produk. Periksa logs server untuk detailnya.')
             }
+
+            setIsSyncComplete(true)
+            // Refresh local state without reload
+            const updatedProducts = await getStoreProducts()
+            setLocalProducts(updatedProducts)
+            // router.refresh()
         } catch (error: any) {
-            showError(error.message || 'Terjadi kesalahan sistem saat melakukan sinkronisasi.')
+            setHasSyncError(true)
+            setIsSyncComplete(true)
+            setSyncLogs(prev => [...prev, {
+                message: `ERROR: ${error.message || 'Terjadi kesalahan sistem.'}`,
+                timestamp: new Date().toISOString()
+            }])
         } finally {
             setIsSyncing(false)
         }
@@ -132,7 +176,12 @@ export default function StoreProductList({
         setSyncingItems(prev => new Set(prev).add(id))
         try {
             const result = await syncSingleStoreProduct(id, product.parentId)
-            if (result.success) {
+            if (result.success && result.product) {
+                // Update local state for immediate UI refresh
+                setLocalProducts(prev => prev.map(p =>
+                    p.wcId === id ? result.product : p
+                ))
+
                 // Remove from syncing and add to finished
                 setSyncingItems(prev => {
                     const next = new Set(prev)
@@ -150,7 +199,16 @@ export default function StoreProductList({
                     })
                 }, 5000)
 
+                // router.refresh()
+            } else if (result.success) {
+                // Fallback for cases where product might not be returned
                 router.refresh()
+                setSyncingItems(prev => {
+                    const next = new Set(prev)
+                    next.delete(id)
+                    return next
+                })
+                setFinishedItems(prev => new Set(prev).add(id))
             } else {
                 showError(result.error || 'Gagal sinkronisasi produk.')
                 setSyncingItems(prev => {
@@ -1209,17 +1267,15 @@ export default function StoreProductList({
                 )
             }
 
-            {
-                isAddingProduct && (
-                    <EditProductModal
-                        product={null}
-                        onClose={() => setIsAddingProduct(false)}
-                        onSuccess={() => {
-                            router.refresh()
-                        }}
-                    />
-                )
-            }
+            {isAddingProduct && (
+                <EditProductModal
+                    product={null}
+                    onClose={() => setIsAddingProduct(false)}
+                    onSuccess={() => {
+                        router.refresh()
+                    }}
+                />
+            )}
 
             {editPurchaseProduct && (
                 <PurchaseInputModal
@@ -1231,6 +1287,14 @@ export default function StoreProductList({
                     editMode
                 />
             )}
+
+            <SyncLogModal
+                isOpen={showSyncModal}
+                onClose={() => setShowSyncModal(false)}
+                logs={syncLogs}
+                isComplete={isSyncComplete}
+                hasError={hasSyncError}
+            />
         </div >
     )
 }
