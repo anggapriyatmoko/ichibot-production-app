@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
-import { Upload, AlertTriangle, Check, Loader2, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Upload, AlertTriangle, Check, Loader2, X, Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { importRawAttendance, getValidUserIds, getAttendanceTemplate } from '@/app/actions/attendance-io'
 import { useAlert } from '@/hooks/use-alert'
-import { useEffect } from 'react'
+import Modal from '@/components/ui/modal'
 
 type ImportPreview = {
     userId: string
@@ -188,143 +188,30 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                 <span className="text-sm font-medium">Import</span>
             </button>
 
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card border border-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="p-6 border-b border-border flex justify-between items-start flex-shrink-0">
+            <Modal
+                isOpen={isOpen}
+                onClose={handleClose}
+                title="Import Attendance"
+                maxWidth="4xl"
+                footer={
+                    !importResult ? (
+                        <div className="flex justify-between items-center w-full">
                             <div>
-                                <h2 className="text-xl font-bold text-foreground">Import Attendance</h2>
-                                <p className="text-sm text-muted-foreground mt-1">Upload Excel (.xlsx) file to update attendance.</p>
+                                {!previewData.length && (
+                                    <button
+                                        onClick={handleDownloadTemplate}
+                                        disabled={isLoading}
+                                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
+                                    >
+                                        {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                                        Download Template
+                                    </button>
+                                )}
                             </div>
-                            <button onClick={handleClose} className="text-muted-foreground hover:text-foreground">
-                                <span className="sr-only">Close</span>
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-hidden p-6 gap-6 flex flex-col min-h-0">
-
-                            {!previewData.length && !importResult ? (
-                                <div className="space-y-6 overflow-y-auto pr-2">
-                                    {/* Upload Area */}
-                                    <div className="border-2 border-dashed border-border rounded-2xl h-48 flex flex-col items-center justify-center bg-muted/10 hover:bg-accent/50 transition-colors relative group">
-                                        <input
-                                            type="file"
-                                            accept=".xlsx,.xls"
-                                            onChange={handleFileUpload}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                            disabled={isLoading}
-                                        />
-                                        <div className="p-4 rounded-full bg-blue-500/10 text-blue-600 mb-3 group-hover:scale-110 transition-transform">
-                                            {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
-                                        </div>
-                                        <p className="font-medium text-foreground">Click to upload or drag and drop</p>
-                                        <p className="text-sm text-muted-foreground mt-1">Supports .xlsx, .xls</p>
-                                    </div>
-
-                                    {/* Instructions */}
-                                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
-                                        <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
-                                            <AlertTriangle className="w-4 h-4" />
-                                            Data Format (Vertical Raw Log)
-                                        </h3>
-                                        <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
-                                            <li>Required columns: <strong>ID</strong>, <strong>Date</strong>, <strong>Time</strong></li>
-                                            <li><strong>Time &lt; 12:00</strong> : Treated as Clock In</li>
-                                            <li><strong>Time &gt;= 12:00</strong> : Treated as Clock Out</li>
-                                            <li>Multiple entries for the same day are aggregated (earliest In, latest Out).</li>
-                                            <li>Invalid User IDs will be highlighted and skipped during import.</li>
-                                        </ul>
-                                        <div className="mt-4">
-                                            <button
-                                                onClick={handleDownloadTemplate}
-                                                disabled={isLoading}
-                                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-2"
-                                            >
-                                                {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 rotate-180" />}
-                                                Download Template (.xlsx)
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : null}
-
-                            {/* Preview Area */}
-                            {previewData.length > 0 && !importResult && (
-                                <div className="flex flex-col h-full gap-4 overflow-hidden">
-                                    <div className="flex items-center justify-between flex-shrink-0">
-                                        <div className="flex gap-4">
-                                            <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
-                                                Users Found: <span className="text-foreground">{fileStats?.total}</span>
-                                            </div>
-                                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${(fileStats?.valid || 0) < (fileStats?.total || 0) ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
-                                                Existing Users: <span className="font-bold">{fileStats?.valid}</span>
-                                            </div>
-                                        </div>
-                                        <button onClick={resetState} className="text-sm text-red-600 hover:underline">
-                                            Clear / Re-upload
-                                        </button>
-                                    </div>
-
-                                    <div className="border border-border rounded-lg overflow-hidden flex-1 relative flex flex-col min-h-0 bg-background/50">
-                                        <div className="overflow-auto flex-1 hover:pr-1 w-full">
-                                            <table className="w-full text-left text-sm whitespace-nowrap">
-                                                <thead className="bg-muted text-muted-foreground font-normal sticky top-0 z-10 shadow-sm">
-                                                    <tr>
-                                                        <th className="p-3 border-b border-border w-10 bg-muted">#</th>
-                                                        <th className="p-3 border-b border-border bg-muted">User ID</th>
-                                                        <th className="p-3 border-b border-border bg-muted">Name</th>
-                                                        <th className="p-3 border-b border-border text-right bg-muted">Days with Data</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-border bg-card">
-                                                    {previewData.map((row, i) => (
-                                                        <tr key={i} className={`hover:bg-muted/50 transition-colors ${!row.isValid ? 'bg-red-500/5 text-red-600' : ''}`}>
-                                                            <td className="p-3 text-muted-foreground text-xs">{i + 1}</td>
-                                                            <td className="p-3 font-mono text-xs flex items-center gap-2">
-                                                                {row.userId}
-                                                                {!row.isValid && <AlertTriangle className="w-3 h-3 text-red-500" />}
-                                                            </td>
-                                                            <td className="p-3 font-medium">{row.name}</td>
-                                                            <td className="p-3 text-right tabular-nums">{row.validDays}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Result Area */}
-                            {importResult && (
-                                <div className="space-y-6 py-8 text-center animate-in fade-in overflow-y-auto">
-                                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Check className="w-8 h-8" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-2xl font-bold text-foreground">Import Completed!</h3>
-                                        <p className="text-muted-foreground mt-2">
-                                            Successfully updated <strong className="text-foreground">{importResult.count}</strong> daily records.
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-4">
-                                        <button onClick={handleClose} className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
-                                            Done
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
-
-                        {/* Footer */}
-                        {!importResult && (
-                            <div className="p-4 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-xl flex-shrink-0">
-                                <button onClick={handleClose} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium">Cancel</button>
+                            <div className="flex gap-3">
+                                <button onClick={handleClose} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground font-medium">
+                                    Batal
+                                </button>
                                 {previewData.length > 0 && (
                                     <button
                                         onClick={handleImport}
@@ -336,10 +223,115 @@ export default function ImportAttendanceModal({ currentMonth, currentYear, onSuc
                                     </button>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : null
+                }
+            >
+                <div className="flex flex-col gap-6 min-h-0">
+                    {!previewData.length && !importResult ? (
+                        <div className="space-y-6">
+                            {/* Upload Area */}
+                            <div className="border-2 border-dashed border-border rounded-2xl h-48 flex flex-col items-center justify-center bg-muted/10 hover:bg-accent/50 transition-colors relative group">
+                                <input
+                                    type="file"
+                                    accept=".xlsx,.xls"
+                                    onChange={handleFileUpload}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    disabled={isLoading}
+                                />
+                                <div className="p-4 rounded-full bg-blue-500/10 text-blue-600 mb-3 group-hover:scale-110 transition-transform">
+                                    {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
+                                </div>
+                                <p className="font-medium text-foreground">Click to upload or drag and drop</p>
+                                <p className="text-sm text-muted-foreground mt-1">Supports .xlsx, .xls</p>
+                            </div>
+
+                            {/* Instructions */}
+                            <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
+                                <h3 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    Data Format (Vertical Raw Log)
+                                </h3>
+                                <ul className="text-sm text-amber-900/80 dark:text-amber-400/80 space-y-2 list-disc list-inside">
+                                    <li>Required columns: <strong>ID</strong>, <strong>Date</strong>, <strong>Time</strong></li>
+                                    <li><strong>Time &lt; 12:00</strong> : Treated as Clock In</li>
+                                    <li><strong>Time &gt;= 12:00</strong> : Treated as Clock Out</li>
+                                    <li>Multiple entries for the same day are aggregated (earliest In, latest Out).</li>
+                                    <li>Invalid User IDs will be highlighted and skipped during import.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {/* Preview Area */}
+                    {previewData.length > 0 && !importResult && (
+                        <div className="flex flex-col gap-4 overflow-hidden">
+                            <div className="flex items-center justify-between flex-shrink-0">
+                                <div className="flex gap-4">
+                                    <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
+                                        Users Found: <span className="text-foreground">{fileStats?.total}</span>
+                                    </div>
+                                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${(fileStats?.valid || 0) < (fileStats?.total || 0) ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
+                                        Existing Users: <span className="font-bold">{fileStats?.valid}</span>
+                                    </div>
+                                </div>
+                                <button onClick={resetState} className="text-sm text-red-600 hover:underline">
+                                    Clear / Re-upload
+                                </button>
+                            </div>
+
+                            <div className="border border-border rounded-lg overflow-hidden flex-1 relative flex flex-col min-h-[300px] bg-background/50">
+                                <div className="overflow-auto flex-1 hover:pr-1 w-full">
+                                    <table className="w-full text-left text-sm whitespace-nowrap">
+                                        <thead className="bg-muted text-muted-foreground font-normal sticky top-0 z-10 shadow-sm">
+                                            <tr>
+                                                <th className="p-3 border-b border-border w-10 bg-muted">#</th>
+                                                <th className="p-3 border-b border-border bg-muted">User ID</th>
+                                                <th className="p-3 border-b border-border bg-muted">Name</th>
+                                                <th className="p-3 border-b border-border text-right bg-muted">Days with Data</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border bg-card">
+                                            {previewData.map((row, i) => (
+                                                <tr key={i} className={`hover:bg-muted/50 transition-colors ${!row.isValid ? 'bg-red-500/5 text-red-600' : ''}`}>
+                                                    <td className="p-3 text-muted-foreground text-xs">{i + 1}</td>
+                                                    <td className="p-3 font-mono text-xs flex items-center gap-2">
+                                                        {row.userId}
+                                                        {!row.isValid && <AlertTriangle className="w-3 h-3 text-red-500" />}
+                                                    </td>
+                                                    <td className="p-3 font-medium">{row.name}</td>
+                                                    <td className="p-3 text-right tabular-nums">{row.validDays}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Result Area */}
+                    {importResult && (
+                        <div className="py-8 text-center animate-in fade-in">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Check className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-bold text-foreground">Import Completed!</h3>
+                                <p className="text-muted-foreground mt-2">
+                                    Successfully updated <strong className="text-foreground">{importResult.count}</strong> daily records.
+                                </p>
+                            </div>
+
+                            <div className="pt-8">
+                                <button onClick={handleClose} className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
+                                    Selesai
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            </Modal>
         </>
     )
 }

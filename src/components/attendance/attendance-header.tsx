@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import { Calendar, ChevronLeft, ChevronRight, Download, Loader2, ChevronDown } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Download, Loader2, ChevronDown, Search } from 'lucide-react'
 import ImportAttendanceModal from './import-attendance-modal'
 import { useAlert } from '@/hooks/use-alert'
 import { exportRawAttendance } from '@/app/actions/attendance-io'
@@ -17,12 +17,24 @@ interface Props {
     currentMonth: number
     currentYear: number
     isAdmin?: boolean
+    basePath?: string
+    monthParam?: string
+    yearParam?: string
+    showSearch?: boolean
+    onSearch?: (query: string) => void
+    searchQuery?: string
 }
 
 export default function AttendanceHeader({
     currentMonth,
     currentYear,
-    isAdmin = false
+    isAdmin = false,
+    basePath = '/attendance',
+    monthParam = 'month',
+    yearParam = 'year',
+    showSearch = false,
+    onSearch,
+    searchQuery
 }: Props) {
     const router = useRouter()
     const { showError } = useAlert()
@@ -39,7 +51,10 @@ export default function AttendanceHeader({
             newYear = currentMonth === 12 ? currentYear + 1 : currentYear
         }
 
-        router.push(`/attendance?month=${newMonth}&year=${newYear}`)
+        const params = new URLSearchParams(window.location.search)
+        params.set(monthParam, newMonth.toString())
+        params.set(yearParam, newYear.toString())
+        router.push(`${basePath}?${params.toString()}`)
     }
 
 
@@ -92,23 +107,35 @@ export default function AttendanceHeader({
     return (
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
             <div className="flex items-center gap-2">
+                {showSearch && (
+                    <div className="relative group mr-2">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => onSearch?.(e.target.value)}
+                            placeholder="Cari karyawan..."
+                            className="pl-9 pr-4 py-1.5 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-[180px] md:w-[240px]"
+                        />
+                    </div>
+                )}
                 <button
                     onClick={() => handleMonthChange('prev')}
-                    className="p-2 hover:bg-muted rounded-full transition-colors"
+                    className="p-1.5 hover:bg-muted rounded-full transition-colors"
                 >
-                    <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+                    <ChevronLeft className="w-4 h-4 text-muted-foreground" />
                 </button>
-                <div className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-lg">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium">
                         {monthNames[currentMonth - 1]} {currentYear}
                     </span>
                 </div>
                 <button
                     onClick={() => handleMonthChange('next')}
-                    className="p-2 hover:bg-accent rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-muted rounded-full transition-colors"
                 >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
             </div>
 

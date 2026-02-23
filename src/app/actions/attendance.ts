@@ -574,3 +574,168 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
         }
     }
 }
+
+// Get admin monthly attendance report data
+export async function getAdminMonthlyAttendanceReport(month: number, year: number) {
+    await requireAuth()
+    const isAdmin = await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+
+    const firstDay = new Date(year, month - 1, 1)
+    const nextMonth = new Date(year, month, 1)
+    const lastDay = new Date(year, month, 0)
+    const daysInMonth = lastDay.getDate()
+
+    // Get all users
+    const usersRaw = await prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            nameEnc: true,
+            usernameEnc: true,
+            departmentEnc: true,
+            roleEnc: true
+        }
+    })
+
+    // Get all attendances for the month
+    const rawAttendances = await prisma.attendance.findMany({
+        where: {
+            date: {
+                gte: firstDay,
+                lt: nextMonth
+            }
+        }
+    })
+
+    // Decrypt attendance records
+    const attendances = rawAttendances.map((att: any) => ({
+        ...att,
+        clockIn: decryptDate(att.clockInEnc),
+        clockOut: decryptDate(att.clockOutEnc),
+        status: decrypt(att.statusEnc),
+        notes: decrypt(att.notesEnc)
+    }))
+
+    // Get work schedules
+    const workSchedules = await prisma.workSchedule.findMany()
+    const workScheduleMap = new Map<number, typeof workSchedules[0]>(workSchedules.map(s => [s.dayOfWeek, s]))
+
+    // Get custom work schedules
+    const customSchedules = await prisma.customWorkSchedule.findMany({
+        where: {
+            startDate: { lte: new Date(year, month, 0) },
+            endDate: { gte: firstDay }
+        }
+    })
+
+    // Build monthly data structure
+    const monthlyData = usersRaw.map(userItem => {
+        const user = {
+            ...userItem,
+            name: decrypt(userItem.nameEnc),
+            username: decrypt(userItem.usernameEnc) || 'Unknown',
+            department: decrypt(userItem.departmentEnc),
+            role: decrypt(userItem.roleEnc) || 'USER'
+        }
+        const userAttendances: { [day: number]: any } = {}
+        let totalLateMinutes = 0
+        let totalEarlyDepartureMinutes = 0
+        let totalAbsentDays = 0
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateToCheck = new Date(year, month - 1, day)
+            dateToCheck.setHours(0, 0, 0, 0)
+
+            const attendance = attendances.find((a: any) =>
+                a.userId === user.id &&
+                new Date(a.date).toDateString() === dateToCheck.toDateString()
+            )
+
+            // Calculation Logic
+            let isLate = false
+            let isEarlyDeparture = false
+            if (attendance && !attendance.isHoliday && attendance.clockIn) {
+                const dayOfWeek = dateToCheck.getDay()
+                const schedule = workScheduleMap.get(dayOfWeek)
+
+                const customSchedule = customSchedules.find(cs => {
+                    const csStart = new Date(cs.startDate)
+                    csStart.setHours(0, 0, 0, 0)
+                    const csEnd = new Date(cs.endDate)
+                    csEnd.setHours(23, 59, 59, 999)
+                    return dateToCheck >= csStart && dateToCheck <= csEnd
+                })
+
+                const effectiveStartTime = customSchedule?.startTime || (schedule?.isWorkDay ? schedule.startTime : null)
+                const effectiveEndTime = customSchedule?.endTime || (schedule?.isWorkDay ? schedule.endTime : null)
+                const isWorkDay = customSchedule ? true : (schedule?.isWorkDay ?? false)
+
+                if (isWorkDay && effectiveStartTime && effectiveEndTime) {
+                    const [scheduleHours, scheduleMinutes] = effectiveStartTime.split(':').map(Number)
+                    const scheduleTotalMinutes = scheduleHours * 60 + scheduleMinutes
+
+                    const clockIn = new Date(attendance.clockIn)
+                    const clockInTotalMinutes = clockIn.getHours() * 60 + clockIn.getMinutes()
+
+                    if (clockInTotalMinutes > scheduleTotalMinutes) {
+                        isLate = true
+                        totalLateMinutes += (clockInTotalMinutes - scheduleTotalMinutes)
+                    }
+
+                    if (attendance.clockOut) {
+                        const [endHours, endMinutes] = effectiveEndTime.split(':').map(Number)
+                        const endTotalMinutes = endHours * 60 + endMinutes
+
+                        const clockOut = new Date(attendance.clockOut)
+                        const clockOutTotalMinutes = clockOut.getHours() * 60 + clockOut.getMinutes()
+
+                        if (clockOutTotalMinutes < endTotalMinutes) {
+                            isEarlyDeparture = true
+                            totalEarlyDepartureMinutes += (endTotalMinutes - clockOutTotalMinutes)
+                        }
+                    }
+                }
+            }
+
+            if (!attendance) {
+                const dayOfWeek = dateToCheck.getDay()
+                const schedule = workScheduleMap.get(dayOfWeek)
+
+                const customScheduleForAbsent = customSchedules.find(cs => {
+                    const csStart = new Date(cs.startDate)
+                    csStart.setHours(0, 0, 0, 0)
+                    const csEnd = new Date(cs.endDate)
+                    csEnd.setHours(23, 59, 59, 999)
+                    return dateToCheck >= csStart && dateToCheck <= csEnd
+                })
+
+                const isWorkDay = customScheduleForAbsent ? true : (schedule?.isWorkDay ?? false)
+
+                if (isWorkDay && dateToCheck <= new Date()) {
+                    totalAbsentDays++
+                }
+            }
+
+            userAttendances[day] = attendance ? { ...attendance, isLate, isEarlyDeparture } : null
+        }
+
+        return {
+            user,
+            attendances: userAttendances,
+            stats: {
+                lateMinutes: totalLateMinutes,
+                earlyMinutes: totalEarlyDepartureMinutes,
+                absentDays: totalAbsentDays
+            }
+        }
+    })
+
+    return {
+        success: true,
+        data: {
+            monthlyData,
+            daysInMonth,
+            isAdmin: true
+        }
+    }
+}

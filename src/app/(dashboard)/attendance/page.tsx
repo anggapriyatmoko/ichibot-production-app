@@ -43,45 +43,27 @@ export default async function AttendancePage({
     // Get all days in month
     const daysInMonth = lastDay.getDate()
 
-    // Get users - all for admin/HRD, only self for regular users
-    const users = isAdmin
-        ? await prisma.user.findMany({
-            orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                nameEnc: true,
-                usernameEnc: true,
-                departmentEnc: true,
-                roleEnc: true
-            }
-        })
-        : await prisma.user.findMany({
-            where: { id: currentUserId },
-            select: {
-                id: true,
-                nameEnc: true,
-                usernameEnc: true,
-                departmentEnc: true,
-                roleEnc: true
-            }
-        })
+    // Get only current user for this page
+    const users = await prisma.user.findMany({
+        where: { id: currentUserId },
+        select: {
+            id: true,
+            nameEnc: true,
+            usernameEnc: true,
+            departmentEnc: true,
+            roleEnc: true
+        }
+    })
 
-    // Get all attendances for the month
+    // Get only current user's attendances for this page
     const rawAttendances = await prisma.attendance.findMany({
-        where: isAdmin
-            ? {
-                date: {
-                    gte: firstDay,
-                    lt: nextMonth
-                }
+        where: {
+            userId: currentUserId,
+            date: {
+                gte: firstDay,
+                lt: nextMonth
             }
-            : {
-                userId: currentUserId,
-                date: {
-                    gte: firstDay,
-                    lt: nextMonth
-                }
-            }
+        }
     })
 
     // Decrypt attendance records
@@ -217,37 +199,35 @@ export default async function AttendancePage({
 
     return (
         <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Absensi</h1>
-                    <p className="text-muted-foreground">
-                        {isAdmin ? 'Kelola data absensi karyawan.' : 'Lihat data absensi Anda.'}
-                    </p>
-                </div>
-                <div className="w-fit">
-                    <AttendanceHeader
-                        currentMonth={currentMonth}
-                        currentYear={currentYear}
-                        isAdmin={isAdmin}
-                    />
-                </div>
+            <div className="mb-4">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Absensi</h1>
+                <p className="text-muted-foreground">
+                    {isAdmin ? 'Kelola data absensi karyawan.' : 'Lihat data absensi Anda.'}
+                </p>
             </div>
 
-            <div className={isAdmin ? "w-full" : "grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"}>
-                <div className="min-w-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div className="lg:col-span-1 min-w-0">
                     <AttendanceManager
                         monthlyData={monthlyData}
                         currentMonth={currentMonth}
                         currentYear={currentYear}
                         daysInMonth={daysInMonth}
-                        isAdmin={isAdmin}
+                        isAdmin={false} // Disable editing capabilities on this page
+                        headerAction={
+                            <AttendanceHeader
+                                currentMonth={currentMonth}
+                                currentYear={currentYear}
+                                isAdmin={false}
+                            />
+                        }
                     />
                 </div>
-                {!isAdmin && (
-                    <div className="space-y-6">
-                        <UserAttendanceSummary month={currentMonth} year={currentYear} />
-                    </div>
-                )}
+                <div className="lg:col-span-1 space-y-6">
+                    <UserAttendanceSummary month={currentMonth} year={currentYear} />
+                </div>
+                {/* Third column remains empty */}
+                <div className="hidden lg:block lg:col-span-1" />
             </div>
         </div>
     )

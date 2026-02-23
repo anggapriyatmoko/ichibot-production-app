@@ -279,14 +279,15 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
 
             const blocks = html
                 .replace(/<br\s*\/?>/gi, '\n')
-                .replace(/<\/p>/gi, '\n')
-                .replace(/<\/div>/gi, '\n')
+                .replace(/<\/?p[^>]*>/gi, '\n')
+                .replace(/<\/?div[^>]*>/gi, '\n')
                 .replace(/<li[^>]*>/gi, '\n• ')
-                .replace(/<\/li>/gi, '')
-                .replace(/<\/?ul[^>]*>/gi, '')
-                .replace(/<\/?ol[^>]*>/gi, '')
-                .replace(/<p[^>]*>/gi, '')
-                .replace(/<div[^>]*>/gi, '')
+                .replace(/<\/li>/gi, '\n')
+                .replace(/<\/?ul[^>]*>/gi, '\n')
+                .replace(/<\/?ol[^>]*>/gi, '\n')
+                .replace(/\r/g, '')
+                .replace(/\n{2,}/g, '\n')
+                .trim()
 
             const processInline = (text: string, inheritBold: boolean, inheritItalic: boolean) => {
                 let remaining = text

@@ -14,9 +14,11 @@ import { AnnouncementManager } from '@/components/hr/announcement-manager'
 import { getSalaryComponents } from '@/app/actions/salary-settings'
 import { getMonthlyPayrollRecap } from '@/app/actions/payroll'
 import { getHRDocuments } from '@/app/actions/hr-document'
+import { getAdminMonthlyAttendanceReport } from '@/app/actions/attendance'
 import ConfidentialAccess from '@/components/auth/confidential-access'
 import HRDTabs from '@/components/hr/hrd-tabs'
-import { Wallet, FileText } from 'lucide-react'
+import AttendanceDataView from '@/components/attendance/attendance-data-view'
+import { Wallet, FileText, Fingerprint } from 'lucide-react'
 
 export const metadata = {
     title: 'HRD Dashboard | Ichibot Production',
@@ -68,7 +70,10 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
         const attMonth = searchParams?.attMonth ? parseInt(searchParams.attMonth) : new Date().getMonth() + 1
         const attYear = searchParams?.attYear ? parseInt(searchParams.attYear) : new Date().getFullYear()
 
-        const recapData = await getMonthlyPayrollRecap(month, year)
+        const [recapData, attendanceReport] = await Promise.all([
+            getMonthlyPayrollRecap(month, year),
+            getAdminMonthlyAttendanceReport(attMonth, attYear)
+        ])
 
         const attendanceTabContent = (
             <div className="fade-in">
@@ -83,6 +88,19 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
                     currentYear={attYear}
                 />
             </div>
+        )
+
+        const dataAbsenTabContent = (
+            <AttendanceDataView
+                monthlyData={attendanceReport.success ? attendanceReport.data.monthlyData : []}
+                currentMonth={attMonth}
+                currentYear={attYear}
+                daysInMonth={attendanceReport.success ? attendanceReport.data.daysInMonth : 0}
+                isAdmin={true}
+                basePath="/hrd-dashboard"
+                monthParam="attMonth"
+                yearParam="attYear"
+            />
         )
 
         const payrollTabContent = (
@@ -129,6 +147,12 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
                 label: 'Rekap Absensi',
                 icon: <Calendar className="w-4 h-4" />,
                 content: attendanceRecapTabContent
+            },
+            {
+                id: 'attendance-data',
+                label: 'Data Absen',
+                icon: <Fingerprint className="w-4 h-4" />,
+                content: dataAbsenTabContent
             },
             {
                 id: 'attendance',
