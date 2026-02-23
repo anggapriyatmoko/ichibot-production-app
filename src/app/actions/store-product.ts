@@ -87,7 +87,7 @@ async function fetchWooCommerceProducts() {
                     'Authorization': `Basic ${auth}`
                 },
                 next: { revalidate: 0 },
-                signal: AbortSignal.timeout(30000) // Increased timeout to 30s
+                signal: AbortSignal.timeout(60000) // Increased timeout to 60s for stability
             })
 
             console.log(`Response status: ${response.status} ${response.statusText}`);
@@ -95,16 +95,26 @@ async function fetchWooCommerceProducts() {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 console.error('API Error details:', errorData);
-                throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}. ${errorData.message || ''}`)
+                throw new Error(`Failed to fetch products page ${page}: ${response.status} ${response.statusText}. ${errorData.message || ''}`)
             }
 
             const products = await response.json()
-            console.log(`Received ${Array.isArray(products) ? products.length : 'non-array'} products.`);
+            console.log(`Received ${Array.isArray(products) ? products.length : 'non-array'} products on page ${page}.`);
 
             if (!Array.isArray(products) || products.length === 0) break
 
             allProducts = [...allProducts, ...products]
+
+            // Check total pages header as a backup for safety
+            const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0');
+            if (totalPages > 0 && page >= totalPages) {
+                console.log(`Reached last page (${page}/${totalPages}) based on X-WP-TotalPages header.`);
+                break;
+            }
+
+            // Fallback: if we got less than perPage, we're likely at the end (standard WP behavior)
             if (products.length < perPage) break
+
             page++
         } catch (fetchError: any) {
             console.error(`Error during fetch (page ${page}):`, fetchError.message);
@@ -239,76 +249,88 @@ export async function syncStoreProducts() {
                 });
                 syncedCount++;
 
-                // If variable product, fetch and sync variations
+                // If variable product, fetch and sync variations with pagination
                 if (product.type === 'variable') {
                     console.log(`Product ${product.id} is variable, fetching variations...`);
                     const baseUrl = WC_URL.replace(/\/$/, '');
                     const auth = Buffer.from(`${WC_KEY}:${WC_SECRET}`).toString('base64');
-                    const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=100`;
-                    console.log(`Fetching variations for ${product.name} (ID: ${product.id}) from ${varUrl}`);
 
-                    try {
-                        const varResponse = await fetch(varUrl, {
-                            headers: { 'Authorization': `Basic ${auth}` },
-                            next: { revalidate: 0 }
-                        });
+                    let varPage = 1;
+                    const varPerPage = 100;
 
-                        if (varResponse.ok) {
-                            const variations = await varResponse.json();
-                            console.log(`Found ${variations.length} variations for product ${product.id}`);
-                            if (variations.length === 0) {
-                                console.log(`Warning: Product ${product.id} is variable but returned 0 variations.`);
+                    while (true) {
+                        const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=${varPerPage}&page=${varPage}`;
+                        console.log(`Fetching variations for ${product.name} (ID: ${product.id}) page ${varPage} from ${varUrl}`);
+
+                        try {
+                            const varResponse = await fetch(varUrl, {
+                                headers: { 'Authorization': `Basic ${auth}` },
+                                next: { revalidate: 0 }
+                            });
+
+                            if (varResponse.ok) {
+                                const variations = await varResponse.json();
+                                console.log(`Found ${variations.length} variations on page ${varPage} for product ${product.id}`);
+
+                                if (!Array.isArray(variations) || variations.length === 0) break;
+
+                                for (const variation of variations) {
+                                    fetchedWcIds.push(variation.id);
+                                    await prisma.storeProduct.upsert({
+                                        where: { wcId: variation.id },
+                                        update: {
+                                            name: product.name, // Parents name for base
+                                            slug: variation.slug,
+                                            sku: variation.sku,
+                                            type: 'variation',
+                                            status: variation.status,
+                                            price: parseFloat(variation.price) || 0,
+                                            regularPrice: parseFloat(variation.regular_price) || 0,
+                                            salePrice: parseFloat(variation.sale_price) || 0,
+                                            stockQuantity: variation.stock_quantity || 0,
+                                            stockStatus: variation.stock_status,
+                                            weight: parseFloat(variation.weight) || 0,
+                                            images: JSON.stringify(variation.image ? [variation.image] : []),
+                                            attributes: JSON.stringify(variation.attributes),
+                                            parentId: product.id,
+                                            updatedAt: new Date(),
+                                            isMissingFromWoo: false,
+                                            backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                                        },
+                                        create: {
+                                            wcId: variation.id,
+                                            name: product.name,
+                                            slug: variation.slug,
+                                            sku: variation.sku,
+                                            type: 'variation',
+                                            status: variation.status,
+                                            price: parseFloat(variation.price) || 0,
+                                            regularPrice: parseFloat(variation.regular_price) || 0,
+                                            salePrice: parseFloat(variation.sale_price) || 0,
+                                            stockQuantity: variation.stock_quantity || 0,
+                                            stockStatus: variation.stock_status,
+                                            weight: parseFloat(variation.weight) || 0,
+                                            images: JSON.stringify(variation.image ? [variation.image] : []),
+                                            attributes: JSON.stringify(variation.attributes),
+                                            parentId: product.id,
+                                            purchased: false,
+                                            isMissingFromWoo: false,
+                                            backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                                        }
+                                    });
+                                    syncedCount++;
+                                }
+
+                                if (variations.length < varPerPage) break;
+                                varPage++;
+                            } else {
+                                console.error(`Error response fetching variations for ${product.id}: ${varResponse.status}`);
+                                break;
                             }
-
-                            for (const variation of variations) {
-                                fetchedWcIds.push(variation.id);
-                                await prisma.storeProduct.upsert({
-                                    where: { wcId: variation.id },
-                                    update: {
-                                        name: product.name, // Parents name for base
-                                        slug: variation.slug,
-                                        sku: variation.sku,
-                                        type: 'variation',
-                                        status: variation.status,
-                                        price: parseFloat(variation.price) || 0,
-                                        regularPrice: parseFloat(variation.regular_price) || 0,
-                                        salePrice: parseFloat(variation.sale_price) || 0,
-                                        stockQuantity: variation.stock_quantity || 0,
-                                        stockStatus: variation.stock_status,
-                                        weight: parseFloat(variation.weight) || 0,
-                                        images: JSON.stringify(variation.image ? [variation.image] : []),
-                                        attributes: JSON.stringify(variation.attributes),
-                                        parentId: product.id,
-                                        updatedAt: new Date(),
-                                        isMissingFromWoo: false,
-                                        backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
-                                    },
-                                    create: {
-                                        wcId: variation.id,
-                                        name: product.name,
-                                        slug: variation.slug,
-                                        sku: variation.sku,
-                                        type: 'variation',
-                                        status: variation.status,
-                                        price: parseFloat(variation.price) || 0,
-                                        regularPrice: parseFloat(variation.regular_price) || 0,
-                                        salePrice: parseFloat(variation.sale_price) || 0,
-                                        stockQuantity: variation.stock_quantity || 0,
-                                        stockStatus: variation.stock_status,
-                                        weight: parseFloat(variation.weight) || 0,
-                                        images: JSON.stringify(variation.image ? [variation.image] : []),
-                                        attributes: JSON.stringify(variation.attributes),
-                                        parentId: product.id,
-                                        purchased: false,
-                                        isMissingFromWoo: false,
-                                        backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
-                                    }
-                                });
-                                syncedCount++;
-                            }
+                        } catch (varError: any) {
+                            console.error(`Error syncing variations for product ${product.id} on page ${varPage}:`, varError.message);
+                            break;
                         }
-                    } catch (varError: any) {
-                        console.error(`Error syncing variations for product ${product.id}:`, varError.message);
                     }
                 }
             } catch (upsertError: any) {
@@ -318,7 +340,9 @@ export async function syncStoreProducts() {
         }
 
         // Mark products as missing if they were not in the fetched list
-        if (fetchedWcIds.length > 0) {
+        // ONLY if sync was fully completed without major fetch errors
+        if (fetchedWcIds.length > 500) { // Safety: Don't mark everything as missing if we only fetched a few items
+            console.log(`Checking for products to mark as missing. Fetched IDs count: ${fetchedWcIds.length}`);
             await prisma.storeProduct.updateMany({
                 where: {
                     wcId: { notIn: fetchedWcIds },
@@ -328,6 +352,8 @@ export async function syncStoreProducts() {
                     isMissingFromWoo: true
                 }
             });
+        } else {
+            console.warn(`Sync potentially incomplete (only ${fetchedWcIds.length} items fetched). skipping mark as missing.`);
         }
 
         console.log(`Sync complete. Success: ${syncedCount}, Errors: ${errorCount}`);
