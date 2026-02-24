@@ -1,10 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { Loader2, FileText, Trash2, Users } from 'lucide-react'
+import { useState, useTransition, useEffect } from 'react'
+import { Loader2, FileText, Trash2, Users, FileDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { deletePayroll } from '@/app/actions/payroll'
+import { deletePayroll, getPayslipData } from '@/app/actions/payroll'
+import PayrollPdfModal from './payroll-pdf-modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -46,6 +47,36 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
     const [page, setPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const [filterRoles, setFilterRoles] = useState<string[]>(['HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE', 'USER'])
+
+    const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
+    const [selectedPdfData, setSelectedPdfData] = useState<any>(null)
+    const [salaryCalcDay, setSalaryCalcDay] = useState(25)
+
+    useEffect(() => {
+        const saved = localStorage.getItem('salaryCalculationDay')
+        if (saved) {
+            setSalaryCalcDay(parseInt(saved))
+        }
+    }, [])
+
+    const handleOpenPdf = async (payrollId: string) => {
+        setIsPdfModalOpen(true)
+        setSelectedPdfData(null) // Reset while loading
+
+        try {
+            const result = await getPayslipData(payrollId, salaryCalcDay)
+            if (result.success) {
+                setSelectedPdfData(result.data)
+            } else {
+                alert('Gagal memuat data slip gaji')
+                setIsPdfModalOpen(false)
+            }
+        } catch (error) {
+            console.error(error)
+            alert('Terjadi kesalahan')
+            setIsPdfModalOpen(false)
+        }
+    }
 
     const ROLE_FILTERS = [
         { id: 'ADMIN', label: 'Admin', color: 'red' },
@@ -275,7 +306,14 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                                             </TableCell>
                                             <TableCell align="center">
                                                 {item.payrollId && (
-                                                    <div className="flex justify-center">
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => handleOpenPdf(item.payrollId!)}
+                                                            className="p-1.5 hover:bg-blue-100 text-muted-foreground hover:text-blue-600 rounded transition-colors"
+                                                            title="Unduh Slip Gaji"
+                                                        >
+                                                            <FileDown className="w-4 h-4" />
+                                                        </button>
                                                         <button
                                                             onClick={() => handleDelete(item.payrollId!)}
                                                             className="p-1.5 hover:bg-red-100 text-muted-foreground hover:text-red-600 rounded transition-colors"
@@ -329,6 +367,12 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={(val) => { setItemsPerPage(val); setPage(1) }}
                 totalCount={totalCount}
+            />
+
+            <PayrollPdfModal
+                isOpen={isPdfModalOpen}
+                onClose={() => setIsPdfModalOpen(false)}
+                payslipData={selectedPdfData}
             />
         </TableWrapper>
     )

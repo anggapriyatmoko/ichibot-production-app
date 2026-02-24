@@ -392,3 +392,76 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
         return { success: false, error: 'Failed to fetch recap' }
     }
 }
+
+export async function getPayslipData(payrollId: string, salaryCalcDay: number) {
+    try {
+        const payroll = await (prisma.payroll as any).findUnique({
+            where: { id: payrollId },
+            include: {
+                user: true,
+                payrollitem: { include: { salarycomponent: true } }
+            }
+        })
+
+        if (!payroll) return { success: false, error: 'Payroll not found' };
+
+        const month = decryptNumber(payroll.monthEnc);
+        const year = decryptNumber(payroll.yearEnc);
+
+        const user = {
+            id: payroll.userId,
+            name: decrypt(payroll.user.nameEnc) || '-',
+            role: decrypt(payroll.user.roleEnc) || '-',
+            department: decrypt(payroll.user.departmentEnc) || '-',
+            joinedDate: payroll.user.createdAt
+        };
+
+        const items = payroll.payrollitem.map((item: any) => ({
+            id: item.id,
+            amount: decryptNumber(item.amountEnc),
+            component: {
+                id: item.salarycomponent.id,
+                name: decrypt(item.salarycomponent.nameEnc),
+                type: decrypt(item.salarycomponent.typeEnc)
+            }
+        }));
+
+        const { getPayrollPeriodAttendanceSummary } = await import('./attendance');
+        const attReport = await getPayrollPeriodAttendanceSummary(salaryCalcDay, month, year);
+
+        let attendanceSummary = {
+            totalWorkDays: 0, lateCount: 0, lateMinutes: 0, absentCount: 0, permitCount: 0, noClockOutCount: 0
+        };
+
+        if (attReport.success) {
+            const userAtt = attReport.data.find((u: any) => u.id === user.id);
+            if (userAtt) {
+                attendanceSummary = {
+                    totalWorkDays: userAtt.totalWorkDays || 0,
+                    lateCount: userAtt.lateCount || 0,
+                    lateMinutes: userAtt.lateMinutes || 0,
+                    absentCount: userAtt.absentCount || 0,
+                    permitCount: userAtt.permitCount || 0,
+                    noClockOutCount: userAtt.noClockOutCount || 0
+                };
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                month,
+                year,
+                basicSalary: decryptNumber(payroll.basicSalaryEnc),
+                netSalary: decryptNumber(payroll.netSalaryEnc),
+                user,
+                items,
+                attendanceSummary,
+                period: attReport.success ? attReport.period : null
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching payslip data:', error)
+        return { success: false, error: 'Failed to fetch payslip data' }
+    }
+}

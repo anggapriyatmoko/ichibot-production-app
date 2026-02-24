@@ -4,6 +4,38 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { encrypt, decrypt, hash } from '@/lib/crypto'
 
+export async function updateSalaryComponent(id: string, name: string, type: 'DEDUCTION' | 'ADDITION') {
+    try {
+        // Check for duplicates
+        const existing = await prisma.salaryComponent.findFirst({
+            where: {
+                nameEnc: encrypt(name) || '',
+                typeHash: hash(type) || '',
+                id: { not: id }
+            }
+        })
+
+        if (existing) {
+            return { success: false, error: 'Component already exists' }
+        }
+
+        await prisma.salaryComponent.update({
+            where: { id },
+            data: {
+                nameEnc: encrypt(name) || '',
+                typeEnc: encrypt(type) || '',
+                typeHash: hash(type) || ''
+            }
+        })
+
+        revalidatePath('/hrd-dashboard')
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating salary component:', error)
+        return { success: false, error: 'Failed to update component' }
+    }
+}
+
 export async function getSalaryComponents(type: 'DEDUCTION' | 'ADDITION') {
     try {
         const components = await prisma.salaryComponent.findMany({
