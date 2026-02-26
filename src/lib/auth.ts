@@ -101,7 +101,17 @@ export async function isAllowedForPage(pathname: string, legacyAllowedRoles?: st
 
     const rbacConfig = await getRbacConfig()
     if (rbacConfig) {
-        const allowedRoles = rbacConfig[pathname]
+        let allowedRoles = rbacConfig[pathname]
+
+        // If exact path not found, try base path
+        if (!allowedRoles) {
+            const pathSegments = pathname.split('/').filter(Boolean)
+            if (pathSegments.length > 0) {
+                const basePath = `/${pathSegments[0]}`
+                allowedRoles = rbacConfig[basePath]
+            }
+        }
+
         if (!allowedRoles) return true // Not managed by RBAC
         return allowedRoles.includes(userRole)
     }

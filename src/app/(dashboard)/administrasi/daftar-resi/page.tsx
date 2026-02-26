@@ -5,7 +5,7 @@ import { getResis } from "@/app/actions/resi";
 
 export default async function DaftarResiPage() {
   await requireAuth();
-  const allowed = await isAllowedForPage('/administrasi/daftar-resi', ['ADMIN', 'HRD', 'ADMINISTRASI', 'USER', 'TEKNISI']);
+  const allowed = await isAllowedForPage('/administrasi/daftar-resi');
   if (!allowed) redirect("/dashboard");
 
 

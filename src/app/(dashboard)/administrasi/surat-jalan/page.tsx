@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default async function SuratJalanPage() {
   await requireAuth();
-  const allowed = await isAllowedForPage('/administrasi/surat-jalan', ['ADMIN', 'HRD', 'ADMINISTRASI']);
+  const allowed = await isAllowedForPage('/administrasi/surat-jalan');
   if (!allowed) redirect("/dashboard");
 
 

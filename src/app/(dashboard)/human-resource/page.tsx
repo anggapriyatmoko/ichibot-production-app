@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function HumanResourcePage() {
     await requireAuth()
-    const allowed = await isAllowedForPage('/human-resource', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    const allowed = await isAllowedForPage('/human-resource')
     if (!allowed) redirect('/dashboard')
 
 

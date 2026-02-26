@@ -36,7 +36,7 @@ async function StorePurchasedContent({ userRole }: { userRole: string }) {
 
 export default async function StorePurchasedPage() {
     const session = await requireAuth();
-    const allowed = await isAllowedForPage('/store/purchased', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    const allowed = await isAllowedForPage('/store/purchased');
     if (!allowed) redirect('/dashboard');
 
 

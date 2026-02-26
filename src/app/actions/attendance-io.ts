@@ -40,7 +40,7 @@ export async function getValidUserIds() {
 
 export async function getAttendanceTemplate() {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     const users = await prisma.user.findMany({
         orderBy: { id: 'asc' },
@@ -80,7 +80,7 @@ export async function getAttendanceTemplate() {
 
 export async function importRawAttendance(formData: FormData) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     const file = formData.get('file') as File
     if (!file) throw new Error('Missing file')
@@ -212,7 +212,7 @@ export async function importRawAttendance(formData: FormData) {
 
 export async function exportRawAttendance(month?: number, year?: number) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     let whereClause = {}
     if (month && year) {

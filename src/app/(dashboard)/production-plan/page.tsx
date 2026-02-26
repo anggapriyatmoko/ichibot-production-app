@@ -26,7 +26,7 @@ export default async function ProductionPlanPage({
     const currentYear = sp.year ? parseInt(sp.year) : today.getFullYear()
 
     // Evaluate if user has admin privileges for this module via dynamic RBAC
-    const isAdmin = await isAllowedForPage('/production-plan', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/production-plan')
 
     // Fetch recipes for the add form
     const recipes = await prisma.recipe.findMany({

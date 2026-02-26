@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvoiceGANPage() {
   await requireAuth();
-  const allowed = await isAllowedForPage('/administrasi/invoice-gan', ['ADMIN', 'HRD', 'ADMINISTRASI']);
+  const allowed = await isAllowedForPage('/administrasi/invoice-gan');
   if (!allowed) redirect("/dashboard");
 
 

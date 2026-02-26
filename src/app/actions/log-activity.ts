@@ -80,7 +80,7 @@ export async function upsertLogActivity(formData: FormData) {
     dateObj.setHours(0, 0, 0, 0)
 
     // Security check: only admin can edit past logs
-    const isAdmin = await isAllowedForPage('/log-activity', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/log-activity')
     if (!isAdmin && !isSameDay(dateObj, new Date())) {
         throw new Error('Hanya Admin yang dapat mengisi atau mengubah log di hari sebelumnya.')
     }
@@ -184,7 +184,7 @@ export async function getLogActivities(targetUserId?: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
     const currentUserId = session?.user?.id
-    const isAdmin = await isAllowedForPage('/log-activity', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/log-activity')
 
     // If targetUserId is provided, check if admin.
     // If not admin, ignore targetUserId and use current.
@@ -234,7 +234,7 @@ export async function getUsersForLog() {
     // Or maybe just fetch all users if admin?
     // Let's check admin inside
     const session: any = await getServerSession(authOptions)
-    const isAdmin = await isAllowedForPage('/log-activity', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/log-activity')
 
     if (!isAdmin) return []
 
@@ -264,7 +264,7 @@ export async function deleteLogActivity(id: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
     const currentUserId = session?.user?.id
-    const isAdmin = await isAllowedForPage('/log-activity', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/log-activity')
 
     const log = await prisma.logActivity.findUnique({ where: { id } })
     if (!log) throw new Error('Log not found')
@@ -280,7 +280,7 @@ export async function deleteLogActivity(id: string) {
 export async function getDailyActivityRecap(dateStr: string) {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
-    const isAdmin = await isAllowedForPage('/log-activity', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/log-activity')
     if (!isAdmin) return []
 
     const { decrypt } = require('@/lib/crypto')

@@ -65,7 +65,7 @@ async function saveFile(file: File, oldPath?: string | null): Promise<string> {
 export async function getHRDocuments() {
     try {
         await requireAuth()
-        await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'USER', 'TEKNISI', 'ADMINISTRASI'])
+        await requirePageAccess('/hrd-dashboard')
 
         const session = await getServerSession(authOptions)
         const user = (session as any)?.user
@@ -112,7 +112,7 @@ export async function getHRDocuments() {
 
 export async function upsertHRDocument(formData: FormData) {
     await requireAuth()
-    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    await requirePageAccess('/hrd-dashboard')
 
     const id = formData.get('id') as string | null
     const name = formData.get('name') as string
@@ -187,7 +187,7 @@ export async function upsertHRDocument(formData: FormData) {
 
 export async function deleteHRDocument(id: string) {
     await requireAuth()
-    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    await requirePageAccess('/hrd-dashboard')
 
     try {
         const doc = await prisma.hRDocument.findUnique({ where: { id } })

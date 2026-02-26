@@ -18,7 +18,7 @@ export default async function AssetsPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
     const sessionSession: any = await requireAuth()
-    const allowed = await isAllowedForPage('/assets', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    const allowed = await isAllowedForPage('/assets');
     if (!allowed) redirect('/dashboard');
 
     const params = await searchParams

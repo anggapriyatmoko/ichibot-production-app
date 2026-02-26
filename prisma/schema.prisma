@@ -594,6 +594,7 @@ model user {
   photoEnc              String?           @db.Text
   roleEnc               String?           @db.Text
   pinEnc                String?           @db.Text
+  leaveQuota            Int?              @default(0)
   createdAnnouncements  announcement[]    @relation("announcement_creatorIdTouser")
   attendances           attendance[]
   messages              chatMessage[]
@@ -607,6 +608,7 @@ model user {
   serviceOrders         serviceOrder[]
   targetedAnnouncements announcement[]    @relation("targetedusers")
   targetedDocuments     hRDocument[]      @relation("HRDocumentTargetUsers")
+  expenses              expense[]
 
   @@map("User")
 }
@@ -785,4 +787,33 @@ model PriceListPrice {
 
   @@index([itemId])
   @@map("PriceListPrice")
+}
+
+model expenseCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  expenses    expense[]
+
+  @@map("ExpenseCategory")
+}
+
+model expense {
+  id          String          @id @default(cuid())
+  userId      String
+  categoryId  String
+  date        DateTime
+  amountEnc   String          @db.Text
+  nameEnc     String          @db.Text
+  image       String?         @db.LongText
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        user            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    expenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@map("Expense")
 }

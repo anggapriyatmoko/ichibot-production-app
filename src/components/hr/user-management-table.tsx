@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Edit, Loader2, Save, X, Users, Upload, Trash2, Image as ImageIcon, Banknote } from 'lucide-react'
+import { Edit, Loader2, Save, X, Users, Upload, Trash2, Image as ImageIcon, Banknote, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Modal from '@/components/ui/modal'
-import { getAllUsersForHRD, updateUserData } from '@/app/actions/hrd'
+import { getAllUsersForHRD, updateUserData, updateUserLeaveQuota } from '@/app/actions/hrd'
 import { useAlert } from '@/hooks/use-alert'
 import Image from 'next/image'
 import PayrollModal from './payroll-modal'
@@ -34,6 +34,8 @@ interface User {
     address: string | null
     ktpNumber: string | null
     contractEndDate: string | null
+    leaveQuota: number | null
+    takenLeaves?: number
     createdAt: Date
 }
 
@@ -86,6 +88,8 @@ export default function UserManagementTable({ userRole }: Props) {
     const [editingUser, setEditingUser] = useState<User | null>(null)
     const [saving, setSaving] = useState(false)
     const [payrollUser, setPayrollUser] = useState<User | null>(null)
+    const [leaveQuotaUser, setLeaveQuotaUser] = useState<User | null>(null)
+    const [newLeaveQuota, setNewLeaveQuota] = useState<number>(0)
     const [page, setPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const [filterRoles, setFilterRoles] = useState<string[]>(['HRD', 'ADMINISTRASI', 'TEKNISI', 'STORE', 'USER'])
@@ -233,6 +237,29 @@ export default function UserManagementTable({ userRole }: Props) {
         }
     }
 
+    const openLeaveQuotaModal = (user: User) => {
+        setLeaveQuotaUser(user)
+        setNewLeaveQuota(user.leaveQuota || 0)
+    }
+
+    const handleSaveLeaveQuota = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!leaveQuotaUser) return
+
+        setSaving(true)
+        try {
+            await updateUserLeaveQuota(leaveQuotaUser.id, newLeaveQuota)
+            showAlert('Jatah cuti berhasil diperbarui')
+            setLeaveQuotaUser(null)
+            loadUsers() // Refresh list
+        } catch (err) {
+            console.error('Failed to save leave quota:', err)
+            showError('Gagal menyimpan jatah cuti')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <>
             <TableWrapper loading={loading}>
@@ -308,6 +335,7 @@ export default function UserManagementTable({ userRole }: Props) {
                                 <TableHead>Kontak</TableHead>
                                 <TableHead>Info Karyawan</TableHead>
                                 <TableHead>KTP & Alamat</TableHead>
+                                <TableHead align="center">Jatah Cuti</TableHead>
                                 <TableHead align="center">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -377,6 +405,18 @@ export default function UserManagementTable({ userRole }: Props) {
                                             </div>
                                         </TableCell>
                                         <TableCell align="center">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <span className="font-bold text-lg text-primary">
+                                                    {user.leaveQuota || 0}
+                                                </span>
+                                                {(user.leaveQuota || 0) > 0 && (
+                                                    <span className="text-xs text-muted-foreground whitespace-nowrap mt-1">
+                                                        Sisa: {(user.leaveQuota || 0) - (user.takenLeaves || 0)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell align="center">
                                             <button
                                                 onClick={() => openEditModal(user)}
                                                 className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors"
@@ -390,6 +430,13 @@ export default function UserManagementTable({ userRole }: Props) {
                                                 title="Input Gaji"
                                             >
                                                 <Banknote className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => openLeaveQuotaModal(user)}
+                                                className="p-2 text-muted-foreground hover:text-cyan-600 hover:bg-cyan-500/10 rounded-lg transition-colors"
+                                                title="Set Jatah Cuti"
+                                            >
+                                                <CalendarDays className="w-4 h-4" />
                                             </button>
                                         </TableCell>
                                     </TableRow>
@@ -600,6 +647,68 @@ export default function UserManagementTable({ userRole }: Props) {
                     user={payrollUser}
                     onClose={() => setPayrollUser(null)}
                 />
+            )}
+
+            {/* Leave Quota Modal */}
+            {leaveQuotaUser && (
+                <Modal
+                    isOpen={!!leaveQuotaUser}
+                    onClose={() => setLeaveQuotaUser(null)}
+                    title="Set Jatah Cuti Tahunan"
+                    maxWidth="sm"
+                    footer={
+                        <div className="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setLeaveQuotaUser(null)}
+                                disabled={saving}
+                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                form="leaveQuotaForm"
+                                disabled={saving}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {saving ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Menyimpan...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-4 h-4" />
+                                        Simpan
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="p-4">
+                        <form id="leaveQuotaForm" onSubmit={handleSaveLeaveQuota} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                                    Jatah Cuti untuk {leaveQuotaUser.name || leaveQuotaUser.username}
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="365"
+                                    value={newLeaveQuota}
+                                    onChange={(e) => setNewLeaveQuota(parseInt(e.target.value) || 0)}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Masukkan jatah cuti karyawan dalam hitungan hari untuk satu tahun berjalan.
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                </Modal>
             )}
         </>
     )

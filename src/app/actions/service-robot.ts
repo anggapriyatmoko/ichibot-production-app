@@ -12,7 +12,7 @@ import path from 'path'
 async function requireServiceAccess() {
     await requireAuth()
     const session: any = await getServerSession(authOptions)
-    await requirePageAccess('/service-robot', ['ADMIN', 'TEKNISI'])
+    await requirePageAccess('/service-robot')
     return session
 }
 

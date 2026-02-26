@@ -35,6 +35,8 @@ export interface UserMonthlyData {
         lateMinutes: number
         earlyMinutes: number
         absentDays?: number
+        leaveQuota?: number
+        takenLeaves?: number
     }
 }
 
@@ -264,6 +266,8 @@ export default function AttendanceManager({
                                 </div>
                             </div>
 
+                            {/* Leave Quota Display Removed from here */}
+
                             {/* Calendar Grid */}
                             <div className="p-3">
                                 {/* Day Headers */}
@@ -413,6 +417,17 @@ export default function AttendanceManager({
                     <X className="w-4 h-4 text-muted-foreground/30" />
                     <span>Belum Absen</span>
                 </div>
+
+                {/* Sisa Cuti - Show for current user if applicable */}
+                {!isAdmin && monthlyData.length === 1 && (
+                    <div className="flex items-center gap-2 sm:pl-4 sm:border-l border-border">
+                        {monthlyData[0].stats?.leaveQuota !== undefined && monthlyData[0].stats?.leaveQuota > 0 ? (
+                            <span>Jatah Cuti Tahunan: <strong>Sisa cuti {monthlyData[0].stats.leaveQuota - (monthlyData[0].stats.takenLeaves || 0)} dari {monthlyData[0].stats.leaveQuota}</strong></span>
+                        ) : (
+                            <span>Jatah Cuti Tahunan: <strong>Tidak memiliki jatah cuti</strong></span>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Edit Modal */}

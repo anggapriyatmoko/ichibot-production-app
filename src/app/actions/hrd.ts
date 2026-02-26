@@ -59,9 +59,9 @@ function validateImageFile(file: File): { valid: boolean; error?: string } {
 // Get all users for HRD dashboard
 export async function getAllUsersForHRD() {
     await requireAuth()
-    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    await requirePageAccess('/hrd-dashboard')
 
-    const users = await prisma.user.findMany({
+    const users = await (prisma.user as any).findMany({
         select: {
             id: true,
             emailEnc: true,
@@ -74,34 +74,65 @@ export async function getAllUsersForHRD() {
             addressEnc: true,
             ktpNumberEnc: true,
             contractEndDateEnc: true,
+            leaveQuota: true,
             createdAt: true,
         },
         orderBy: { createdAt: 'desc' }
     })
 
+    const currentYear = new Date().getFullYear()
+    const firstDayOfYear = new Date(currentYear, 0, 1)
+    const lastDayOfYear = new Date(currentYear, 11, 31)
+
+    const allAttendances = await (prisma.attendance as any).findMany({
+        where: {
+            date: {
+                gte: firstDayOfYear,
+                lte: lastDayOfYear
+            }
+        },
+        select: {
+            userId: true,
+            statusEnc: true
+        }
+    })
+
     // Decrypt sensitive fields
-    return users.map(user => ({
-        id: user.id,
-        email: decrypt(user.emailEnc),
-        username: decrypt(user.usernameEnc) || 'Unknown',
-        name: decrypt(user.nameEnc),
-        department: decrypt(user.departmentEnc),
-        role: decrypt(user.roleEnc) || 'USER',
-        photo: decrypt(user.photoEnc),
-        phone: decrypt(user.phoneEnc),
-        address: decrypt(user.addressEnc),
-        ktpNumber: decrypt(user.ktpNumberEnc),
-        contractEndDate: decrypt(user.contractEndDateEnc),
-        createdAt: user.createdAt,
-    }))
+    return users.map((user: any) => {
+        let takenLeaves = 0
+        allAttendances.forEach((att: any) => {
+            if (att.userId === user.id) {
+                if (decrypt(att.statusEnc) === 'LEAVE') {
+                    takenLeaves++
+                }
+            }
+        })
+
+        return {
+            id: user.id,
+            email: decrypt(user.emailEnc),
+            username: decrypt(user.usernameEnc) || 'Unknown',
+            name: decrypt(user.nameEnc),
+            department: decrypt(user.departmentEnc),
+            role: decrypt(user.roleEnc) || 'USER',
+            photo: decrypt(user.photoEnc),
+            phone: decrypt(user.phoneEnc),
+            address: decrypt(user.addressEnc),
+            ktpNumber: decrypt(user.ktpNumberEnc),
+            contractEndDate: decrypt(user.contractEndDateEnc),
+            leaveQuota: user.leaveQuota,
+            takenLeaves: takenLeaves,
+            createdAt: user.createdAt,
+        }
+    })
 }
 
 // Get single user for editing
 export async function getUserForEdit(userId: string) {
     await requireAuth()
-    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    await requirePageAccess('/hrd-dashboard')
 
-    const user = await prisma.user.findUnique({
+    const user = await (prisma.user as any).findUnique({
         where: { id: userId },
         select: {
             id: true,
@@ -115,6 +146,7 @@ export async function getUserForEdit(userId: string) {
             addressEnc: true,
             ktpNumberEnc: true,
             contractEndDateEnc: true,
+            leaveQuota: true,
         }
     })
 
@@ -133,6 +165,7 @@ export async function getUserForEdit(userId: string) {
         address: decrypt(user.addressEnc),
         ktpNumber: decrypt(user.ktpNumberEnc),
         contractEndDate: decrypt(user.contractEndDateEnc),
+        leaveQuota: user.leaveQuota,
     }
 }
 
@@ -140,7 +173,7 @@ export async function getUserForEdit(userId: string) {
 export async function updateUserData(formData: FormData) {
     const session: any = await getServerSession(authOptions)
     await requireAuth()
-    await requirePageAccess('/hrd-dashboard', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    await requirePageAccess('/hrd-dashboard')
 
     const userId = formData.get('userId') as string
     const name = formData.get('name') as string
@@ -252,5 +285,22 @@ export async function updateUserData(formData: FormData) {
 
     revalidatePath('/hrd-dashboard')
     revalidatePath('/hr-other-data') // Also revalidate user's personal view
+    return { success: true }
+}
+
+// Update user leave quota
+export async function updateUserLeaveQuota(userId: string, quota: number) {
+    await requireAuth()
+    await requirePageAccess('/hrd-dashboard')
+
+    await (prisma.user as any).update({
+        where: { id: userId },
+        data: {
+            leaveQuota: quota
+        }
+    })
+
+    revalidatePath('/hrd-dashboard')
+    revalidatePath('/attendance')
     return { success: true }
 }

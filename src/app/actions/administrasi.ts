@@ -12,7 +12,7 @@ import { encrypt, decrypt } from '@/lib/crypto'
 // Helper to check if user can access administrasi
 async function requireAdministrasiAccess() {
     await requireAuth()
-    await requirePageAccess('/administrasi', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    await requirePageAccess('/administrasi')
 }
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'public/uploads/administrasi')

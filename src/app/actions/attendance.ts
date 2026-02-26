@@ -27,7 +27,7 @@ function decryptAttendance(att: any) {
 // Get all attendances for a specific date
 export async function getAttendances(dateStr?: string) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     const dateObj = dateStr ? new Date(dateStr) : new Date()
     dateObj.setHours(0, 0, 0, 0)
@@ -80,7 +80,7 @@ export async function getAttendances(dateStr?: string) {
 // Upsert attendance (clock in or clock out)
 export async function upsertAttendance(formData: FormData) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     const userId = formData.get('userId') as string
     const dateStr = formData.get('date') as string
@@ -189,7 +189,7 @@ export async function upsertAttendance(formData: FormData) {
 // Delete attendance
 export async function deleteAttendance(id: string) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     await prisma.attendance.delete({ where: { id } })
     revalidatePath('/attendance')
@@ -199,7 +199,7 @@ export async function deleteAttendance(id: string) {
 // Get monthly attendance summary for a user (decrypted)
 export async function getMonthlyAttendance(userId: string, month: number, year: number) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0) // Last day of month
@@ -222,7 +222,7 @@ export async function getMonthlyAttendance(userId: string, month: number, year: 
 // Get attendance summary for payroll period (from salaryCalcDay of previous month to salaryCalcDay-1 of current month)
 export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, month: number, year: number) {
     await requireAuth()
-    await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    await requirePageAccess('/attendance')
 
     // Calculate period: from salaryCalcDay of previous month to salaryCalcDay-1 of current month
     // Example: salaryCalcDay=25, month=1, year=2026
@@ -578,7 +578,7 @@ export async function getMyPayrollPeriodAttendanceSummary(salaryCalcDay: number,
 // Get admin monthly attendance report data
 export async function getAdminMonthlyAttendanceReport(month: number, year: number) {
     await requireAuth()
-    const isAdmin = await requirePageAccess('/attendance', ['ADMIN', 'HRD'])
+    const isAdmin = await requirePageAccess('/attendance')
 
     const firstDay = new Date(year, month - 1, 1)
     const nextMonth = new Date(year, month, 1)

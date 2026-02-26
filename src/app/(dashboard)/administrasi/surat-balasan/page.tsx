@@ -5,7 +5,7 @@ import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export default async function SuratBalasanPage() {
     await requireAuth()
-    const allowed = await isAllowedForPage('/administrasi/surat-balasan', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    const allowed = await isAllowedForPage('/administrasi/surat-balasan')
     if (!allowed) redirect('/dashboard')
 
 

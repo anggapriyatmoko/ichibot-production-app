@@ -27,7 +27,7 @@ export default async function AttendancePage({
         redirect('/login')
     }
 
-    const isAdmin = await isAllowedForPage('/attendance', ['ADMIN', 'HRD'])
+    const isAdmin = await isAllowedForPage('/attendance')
     const currentUserId = session.user.id
 
     const params = await searchParams
@@ -44,18 +44,19 @@ export default async function AttendancePage({
     const daysInMonth = lastDay.getDate()
 
     // Get only current user for this page
-    const users = await prisma.user.findMany({
+    const users = await (prisma.user as any).findMany({
         where: { id: currentUserId },
         select: {
             id: true,
             nameEnc: true,
             usernameEnc: true,
             departmentEnc: true,
-            roleEnc: true
+            roleEnc: true,
+            leaveQuota: true
         }
     })
 
-    // Get only current user's attendances for this page
+    // Get only current user's attendances for this page (this month)
     const rawAttendances = await prisma.attendance.findMany({
         where: {
             userId: currentUserId,
@@ -63,6 +64,25 @@ export default async function AttendancePage({
                 gte: firstDay,
                 lt: nextMonth
             }
+        }
+    })
+
+    // Get current user's attendances for the whole current year to calculate leave quota
+    const firstDayOfYear = new Date(currentYear, 0, 1)
+    const lastDayOfYear = new Date(currentYear, 11, 31)
+
+    // Using any for prisma.attendance to avoid type errors with related data
+    const annualAttendances = await (prisma.attendance as any).findMany({
+        where: {
+            userId: currentUserId,
+            date: {
+                gte: firstDayOfYear,
+                lte: lastDayOfYear
+            }
+        },
+        select: {
+            statusEnc: true,
+            userId: true
         }
     })
 
@@ -88,18 +108,21 @@ export default async function AttendancePage({
     })
 
     // Build monthly data structure
-    const monthlyData = users.map(userItem => {
+    const monthlyData = users.map((userItem: any) => {
+        const userItemAny = userItem;
         const user = {
-            ...userItem,
-            name: decrypt(userItem.nameEnc),
-            username: decrypt(userItem.usernameEnc) || 'Unknown',
-            department: decrypt(userItem.departmentEnc),
-            role: decrypt(userItem.roleEnc) || 'USER'
+            ...userItemAny,
+            name: decrypt(userItemAny.nameEnc),
+            username: decrypt(userItemAny.usernameEnc) || 'Unknown',
+            department: decrypt(userItemAny.departmentEnc),
+            role: decrypt(userItemAny.roleEnc) || 'USER',
+            leaveQuota: userItemAny.leaveQuota || 0
         }
         const userAttendances: { [day: number]: any } = {}
         let totalLateMinutes = 0
         let totalEarlyDepartureMinutes = 0
         let totalAbsentDays = 0
+        let takenLeaves = 0
 
         for (let day = 1; day <= daysInMonth; day++) {
             const dateToCheck = new Date(currentYear, currentMonth - 1, day)
@@ -186,13 +209,25 @@ export default async function AttendancePage({
             userAttendances[day] = attendance ? { ...attendance, isLate, isEarlyDeparture } : null
         }
 
+        // Calculate taken leaves for the entire year
+        annualAttendances.forEach((att: any) => {
+            if (att.userId === user.id) {
+                const status = decrypt(att.statusEnc)
+                if (status === 'LEAVE') {
+                    takenLeaves++
+                }
+            }
+        })
+
         return {
             user,
             attendances: userAttendances,
             stats: {
                 lateMinutes: totalLateMinutes,
                 earlyMinutes: totalEarlyDepartureMinutes,
-                absentDays: totalAbsentDays
+                absentDays: totalAbsentDays,
+                leaveQuota: user.leaveQuota,
+                takenLeaves: takenLeaves
             }
         }
     })

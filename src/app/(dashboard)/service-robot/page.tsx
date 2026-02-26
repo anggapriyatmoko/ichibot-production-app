@@ -22,7 +22,7 @@ export default async function ServiceRobotPage({
     const session: any = await getServerSession(authOptions)
 
     // Only allow those configured in RBAC, fallback to ADMIN/TEKNISI
-    const isAllowed = await isAllowedForPage('/service-robot', ['ADMIN', 'TEKNISI'])
+    const isAllowed = await isAllowedForPage('/service-robot')
     if (!isAllowed) {
         redirect('/dashboard')
     }
@@ -147,7 +147,7 @@ export default async function ServiceRobotPage({
                 products={robotTypes}
                 customers={customers}
                 analysisData={analysisData}
-                isAdmin={await isAllowedForPage('/service-robot', ['ADMIN', 'HRD'])}
+                isAdmin={await isAllowedForPage('/service-robot')}
             />
         </div>
     )

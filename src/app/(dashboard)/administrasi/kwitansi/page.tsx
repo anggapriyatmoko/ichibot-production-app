@@ -5,7 +5,7 @@ import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export default async function KwitansiPage() {
     await requireAuth()
-    const allowed = await isAllowedForPage('/administrasi/kwitansi', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    const allowed = await isAllowedForPage('/administrasi/kwitansi')
     if (!allowed) redirect('/dashboard')
 
 

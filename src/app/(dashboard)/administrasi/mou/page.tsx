@@ -5,7 +5,7 @@ import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export default async function MOUPage() {
     await requireAuth()
-    const allowed = await isAllowedForPage('/administrasi/mou', ['ADMIN', 'HRD', 'ADMINISTRASI'])
+    const allowed = await isAllowedForPage('/administrasi/mou')
     if (!allowed) redirect('/dashboard')
 
 

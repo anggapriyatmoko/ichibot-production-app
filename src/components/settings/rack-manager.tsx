@@ -105,6 +105,11 @@ function DrawerItem({ drawer, onSelectSku, onSelectEmpty }: DrawerItemProps) {
                 {drawer.code}
             </span>
 
+            {/* Empty stock indicator */}
+            {drawer.isUsed && drawer.details && drawer.details.stock <= 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background shadow-sm z-10" title="Stok Habis" />
+            )}
+
             {/* Tooltip for used drawers */}
             {drawer.isUsed && drawer.details && (
                 <div className={cn(
@@ -292,6 +297,10 @@ export default function RackManager({ userRole }: RackManagerProps) {
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2.5 h-2.5 rounded-sm bg-gray-200 border border-border/50" />
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Tersedia</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 border-l border-border pl-4 ml-1">
+                                <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm" />
+                                <span className="text-[10px] font-bold text-red-500 uppercase tracking-tight">Stok Habis</span>
                             </div>
                         </div>
                     </div>

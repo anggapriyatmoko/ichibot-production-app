@@ -20,7 +20,7 @@ async function StoreProductContent() {
 
 export default async function StoreProductPage() {
     const session = await requireAuth();
-    const allowed = await isAllowedForPage('/store/product', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    const allowed = await isAllowedForPage('/store/product');
     if (!allowed) redirect('/dashboard');
 
 

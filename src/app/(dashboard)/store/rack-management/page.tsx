@@ -14,7 +14,7 @@ export default async function StoreRackManagementPage() {
     const session: any = await getServerSession(authOptions)
     const userRole = session?.user?.role
 
-    const allowed = await isAllowedForPage('/store/rack-management', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    const allowed = await isAllowedForPage('/store/rack-management');
     if (!allowed) redirect('/dashboard');
 
     return (

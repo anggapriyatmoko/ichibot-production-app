@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation';
 
 export default async function CataloguePage() {
     const session: any = await requireAuth()
-    const allowed = await isAllowedForPage('/catalogue', ['ADMIN', 'USER', 'TEKNISI', 'HRD', 'ADMINISTRASI']);
+    const allowed = await isAllowedForPage('/catalogue');
     if (!allowed) redirect('/dashboard');
 
 

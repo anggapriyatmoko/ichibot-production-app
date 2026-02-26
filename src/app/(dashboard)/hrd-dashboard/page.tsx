@@ -35,8 +35,8 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
         redirect('/login')
     }
 
-    // Evaluate access using dynamic RBAC, fallback to ADMIN
-    const isAllowed = await isAllowedForPage('/hrd-dashboard', ['ADMIN'])
+    // Evaluate access using dynamic RBAC
+    const isAllowed = await isAllowedForPage('/hrd-dashboard')
     if (!isAllowed) {
         redirect('/dashboard')
     }

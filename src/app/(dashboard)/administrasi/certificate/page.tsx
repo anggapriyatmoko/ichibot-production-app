@@ -4,7 +4,7 @@ import CertificateManager from "@/components/administrasi/certificate-manager";
 
 export default async function CertificatePage() {
   await requireAuth();
-  const allowed = await isAllowedForPage('/administrasi/certificate', ['ADMIN', 'HRD', 'ADMINISTRASI']);
+  const allowed = await isAllowedForPage('/administrasi/certificate');
   if (!allowed) redirect("/dashboard");
 
 
