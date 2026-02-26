@@ -1277,6 +1277,40 @@ export default function SparepartProjectList({
                                     )}
                                 </div>
                             </div>
+
+                            {/* Mobile Quick Actions */}
+                            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border mt-3">
+                                <button
+                                    onClick={() => setStockModalItem(item)}
+                                    className="py-2 px-2 flex-1 flex items-center justify-center gap-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20 text-[11px] font-semibold bg-emerald-500/5"
+                                    title="Add Stock"
+                                >
+                                    <PackagePlus className="w-3.5 h-3.5" />
+                                    Add Stock
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (item.stock <= 0) {
+                                            showError('Stock barang ini habis!')
+                                            return
+                                        }
+                                        setTakeModalItem(item)
+                                    }}
+                                    className="py-2 px-2 flex-1 flex items-center justify-center gap-1.5 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors border border-orange-500/20 text-[11px] font-semibold bg-orange-500/5"
+                                    title="Ambil Barang"
+                                >
+                                    <PackageMinus className="w-3.5 h-3.5" />
+                                    Ambil
+                                </button>
+                                <button
+                                    onClick={() => setMoveModalItem(item)}
+                                    className="py-2 px-2 flex-[1.2] flex items-center justify-center gap-1.5 text-purple-500 hover:bg-purple-500/10 rounded-lg transition-colors border border-purple-500/20 text-[11px] font-semibold bg-purple-500/5"
+                                    title="Move to Production"
+                                >
+                                    <ArrowRightCircle className="w-3.5 h-3.5" />
+                                    To Production
+                                </button>
+                            </div>
                         </div>
                     ))}
                     {filteredItems.length === 0 && (

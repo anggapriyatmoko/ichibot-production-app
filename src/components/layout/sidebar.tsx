@@ -198,6 +198,11 @@ export const navigationGroups = [
         adminOnly: true,
       },
       {
+        name: "Ringkasan Akun",
+        href: "/keuangan/ringkasan-akun",
+        icon: Wallet,
+      },
+      {
         name: "Pengeluaran",
         href: "/keuangan/pengeluaran",
         icon: TrendingDown,

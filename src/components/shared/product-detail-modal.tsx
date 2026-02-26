@@ -449,6 +449,13 @@ export default function ProductDetailModal({ product, isOpen, onClose, onAddToCa
                                     </>
                                 )}
                             </>
+                        ) : product.image ? (
+                            <Image
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                className="object-contain p-4"
+                            />
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full min-h-[400px]">
                                 <Package className="w-20 h-20 mb-4 opacity-20" />

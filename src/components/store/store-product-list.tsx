@@ -44,6 +44,7 @@ export default function StoreProductList({
     showPurchasedAt = false,
     showSyncButton = true,
     showPurchaseColumns = false,
+    showAddButton = true,
     kursYuan,
     kursUsd,
     additionalFee = 0
@@ -55,6 +56,7 @@ export default function StoreProductList({
     showPurchasedAt?: boolean,
     showSyncButton?: boolean,
     showPurchaseColumns?: boolean,
+    showAddButton?: boolean,
     kursYuan?: number,
     kursUsd?: number,
     additionalFee?: number
@@ -416,7 +418,9 @@ export default function StoreProductList({
                         if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
                         else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
 
-                        return price
+                        const paket = p.purchasePackage || 1
+                        const total = (price * paket) * (1 + (additionalFee || 0) / 100)
+                        return total
                     }
                     aValue = getPriceValue(a)
                     bValue = getPriceValue(b)
@@ -456,7 +460,7 @@ export default function StoreProductList({
 
                             const paket = p.purchasePackage || 1
                             const qty = p.purchaseQty || 1
-                            const total = price * paket
+                            const total = (price * paket) * (1 + (additionalFee || 0) / 100)
                             return total / ((paket * qty) || 1) // Sort by per Pcs
                         }
                         aValue = getPriceValue(a)
@@ -543,13 +547,15 @@ export default function StoreProductList({
                                         {isSyncing ? 'Sinkronisasi...' : 'Sync Now'}
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => setIsAddingProduct(true)}
-                                    className="flex items-center justify-center gap-2 px-4 h-9 bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-700 shadow-sm whitespace-nowrap"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Tambah
-                                </button>
+                                {showAddButton && (
+                                    <button
+                                        onClick={() => setIsAddingProduct(true)}
+                                        className="flex items-center justify-center gap-2 px-4 h-9 bg-emerald-600 text-white rounded-lg text-sm font-bold transition-all hover:bg-emerald-700 shadow-sm whitespace-nowrap"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Tambah
+                                    </button>
+                                )}
                             </div>
                         </div>
                     }
@@ -1074,7 +1080,8 @@ export default function StoreProductList({
                                                         } else if (currency === 'USD' && kursUsd) {
                                                             priceInputIdr = product.purchasePrice * kursUsd
                                                         }
-                                                        const totalHarga = priceInputIdr * paket
+                                                        const totalHargaWithoutFee = priceInputIdr * paket
+                                                        const totalHarga = totalHargaWithoutFee * (1 + (additionalFee || 0) / 100)
                                                         const perPcs = totalHarga / ((paket * jumlah) || 1)
                                                         return (
                                                             <div className="flex flex-col items-end gap-1">
@@ -1091,6 +1098,11 @@ export default function StoreProductList({
                                                                             Rp {formatNumber(Math.round(totalHarga))}
                                                                         </span>
                                                                     </div>
+                                                                )}
+                                                                {additionalFee > 0 && (
+                                                                    <span className="text-[9px] text-orange-600/80 font-medium bg-orange-50 px-1.5 py-0.5 rounded">
+                                                                        +Fee {additionalFee}%
+                                                                    </span>
                                                                 )}
                                                                 {currency !== 'IDR' && (
                                                                     <span className="text-[10px] text-muted-foreground">

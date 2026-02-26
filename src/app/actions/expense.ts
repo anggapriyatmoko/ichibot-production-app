@@ -14,10 +14,18 @@ export interface ExpenseData {
     image?: string
 }
 
-export async function getExpenses(userId: string) {
+export async function getExpenses(userId: string, startDateIso?: string, endDateIso?: string) {
     try {
+        const whereClause: any = { userId }
+        if (startDateIso && endDateIso) {
+            whereClause.date = {
+                gte: new Date(startDateIso),
+                lte: new Date(endDateIso)
+            }
+        }
+
         const expenses = await (prisma as any).expense.findMany({
-            where: { userId },
+            where: whereClause,
             include: {
                 category: true
             },

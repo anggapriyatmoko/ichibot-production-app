@@ -127,14 +127,6 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         }
     }, [showError])
 
-    // Debounce effect
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedTerm(searchTerm)
-        }, 500)
-        return () => clearTimeout(timer)
-    }, [searchTerm])
-
     // Search effect
     useEffect(() => {
         if (debouncedTerm !== lastSearchedRef.current) {
@@ -410,20 +402,28 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                             <Store className="w-5 h-5 md:w-6 md:h-6" />
                         </a>
                     </div>
-                    <div className="relative flex-1 max-w-2xl">
-                        <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Cari produk..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSearch(searchTerm)
-                                }
-                            }}
-                            className="w-full pl-9 md:pl-12 pr-4 py-2 md:py-4 bg-card border border-border rounded-xl md:rounded-2xl text-sm md:text-lg font-medium shadow-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                        />
+                    <div className="relative flex-1 max-w-2xl flex gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Cari produk (Tekan Enter)..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        setDebouncedTerm(searchTerm)
+                                    }
+                                }}
+                                className="w-full pl-9 md:pl-12 pr-4 py-2 md:py-4 bg-card border border-border rounded-xl md:rounded-2xl text-sm md:text-lg font-medium shadow-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            />
+                        </div>
+                        <button
+                            onClick={() => setDebouncedTerm(searchTerm)}
+                            className="bg-primary text-primary-foreground px-4 md:px-6 rounded-xl md:rounded-2xl font-bold md:text-lg hover:bg-primary/90 transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            Cari
+                        </button>
                     </div>
                 </div>
 
@@ -496,7 +496,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                         <>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-6 p-1 h-fit">
                                 {products.map((product) => (
-                                    <button
+                                    <div
                                         key={product.id}
                                         onClick={() => {
                                             if (product.type === 'variable') {
@@ -505,11 +505,17 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                 addToCart(product)
                                             }
                                         }}
-                                        className="flex flex-col bg-card border border-border hover:border-primary hover:shadow-lg transition-all text-left animate-in fade-in slide-in-from-bottom-2 group rounded-xl overflow-hidden"
+                                        className="flex flex-col bg-card border border-border hover:border-primary hover:shadow-lg transition-all text-left animate-in fade-in slide-in-from-bottom-2 group rounded-xl overflow-hidden cursor-pointer"
                                     >
                                         <div className="aspect-square relative bg-muted rounded-t-xl overflow-hidden">
                                             {product.image ? (
-                                                <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                                <Image
+                                                    src={product.image}
+                                                    alt={product.name}
+                                                    fill
+                                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 15vw"
+                                                    className="object-cover"
+                                                />
                                             ) : (
                                                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
                                                     <Package className="w-12 h-12" />
@@ -581,13 +587,12 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                             }}
                                                             className="text-xs text-primary font-black hover:bg-primary/5 px-2 py-1 rounded-lg border border-primary/20 transition-all"
                                                         >
-                                                            Lihat Varian
                                                         </button>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
 

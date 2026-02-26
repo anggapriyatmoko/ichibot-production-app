@@ -37,7 +37,7 @@ export default async function PengeluaranPage() {
                 <p className="text-muted-foreground">Catat dan kelola riwayat pengeluaran pribadi Anda.</p>
             </div>
 
-            <ExpenseListUser initialExpenses={expenses} categories={categories} />
+            <ExpenseListUser userId={userId} initialExpenses={expenses} categories={categories} />
         </div>
     )
 }

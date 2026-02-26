@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown } from 'lucide-react'
+import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart } from 'lucide-react'
 import { getAllExpenses } from '@/app/actions/expense'
 import { useAlert } from '@/hooks/use-alert'
 import {
@@ -102,6 +102,28 @@ export default function ExpenseDashboardAdmin() {
         const val = parseFloat(current.amount)
         return acc + (isNaN(val) ? 0 : val)
     }, 0)
+
+    const categoryDistribution = expenses.reduce((acc, exp) => {
+        const catName = exp.category?.name || 'Lainnya'
+        const val = parseFloat(exp.amount)
+        if (!isNaN(val)) {
+            acc[catName] = (acc[catName] || 0) + val
+        }
+        return acc
+    }, {} as Record<string, number>)
+
+    const sortedCategories = Object.entries(categoryDistribution).sort((a, b) => b[1] - a[1])
+
+    const userDistribution = expenses.reduce((acc, exp) => {
+        const userName = exp.userName || 'Unknown'
+        const val = parseFloat(exp.amount)
+        if (!isNaN(val)) {
+            acc[userName] = (acc[userName] || 0) + val
+        }
+        return acc
+    }, {} as Record<string, number>)
+
+    const sortedUsers = Object.entries(userDistribution).sort((a, b) => b[1] - a[1])
 
     const requestSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc'
@@ -280,6 +302,104 @@ export default function ExpenseDashboardAdmin() {
                     </Table>
                 </div>
             </TableWrapper>
+
+            {/* Analytics Section */}
+            {expenses.length > 0 && !isLoading && (
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm mt-6">
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <Activity className="w-5 h-5 text-primary" />
+                        </div>
+                        <h2 className="text-xl font-bold text-foreground">Analisis Pengeluaran (Periode Dipilih)</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-1 p-5 rounded-xl bg-destructive/5 border border-destructive/10 flex flex-col justify-center">
+                            <div className="flex items-center gap-2 mb-2 text-destructive">
+                                <ReceiptText className="w-4 h-4" />
+                                <h3 className="text-sm font-semibold uppercase tracking-wider">Total Pengeluaran</h3>
+                            </div>
+                            <span className="text-3xl font-black text-destructive break-words">
+                                {formatCurrency(totalAmount)}
+                            </span>
+                            <div className="mt-3 flex gap-2 p-2 bg-muted/50 rounded text-xs items-center">
+                                <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-muted-foreground leading-tight">Total dari {expenses.length} catatan pengeluaran.</span>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-1 space-y-4">
+                            <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
+                                <PieChart className="w-4 h-4 text-muted-foreground" />
+                                Per Kategori
+                            </h3>
+                            <div className="space-y-3">
+                                {sortedCategories.map(([catName, amount], idx) => {
+                                    const percentage = totalAmount > 0 ? (amount / totalAmount) * 100 : 0
+                                    const colorClass = idx === 0 ? 'bg-destructive' : idx === 1 ? 'bg-orange-500' : idx === 2 ? 'bg-amber-500' : 'bg-primary'
+
+                                    return (
+                                        <div key={catName} className="space-y-1">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-foreground truncate max-w-[150px]" title={catName}>
+                                                    {catName}
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-foreground">
+                                                        {formatCurrency(amount)}
+                                                    </span>
+                                                    <span className="text-muted-foreground text-xs w-9 text-right">{percentage.toFixed(1)}%</span>
+                                                </div>
+                                            </div>
+                                            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-1 space-y-4">
+                            <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2 flex items-center gap-2">
+                                <Users className="w-4 h-4 text-muted-foreground" />
+                                Per User / Penginput
+                            </h3>
+                            <div className="space-y-3">
+                                {sortedUsers.map(([userName, amount], idx) => {
+                                    const percentage = totalAmount > 0 ? (amount / totalAmount) * 100 : 0
+                                    const colorClass = idx === 0 ? 'bg-blue-500' : idx === 1 ? 'bg-indigo-500' : idx === 2 ? 'bg-violet-500' : 'bg-slate-500'
+
+                                    return (
+                                        <div key={userName} className="space-y-1">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-foreground truncate max-w-[150px]" title={userName}>
+                                                    {userName}
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-foreground">
+                                                        {formatCurrency(amount)}
+                                                    </span>
+                                                    <span className="text-muted-foreground text-xs w-9 text-right">{percentage.toFixed(1)}%</span>
+                                                </div>
+                                            </div>
+                                            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Image Preview Modal */}
             <Modal

@@ -800,6 +800,19 @@ model expenseCategory {
   @@map("ExpenseCategory")
 }
 
+model bankAccount {
+  id               String   @id @default(cuid())
+  bankNameEnc      String   @db.Text
+  accountNumberEnc String   @db.Text
+  accountNameEnc   String   @db.Text
+  balanceEnc       String   @db.Text
+  currency         String   @default("IDR")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("BankAccount")
+}
+
 model expense {
   id          String          @id @default(cuid())
   userId      String

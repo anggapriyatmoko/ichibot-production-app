@@ -1202,7 +1202,7 @@ export default function ProductList({
                                 </div>
 
                                 {/* Stock and Status */}
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between mb-4">
                                     <div>
                                         <p className="text-xs text-muted-foreground mb-1">Stock</p>
                                         <p className={cn("text-xl font-bold", product.stock <= 0 ? "text-red-500" : "text-emerald-500")}>
@@ -1222,6 +1222,26 @@ export default function ProductList({
                                         )}
                                         <p className="text-[10px] text-muted-foreground mt-1">Min: {product.lowStockThreshold}</p>
                                     </div>
+                                </div>
+
+                                {/* Mobile Quick Actions */}
+                                <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                                    <button
+                                        onClick={() => setStockModalProduct(product)}
+                                        className="py-2 px-3 flex-1 flex items-center justify-center gap-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20 text-xs font-semibold bg-emerald-500/5"
+                                        title="Add Stock"
+                                    >
+                                        <PackagePlus className="w-4 h-4" />
+                                        Add Stock
+                                    </button>
+                                    <button
+                                        onClick={() => handleMoveToProject(product)}
+                                        className="py-2 px-3 flex-1 flex items-center justify-center gap-2 text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors border border-orange-500/20 text-xs font-semibold bg-orange-500/5"
+                                        title="Move to Sparepart Project"
+                                    >
+                                        <FolderKanban className="w-4 h-4" />
+                                        To Project
+                                    </button>
                                 </div>
                             </div>
                         )

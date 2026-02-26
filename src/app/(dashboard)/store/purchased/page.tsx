@@ -27,6 +27,7 @@ async function StorePurchasedContent({ userRole }: { userRole: string }) {
             showSyncButton={false}
             showSupplierColumn={userRole === 'ADMIN'}
             showPurchaseColumns={true}
+            showAddButton={false}
             kursYuan={kursYuan}
             kursUsd={kursUsd}
             additionalFee={additionalFee}
