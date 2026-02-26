@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Shield, Save, Loader2 } from 'lucide-react'
+import { Shield, Save, Loader2, CheckCircle2 } from 'lucide-react'
 import { getRbacConfig, saveRbacConfig, type RbacConfig } from '@/app/actions/rbac'
 import { navigationGroups, dashboardItem } from '@/components/layout/sidebar'
+import Modal from '@/components/ui/modal'
 import {
     TableWrapper,
     TableHeaderContent,
@@ -109,7 +110,6 @@ export default function RbacManager() {
             setSaveMessage({ type: 'error', text: error.message || 'Terjadi kesalahan' })
         } finally {
             setSaving(false)
-            setTimeout(() => setSaveMessage(null), 3000)
         }
     }
 
@@ -131,14 +131,6 @@ export default function RbacManager() {
                 icon={<Shield className="w-5 h-5" />}
                 actions={
                     <div className="flex items-center gap-3">
-                        {saveMessage && (
-                            <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${saveMessage.type === 'success'
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                }`}>
-                                {saveMessage.text}
-                            </span>
-                        )}
                         <button
                             onClick={handleSave}
                             disabled={saving || loading}
@@ -233,6 +225,40 @@ export default function RbacManager() {
                     </TableFooter>
                 </Table>
             </TableScrollArea>
+
+            {/* Success/Error Modal */}
+            <Modal
+                isOpen={!!saveMessage}
+                onClose={() => setSaveMessage(null)}
+                title={saveMessage?.type === 'success' ? 'Sukses' : 'Gagal'}
+                maxWidth="sm"
+                footer={
+                    <button
+                        onClick={() => setSaveMessage(null)}
+                        className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                    >
+                        Tutup
+                    </button>
+                }
+            >
+                <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
+                    {saveMessage?.type === 'success' ? (
+                        <div className="text-emerald-500 dark:text-emerald-400 flex items-center justify-center mb-2">
+                            <CheckCircle2 className="w-16 h-16" />
+                        </div>
+                    ) : (
+                        <div className="text-destructive flex items-center justify-center mb-2 border-4 border-destructive rounded-full w-16 h-16">
+                            <div className="text-4xl font-black">!</div>
+                        </div>
+                    )}
+                    <h3 className="text-xl font-black">
+                        {saveMessage?.type === 'success' ? 'Berhasil Menyimpan' : 'Terjadi Kesalahan'}
+                    </h3>
+                    <p className="text-muted-foreground text-sm max-w-[250px]">
+                        {saveMessage?.text}
+                    </p>
+                </div>
+            </Modal>
         </TableWrapper>
     )
 }
