@@ -255,7 +255,7 @@ export const navigationGroups = [
         children: [
           { name: "Absensi", href: "/attendance", icon: Clock },
           { name: "Izin/Lembur", href: "/overtime-leave", icon: ClipboardList },
-          { name: "Data Lainnya", href: "/hr-other-data", icon: FolderKanban, excludeRoles: ["EXTERNAL"] },
+          { name: "Data Lainnya", href: "/hr-other-data", icon: FolderKanban },
           { name: "Kalender", href: "/calendar", icon: Calendar },
         ],
       },

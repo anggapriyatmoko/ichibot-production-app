@@ -78,15 +78,17 @@ interface DrawerItemProps {
     drawerColors?: any
     drawerNotes?: any
     drawerNoteColors?: any
-    drawerUpdatedTimes?: any // Added this line
+    drawerUpdatedTimes?: any
+    isHidden?: boolean
     onClick: () => void
+    onToggleHidden?: () => void
 }
 
-function DrawerItem({ drawer, drawerColors, drawerNotes, drawerNoteColors, onClick }: DrawerItemProps) {
+function DrawerItem({ drawer, drawerColors, drawerNotes, drawerNoteColors, isHidden, onClick, onToggleHidden }: DrawerItemProps) {
     const specificColor = drawerColors ? drawerColors[drawer.code] : null
     const noteColorValue = drawerNoteColors?.[drawer.code] || 'green'
     const noteColor = NOTE_COLORS.find(c => c.value === noteColorValue) || NOTE_COLORS[0]
-    const colorTemplate = RACK_COLORS.find(c => c.value === specificColor) || RACK_COLORS[0]
+    const colorTemplate = (!isHidden && specificColor) ? (RACK_COLORS.find(c => c.value === specificColor) || RACK_COLORS[0]) : RACK_COLORS[0]
     const [align, setAlign] = useState<'left' | 'right' | 'center'>('center')
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -105,22 +107,37 @@ function DrawerItem({ drawer, drawerColors, drawerNotes, drawerNoteColors, onCli
         }
     }
 
+    // Hidden drawer: black, no text, still clickable
+    if (isHidden) {
+        return (
+            <div
+                ref={containerRef}
+                className="relative group/tooltip cursor-pointer"
+                onClick={onToggleHidden}
+            >
+                <span className="px-2 py-1 rounded text-[10px] font-medium shadow-sm transition-all block bg-gray-900 text-transparent select-none hover:bg-gray-800 hover:scale-105 active:scale-95 cursor-pointer min-w-[40px]">
+                    &nbsp;
+                </span>
+            </div>
+        )
+    }
+
     return (
         <div
             ref={containerRef}
             className={cn(
                 "relative group/tooltip",
-                drawer.isUsed ? "cursor-pointer" : "cursor-default opacity-80"
+                drawer.isUsed ? "cursor-pointer" : "cursor-pointer opacity-80"
             )}
             onMouseEnter={handleMouseEnter}
-            onClick={drawer.isUsed ? onClick : undefined}
+            onClick={drawer.isUsed ? onClick : onToggleHidden}
         >
             <div className="relative">
                 <span className={cn(
                     "px-2 py-1 rounded text-[10px] font-medium shadow-sm transition-all block",
                     drawer.isUsed
                         ? cn(colorTemplate.active, "text-white cursor-help hover:scale-110 active:scale-95 shadow-sm")
-                        : "bg-gray-100 text-muted-foreground border border-border/50 shadow-sm"
+                        : "bg-gray-100 text-muted-foreground border border-border/50 shadow-sm hover:bg-gray-200 hover:scale-105 active:scale-95"
                 )}>
                     {drawer.code}
                 </span>
@@ -413,19 +430,77 @@ export default function StoreRackManager({ userRole }: { userRole?: string }) {
                                     )}
                                 </div>
                                 <div className="rounded-lg p-3 flex flex-wrap gap-1.5 min-h-[50px]">
-                                    {rack.allDrawers.map(drawer => (
-                                        <DrawerItem
-                                            key={drawer.code}
-                                            drawer={drawer}
-                                            drawerColors={rack.drawerColors}
-                                            drawerNotes={rack.drawerNotes}
-                                            drawerNoteColors={rack.drawerNoteColors}
-                                            onClick={() => {
-                                                setSelectedRack(rack)
-                                                setSelectedDrawerCode(drawer.code)
-                                            }}
-                                        />
-                                    ))}
+                                    {rack.allDrawers.map(drawer => {
+                                        const drawerHidden = (rack.drawerColors as any)?.[drawer.code] === 'hidden'
+                                        return (
+                                            <DrawerItem
+                                                key={drawer.code}
+                                                drawer={drawer}
+                                                drawerColors={rack.drawerColors}
+                                                drawerNotes={rack.drawerNotes}
+                                                drawerNoteColors={rack.drawerNoteColors}
+                                                isHidden={drawerHidden}
+                                                onClick={() => {
+                                                    setSelectedRack(rack)
+                                                    setSelectedDrawerCode(drawer.code)
+                                                }}
+                                                onToggleHidden={() => {
+                                                    const currentlyHidden = (rack.drawerColors as any)?.[drawer.code] === 'hidden'
+                                                    if (currentlyHidden) {
+                                                        // Un-hide: show confirmation to restore
+                                                        showConfirmation({
+                                                            title: 'Kembalikan Laci',
+                                                            message: `Apakah Anda ingin mengembalikan laci "${drawer.code}" ?`,
+                                                            type: 'confirm',
+                                                            action: async () => {
+                                                                try {
+                                                                    const newDrawerColors = { ...(rack.drawerColors as any || {}) }
+                                                                    delete newDrawerColors[drawer.code]
+                                                                    await updateStoreRack(rack.id, {
+                                                                        name: rack.name,
+                                                                        drawerCount: rack.drawerCount,
+                                                                        rows: rack.rows || undefined,
+                                                                        cols: rack.cols || undefined,
+                                                                        description: rack.description || undefined,
+                                                                        drawerColors: newDrawerColors
+                                                                    } as any)
+                                                                    loadRacks(true)
+                                                                } catch (error) {
+                                                                    showError('Gagal mengembalikan laci')
+                                                                }
+                                                            }
+                                                        })
+                                                    } else {
+                                                        // Hide: show confirmation to mark as non-existent
+                                                        showConfirmation({
+                                                            title: 'Laci Tidak Ada',
+                                                            message: `Apakah laci "${drawer.code}" ini tidak ada?`,
+                                                            type: 'confirm',
+                                                            action: async () => {
+                                                                try {
+                                                                    const newDrawerColors = {
+                                                                        ...(rack.drawerColors as any || {}),
+                                                                        [drawer.code]: 'hidden'
+                                                                    }
+                                                                    await updateStoreRack(rack.id, {
+                                                                        name: rack.name,
+                                                                        drawerCount: rack.drawerCount,
+                                                                        rows: rack.rows || undefined,
+                                                                        cols: rack.cols || undefined,
+                                                                        description: rack.description || undefined,
+                                                                        drawerColors: newDrawerColors
+                                                                    } as any)
+                                                                    loadRacks(true)
+                                                                } catch (error) {
+                                                                    showError('Gagal menyembunyikan laci')
+                                                                }
+                                                            }
+                                                        })
+                                                    }
+                                                }}
+                                            />
+                                        )
+                                    })}
                                 </div>
                             </div>
                         )

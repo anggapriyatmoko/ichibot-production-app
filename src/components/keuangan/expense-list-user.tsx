@@ -16,7 +16,8 @@ import {
     TableCell,
     TableHeaderContent,
     TableEmpty,
-    TableFooter
+    TableFooter,
+    TablePagination
 } from '@/components/ui/table'
 import Modal from '@/components/ui/modal'
 
@@ -46,6 +47,8 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
     const { showAlert, showError } = useAlert()
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
     const [isLoadingData, setIsLoadingData] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -320,9 +323,9 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                             {expenses.length === 0 ? (
                                 <TableEmpty colSpan={7} message="Belum ada riwayat pengeluaran" />
                             ) : (
-                                expenses.map((item, idx) => (
+                                expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
                                     <TableRow key={item.id}>
-                                        <TableCell align="center" className="text-muted-foreground">{idx + 1}</TableCell>
+                                        <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                                         <TableCell className="font-medium whitespace-nowrap">
                                             {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
                                             <div className="text-xs text-muted-foreground mt-0.5">
@@ -394,6 +397,16 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                         )}
                     </Table>
                 </div>
+                {expenses.length > 0 && (
+                    <TablePagination
+                        currentPage={currentPage}
+                        totalPages={Math.ceil(expenses.length / itemsPerPage)}
+                        onPageChange={setCurrentPage}
+                        itemsPerPage={itemsPerPage}
+                        onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
+                        totalCount={expenses.length}
+                    />
+                )}
             </TableWrapper>
 
             {/* Analytics Section */}

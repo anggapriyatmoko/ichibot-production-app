@@ -13,6 +13,7 @@ import { useAlert } from '@/hooks/use-alert'
 import * as XLSX from 'xlsx'
 
 import ImportSparepartModal from './import-sparepart-modal'
+import ImagePreviewModal from '@/components/ui/image-preview-modal'
 import {
     Table,
     TableBody,
@@ -74,6 +75,7 @@ export default function SparepartProjectList({
     const [editingItem, setEditingItem] = useState<SparepartProject | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
 
     // Stock Modal State
     const [stockModalItem, setStockModalItem] = useState<SparepartProject | null>(null)
@@ -1252,9 +1254,9 @@ export default function SparepartProjectList({
                                 {/* Image */}
                                 <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
                                     {item.image ? (
-                                        <a href={item.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                        <button type="button" onClick={() => setPreviewImage({ url: item.image!, name: item.name })} className="block w-full h-full cursor-pointer">
                                             <Image src={item.image} alt={item.name} fill className="object-cover" />
-                                        </a>
+                                        </button>
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-gray-600">
                                             <ImageIcon className="w-6 h-6" />
@@ -1424,9 +1426,9 @@ export default function SparepartProjectList({
                                         <div className="relative group/image">
                                             <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border">
                                                 {item.image ? (
-                                                    <a href={item.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                                    <button type="button" onClick={() => setPreviewImage({ url: item.image!, name: item.name })} className="block w-full h-full cursor-pointer">
                                                         <Image src={item.image} alt={item.name} fill className="object-cover" />
-                                                    </a>
+                                                    </button>
                                                 ) : (
                                                     <div className="flex items-center justify-center h-full text-gray-600">
                                                         <ImageIcon className="w-4 h-4" />
@@ -1545,6 +1547,7 @@ export default function SparepartProjectList({
                     }}
                 />
             </TableWrapper>
+            <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
         </div>
     )
 }

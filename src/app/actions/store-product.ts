@@ -577,6 +577,11 @@ export async function toggleStoreProductPurchased(
             purchasedAt: purchased ? new Date() : null,
         }
 
+        // When unchecking, also clear the order batch assignment
+        if (!purchased) {
+            updateData.orderBatchId = null
+        }
+
         if (purchased && purchaseData) {
             updateData.purchasePackage = purchaseData.purchasePackage ?? null
             updateData.purchaseQty = purchaseData.purchaseQty ?? null
@@ -694,6 +699,31 @@ export async function getStorePurchasedProducts() {
     } catch (error) {
         console.error('Error fetching purchased products from DB:', error)
         return []
+    }
+}
+
+export async function moveToOrderBatch() {
+    try {
+        // Generate batch ID from today's date
+        const now = new Date()
+        const batchId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+        // Move all purchased items that are still in the cart (no batch ID)
+        const result = await (prisma as any).storeProduct.updateMany({
+            where: {
+                purchased: true,
+                orderBatchId: null
+            },
+            data: {
+                orderBatchId: batchId
+            }
+        })
+
+        revalidatePath('/store/purchased')
+        return { success: true, count: result.count, batchId }
+    } catch (error: any) {
+        console.error('Error moving to order batch:', error)
+        return { success: false, error: error.message }
     }
 }
 

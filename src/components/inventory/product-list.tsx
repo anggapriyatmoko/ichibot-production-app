@@ -101,6 +101,9 @@ export default function ProductList({
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search')?.toString() || '')
+    const [imagePreview, setImagePreview] = useState<{ url: string, name: string } | null>(null)
+    const [imageSize, setImageSize] = useState<string>('')
+    const [fileSize, setFileSize] = useState<string>('')
 
     // Sync URL with Search Term (Debounced)
     useEffect(() => {
@@ -1181,9 +1184,9 @@ export default function ProductList({
                                     {/* Image */}
                                     <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
                                         {product.image ? (
-                                            <a href={product.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                            <button type="button" onClick={() => { setImagePreview({ url: product.image!, name: product.name }); setImageSize(''); setFileSize('') }} className="block w-full h-full cursor-pointer">
                                                 <Image src={product.image} alt={product.name} fill className="object-cover" />
-                                            </a>
+                                            </button>
                                         ) : (
                                             <div className="flex items-center justify-center h-full text-gray-600">
                                                 <ImageIcon className="w-6 h-6" />
@@ -1369,9 +1372,9 @@ export default function ProductList({
                                                 <div className="relative group/image">
                                                     <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border">
                                                         {product.image ? (
-                                                            <a href={product.image} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                                                            <button type="button" onClick={() => { setImagePreview({ url: product.image!, name: product.name }); setImageSize('') }} className="block w-full h-full cursor-pointer">
                                                                 <Image src={product.image} alt={product.name} fill className="object-cover" />
-                                                            </a>
+                                                            </button>
                                                         ) : (
                                                             <div className="flex items-center justify-center h-full text-gray-600">
                                                                 <ImageIcon className="w-4 h-4" />
@@ -1483,6 +1486,57 @@ export default function ProductList({
                     totalCount={totalItems}
                 />
             </TableWrapper>
+
+            {/* Image Preview Modal */}
+            {imagePreview && (
+                <Modal
+                    isOpen={!!imagePreview}
+                    onClose={() => setImagePreview(null)}
+                    title={imagePreview.name}
+                    maxWidth="2xl"
+                    footer={
+                        <div className="flex items-center justify-between w-full">
+                            <span className="text-xs text-muted-foreground">{imageSize}{fileSize && ` (${fileSize})`}</span>
+                            <div className="flex gap-2">
+                                <a
+                                    href={imagePreview.url}
+                                    download={imagePreview.name}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Download
+                                </a>
+                                <button
+                                    onClick={() => setImagePreview(null)}
+                                    className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    }
+                >
+                    <div className="flex items-center justify-center p-4">
+                        <img
+                            src={imagePreview.url}
+                            alt={imagePreview.name}
+                            className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                            onLoad={(e) => {
+                                const img = e.currentTarget
+                                setImageSize(`${img.naturalWidth} × ${img.naturalHeight} px`)
+                                fetch(img.src).then(res => res.blob()).then(blob => {
+                                    const bytes = blob.size
+                                    if (bytes >= 1024 * 1024) {
+                                        setFileSize(`${(bytes / (1024 * 1024)).toFixed(2)} MB`)
+                                    } else {
+                                        setFileSize(`${(bytes / 1024).toFixed(1)} KB`)
+                                    }
+                                }).catch(() => { })
+                            }}
+                        />
+                    </div>
+                </Modal>
+            )}
         </div>
     )
 }

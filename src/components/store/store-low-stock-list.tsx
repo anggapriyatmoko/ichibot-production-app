@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
-import { toggleStoreProductPurchased } from '@/app/actions/store-product'
+import { toggleStoreProductPurchased, syncSingleStoreProduct } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -37,15 +37,19 @@ function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { 
 export default function StoreLowStockList({
     initialProducts,
     suppliers = [],
-    kursYuan
+    kursYuan,
+    additionalFee = 0
 }: {
     initialProducts: any[],
     suppliers?: any[],
-    kursYuan?: number
+    kursYuan?: number,
+    additionalFee?: number
 }) {
     const [searchTerm, setSearchTerm] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(20)
+    const [syncingItems, setSyncingItems] = useState<Set<number>>(new Set())
+    const [finishedItems, setFinishedItems] = useState<Set<number>>(new Set())
     const [localProducts, setLocalProducts] = useState(initialProducts)
     const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([])
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
@@ -389,6 +393,34 @@ export default function StoreLowStockList({
                                                         <Edit2 className="w-2.5 h-2.5" />
                                                         Edit
                                                     </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const id = product.wcId
+                                                            if (syncingItems.has(id)) return
+                                                            setSyncingItems(prev => new Set(prev).add(id))
+                                                            try {
+                                                                const result = await syncSingleStoreProduct(id, product.parentId)
+                                                                if (result.success && result.product) {
+                                                                    setLocalProducts(prev => prev.map(p => p.wcId === id ? result.product : p))
+                                                                } else {
+                                                                    router.refresh()
+                                                                }
+                                                            } catch { /* ignore */ } finally {
+                                                                setSyncingItems(prev => { const n = new Set(prev); n.delete(id); return n })
+                                                                setFinishedItems(prev => new Set(prev).add(id))
+                                                                setTimeout(() => setFinishedItems(prev => { const n = new Set(prev); n.delete(id); return n }), 5000)
+                                                            }
+                                                        }}
+                                                        disabled={syncingItems.has(product.wcId)}
+                                                        className={cn(
+                                                            "p-1 hover:bg-muted rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-muted/50 px-1.5",
+                                                            syncingItems.has(product.wcId) && "text-primary"
+                                                        )}
+                                                        title="Sync dari WooCommerce"
+                                                    >
+                                                        <RefreshCw className={cn("w-2.5 h-2.5", syncingItems.has(product.wcId) && "animate-spin")} />
+                                                        {finishedItems.has(product.wcId) ? "Selesai" : "Sync"}
+                                                    </button>
                                                     <span className={cn(
                                                         "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
                                                         product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
@@ -551,6 +583,7 @@ export default function StoreLowStockList({
                 onClose={() => setPurchaseTarget(null)}
                 product={purchaseTarget || { wcId: 0, name: '' }}
                 kursYuan={kursYuan}
+                additionalFee={additionalFee}
             />
         </div>
     )

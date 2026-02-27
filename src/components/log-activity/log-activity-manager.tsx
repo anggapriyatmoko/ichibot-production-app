@@ -9,6 +9,7 @@ import { upsertLogActivity, getLogActivities, deleteLogActivity, getDailyActivit
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import Modal from '@/components/ui/modal'
+import ImagePreviewModal from '@/components/ui/image-preview-modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -58,6 +59,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
     const [selectedUserId, setSelectedUserId] = useState<string>(currentUser.id)
     const [isLoading, setIsLoading] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
@@ -390,10 +392,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                             {log.image && (
                                                 <div>
                                                     <h4 className="text-xs font-medium text-muted-foreground uppercase mb-1">Dokumentasi</h4>
-                                                    <a
-                                                        href={log.image}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewImage({ url: log.image!, name: `Dokumentasi - ${format(new Date(log.date), 'dd MMM yyyy', { locale: id })}` })}
                                                         className="inline-block"
                                                     >
                                                         <img
@@ -401,7 +402,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                             alt="Dokumentasi aktivitas"
                                                             className="w-20 h-20 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity cursor-pointer"
                                                         />
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -498,10 +499,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 </TableCell>
                                                 <TableCell align="center" className="align-top">
                                                     {log.image ? (
-                                                        <a
-                                                            href={log.image}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPreviewImage({ url: log.image!, name: `Dokumentasi - ${format(new Date(log.date), 'dd MMM yyyy', { locale: id })}` })}
                                                             className="group/img relative inline-block"
                                                         >
                                                             <img
@@ -512,7 +512,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
                                                                 <Search className="w-3 h-3 text-white" />
                                                             </div>
-                                                        </a>
+                                                        </button>
                                                     ) : (
                                                         <span className="text-muted-foreground opacity-30">—</span>
                                                     )}
@@ -594,17 +594,16 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 <div className="text-xs text-muted-foreground">{item.user.department || '-'}</div>
                                             </div>
                                             {item.log?.image && (
-                                                <a
-                                                    href={item.log.image}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPreviewImage({ url: item.log.image!, name: `Dokumentasi - ${item.user.name}` })}
                                                 >
                                                     <img
                                                         src={item.log.image}
                                                         alt="Dokumentasi"
-                                                        className="w-16 h-16 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+                                                        className="w-16 h-16 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity cursor-pointer"
                                                     />
-                                                </a>
+                                                </button>
                                             )}
                                         </div>
                                         <div className="space-y-2 pt-2 border-t border-border">
@@ -698,10 +697,9 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                 </TableCell>
                                                 <TableCell align="center" className="align-top">
                                                     {item.log?.image ? (
-                                                        <a
-                                                            href={item.log.image}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPreviewImage({ url: item.log.image!, name: `Dokumentasi - ${item.user.name}` })}
                                                             className="group/img relative inline-block"
                                                         >
                                                             <img
@@ -712,7 +710,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
                                                                 <Search className="w-3 h-3 text-white" />
                                                             </div>
-                                                        </a>
+                                                        </button>
                                                     ) : (
                                                         <span className="text-muted-foreground opacity-30">—</span>
                                                     )}
@@ -855,6 +853,7 @@ export default function LogActivityManager({ initialLogs, users, currentUser }: 
                     </form>
                 </Modal>
             )}
+            <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
         </div>
     )
 }

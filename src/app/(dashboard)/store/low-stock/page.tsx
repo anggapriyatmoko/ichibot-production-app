@@ -10,13 +10,15 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 export const dynamic = 'force-dynamic';
 
 async function StoreLowStockContent() {
-    const [products, suppliers, kursYuanRaw] = await Promise.all([
+    const [products, suppliers, kursYuanRaw, additionalFeeStr] = await Promise.all([
         getStoreLowStockProducts(),
         getStoreSuppliers(),
-        getSystemSetting('KURS_YUAN')
+        getSystemSetting('KURS_YUAN'),
+        getSystemSetting('STORE_ADDITIONAL_FEE')
     ]);
     const kursYuan = kursYuanRaw ? parseFloat(kursYuanRaw) : undefined;
-    return <StoreLowStockList initialProducts={products} suppliers={suppliers} kursYuan={kursYuan} />;
+    const additionalFee = additionalFeeStr ? parseFloat(additionalFeeStr) : 0;
+    return <StoreLowStockList initialProducts={products} suppliers={suppliers} kursYuan={kursYuan} additionalFee={additionalFee} />;
 }
 
 export default async function StoreLowStockPage() {

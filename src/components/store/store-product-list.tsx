@@ -327,9 +327,35 @@ export default function StoreProductList({
             multiPaket: physicalProducts.filter(p => (p.purchasePackage || 0) > 1).length,
             withSku: physicalProducts.filter(p => p.sku && p.sku.trim() !== '').length,
             withoutSku: physicalProducts.filter(p => !p.sku || p.sku.trim() === '').length,
+            totalOmset: physicalProducts
+                .filter(p => p.purchased && p.purchasePrice && p.purchaseQty)
+                .reduce((acc, p) => {
+                    const paket = p.purchasePackage || 1
+                    const jumlah = p.purchaseQty || 0
+                    const hargaJual = p.price || 0
+                    return acc + (hargaJual * paket * jumlah)
+                }, 0),
+            totalLaba: physicalProducts
+                .filter(p => p.purchased && p.purchasePrice && p.purchaseQty)
+                .reduce((acc, p) => {
+                    const paket = p.purchasePackage || 1
+                    const jumlah = p.purchaseQty || 0
+                    let priceInIdr = p.purchasePrice || 0
+                    const currency = p.purchaseCurrency || 'IDR'
+                    if (currency === 'CNY' && kursYuan) {
+                        priceInIdr = (p.purchasePrice || 0) * kursYuan
+                    } else if (currency === 'USD' && kursUsd) {
+                        priceInIdr = (p.purchasePrice || 0) * kursUsd
+                    }
+                    const totalHarga = priceInIdr * paket * (1 + (additionalFee || 0) / 100)
+                    const perPcs = totalHarga / ((paket * jumlah) || 1)
+                    const hargaJual = p.price || 0
+                    const labaPerPcs = hargaJual - perPcs
+                    return acc + (labaPerPcs * paket * jumlah)
+                }, 0),
         }
         return stats
-    }, [localProducts, kursYuan, kursUsd])
+    }, [localProducts, kursYuan, kursUsd, additionalFee])
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' | null = 'asc'
@@ -504,7 +530,7 @@ export default function StoreProductList({
             <TableWrapper>
                 <TableHeaderContent
                     title="Store Products"
-                    description="Manajemen inventaris produk dari WooCommerce."
+                    description={<>Manajemen inventaris produk dari WooCommerce.{additionalFee > 0 && showPurchaseColumns && <span className="text-[10px] text-orange-600/80 font-medium bg-orange-50 px-1.5 py-0.5 rounded ml-2">Harga beli sudah termasuk +Fee {additionalFee}%</span>}</>}
                     icon={<Package className="w-5 h-5 font-bold" />}
                     actions={
                         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -806,6 +832,9 @@ export default function StoreProductList({
                                             Harga Beli (IDR)
                                             <SortIcon columnKey="hargaBeliIdr" sortConfig={sortConfig} />
                                         </TableHead>
+                                        <TableHead align="right" className="whitespace-nowrap">
+                                            Laba
+                                        </TableHead>
                                     </>
                                 )}
                             </TableRow>
@@ -1087,27 +1116,68 @@ export default function StoreProductList({
                                                             <div className="flex flex-col items-end gap-1">
                                                                 <div className="flex flex-col items-end">
                                                                     <span className="text-[10px] text-muted-foreground uppercase">Harga per Pcs</span>
-                                                                    <span className="text-sm font-semibold text-foreground">
+                                                                    <span className="text-sm font-semibold text-foreground flex items-baseline gap-1">
+                                                                        {currency !== 'IDR' && (
+                                                                            <span className="text-[10px] text-muted-foreground font-normal">
+                                                                                {currency === 'CNY' ? '¥' : '$'}{formatNumber(product.purchasePrice)}
+                                                                            </span>
+                                                                        )}
                                                                         Rp {formatNumber(Math.round(perPcs))}
                                                                     </span>
                                                                 </div>
                                                                 {jumlah > 0 && (
                                                                     <div className="flex flex-col items-end border-t border-border pt-1">
                                                                         <span className="text-[10px] text-muted-foreground uppercase">Total Pembelian</span>
-                                                                        <span className="text-sm font-bold text-primary">
+                                                                        <span className="text-sm font-bold text-primary flex items-baseline gap-1">
+                                                                            {currency !== 'IDR' && (
+                                                                                <span className="text-[10px] text-muted-foreground font-normal">
+                                                                                    {currency === 'CNY' ? '¥' : '$'}{formatNumber(product.purchasePrice * paket)}
+                                                                                </span>
+                                                                            )}
                                                                             Rp {formatNumber(Math.round(totalHarga))}
                                                                         </span>
                                                                     </div>
                                                                 )}
-                                                                {additionalFee > 0 && (
-                                                                    <span className="text-[9px] text-orange-600/80 font-medium bg-orange-50 px-1.5 py-0.5 rounded">
-                                                                        +Fee {additionalFee}%
+
+                                                            </div>
+                                                        )
+                                                    })() : (
+                                                        <span className="text-muted-foreground text-xs">-</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right" className="whitespace-nowrap">
+                                                    {product.purchasePrice && product.price ? (() => {
+                                                        const paket = product.purchasePackage || 1
+                                                        const jumlah = product.purchaseQty || 0
+                                                        let priceInputIdr = product.purchasePrice
+                                                        const currency = product.purchaseCurrency || 'IDR'
+                                                        if (currency === 'CNY' && kursYuan) {
+                                                            priceInputIdr = product.purchasePrice * kursYuan
+                                                        } else if (currency === 'USD' && kursUsd) {
+                                                            priceInputIdr = product.purchasePrice * kursUsd
+                                                        }
+                                                        const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                                                        const perPcs = totalHarga / ((paket * jumlah) || 1)
+                                                        const hargaJual = product.price || 0
+                                                        const labaPerPcs = hargaJual - perPcs
+                                                        const totalQty = paket * jumlah
+                                                        const totalLaba = labaPerPcs * totalQty
+                                                        const isProfit = labaPerPcs >= 0
+                                                        return (
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-[10px] text-muted-foreground uppercase">Laba per Pcs</span>
+                                                                    <span className={`text-sm font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                        {isProfit ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaPerPcs)))}
                                                                     </span>
-                                                                )}
-                                                                {currency !== 'IDR' && (
-                                                                    <span className="text-[10px] text-muted-foreground">
-                                                                        {currency === 'CNY' ? '¥' : '$'}{formatNumber(product.purchasePrice)}
-                                                                    </span>
+                                                                </div>
+                                                                {totalQty > 0 && (
+                                                                    <div className="flex flex-col items-end border-t border-border pt-1">
+                                                                        <span className="text-[10px] text-muted-foreground uppercase">Total Laba</span>
+                                                                        <span className={`text-sm font-bold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                            {isProfit ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(totalLaba)))}
+                                                                        </span>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         )
@@ -1121,7 +1191,7 @@ export default function StoreProductList({
                                 ))
                             ) : (
                                 <TableEmpty
-                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? 2 : 0) + (showPurchaseColumns ? 4 : 5)}
+                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? 3 : 0) + (showPurchaseColumns ? 4 : 5)}
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk ditemukan."
                                     description={searchTerm ? (
@@ -1174,7 +1244,7 @@ export default function StoreProductList({
                             <div className="flex flex-col">
                                 <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalPurchaseValue)}</p>
                                 <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
-                                    * Total dari semua produk yang memiliki data pembelian.
+                                    * Total dari semua produk yang memiliki data pembelian. Belum termasuk additional fee.
                                 </p>
                             </div>
                         </div>
@@ -1218,30 +1288,59 @@ export default function StoreProductList({
                             </div>
                         </>
                     )}
-                    <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                            {showPurchaseColumns ? 'Produk QTY Beli >1' : 'Produk Varian'}
-                        </p>
-                        <div className="flex items-baseline gap-2">
-                            <p className="text-2xl font-bold text-foreground">
-                                {formatNumber(showPurchaseColumns ? analysis.multiPaket : analysis.variationProducts)}
-                            </p>
-                            <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
-                        </div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Kelengkapan SKU</p>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-muted-foreground">Dengan SKU:</span>
-                                <span className="font-bold text-emerald-600">{formatNumber(analysis.withSku)}</span>
+
+                    {showPurchaseColumns && (
+                        <>
+                            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100/50">
+                                <p className="text-xs font-semibold text-blue-600/70 uppercase tracking-wider mb-1">Omset Total (Jual Semua)</p>
+                                <div className="flex flex-col">
+                                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(analysis.totalOmset)}</p>
+                                    <p className="text-[10px] text-blue-600/60 font-medium mt-1 italic">
+                                        * Harga jual × jumlah beli untuk semua produk.
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-muted-foreground">Tanpa SKU:</span>
-                                <span className="font-bold text-orange-600">{formatNumber(analysis.withoutSku)}</span>
+                            <div className={`p-4 rounded-xl border ${analysis.totalLaba >= 0 ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-red-50/50 border-red-100/50'}`}>
+                                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${analysis.totalLaba >= 0 ? 'text-emerald-600/70' : 'text-red-600/70'}`}>Laba Total</p>
+                                <div className="flex flex-col">
+                                    <p className={`text-2xl font-bold ${analysis.totalLaba >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        {analysis.totalLaba >= 0 ? '+' : '-'}{formatCurrency(Math.abs(analysis.totalLaba))}
+                                    </p>
+                                    <p className={`text-[10px] font-medium mt-1 italic ${analysis.totalLaba >= 0 ? 'text-emerald-600/60' : 'text-red-600/60'}`}>
+                                        * Harga jual − harga beli (incl. fee) × jumlah beli.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
+                    {!showPurchaseColumns && (
+                        <>
+                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                                    Produk Varian
+                                </p>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl font-bold text-foreground">
+                                        {formatNumber(analysis.variationProducts)}
+                                    </p>
+                                    <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                                </div>
+                            </div>
+                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Kelengkapan SKU</p>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Dengan SKU:</span>
+                                        <span className="font-bold text-emerald-600">{formatNumber(analysis.withSku)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Tanpa SKU:</span>
+                                        <span className="font-bold text-orange-600">{formatNumber(analysis.withoutSku)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -1296,6 +1395,7 @@ export default function StoreProductList({
                     product={editPurchaseProduct}
                     kursYuan={kursYuan}
                     kursUsd={kursUsd}
+                    additionalFee={additionalFee}
                     editMode
                 />
             )}

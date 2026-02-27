@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck, Camera, ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck, Camera, ImageIcon, DollarSign, TrendingUp } from 'lucide-react'
 import { createServiceRobot, updateServiceRobot, deleteServiceRobot, getServiceRobots } from '@/app/actions/service-robot'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
+import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import ImportServiceRobotModal from './import-service-robot-modal'
@@ -12,6 +13,7 @@ import SendResiModal from './send-resi-modal'
 import { processImageFile } from '@/utils/image-compression'
 import Image from 'next/image'
 import Modal from '@/components/ui/modal'
+import ImagePreviewModal from '@/components/ui/image-preview-modal'
 import {
     TableWrapper,
     TableScrollArea,
@@ -63,6 +65,14 @@ interface ServiceRobotManagerProps {
             count: number
         }[]
     }
+    financialData?: {
+        totalRevenue: number
+        totalOrders: number
+        thisMonthRevenue: number
+        thisMonthOrders: number
+        averageOrderValue: number
+        monthlyRevenue: number[]
+    }
 }
 
 const statusOptions = [
@@ -80,7 +90,7 @@ const STATUS_COLORS = {
     'CANCELLED': 'bg-gray-500'
 }
 
-export default function ServiceRobotManager({ initialServices, totalPages, currentPage, totalCount, products, customers, analysisData, isAdmin = false }: ServiceRobotManagerProps) {
+export default function ServiceRobotManager({ initialServices, totalPages, currentPage, totalCount, products, customers, analysisData, financialData, isAdmin = false }: ServiceRobotManagerProps) {
     const router = useRouter()
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
 
@@ -187,6 +197,7 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
 
     // Image state
     const [imagePreview, setImagePreview] = useState<string | null>(null)
+    const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [removeImage, setRemoveImage] = useState(false)
 
@@ -1019,13 +1030,13 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                                 </TableCell>
                                                 <TableCell>
                                                     {service.image ? (
-                                                        <a href={service.image} target="_blank" rel="noopener noreferrer" className="block">
+                                                        <button type="button" onClick={() => setPreviewImage({ url: service.image!, name: `${service.customerName} - ${service.robotType}` })} className="block">
                                                             <img
                                                                 src={service.image}
                                                                 alt="Robot"
                                                                 className="w-10 h-10 object-cover rounded-lg border border-border hover:border-primary hover:opacity-80 transition-all cursor-pointer"
                                                             />
-                                                        </a>
+                                                        </button>
                                                     ) : (
                                                         <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
                                                             <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
@@ -1164,13 +1175,13 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                             <div className="flex items-center gap-3 py-2 border-y border-border/50 border-dashed">
                                 <div className="shrink-0">
                                     {service.image ? (
-                                        <a href={service.image} target="_blank" rel="noopener noreferrer" className="block">
+                                        <button type="button" onClick={() => setPreviewImage({ url: service.image!, name: `${service.customerName} - ${service.robotType}` })} className="block">
                                             <img
                                                 src={service.image}
                                                 alt="Robot"
                                                 className="w-14 h-14 object-cover rounded-lg border border-border"
                                             />
-                                        </a>
+                                        </button>
                                     ) : (
                                         <div className="w-14 h-14 bg-muted rounded-lg flex items-center justify-center">
                                             <ImageIcon className="w-6 h-6 text-muted-foreground/30" />
@@ -1389,19 +1400,19 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                 Ringkasan Status
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-muted/50 rounded-lg">
+                                <div className="p-4 bg-muted/30 rounded-lg">
                                     <div className="text-sm text-muted-foreground mb-1">Total Service</div>
                                     <div className="text-2xl font-bold text-foreground">{analysisData.totalServices}</div>
                                 </div>
-                                <div className="p-4 bg-red-50/50 dark:bg-red-900/10 rounded-lg">
+                                <div className="p-4 bg-red-500/10 rounded-lg">
                                     <div className="text-sm text-red-600 mb-1">Pending</div>
                                     <div className="text-2xl font-bold text-red-700 dark:text-red-400">{analysisData.statusCounts.PENDING}</div>
                                 </div>
-                                <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg">
+                                <div className="p-4 bg-blue-500/10 rounded-lg">
                                     <div className="text-sm text-blue-600 mb-1">In Progress</div>
                                     <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{analysisData.statusCounts.IN_PROGRESS}</div>
                                 </div>
-                                <div className="p-4 bg-green-50/50 dark:bg-green-900/10 rounded-lg">
+                                <div className="p-4 bg-green-500/10 rounded-lg">
                                     <div className="text-sm text-green-600 mb-1">Selesai / Dikirim</div>
                                     <div className="text-2xl font-bold text-green-700 dark:text-green-400">
                                         {(analysisData.statusCounts.DONE || 0) + (analysisData.statusCounts.DELIVERED || 0)}
@@ -1437,8 +1448,72 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                                 )}
                             </div>
                         </div>
+
+                        {/* Financial Analysis */}
+                        {financialData && (
+                            <div className="md:col-span-2 bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <DollarSign className="w-5 h-5 text-primary" />
+                                    Analisa Keuangan Service
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                    <div className="p-4 bg-emerald-500/10 rounded-lg">
+                                        <div className="text-xs text-emerald-600 mb-1">Total Pendapatan</div>
+                                        <div className="text-xl font-bold text-emerald-700 dark:text-emerald-400">Rp {formatNumber(financialData.totalRevenue)}</div>
+                                    </div>
+                                    <div className="p-4 bg-blue-500/10 rounded-lg">
+                                        <div className="text-xs text-blue-600 mb-1">Bulan Ini</div>
+                                        <div className="text-xl font-bold text-blue-700 dark:text-blue-400">Rp {formatNumber(financialData.thisMonthRevenue)}</div>
+                                        <div className="text-[10px] text-blue-500 mt-0.5">{financialData.thisMonthOrders} transaksi</div>
+                                    </div>
+                                    <div className="p-4 bg-purple-500/10 rounded-lg">
+                                        <div className="text-xs text-purple-600 mb-1">Total Transaksi</div>
+                                        <div className="text-xl font-bold text-purple-700 dark:text-purple-400">{financialData.totalOrders}</div>
+                                    </div>
+                                    <div className="p-4 bg-orange-500/10 rounded-lg">
+                                        <div className="text-xs text-orange-600 mb-1">Rata-rata / Transaksi</div>
+                                        <div className="text-xl font-bold text-orange-700 dark:text-orange-400">Rp {formatNumber(financialData.averageOrderValue)}</div>
+                                    </div>
+                                </div>
+
+                                {/* Monthly Revenue Bar Chart */}
+                                {financialData.monthlyRevenue.length > 0 && (
+                                    <div>
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1">
+                                            <TrendingUp className="w-3.5 h-3.5" />
+                                            Pendapatan Bulanan {new Date().getFullYear()}
+                                        </h4>
+                                        <div className="flex items-end gap-1.5 h-32">
+                                            {financialData.monthlyRevenue.map((revenue, idx) => {
+                                                const maxRevenue = Math.max(...financialData.monthlyRevenue, 1)
+                                                const heightPercent = (revenue / maxRevenue) * 100
+                                                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
+                                                const isCurrentMonth = idx === new Date().getMonth()
+                                                return (
+                                                    <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
+                                                        <div className="relative w-full">
+                                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-medium text-foreground bg-popover border border-border rounded px-1.5 py-0.5 shadow-sm whitespace-nowrap z-10">
+                                                                Rp {formatNumber(revenue)}
+                                                            </div>
+                                                        </div>
+                                                        <div
+                                                            className={`w-full rounded-t-md transition-all ${isCurrentMonth ? 'bg-primary' : 'bg-primary/30'}`}
+                                                            style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                                                        />
+                                                        <span className={`text-[9px] ${isCurrentMonth ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
+                                                            {monthNames[idx]}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
+
             </div>
 
             {/* Send Resi Modal */}
@@ -1448,6 +1523,7 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
                 service={resiService}
                 onSuccess={() => router.refresh()}
             />
+            <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
         </>
     )
 }

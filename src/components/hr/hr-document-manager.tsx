@@ -149,7 +149,7 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
         }
     }
 
-    const colCount = readOnly ? 5 : 6
+    const colCount = readOnly ? 4 : 6
 
     return (
         <TableWrapper className="mb-8" loading={isPending}>
@@ -173,11 +173,11 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
                 <Table>
                     <TableHeader>
                         <TableRow hoverable={false} className="bg-muted/50">
-                            <TableHead className="w-1/4">Nama Dokumen</TableHead>
+                            <TableHead>Nama Dokumen</TableHead>
                             <TableHead className="w-1/4">Keterangan</TableHead>
-                            <TableHead>Tipe</TableHead>
-                            <TableHead>Dapat Dilihat Oleh</TableHead>
-                            <TableHead>Aksi</TableHead>
+                            <TableHead className="w-0 whitespace-nowrap">Tipe</TableHead>
+                            {!readOnly && <TableHead>Dapat Dilihat Oleh</TableHead>}
+                            <TableHead className="w-0 whitespace-nowrap">Aksi</TableHead>
                             {!readOnly && <TableHead align="center" className="w-20">Edit/Hapus</TableHead>}
                         </TableRow>
                     </TableHeader>
@@ -210,25 +210,27 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
                                             <span className="text-xs text-muted-foreground">-</span>
                                         )}
                                     </TableCell>
-                                    <TableCell className="align-top">
-                                        {doc.isForAll ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 text-[10px] font-bold border border-emerald-500/20">
-                                                <Users className="w-3 h-3" /> Semua User
-                                            </span>
-                                        ) : (
-                                            <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                                {doc.targetUsers.length > 0 ? (
-                                                    doc.targetUsers.map(u => (
-                                                        <span key={u.id} className="px-1.5 py-0.5 bg-primary/5 text-primary text-[9px] font-medium rounded border border-primary/10">
-                                                            {u.name || u.username}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-[10px] text-muted-foreground italic">Tidak ada user</span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </TableCell>
+                                    {!readOnly && (
+                                        <TableCell className="align-top">
+                                            {doc.isForAll ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 text-[10px] font-bold border border-emerald-500/20">
+                                                    <Users className="w-3 h-3" /> Semua User
+                                                </span>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                                    {doc.targetUsers.length > 0 ? (
+                                                        doc.targetUsers.map(u => (
+                                                            <span key={u.id} className="px-1.5 py-0.5 bg-primary/5 text-primary text-[9px] font-medium rounded border border-primary/10">
+                                                                {u.name || u.username}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-[10px] text-muted-foreground italic">Tidak ada user</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                    )}
                                     <TableCell className="align-top">
                                         <div className="flex gap-2">
                                             {doc.link && (

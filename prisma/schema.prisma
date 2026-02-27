@@ -668,6 +668,7 @@ model StoreProduct {
   attributes       String?   @db.Text
   parentId         Int?
   backupGudang     String?   @db.Text
+  orderBatchId     String?
 
   @@map("StoreProduct")
 }

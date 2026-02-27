@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart } from 'lucide-react'
-import { getAllExpenses } from '@/app/actions/expense'
+import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X } from 'lucide-react'
+import { getAllExpenses, updateExpenseAdmin, ExpenseData } from '@/app/actions/expense'
+import { getExpenseCategories } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
 import {
     TableWrapper,
@@ -16,7 +17,8 @@ import {
     TableCell,
     TableHeaderContent,
     TableEmpty,
-    TableFooter
+    TableFooter,
+    TablePagination
 } from '@/components/ui/table'
 import Modal from '@/components/ui/modal'
 
@@ -38,9 +40,11 @@ interface Expense {
 }
 
 export default function ExpenseDashboardAdmin() {
-    const { showError } = useAlert()
+    const { showAlert, showError } = useAlert()
     const [expenses, setExpenses] = useState<Expense[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
     // Sort state (Default: terbaru = date desc)
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' })
@@ -56,6 +60,24 @@ export default function ExpenseDashboardAdmin() {
     // Preview Image State
     const [previewImage, setPreviewImage] = useState<string | null>(null)
     const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
+    // Categories and Edit Modal State
+    const [categories, setCategories] = useState<Category[]>([])
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
+    const [categorySearchQuery, setCategorySearchQuery] = useState('')
+    const categoryDropdownRef = React.useRef<HTMLDivElement>(null)
+
+    const defaultFormData = {
+        name: '',
+        amount: '',
+        categoryId: '',
+        date: new Date().toISOString().substring(0, 10),
+        image: '' as string | null
+    }
+    const [formData, setFormData] = useState(defaultFormData)
 
     // Helper formatting Currency
     const formatCurrency = (value: string | number) => {
@@ -78,11 +100,22 @@ export default function ExpenseDashboardAdmin() {
             const end = endDate ? new Date(endDate) : undefined
             if (end) end.setHours(23, 59, 59, 999)
 
-            const res = await getAllExpenses(start?.toISOString(), end?.toISOString())
-            if (res.success && res.data) {
-                setExpenses(res.data as Expense[])
+            const [expensesRes, categoriesRes] = await Promise.all([
+                getAllExpenses(start?.toISOString(), end?.toISOString()),
+                getExpenseCategories()
+            ])
+
+            if (expensesRes.success && expensesRes.data) {
+                setExpenses(expensesRes.data as Expense[])
             } else {
-                showError(res.error || 'Gagal memuat rekapitulasi')
+                showError(expensesRes.error || 'Gagal memuat rekapitulasi')
+            }
+
+            if (categoriesRes.success && categoriesRes.data) {
+                setCategories(categoriesRes.data as Category[])
+                if (defaultFormData.categoryId === '' && categoriesRes.data.length > 0) {
+                    defaultFormData.categoryId = categoriesRes.data[0].id
+                }
             }
         } catch (error) {
             console.error(error)
@@ -97,6 +130,89 @@ export default function ExpenseDashboardAdmin() {
         fetchExpenses()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []) // Empty dependency array prevents recursive fetch
+
+    // Close category dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+                setIsCategoryDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    const handleOpenModal = (expense: Expense) => {
+        setEditingId(expense.id)
+        setFormData({
+            name: expense.name,
+            amount: expense.amount,
+            categoryId: expense.categoryId,
+            date: new Date(expense.date).toISOString().substring(0, 10),
+            image: expense.image
+        })
+        setIsModalOpen(true)
+    }
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false)
+        setEditingId(null)
+        setFormData({ ...defaultFormData })
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setFormData(prev => ({ ...prev, image: reader.result as string }))
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!formData.name.trim() || !formData.amount || !formData.categoryId || !formData.date || !editingId) return
+
+        setIsSubmitting(true)
+
+        const payload: ExpenseData = {
+            name: formData.name,
+            amount: formData.amount,
+            categoryId: formData.categoryId,
+            date: new Date(formData.date),
+            image: formData.image || undefined
+        }
+
+        try {
+            const res = await updateExpenseAdmin(editingId, payload)
+            if (res.success && res.data) {
+                // Update local state without fetching all again
+                const updatedCat = categories.find(c => c.id === formData.categoryId)
+                const tempUpdated = {
+                    ...(res.data as any),
+                    name: payload.name,
+                    amount: payload.amount.toString(),
+                    category: updatedCat
+                }
+                setExpenses(prev => prev.map(exp => exp.id === editingId ? { ...exp, ...tempUpdated } as Expense : exp))
+                handleCloseModal()
+                showAlert('Pengeluaran berhasil diperbarui', 'Berhasil')
+            } else {
+                showError(res.error || 'Gagal memperbarui pengeluaran')
+            }
+        } catch (error) {
+            console.error(error)
+            showError('Terjadi kesalahan sistem')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const filteredCategories = categories.filter(cat =>
+        cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+    )
 
     const totalAmount = expenses.reduce((acc, current) => {
         const val = parseFloat(current.amount)
@@ -239,15 +355,16 @@ export default function ExpenseDashboardAdmin() {
                                     Jumlah {renderSortIcon('amount')}
                                 </TableHead>
                                 <TableHead align="center">Bukti</TableHead>
+                                <TableHead align="center" className="w-[80px]">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {sortedExpenses.length === 0 && !isLoading ? (
                                 <TableEmpty colSpan={7} message="Tidak ada data pengeluaran pada rentang tanggal ini." />
                             ) : (
-                                sortedExpenses.map((item, idx) => (
+                                sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
                                     <TableRow key={item.id}>
-                                        <TableCell align="center" className="text-muted-foreground">{idx + 1}</TableCell>
+                                        <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                                         <TableCell className="font-medium whitespace-nowrap">
                                             {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
                                             <div className="text-xs text-muted-foreground mt-0.5">
@@ -282,6 +399,15 @@ export default function ExpenseDashboardAdmin() {
                                                 <span className="text-xs text-muted-foreground">-</span>
                                             )}
                                         </TableCell>
+                                        <TableCell align="center">
+                                            <button
+                                                onClick={() => handleOpenModal(item)}
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors inline-block"
+                                                title="Edit Pengeluaran"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -295,12 +421,22 @@ export default function ExpenseDashboardAdmin() {
                                     <TableCell align="right" className="font-bold text-lg text-primary py-4">
                                         {formatCurrency(totalAmount)}
                                     </TableCell>
-                                    <TableCell></TableCell>
+                                    <TableCell colSpan={2}></TableCell>
                                 </TableRow>
                             </TableFooter>
                         )}
                     </Table>
                 </div>
+                {expenses.length > 0 && !isLoading && (
+                    <TablePagination
+                        currentPage={currentPage}
+                        totalPages={Math.ceil(sortedExpenses.length / itemsPerPage)}
+                        onPageChange={setCurrentPage}
+                        itemsPerPage={itemsPerPage}
+                        onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
+                        totalCount={sortedExpenses.length}
+                    />
+                )}
             </TableWrapper>
 
             {/* Analytics Section */}
@@ -414,6 +550,176 @@ export default function ExpenseDashboardAdmin() {
                         <img src={previewImage} alt="Bukti" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-sm" />
                     </div>
                 )}
+            </Modal>
+
+            {/* Edit Modal */}
+            <Modal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                title="Edit Catatan Pengeluaran"
+                maxWidth="lg"
+                footer={
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={handleCloseModal}
+                            disabled={isSubmitting}
+                            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors text-sm font-medium"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            form="admin-expense-form"
+                            disabled={isSubmitting || !formData.name.trim() || !formData.amount.trim() || !formData.categoryId}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2 transition-colors disabled:opacity-50 text-sm font-medium"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Save className="w-4 h-4" />
+                            )}
+                            Simpan Perubahan
+                        </button>
+                    </div>
+                }
+            >
+                <form id="admin-expense-form" onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-foreground">
+                                Tanggal <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                value={formData.date}
+                                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                                className="w-full px-3 py-2 border border-border bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col">
+                            <label className="text-sm font-medium text-foreground">
+                                Kategori <span className="text-red-500">*</span>
+                            </label>
+
+                            <div className="relative" ref={categoryDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                                    className="w-full flex items-center justify-between px-3 py-2 border border-border bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-left"
+                                >
+                                    <span className={formData.categoryId ? "text-foreground" : "text-muted-foreground"}>
+                                        {formData.categoryId
+                                            ? categories.find(c => c.id === formData.categoryId)?.name || 'Pilih Kategori'
+                                            : 'Pilih Kategori'}
+                                    </span>
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                </button>
+
+                                {isCategoryDropdownOpen && (
+                                    <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-lg shadow-lg overflow-hidden flex flex-col">
+                                        <div className="p-2 border-b border-border shrink-0">
+                                            <div className="relative">
+                                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Cari kategori..."
+                                                    value={categorySearchQuery}
+                                                    onChange={(e) => setCategorySearchQuery(e.target.value)}
+                                                    className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-transparent focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-md outline-none transition-all"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                            {filteredCategories.length === 0 ? (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground text-center">
+                                                    Kategori tidak ditemukan
+                                                </div>
+                                            ) : (
+                                                filteredCategories.map(cat => (
+                                                    <button
+                                                        key={cat.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setFormData(prev => ({ ...prev, categoryId: cat.id }))
+                                                            setIsCategoryDropdownOpen(false)
+                                                            setCategorySearchQuery('')
+                                                        }}
+                                                        className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${formData.categoryId === cat.id
+                                                            ? 'bg-primary/10 text-primary font-medium'
+                                                            : 'hover:bg-muted text-foreground'
+                                                            }`}
+                                                    >
+                                                        {cat.name}
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                            Nama Pengeluaran <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Makan siang, bensin, dll..."
+                            className="w-full px-3 py-2 border border-border bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                            Jumlah (Rp) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.amount ? new Intl.NumberFormat('id-ID').format(parseInt(formData.amount, 10)) : ''}
+                            onChange={(e) => {
+                                const rawValue = e.target.value.replace(/\D/g, '')
+                                setFormData(prev => ({ ...prev, amount: rawValue }))
+                            }}
+                            placeholder="150.000"
+                            className="w-full px-3 py-2 border border-border bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">
+                            Bukti Foto (Opsional)
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        {formData.image && (
+                            <div className="mt-2 relative inline-block">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={formData.image} alt="Preview" className="h-24 object-cover rounded-lg border border-border" />
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, image: null }))}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                                    title="Hapus foto"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </form>
             </Modal>
         </div>
     )

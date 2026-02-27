@@ -49,7 +49,7 @@ export default async function ServiceRobotPage({
         ]
     }
 
-    const [services, totalCount, recipePromise, customerPromise, statusStats, typeStats] = await prisma.$transaction([
+    const [services, totalCount, recipePromise, customerPromise, statusStats, typeStats, serviceOrdersRaw] = await prisma.$transaction([
         prisma.serviceRobot.findMany({
             where,
             orderBy: { entryDate: 'desc' },
@@ -94,6 +94,18 @@ export default async function ServiceRobotPage({
                 }
             },
             take: 5
+        }),
+        // Financial data from service orders
+        prisma.serviceOrder.findMany({
+            select: {
+                createdAt: true,
+                items: {
+                    select: {
+                        productPrice: true,
+                        quantity: true
+                    }
+                }
+            }
         })
     ])
 
@@ -132,6 +144,39 @@ export default async function ServiceRobotPage({
     // Calculate total from global status stats
     analysisData.totalServices = (statusStats as any[]).reduce((acc, curr) => acc + curr._count.serviceStatus, 0)
 
+    // Build financial data
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth()
+    const monthlyRevenue: number[] = Array(12).fill(0)
+    let totalRevenue = 0
+    let totalOrders = 0
+    let thisMonthRevenue = 0
+    let thisMonthOrders = 0
+
+        ; (serviceOrdersRaw as any[]).forEach(order => {
+            const orderTotal = order.items.reduce((acc: number, item: any) => acc + (item.productPrice * item.quantity), 0)
+            totalRevenue += orderTotal
+            totalOrders++
+
+            const orderDate = new Date(order.createdAt)
+            if (orderDate.getFullYear() === currentYear) {
+                monthlyRevenue[orderDate.getMonth()] += orderTotal
+            }
+            if (orderDate.getFullYear() === currentYear && orderDate.getMonth() === currentMonth) {
+                thisMonthRevenue += orderTotal
+                thisMonthOrders++
+            }
+        })
+
+    const financialData = {
+        totalRevenue,
+        totalOrders,
+        thisMonthRevenue,
+        thisMonthOrders,
+        averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
+        monthlyRevenue: monthlyRevenue.slice(0, currentMonth + 1)
+    }
+
     return (
         <div className="space-y-8">
             <div className="mb-8 text-left">
@@ -147,6 +192,7 @@ export default async function ServiceRobotPage({
                 products={robotTypes}
                 customers={customers}
                 analysisData={analysisData}
+                financialData={financialData}
                 isAdmin={await isAllowedForPage('/service-robot')}
             />
         </div>

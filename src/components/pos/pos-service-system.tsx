@@ -87,6 +87,7 @@ export default function POSServiceSystem({
     })
 
     const [searchTerm, setSearchTerm] = useState('')
+    const [shippingCost, setShippingCost] = useState(0)
     const [loading, setLoading] = useState(false)
     const [showReceipt, setShowReceipt] = useState(false)
     const [receiptData, setReceiptData] = useState<any>(null)
@@ -244,9 +245,20 @@ export default function POSServiceSystem({
                         </div>
                     `).join('')}
                 </div>
+                ${receiptData.shippingCost > 0 ? `
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #000;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                        <span>Subtotal:</span>
+                        <span>Rp ${formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px;">
+                        <span>Biaya Pengiriman:</span>
+                        <span>Rp ${formatNumber(receiptData.shippingCost)}</span>
+                    </div>
+                </div>` : ''}
                 <div class="total">
                     <span>TOTAL:</span>
-                    <span>Rp ${formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
+                    <span>Rp ${formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0) + (receiptData.shippingCost || 0))}</span>
                 </div>
                 <div class="footer">
                     <p style="font-weight: bold; margin-bottom: 5px;">Printed by: ${userName}</p>
@@ -277,7 +289,12 @@ export default function POSServiceSystem({
             message += `${idx + 1}. ${item.productName} (x${item.quantity}) - Rp ${formatNumber(item.productPrice * item.quantity)}\\n`
         })
 
-        const total = receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0)
+        const subtotal = receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0)
+        if (receiptData.shippingCost > 0) {
+            message += `\\nSubtotal: Rp ${formatNumber(subtotal)}\\n`
+            message += `Biaya Pengiriman: Rp ${formatNumber(receiptData.shippingCost)}\\n`
+        }
+        const total = subtotal + (receiptData.shippingCost || 0)
         message += `\\n*Total Bayar: Rp ${formatNumber(total)}*\\n`
         message += `\\nPrinted by: ${userName}\\n`
         message += `\\nTerima kasih atas kepercayaan Anda!`
@@ -320,7 +337,8 @@ export default function POSServiceSystem({
         }).filter(item => item.quantity > 0))
     }
 
-    const cartTotal = cart.reduce((acc, item) => acc + (item.salePrice || item.price) * item.quantity, 0)
+    const cartSubtotal = cart.reduce((acc, item) => acc + (item.salePrice || item.price) * item.quantity, 0)
+    const cartTotal = cartSubtotal + shippingCost
 
     const handleCheckout = async () => {
         if (cart.length === 0) return
@@ -342,7 +360,7 @@ export default function POSServiceSystem({
                     })))
 
                     if (result.success) {
-                        setReceiptData(result.order)
+                        setReceiptData({ ...result.order, shippingCost })
                         setShowReceipt(true)
 
                         // Update local stock state
@@ -361,6 +379,7 @@ export default function POSServiceSystem({
                         }
 
                         setCart([])
+                        setShippingCost(0)
                         router.refresh()
                     } else {
                         showAlert(result.error || 'Terjadi kesalahan saat checkout', 'error')
@@ -389,14 +408,18 @@ export default function POSServiceSystem({
 
         setSavedCarts([newSavedCart, ...savedCarts])
         setCart([])
+        setShippingCost(0)
         setSaveCartNote('')
         setShowSaveCartModal(false)
+        setActiveSavedCartId(null)
         showAlert('Keranjang berhasil disimpan', 'success')
     }
 
     const handleLoadSavedCart = (saved: SavedCart) => {
         setCart(saved.items)
-        setActiveSavedCartId(saved.id)
+        setSavedCarts(prev => prev.filter(c => c.id !== saved.id))
+        setActiveSavedCartId(null)
+        setSaveCartNote('')
         setShowSavedCartsList(false)
         showAlert('Keranjang berhasil dimuat', 'success')
     }
@@ -1003,9 +1026,46 @@ export default function POSServiceSystem({
                 </div>
 
                 <div className="p-4 md:p-6 bg-muted/5 border-t border-border space-y-3 md:space-y-4">
-                    <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border shadow-sm">
-                        <span className="text-sm font-bold text-muted-foreground">Total Bayar</span>
-                        <span className="text-lg font-bold text-primary">Rp {formatNumber(cartTotal)}</span>
+                    {/* Biaya Pengiriman */}
+                    <div className="flex items-center gap-3 bg-card px-4 py-3 rounded-2xl border border-border">
+                        <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Ongkir</label>
+                        <div className="flex items-center gap-1 flex-1">
+                            <span className="text-xs text-muted-foreground">Rp</span>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={shippingCost === 0 ? '' : formatNumber(shippingCost)}
+                                onChange={(e) => {
+                                    const raw = e.target.value.replace(/\D/g, '')
+                                    setShippingCost(raw ? parseInt(raw) : 0)
+                                }}
+                                placeholder="0"
+                                className="flex-1 bg-transparent text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground/40 min-w-0"
+                            />
+                        </div>
+                        {shippingCost > 0 && (
+                            <button onClick={() => setShippingCost(0)} className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                    <div className="bg-card p-4 rounded-2xl border border-border shadow-sm space-y-2">
+                        {shippingCost > 0 && (
+                            <>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-muted-foreground">Subtotal</span>
+                                    <span className="text-xs font-medium text-muted-foreground">Rp {formatNumber(cartSubtotal)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-muted-foreground">Ongkir</span>
+                                    <span className="text-xs font-medium text-muted-foreground">Rp {formatNumber(shippingCost)}</span>
+                                </div>
+                            </>
+                        )}
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-bold text-muted-foreground">Total Bayar</span>
+                            <span className="text-lg font-bold text-primary">Rp {formatNumber(cartTotal)}</span>
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <button
@@ -1395,9 +1455,21 @@ export default function POSServiceSystem({
                         </div>
 
                         <div className="mt-4 border-t-2 border-dashed border-gray-300 pt-3">
+                            {receiptData.shippingCost > 0 && (
+                                <>
+                                    <div className="flex justify-between items-center text-[12px] text-black mb-1">
+                                        <span>Subtotal:</span>
+                                        <span>Rp {formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[12px] text-black mb-2">
+                                        <span>Biaya Pengiriman:</span>
+                                        <span>Rp {formatNumber(receiptData.shippingCost)}</span>
+                                    </div>
+                                </>
+                            )}
                             <div className="flex justify-between items-center font-bold text-[12px] text-black">
                                 <span className="uppercase tracking-tighter">TOTAL:</span>
-                                <span>Rp {formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0))}</span>
+                                <span>Rp {formatNumber(receiptData.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0) + (receiptData.shippingCost || 0))}</span>
                             </div>
                         </div>
 

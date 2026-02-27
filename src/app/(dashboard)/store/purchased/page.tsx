@@ -1,6 +1,6 @@
 import { getStorePurchasedProducts } from '@/app/actions/store-product'
 import { getSystemSetting } from '@/app/actions/system-settings'
-import StoreProductList from '@/components/store/store-product-list'
+import StorePurchasedTabs from '@/components/store/store-purchased-tabs'
 import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -20,14 +20,9 @@ async function StorePurchasedContent({ userRole }: { userRole: string }) {
     const additionalFee = additionalFeeStr ? parseFloat(additionalFeeStr) : 0
 
     return (
-        <StoreProductList
+        <StorePurchasedTabs
             initialProducts={products}
-            showPurchasedStyles={false}
-            showPurchasedAt={true}
-            showSyncButton={false}
             showSupplierColumn={userRole === 'ADMIN'}
-            showPurchaseColumns={true}
-            showAddButton={false}
             kursYuan={kursYuan}
             kursUsd={kursUsd}
             additionalFee={additionalFee}

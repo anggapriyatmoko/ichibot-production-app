@@ -6,7 +6,7 @@ import Modal from '@/components/ui/modal'
 import { toggleStoreProductPurchased, updatePurchaseData } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
-import { formatNumber } from '@/utils/format'
+import { formatNumber, formatCurrency } from '@/utils/format'
 
 interface PurchaseInputModalProps {
     isOpen: boolean
@@ -19,9 +19,14 @@ interface PurchaseInputModalProps {
         purchaseQty?: number | null
         purchasePrice?: number | null
         purchaseCurrency?: string | null
+        sku?: string | null
+        stockQuantity?: number | null
+        regularPrice?: number | null
+        salePrice?: number | null
     }
     kursYuan?: number
     kursUsd?: number
+    additionalFee?: number
     /** When true, only updates purchase data without toggling purchased status */
     editMode?: boolean
 }
@@ -32,6 +37,7 @@ export default function PurchaseInputModal({
     product,
     kursYuan,
     kursUsd,
+    additionalFee = 0,
     editMode = false
 }: PurchaseInputModalProps) {
     const [purchasePackage, setPurchasePackage] = useState<number | ''>('')
@@ -160,6 +166,52 @@ export default function PurchaseInputModal({
             <div className="mb-5 pb-4 border-b border-border">
                 <p className="text-sm text-muted-foreground">Produk</p>
                 <p className="font-semibold text-foreground text-sm mt-0.5 line-clamp-2">{product.name}</p>
+
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs bg-muted/30 p-3 rounded-lg border border-border/50">
+                    <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold mb-0.5">SKU</span>
+                        <span className="font-medium text-foreground font-mono">{product.sku || '-'}</span>
+                    </div>
+                    <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold mb-0.5">Stok</span>
+                        <span className="font-medium text-foreground">
+                            {product.stockQuantity !== undefined && product.stockQuantity !== null ? formatNumber(product.stockQuantity) : '-'}
+                        </span>
+                    </div>
+                    <div className="col-span-2">
+                        <span className="text-muted-foreground block text-[10px] uppercase font-semibold mb-0.5">Harga Jual</span>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">{formatCurrency(product.price || 0)}</span>
+                                {product.salePrice && product.salePrice > 0 && product.salePrice < (product.regularPrice || 0) ? (
+                                    <span className="text-muted-foreground line-through text-[10px]">
+                                        {formatCurrency(product.regularPrice || 0)}
+                                    </span>
+                                ) : null}
+                            </div>
+                            {(() => {
+                                if (!purchasePrice || !purchasePackage || !product.price) return null
+                                const paket = Number(purchasePackage) || 1
+                                const jumlah = Number(purchaseQty) || 1
+                                let priceInIdr = Number(purchasePrice)
+                                if (purchaseCurrency === 'CNY' && kursYuan) {
+                                    priceInIdr = Number(purchasePrice) * kursYuan
+                                } else if (purchaseCurrency === 'USD' && kursUsd) {
+                                    priceInIdr = Number(purchasePrice) * kursUsd
+                                }
+                                const totalHarga = priceInIdr * paket * (1 + (additionalFee || 0) / 100)
+                                const perPcs = totalHarga / ((paket * jumlah) || 1)
+                                const laba = product.price - perPcs
+                                const isProfit = laba >= 0
+                                return (
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${isProfit ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                        Laba/pcs: {isProfit ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(laba)))}
+                                    </span>
+                                )
+                            })()}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="space-y-5">

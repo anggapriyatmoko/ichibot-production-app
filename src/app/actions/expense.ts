@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { encrypt, decrypt } from '@/lib/crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { requirePageAccess } from '@/lib/auth'
 
 export interface ExpenseData {
     categoryId: string
@@ -156,6 +157,49 @@ export async function updateExpense(id: string, data: ExpenseData) {
         return { success: true, data: expense }
     } catch (error) {
         console.error('Error updating expense:', error)
+        return { success: false, error: 'Failed to update expense' }
+    }
+}
+
+export async function updateExpenseAdmin(id: string, data: ExpenseData) {
+    try {
+        const session: any = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        // Verify that the user has access to the financial dashboard (admin equivalent)
+        try {
+            await requirePageAccess('/keuangan/dashboard')
+        } catch (error) {
+            return { success: false, error: 'Unauthorized: Admin access required' }
+        }
+
+        const amountEnc = encrypt(data.amount.toString())
+        const nameEnc = encrypt(data.name)
+
+        if (!amountEnc || !nameEnc) {
+            return { success: false, error: 'Encryption failed' }
+        }
+
+        const expense = await (prisma as any).expense.update({
+            where: {
+                id, // No userId check, so Admin can edit any expense
+            },
+            data: {
+                categoryId: data.categoryId,
+                date: data.date,
+                amountEnc,
+                nameEnc,
+                image: data.image
+            }
+        })
+
+        revalidatePath('/keuangan/pengeluaran')
+        revalidatePath('/keuangan/dashboard')
+        return { success: true, data: expense }
+    } catch (error) {
+        console.error('Error updating expense as admin:', error)
         return { success: false, error: 'Failed to update expense' }
     }
 }

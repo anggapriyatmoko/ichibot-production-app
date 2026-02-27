@@ -13,6 +13,7 @@ import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import ImportAssetModal from './import-asset-modal'
 import Modal from '@/components/ui/modal'
+import ImagePreviewModal from '@/components/ui/image-preview-modal'
 import {
     Table,
     TableBody,
@@ -67,6 +68,7 @@ export default function AssetManager({
     const [isAdding, setIsAdding] = useState(false)
     const [editingAsset, setEditingAsset] = useState<MachineAsset | null>(null)
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search')?.toString() || '')
+    const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
 
     // Form state
     const [formData, setFormData] = useState({
@@ -812,7 +814,9 @@ export default function AssetManager({
                             <div className="flex gap-3 mb-3">
                                 <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border flex-shrink-0">
                                     {asset.image ? (
-                                        <Image src={asset.image} alt={asset.name} fill className="object-cover" />
+                                        <button type="button" onClick={() => setPreviewImage({ url: asset.image!, name: asset.name })} className="block w-full h-full cursor-pointer">
+                                            <Image src={asset.image} alt={asset.name} fill className="object-cover" />
+                                        </button>
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-muted-foreground">
                                             <Wrench className="w-6 h-6" />
@@ -910,7 +914,7 @@ export default function AssetManager({
                                     <TableRow key={asset.id} className="group">
                                         <TableCell>
                                             <div className="relative group/image w-10 h-10">
-                                                <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer">
+                                                <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden relative border border-border cursor-pointer" onClick={() => asset.image && setPreviewImage({ url: asset.image, name: asset.name })}>
                                                     {asset.image ? (
                                                         <Image src={asset.image} alt={asset.name} fill className="object-cover" />
                                                     ) : (
@@ -1092,6 +1096,7 @@ export default function AssetManager({
                     </div>
                 )
             }
+            <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
         </div >
     )
 }
