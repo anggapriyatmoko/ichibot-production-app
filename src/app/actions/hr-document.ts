@@ -65,7 +65,6 @@ async function saveFile(file: File, oldPath?: string | null): Promise<string> {
 export async function getHRDocuments() {
     try {
         await requireAuth()
-        await requirePageAccess('/hrd-dashboard')
 
         const session = await getServerSession(authOptions)
         const user = (session as any)?.user

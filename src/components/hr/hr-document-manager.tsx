@@ -16,8 +16,10 @@ import {
     TableCell,
     TableEmpty,
     TableHeaderContent,
+    TablePagination,
 } from '@/components/ui/table'
 import Modal from '@/components/ui/modal'
+import DocumentPreviewModal from '@/components/ui/document-preview-modal'
 
 interface HRDocument {
     id: string
@@ -59,6 +61,9 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
     const [userSearch, setUserSearch] = useState('')
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [error, setError] = useState('')
+    const [previewDoc, setPreviewDoc] = useState<{ url: string; name: string } | null>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(10)
 
     const [removeFile, setRemoveFile] = useState(false)
 
@@ -151,6 +156,23 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
 
     const colCount = readOnly ? 4 : 6
 
+    // Pagination
+    const totalCount = documents.length
+    const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage))
+    const paginatedDocuments = documents.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    )
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) setCurrentPage(page)
+    }
+
+    const handleItemsPerPageChange = (count: number) => {
+        setItemsPerPage(count)
+        setCurrentPage(1)
+    }
+
     return (
         <TableWrapper className="mb-8" loading={isPending}>
             <TableHeaderContent
@@ -189,7 +211,7 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
                                 icon={<FileText className="w-12 h-12 opacity-20" />}
                             />
                         ) : (
-                            documents.map((doc) => (
+                            paginatedDocuments.map((doc) => (
                                 <TableRow key={doc.id} className="group">
                                     <TableCell className="font-medium text-foreground align-top">
                                         {doc.name}
@@ -245,15 +267,13 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
                                                 </a>
                                             )}
                                             {doc.filePath && (
-                                                <a
-                                                    href={doc.filePath}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    onClick={() => setPreviewDoc({ url: doc.filePath!, name: doc.name })}
                                                     className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
                                                 >
                                                     <FileText className="w-3.5 h-3.5" />
                                                     Lihat PDF
-                                                </a>
+                                                </button>
                                             )}
                                         </div>
                                     </TableCell>
@@ -283,6 +303,24 @@ export default function HRDocumentManager({ documents, allUsers = [], readOnly =
                     </TableBody>
                 </Table>
             </TableScrollArea>
+
+            {totalCount > 0 && (
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={handleItemsPerPageChange}
+                    pageSizeOptions={[10, 20, 50]}
+                    totalCount={totalCount}
+                />
+            )}
+
+            {/* Document Preview Modal */}
+            <DocumentPreviewModal
+                document={previewDoc}
+                onClose={() => setPreviewDoc(null)}
+            />
 
             {/* Modal */}
             {isModalOpen && (
