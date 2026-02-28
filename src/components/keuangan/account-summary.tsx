@@ -85,7 +85,7 @@ export default function AccountSummaryList({
                     }
                 />
 
-                <TableScrollArea>
+                <TableScrollArea className="hidden md:block">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -131,8 +131,16 @@ export default function AccountSummaryList({
                                                 <span className="text-[10px] text-muted-foreground mt-0.5">
                                                     Diperbarui: {formatDateTime(account.updatedAt)}, {
                                                         (() => {
-                                                            const diffMs = new Date().getTime() - new Date(account.updatedAt).getTime();
+                                                            const now = new Date();
+                                                            const updated = new Date(account.updatedAt);
+
+                                                            // Set both dates to midnight to compare calendar days
+                                                            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                                            const updatedMidnight = new Date(updated.getFullYear(), updated.getMonth(), updated.getDate());
+
+                                                            const diffMs = todayMidnight.getTime() - updatedMidnight.getTime();
                                                             const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
                                                             if (diffDays === 0) return 'hari ini';
                                                             if (diffDays === 1) return 'kemarin';
                                                             return `${diffDays} hari yang lalu`;
@@ -172,6 +180,87 @@ export default function AccountSummaryList({
                         </TableBody>
                     </Table>
                 </TableScrollArea>
+
+                {/* Mobile View (List) */}
+                <div className="block md:hidden mt-4">
+                    {initialData.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-border border-dashed mx-4">
+                            Belum ada akun bank
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border border-t border-b border-border">
+                            {initialData.map((account) => (
+                                <div key={account.id} className="py-4 px-4 flex flex-col gap-3">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-foreground text-sm leading-tight">{account.bankName}</h4>
+                                            <p className="font-medium text-foreground text-xs">{account.accountName}</p>
+                                            <div className="mt-1">
+                                                {account.accountNumber ? (
+                                                    <span className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                                                        {account.accountNumber}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-xs italic">-</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            <span className="font-bold text-foreground text-sm whitespace-nowrap">
+                                                {account.currency === 'USD' ? '$' : account.currency === 'CNY' ? '¥' : 'Rp'}{' '}
+                                                {formatNumber(account.balance)}
+                                            </span>
+                                            {account.currency !== 'IDR' && (
+                                                <span className="text-[10px] text-muted-foreground font-medium">
+                                                    (Rp {formatNumber(getBalanceInIdr(account))})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center pt-1">
+                                        <div className="text-[10px] text-muted-foreground">
+                                            Diperbarui: {formatDateTime(account.updatedAt)}, {
+                                                (() => {
+                                                    const now = new Date();
+                                                    const updated = new Date(account.updatedAt);
+
+                                                    // Set both dates to midnight to compare calendar days
+                                                    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                                    const updatedMidnight = new Date(updated.getFullYear(), updated.getMonth(), updated.getDate());
+
+                                                    const diffMs = todayMidnight.getTime() - updatedMidnight.getTime();
+                                                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                                                    if (diffDays === 0) return 'hari ini';
+                                                    if (diffDays === 1) return 'kemarin';
+                                                    return `${diffDays} hari yang lalu`;
+                                                })()
+                                            }
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => openEditForm(account)}
+                                                className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-md transition-colors flex items-center gap-1"
+                                                title="Edit"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                                <span className="text-[10px] font-medium hidden sm:inline">Edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(account)}
+                                                className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md transition-colors flex items-center gap-1"
+                                                title="Hapus"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </TableWrapper>
 
             {/* Analytics Section */}

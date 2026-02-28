@@ -569,6 +569,7 @@ export async function toggleStoreProductPurchased(
         purchaseQty?: number
         purchasePrice?: number
         purchaseCurrency?: string
+        storeName?: string
     }
 ) {
     try {
@@ -587,6 +588,9 @@ export async function toggleStoreProductPurchased(
             updateData.purchaseQty = purchaseData.purchaseQty ?? null
             updateData.purchasePrice = purchaseData.purchasePrice ?? null
             updateData.purchaseCurrency = purchaseData.purchaseCurrency ?? null
+            if (purchaseData.storeName !== undefined) {
+                updateData.storeName = purchaseData.storeName
+            }
         }
 
         await prisma.storeProduct.update({
@@ -609,6 +613,7 @@ export async function updatePurchaseData(
         purchaseQty?: number
         purchasePrice?: number
         purchaseCurrency?: string
+        storeName?: string
     }
 ) {
     try {
@@ -619,6 +624,7 @@ export async function updatePurchaseData(
                 purchaseQty: data.purchaseQty ?? null,
                 purchasePrice: data.purchasePrice ?? null,
                 purchaseCurrency: data.purchaseCurrency ?? null,
+                ...(data.storeName !== undefined && { storeName: data.storeName })
             }
         })
         revalidatePath('/store/product')

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Loader2, X, Search, Bot, MessageCircle, BarChart3, Download, ArrowUpDown, ArrowUp, ArrowDown, Truck, Camera, ImageIcon, DollarSign, TrendingUp } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 import { createServiceRobot, updateServiceRobot, deleteServiceRobot, getServiceRobots } from '@/app/actions/service-robot'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
@@ -1478,34 +1479,63 @@ export default function ServiceRobotManager({ initialServices, totalPages, curre
 
                                 {/* Monthly Revenue Bar Chart */}
                                 {financialData.monthlyRevenue.length > 0 && (
-                                    <div>
-                                        <h4 className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1">
-                                            <TrendingUp className="w-3.5 h-3.5" />
-                                            Pendapatan Bulanan {new Date().getFullYear()}
+                                    <div className="mt-8 pt-6 border-t border-border">
+                                        <h4 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                                            Pendapatan Bulanan Tahun {new Date().getFullYear()}
                                         </h4>
-                                        <div className="flex items-end gap-1.5 h-32">
-                                            {financialData.monthlyRevenue.map((revenue, idx) => {
-                                                const maxRevenue = Math.max(...financialData.monthlyRevenue, 1)
-                                                const heightPercent = (revenue / maxRevenue) * 100
-                                                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
-                                                const isCurrentMonth = idx === new Date().getMonth()
-                                                return (
-                                                    <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group">
-                                                        <div className="relative w-full">
-                                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-medium text-foreground bg-popover border border-border rounded px-1.5 py-0.5 shadow-sm whitespace-nowrap z-10">
-                                                                Rp {formatNumber(revenue)}
-                                                            </div>
-                                                        </div>
-                                                        <div
-                                                            className={`w-full rounded-t-md transition-all ${isCurrentMonth ? 'bg-primary' : 'bg-primary/30'}`}
-                                                            style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                                                        />
-                                                        <span className={`text-[9px] ${isCurrentMonth ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
-                                                            {monthNames[idx]}
-                                                        </span>
-                                                    </div>
-                                                )
-                                            })}
+                                        <div className="h-[300px] w-full mt-4">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart
+                                                    data={financialData.monthlyRevenue.map((rev, idx) => ({
+                                                        name: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'][idx],
+                                                        total: rev
+                                                    }))}
+                                                    margin={{ top: 20, right: 10, left: 10, bottom: 0 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                                    <XAxis
+                                                        dataKey="name"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                                                        dy={10}
+                                                    />
+                                                    <YAxis
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        width={60}
+                                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                                                        tickFormatter={(value: number) => {
+                                                            if (value >= 1000000) return `Rp ${value / 1000000}M`
+                                                            if (value >= 1000) return `Rp ${value / 1000}K`
+                                                            return value.toString()
+                                                        }}
+                                                    />
+                                                    <RechartsTooltip
+                                                        cursor={false}
+                                                        content={({ active, payload, label }: any) => {
+                                                            if (active && payload && payload.length) {
+                                                                return (
+                                                                    <div className="bg-popover border border-border p-3 rounded-lg shadow-md text-popover-foreground text-sm">
+                                                                        <p className="font-semibold mb-1">{label} {new Date().getFullYear()}</p>
+                                                                        <p className="text-primary font-bold">
+                                                                            Rp {formatNumber(payload[0].value)}
+                                                                        </p>
+                                                                    </div>
+                                                                )
+                                                            }
+                                                            return null
+                                                        }}
+                                                    />
+                                                    <Bar
+                                                        dataKey="total"
+                                                        fill="#3b82f6"
+                                                        radius={[4, 4, 0, 0]}
+                                                        maxBarSize={50}
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     </div>
                                 )}

@@ -2,8 +2,7 @@ import NextAuth, { AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import prisma from "@/lib/prisma"
 import { compare } from "bcryptjs"
-
-const rateLimitStore = new Map<string, { attempts: number, blockedUntil: number }>()
+import { rateLimitStore } from "@/lib/rate-limit"
 
 export const authOptions: AuthOptions = {
     session: {

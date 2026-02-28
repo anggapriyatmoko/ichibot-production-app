@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, Key, Delete, X } from 'lucide-react'
+import { Lock, Key, Delete, X, Timer } from 'lucide-react'
+
+const LOCKOUT_KEYWORD = 'Terlalu banyak percobaan'
 
 export default function LoginForm() {
     const router = useRouter()
@@ -16,6 +18,9 @@ export default function LoginForm() {
     const [sessionExpired, setSessionExpired] = useState(false)
     const [authType, setAuthType] = useState<'password' | 'pin'>('password')
     const [hasError, setHasError] = useState(false)
+    const [isLockedOut, setIsLockedOut] = useState(false)
+    const [lockoutRemaining, setLockoutRemaining] = useState(0)
+    const lockoutTimerRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
         if (searchParams.get('expired') === 'true') {
@@ -23,9 +28,48 @@ export default function LoginForm() {
         }
     }, [searchParams])
 
+    // Start lockout countdown
+    const startLockoutTimer = useCallback((minutes: number) => {
+        if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+        const totalSeconds = minutes * 60
+        setIsLockedOut(true)
+        setLockoutRemaining(totalSeconds)
+        setError(LOCKOUT_KEYWORD)
+
+        lockoutTimerRef.current = setInterval(() => {
+            setLockoutRemaining(prev => {
+                if (prev <= 1) {
+                    if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+                    setIsLockedOut(false)
+                    setError('')
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+    }, [])
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+        }
+    }, [])
+
+    // Helper to check if error is a rate limit error and trigger lockout
+    const handleErrorResponse = useCallback((errorMsg: string) => {
+        if (errorMsg.includes(LOCKOUT_KEYWORD)) {
+            const match = errorMsg.match(/(\d+)\s*menit/)
+            const minutes = match ? parseInt(match[1]) : 5
+            startLockoutTimer(minutes)
+            return true
+        }
+        return false
+    }, [startLockoutTimer])
+
     // Auto-submit when PIN reaches 6 digits
     useEffect(() => {
-        if (authType === 'pin' && pin.length === 6 && email) {
+        if (authType === 'pin' && pin.length === 6 && email && !isLockedOut) {
             handlePinSubmit()
         }
     }, [pin])
@@ -37,6 +81,7 @@ export default function LoginForm() {
             return
         }
 
+        if (isLockedOut) return
         setLoading(true)
         setError('')
         setSessionExpired(false)
@@ -50,7 +95,9 @@ export default function LoginForm() {
             })
 
             if (res?.error) {
-                setError(res.error)
+                if (!handleErrorResponse(res.error)) {
+                    setError(res.error)
+                }
             } else {
                 router.push('/inventory')
                 router.refresh()
@@ -63,7 +110,7 @@ export default function LoginForm() {
     }
 
     const handlePinSubmit = async () => {
-        if (!email || pin.length < 4) return
+        if (!email || pin.length < 4 || isLockedOut) return
 
         setLoading(true)
         setError('')
@@ -79,12 +126,18 @@ export default function LoginForm() {
             })
 
             if (res?.error) {
-                setError(res.error)
-                setHasError(true)
-                setTimeout(() => {
+                if (handleErrorResponse(res.error)) {
+                    // Rate limited — lockout is active, clear PIN
                     setPin('')
                     setHasError(false)
-                }, 2000)
+                } else {
+                    setError(res.error)
+                    setHasError(true)
+                    setTimeout(() => {
+                        setPin('')
+                        setHasError(false)
+                    }, 2000)
+                }
             } else {
                 router.push('/inventory')
                 router.refresh()
@@ -98,17 +151,24 @@ export default function LoginForm() {
     }
 
     const handleDigitPress = (digit: string) => {
-        if (pin.length < 6) {
+        if (pin.length < 6 && !isLockedOut) {
             setPin(pin + digit)
             setHasError(false)
-            setError('')
+            if (!isLockedOut) setError('')
         }
     }
 
     const handleRemoveDigit = () => {
+        if (isLockedOut) return
         setPin(pin.slice(0, -1))
         setHasError(false)
-        setError('')
+        if (!isLockedOut) setError('')
+    }
+
+    const formatCountdown = (seconds: number) => {
+        const m = Math.floor(seconds / 60)
+        const s = seconds % 60
+        return `${m}:${s.toString().padStart(2, '0')}`
     }
 
     return (
@@ -121,7 +181,18 @@ export default function LoginForm() {
                     Sesi Anda telah berakhir. Silakan login kembali.
                 </div>
             )}
-            {error && (
+            {isLockedOut && (
+                <div className="p-3 text-sm rounded-lg text-amber-500 bg-amber-100/10 border border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                        <Timer className="w-4 h-4 flex-shrink-0 animate-pulse" />
+                        <div>
+                            <p className="font-medium">Terlalu banyak percobaan.</p>
+                            <p className="text-xs mt-0.5 opacity-80">Tunggu {formatCountdown(lockoutRemaining)} untuk mencoba lagi.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {error && !isLockedOut && (
                 <div className="p-3 text-sm text-red-500 bg-red-100/10 border border-red-500/20 rounded-lg">
                     {error}
                 </div>
@@ -131,22 +202,24 @@ export default function LoginForm() {
             <div className="flex gap-2 p-1 bg-white/5 rounded-lg">
                 <button
                     type="button"
-                    onClick={() => { setAuthType('password'); setPin(''); setError(''); setHasError(false); }}
+                    onClick={() => { setAuthType('password'); setPin(''); if (!isLockedOut) { setError(''); } setHasError(false); }}
+                    disabled={isLockedOut}
                     className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${authType === 'password'
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                            : 'text-gray-400 hover:text-white'
-                        }`}
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                        : 'text-gray-400 hover:text-white'
+                        } ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     <Lock className="w-4 h-4" />
                     Password
                 </button>
                 <button
                     type="button"
-                    onClick={() => { setAuthType('pin'); setPassword(''); setError(''); setHasError(false); }}
+                    onClick={() => { setAuthType('pin'); setPassword(''); if (!isLockedOut) { setError(''); } setHasError(false); }}
+                    disabled={isLockedOut}
                     className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${authType === 'pin'
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                            : 'text-gray-400 hover:text-white'
-                        }`}
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                        : 'text-gray-400 hover:text-white'
+                        } ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     <Key className="w-4 h-4" />
                     PIN
@@ -161,9 +234,10 @@ export default function LoginForm() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white placeholder-gray-500 transition-all font-light"
+                    className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white placeholder-gray-500 transition-all font-light ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                     placeholder="user@ichibot.id"
                     required
+                    disabled={isLockedOut}
                 />
             </div>
 
@@ -177,15 +251,16 @@ export default function LoginForm() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white placeholder-gray-500 transition-all font-light"
+                            className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-white placeholder-gray-500 transition-all font-light ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                             placeholder="••••••••"
                             required
+                            disabled={isLockedOut}
                         />
                     </div>
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || isLockedOut}
                         className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
                     >
                         {loading ? (
@@ -213,7 +288,9 @@ export default function LoginForm() {
                             {[0, 1, 2, 3, 4, 5].map((index) => (
                                 <div
                                     key={index}
-                                    className={`w-10 h-12 md:w-12 md:h-14 flex items-center justify-center border-2 rounded-lg transition-all ${hasError
+                                    className={`w-10 h-12 md:w-12 md:h-14 flex items-center justify-center border-2 rounded-lg transition-all ${isLockedOut
+                                        ? 'border-white/10 opacity-50'
+                                        : hasError
                                             ? 'border-red-500'
                                             : index < pin.length
                                                 ? 'border-blue-500'
@@ -221,8 +298,8 @@ export default function LoginForm() {
                                         }`}
                                 >
                                     <div className={`w-3 h-3 rounded-full transition-colors ${index < pin.length
-                                            ? 'bg-white'
-                                            : 'bg-white/30'
+                                        ? 'bg-white'
+                                        : 'bg-white/30'
                                         }`} />
                                 </div>
                             ))}
@@ -254,8 +331,8 @@ export default function LoginForm() {
                                 key={num}
                                 type="button"
                                 onClick={() => handleDigitPress(num.toString())}
-                                className="py-4 bg-white/10 hover:bg-white/20 active:bg-blue-500/30 rounded-lg text-xl font-bold text-white transition-all touch-manipulation"
-                                disabled={pin.length >= 6 || loading}
+                                className={`py-4 rounded-lg text-xl font-bold text-white transition-all touch-manipulation ${isLockedOut ? 'bg-white/5 opacity-50 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 active:bg-blue-500/30'}`}
+                                disabled={pin.length >= 6 || loading || isLockedOut}
                             >
                                 {num}
                             </button>
@@ -264,16 +341,16 @@ export default function LoginForm() {
                         <button
                             type="button"
                             onClick={() => handleDigitPress('0')}
-                            className="py-4 bg-white/10 hover:bg-white/20 active:bg-blue-500/30 rounded-lg text-xl font-bold text-white transition-all touch-manipulation"
-                            disabled={pin.length >= 6 || loading}
+                            className={`py-4 rounded-lg text-xl font-bold text-white transition-all touch-manipulation ${isLockedOut ? 'bg-white/5 opacity-50 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 active:bg-blue-500/30'}`}
+                            disabled={pin.length >= 6 || loading || isLockedOut}
                         >
                             0
                         </button>
                         <button
                             type="button"
                             onClick={handleRemoveDigit}
-                            className="py-4 bg-white/10 hover:bg-white/20 active:bg-red-500/30 rounded-lg flex items-center justify-center transition-all touch-manipulation"
-                            disabled={pin.length === 0 || loading}
+                            className={`py-4 rounded-lg flex items-center justify-center transition-all touch-manipulation ${isLockedOut ? 'bg-white/5 opacity-50 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 active:bg-red-500/30'}`}
+                            disabled={pin.length === 0 || loading || isLockedOut}
                         >
                             <Delete className="w-5 h-5 text-white" />
                         </button>

@@ -450,6 +450,31 @@ export default function StoreProductList({
                     }
                     aValue = getPriceValue(a)
                     bValue = getPriceValue(b)
+                } else if (sortConfig.key === 'labaPerPcs') {
+                    const getLaba = (p: any) => {
+                        let priceInputIdr = p.purchasePrice || 0
+                        const currency = p.purchaseCurrency || 'IDR'
+                        if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
+                        else if (currency === 'USD' && kursUsd) priceInputIdr *= kursUsd
+
+                        const paket = p.purchasePackage || 1
+                        const jumlah = p.purchaseQty || 0
+                        const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                        const perPcs = totalHarga / ((paket * jumlah) || 1)
+                        const hargaJual = p.price || 0
+                        return hargaJual - perPcs
+                    }
+                    aValue = getLaba(a)
+                    bValue = getLaba(b)
+                }
+
+                // Push empty values to the bottom
+                if (sortConfig.key === 'storeName') {
+                    const aEmpty = !aValue || String(aValue).trim() === ''
+                    const bEmpty = !bValue || String(bValue).trim() === ''
+                    if (aEmpty && !bEmpty) return 1  // a down
+                    if (!aEmpty && bEmpty) return -1 // b down
+                    if (aEmpty && bEmpty) return 0
                 }
 
                 if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
@@ -491,6 +516,31 @@ export default function StoreProductList({
                         }
                         aValue = getPriceValue(a)
                         bValue = getPriceValue(b)
+                    } else if (sortConfig.key === 'labaPerPcs') {
+                        const getLaba = (p: any) => {
+                            let priceInputIdr = p.purchasePrice || 0
+                            const currency = p.purchaseCurrency || 'IDR'
+                            if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
+                            else if (currency === 'USD' && kursUsd) priceInputIdr *= kursUsd
+
+                            const paket = p.purchasePackage || 1
+                            const jumlah = p.purchaseQty || 0
+                            const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                            const perPcs = totalHarga / ((paket * jumlah) || 1)
+                            const hargaJual = p.price || 0
+                            return hargaJual - perPcs
+                        }
+                        aValue = getLaba(a)
+                        bValue = getLaba(b)
+                    }
+
+                    // Push empty values to the bottom
+                    if (sortConfig.key === 'storeName') {
+                        const aEmpty = !aValue || String(aValue).trim() === ''
+                        const bEmpty = !bValue || String(bValue).trim() === ''
+                        if (aEmpty && !bEmpty) return 1  // a down
+                        if (!aEmpty && bEmpty) return -1 // b down
+                        if (aEmpty && bEmpty) return 0
                     }
 
                     if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
@@ -832,8 +882,13 @@ export default function StoreProductList({
                                             Harga Beli (IDR)
                                             <SortIcon columnKey="hargaBeliIdr" sortConfig={sortConfig} />
                                         </TableHead>
-                                        <TableHead align="right" className="whitespace-nowrap">
+                                        <TableHead
+                                            align="right"
+                                            className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                            onClick={() => handleSort('labaPerPcs')}
+                                        >
                                             Laba
+                                            <SortIcon columnKey="labaPerPcs" sortConfig={sortConfig} />
                                         </TableHead>
                                     </>
                                 )}
@@ -1301,13 +1356,20 @@ export default function StoreProductList({
                                 </div>
                             </div>
                             <div className={`p-4 rounded-xl border ${analysis.totalLaba >= 0 ? 'bg-emerald-50/50 border-emerald-100/50' : 'bg-red-50/50 border-red-100/50'}`}>
-                                <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${analysis.totalLaba >= 0 ? 'text-emerald-600/70' : 'text-red-600/70'}`}>Laba Total</p>
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className={`text-xs font-semibold uppercase tracking-wider ${analysis.totalLaba >= 0 ? 'text-emerald-600/70' : 'text-red-600/70'}`}>Laba Total</p>
+                                    {analysis.totalPurchaseValueInclFee > 0 && (
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${analysis.totalLaba >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                            {analysis.totalLaba >= 0 ? '+' : ''}{((analysis.totalLaba / analysis.totalPurchaseValueInclFee) * 100).toFixed(1)}%
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex flex-col">
                                     <p className={`text-2xl font-bold ${analysis.totalLaba >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                         {analysis.totalLaba >= 0 ? '+' : '-'}{formatCurrency(Math.abs(analysis.totalLaba))}
                                     </p>
                                     <p className={`text-[10px] font-medium mt-1 italic ${analysis.totalLaba >= 0 ? 'text-emerald-600/60' : 'text-red-600/60'}`}>
-                                        * Harga jual − harga beli (incl. fee) × jumlah beli.
+                                        * Persentase dihitung dari: (Laba Total / Total Pembelian include fee) × 100%
                                     </p>
                                 </div>
                             </div>

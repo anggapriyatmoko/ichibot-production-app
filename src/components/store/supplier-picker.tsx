@@ -16,7 +16,7 @@ export default function SupplierPicker({
     const [isOpen, setIsOpen] = useState(false)
     const [suppliers, setSuppliers] = useState<any[]>([])
     const [selectedNames, setSelectedNames] = useState<string[]>(
-        initialValue ? initialValue.split(',').map(s => s.trim()).filter(Boolean) : []
+        initialValue ? initialValue.split('||').map(s => s.trim()).filter(Boolean) : []
     )
     const [searchTerm, setSearchTerm] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -24,7 +24,7 @@ export default function SupplierPicker({
 
     // Sync state with prop if prop changes (e.g. after successful save or from outside)
     useEffect(() => {
-        setSelectedNames(initialValue ? initialValue.split(',').map(s => s.trim()).filter(Boolean) : [])
+        setSelectedNames(initialValue ? initialValue.split('||').map(s => s.trim()).filter(Boolean) : [])
     }, [initialValue])
 
     useEffect(() => {
@@ -54,7 +54,7 @@ export default function SupplierPicker({
     }
 
     const handleSave = async () => {
-        const newValue = selectedNames.join(', ')
+        const newValue = selectedNames.join('||')
         if (newValue === initialValue) {
             setIsOpen(false)
             return

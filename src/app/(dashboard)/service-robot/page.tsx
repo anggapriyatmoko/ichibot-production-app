@@ -174,7 +174,7 @@ export default async function ServiceRobotPage({
         thisMonthRevenue,
         thisMonthOrders,
         averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
-        monthlyRevenue: monthlyRevenue.slice(0, currentMonth + 1)
+        monthlyRevenue
     }
 
     return (

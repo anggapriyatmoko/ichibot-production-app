@@ -58,12 +58,12 @@ export async function updateStoreSupplier(id: string, name: string) {
             // Update each product
             for (const product of products) {
                 if (product.storeName) {
-                    const names = product.storeName.split(',').map((n: string) => n.trim()).filter(Boolean)
+                    const names = product.storeName.split('||').map((n: string) => n.trim()).filter(Boolean)
                     const newNames = names.map((n: string) => n === oldName ? name : n)
 
                     // Remove duplicates just in case
                     const uniqueNames = Array.from(new Set(newNames))
-                    const newStoreName = uniqueNames.join(', ')
+                    const newStoreName = uniqueNames.join('||')
 
                     await prisma.storeProduct.update({
                         where: { wcId: product.wcId },
@@ -112,9 +112,9 @@ export async function deleteStoreSupplier(id: string) {
 
         for (const product of products) {
             if (product.storeName) {
-                const names = product.storeName.split(',').map((n: string) => n.trim()).filter(Boolean)
+                const names = product.storeName.split('||').map((n: string) => n.trim()).filter(Boolean)
                 const newNames = names.filter((n: string) => n !== supplierName)
-                const newStoreName = newNames.join(', ')
+                const newStoreName = newNames.join('||')
 
                 await prisma.storeProduct.update({
                     where: { wcId: product.wcId },

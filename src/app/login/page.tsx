@@ -1,9 +1,11 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, Lock, Key, Delete, X } from 'lucide-react'
+import { Loader2, Lock, Key, Delete, X, Timer } from 'lucide-react'
+
+const LOCKOUT_KEYWORD = 'Terlalu banyak percobaan'
 
 function LoginContent() {
     const router = useRouter()
@@ -16,6 +18,9 @@ function LoginContent() {
     const [authType, setAuthType] = useState<'password' | 'pin'>('password')
     const [hasError, setHasError] = useState(false)
     const [sessionExpired, setSessionExpired] = useState(false)
+    const [isLockedOut, setIsLockedOut] = useState(false)
+    const [lockoutRemaining, setLockoutRemaining] = useState(0)
+    const lockoutTimerRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
         if (searchParams.get('expired') === 'true') {
@@ -23,9 +28,85 @@ function LoginContent() {
         }
     }, [searchParams])
 
+    // Check rate limit status on page load (persists across refresh/new tab)
+    useEffect(() => {
+        async function checkRateLimit() {
+            try {
+                const res = await fetch('/api/auth/rate-limit-status')
+                const data = await res.json()
+                if (data.isLocked && data.remainingSeconds > 0) {
+                    setIsLockedOut(true)
+                    setLockoutRemaining(data.remainingSeconds)
+                    setError(LOCKOUT_KEYWORD)
+
+                    if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+                    lockoutTimerRef.current = setInterval(() => {
+                        setLockoutRemaining(prev => {
+                            if (prev <= 1) {
+                                if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+                                setIsLockedOut(false)
+                                setError('')
+                                return 0
+                            }
+                            return prev - 1
+                        })
+                    }, 1000)
+                }
+            } catch (e) {
+                // Silently fail - lockout check is non-critical
+            }
+        }
+        checkRateLimit()
+    }, [])
+
+    // Start lockout countdown
+    const startLockoutTimer = useCallback((minutes: number) => {
+        if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+        const totalSeconds = minutes * 60
+        setIsLockedOut(true)
+        setLockoutRemaining(totalSeconds)
+        setError(LOCKOUT_KEYWORD)
+
+        lockoutTimerRef.current = setInterval(() => {
+            setLockoutRemaining(prev => {
+                if (prev <= 1) {
+                    if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+                    setIsLockedOut(false)
+                    setError('')
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+    }, [])
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (lockoutTimerRef.current) clearInterval(lockoutTimerRef.current)
+        }
+    }, [])
+
+    // Helper to check if error is a rate limit error and trigger lockout
+    const handleErrorResponse = useCallback((errorMsg: string) => {
+        if (errorMsg.includes(LOCKOUT_KEYWORD)) {
+            const match = errorMsg.match(/(\d+)\s*menit/)
+            const minutes = match ? parseInt(match[1]) : 5
+            startLockoutTimer(minutes)
+            return true
+        }
+        return false
+    }, [startLockoutTimer])
+
+    const formatCountdown = (seconds: number) => {
+        const m = Math.floor(seconds / 60)
+        const s = seconds % 60
+        return `${m}:${s.toString().padStart(2, '0')}`
+    }
+
     // Auto-submit when PIN reaches 6 digits
     useEffect(() => {
-        if (authType === 'pin' && pin.length === 6) {
+        if (authType === 'pin' && pin.length === 6 && !isLockedOut) {
             handlePinSubmit()
         }
     }, [pin])
@@ -33,7 +114,7 @@ function LoginContent() {
     // Listen for keyboard input when in PIN mode
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
-            if (authType !== 'pin') return
+            if (authType !== 'pin' || isLockedOut) return
 
             // Handle number keys (0-9)
             if (e.key >= '0' && e.key <= '9') {
@@ -56,7 +137,7 @@ function LoginContent() {
 
         window.addEventListener('keydown', handleKeyPress)
         return () => window.removeEventListener('keydown', handleKeyPress)
-    }, [authType, pin])
+    }, [authType, pin, isLockedOut])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -65,6 +146,7 @@ function LoginContent() {
             return
         }
 
+        if (isLockedOut) return
         setLoading(true)
         setError('')
         setSessionExpired(false)
@@ -78,7 +160,9 @@ function LoginContent() {
             })
 
             if (res?.error) {
-                setError(res.error)
+                if (!handleErrorResponse(res.error)) {
+                    setError(res.error)
+                }
                 setLoading(false)
             } else {
                 router.push('/dashboard')
@@ -91,7 +175,7 @@ function LoginContent() {
     }
 
     const handlePinSubmit = async () => {
-        if (pin.length < 4) return
+        if (pin.length < 4 || isLockedOut) return
 
         setLoading(true)
         setError('')
@@ -107,12 +191,18 @@ function LoginContent() {
             })
 
             if (res?.error) {
-                setError(res.error)
-                setHasError(true)
-                setTimeout(() => {
+                if (handleErrorResponse(res.error)) {
+                    // Rate limited — lockout is active, clear PIN
                     setPin('')
                     setHasError(false)
-                }, 2000)
+                } else {
+                    setError(res.error)
+                    setHasError(true)
+                    setTimeout(() => {
+                        setPin('')
+                        setHasError(false)
+                    }, 2000)
+                }
             } else {
                 router.push('/dashboard')
                 router.refresh()
@@ -126,7 +216,7 @@ function LoginContent() {
     }
 
     const handleDigitPress = (digit: string) => {
-        if (pin.length < 6) {
+        if (pin.length < 6 && !isLockedOut) {
             setPin(pin + digit)
             setHasError(false)
             setError('')
@@ -134,6 +224,7 @@ function LoginContent() {
     }
 
     const handleRemoveDigit = () => {
+        if (isLockedOut) return
         setPin(pin.slice(0, -1))
         setHasError(false)
         setError('')
@@ -196,7 +287,19 @@ function LoginContent() {
                                     </div>
                                 )}
 
-                                {error && authType === 'password' && (
+                                {isLockedOut && (
+                                    <div className="p-3 text-sm rounded-lg text-amber-500 bg-amber-100/10 border border-amber-500/20">
+                                        <div className="flex items-center gap-2">
+                                            <Timer className="w-4 h-4 flex-shrink-0 animate-pulse" />
+                                            <div>
+                                                <p className="font-medium">Terlalu banyak percobaan.</p>
+                                                <p className="text-xs mt-0.5 opacity-80">Tunggu {formatCountdown(lockoutRemaining)} untuk mencoba lagi.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {error && !isLockedOut && (
                                     <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg text-center">
                                         {error}
                                     </div>
@@ -206,22 +309,24 @@ function LoginContent() {
                                 <div className="flex gap-2 p-1 bg-muted rounded-lg">
                                     <button
                                         type="button"
-                                        onClick={() => { setAuthType('password'); setPin(''); setError(''); setHasError(false); }}
+                                        onClick={() => { setAuthType('password'); setPin(''); if (!isLockedOut) setError(''); setHasError(false); }}
+                                        disabled={isLockedOut}
                                         className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${authType === 'password'
                                             ? 'bg-primary text-primary-foreground shadow-lg'
                                             : 'text-muted-foreground hover:text-foreground'
-                                            }`}
+                                            } ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <Lock className="w-4 h-4" />
                                         Password
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => { setAuthType('pin'); setPassword(''); setError(''); setHasError(false); }}
+                                        onClick={() => { setAuthType('pin'); setPassword(''); if (!isLockedOut) setError(''); setHasError(false); }}
+                                        disabled={isLockedOut}
                                         className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all flex items-center justify-center gap-2 ${authType === 'pin'
                                             ? 'bg-primary text-primary-foreground shadow-lg'
                                             : 'text-muted-foreground hover:text-foreground'
-                                            }`}
+                                            } ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <Key className="w-4 h-4" />
                                         PIN
@@ -242,7 +347,8 @@ function LoginContent() {
                                                 required
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
-                                                className="block w-full rounded-lg border border-border bg-muted px-4 py-3 text-foreground shadow-sm focus:border-primary focus:ring-primary sm:text-sm outline-none transition-all"
+                                                disabled={isLockedOut}
+                                                className={`block w-full rounded-lg border border-border bg-muted px-4 py-3 text-foreground shadow-sm focus:border-primary focus:ring-primary sm:text-sm outline-none transition-all ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 placeholder="user@ichibot.id"
                                             />
                                         </div>
@@ -264,7 +370,8 @@ function LoginContent() {
                                                     required
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
-                                                    className="block w-full rounded-lg border border-border bg-muted px-4 py-3 text-foreground shadow-sm focus:border-primary focus:ring-primary sm:text-sm outline-none transition-all"
+                                                    disabled={isLockedOut}
+                                                    className={`block w-full rounded-lg border border-border bg-muted px-4 py-3 text-foreground shadow-sm focus:border-primary focus:ring-primary sm:text-sm outline-none transition-all ${isLockedOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     placeholder="••••••••"
                                                 />
                                             </div>
@@ -272,7 +379,7 @@ function LoginContent() {
 
                                         <button
                                             type="submit"
-                                            disabled={loading}
+                                            disabled={loading || isLockedOut}
                                             className="flex w-full justify-center rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                         >
                                             {loading ? (
@@ -294,11 +401,13 @@ function LoginContent() {
                                                 {[0, 1, 2, 3, 4, 5].map((index) => (
                                                     <div
                                                         key={index}
-                                                        className={`w-10 h-12 md:w-12 md:h-14 flex items-center justify-center border-2 rounded-lg transition-all ${hasError
-                                                            ? 'border-red-500'
-                                                            : index < pin.length
-                                                                ? 'border-primary'
-                                                                : 'border-border'
+                                                        className={`w-10 h-12 md:w-12 md:h-14 flex items-center justify-center border-2 rounded-lg transition-all ${isLockedOut
+                                                            ? 'border-border opacity-50'
+                                                            : hasError
+                                                                ? 'border-red-500'
+                                                                : index < pin.length
+                                                                    ? 'border-primary'
+                                                                    : 'border-border'
                                                             }`}
                                                     >
                                                         <div className={`w-3 h-3 rounded-full transition-colors ${index < pin.length
@@ -335,8 +444,8 @@ function LoginContent() {
                                                     key={num}
                                                     type="button"
                                                     onClick={() => handleDigitPress(num.toString())}
-                                                    className="py-3 md:py-4 bg-muted hover:bg-muted/80 active:bg-primary/20 rounded-lg text-xl font-bold text-foreground transition-all touch-manipulation"
-                                                    disabled={pin.length >= 6 || loading}
+                                                    className={`py-3 md:py-4 rounded-lg text-xl font-bold text-foreground transition-all touch-manipulation ${isLockedOut ? 'bg-muted/50 opacity-50 cursor-not-allowed' : 'bg-muted hover:bg-muted/80 active:bg-primary/20'}`}
+                                                    disabled={pin.length >= 6 || loading || isLockedOut}
                                                 >
                                                     {num}
                                                 </button>
@@ -345,16 +454,16 @@ function LoginContent() {
                                             <button
                                                 type="button"
                                                 onClick={() => handleDigitPress('0')}
-                                                className="py-3 md:py-4 bg-muted hover:bg-muted/80 active:bg-primary/20 rounded-lg text-xl font-bold text-foreground transition-all touch-manipulation"
-                                                disabled={pin.length >= 6 || loading}
+                                                className={`py-3 md:py-4 rounded-lg text-xl font-bold text-foreground transition-all touch-manipulation ${isLockedOut ? 'bg-muted/50 opacity-50 cursor-not-allowed' : 'bg-muted hover:bg-muted/80 active:bg-primary/20'}`}
+                                                disabled={pin.length >= 6 || loading || isLockedOut}
                                             >
                                                 0
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={handleRemoveDigit}
-                                                className="py-3 md:py-4 bg-muted hover:bg-muted/80 active:bg-red-500/20 rounded-lg flex items-center justify-center transition-all touch-manipulation"
-                                                disabled={pin.length === 0 || loading}
+                                                className={`py-3 md:py-4 rounded-lg flex items-center justify-center transition-all touch-manipulation ${isLockedOut ? 'bg-muted/50 opacity-50 cursor-not-allowed' : 'bg-muted hover:bg-muted/80 active:bg-red-500/20'}`}
+                                                disabled={pin.length === 0 || loading || isLockedOut}
                                             >
                                                 <Delete className="w-5 h-5" />
                                             </button>

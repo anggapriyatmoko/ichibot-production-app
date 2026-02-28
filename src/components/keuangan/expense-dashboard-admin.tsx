@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X } from 'lucide-react'
+import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X, BarChart3 } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { getAllExpenses, updateExpenseAdmin, ExpenseData } from '@/app/actions/expense'
 import { getExpenseCategories } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
@@ -241,6 +242,47 @@ export default function ExpenseDashboardAdmin() {
 
     const sortedUsers = Object.entries(userDistribution).sort((a, b) => b[1] - a[1])
 
+    // Data for Monthly Chart (Current Year)
+    const currentYear = new Date().getFullYear()
+
+    // Check if the selected date range includes any part of the current year
+    // For a cleaner UX, we ideally want to show the full year's data regardless of the active filter
+    // So we'll use all fetched expenses and filter them by the current year
+    const monthlyExpenses = Array.from({ length: 12 }, (_, i) => {
+        const monthDate = new Date(currentYear, i, 1)
+        return {
+            name: format(monthDate, 'MMM', { locale: localeId }),
+            total: 0
+        }
+    })
+
+    // Populate monthly expenses from the loaded expenses (which are constrained by the startDate/endDate filters)
+    // NOTE: If the filter doesn't span the whole year, some months will naturally be 0.
+    expenses.forEach((exp) => {
+        const expDate = new Date(exp.date)
+        if (expDate.getFullYear() === currentYear) {
+            const val = parseFloat(exp.amount)
+            if (!isNaN(val)) {
+                monthlyExpenses[expDate.getMonth()].total += val
+            }
+        }
+    })
+
+    // Custom Tooltip for Chart
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-popover border border-border p-3 rounded-lg shadow-md text-popover-foreground text-sm">
+                    <p className="font-semibold mb-1">{label} {currentYear}</p>
+                    <p className="text-primary font-bold">
+                        {formatCurrency(payload[0].value)}
+                    </p>
+                </div>
+            )
+        }
+        return null
+    }
+
     const requestSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc'
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -334,7 +376,7 @@ export default function ExpenseDashboardAdmin() {
                     }
                 />
 
-                <div className="overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -427,6 +469,78 @@ export default function ExpenseDashboardAdmin() {
                         )}
                     </Table>
                 </div>
+
+                {/* Mobile View (List) */}
+                <div className="block md:hidden mt-4">
+                    {sortedExpenses.length === 0 && !isLoading ? (
+                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-border border-dashed mx-4">
+                            Tidak ada data pengeluaran pada rentang tanggal ini.
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border border-t border-b border-border">
+                            {sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
+                                <div key={item.id} className="py-4 px-4 flex flex-col gap-3">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <div className="space-y-1">
+                                            <h4 className="font-semibold text-foreground text-sm leading-tight">{item.name}</h4>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })} • {format(new Date(item.createdAt || item.date), 'HH:mm')}
+                                            </p>
+                                            <div className="text-xs font-medium text-foreground bg-muted/50 w-fit px-2 py-0.5 rounded flex items-center gap-1.5 mt-1">
+                                                <Users className="w-3 h-3 text-muted-foreground" />
+                                                {item.userName || 'Unknown'}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            <span className="font-bold text-foreground text-sm">{formatCurrency(item.amount)}</span>
+                                            <span className="px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded-md w-fit">
+                                                {item.category?.name || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-1">
+                                        <div>
+                                            {item.image ? (
+                                                <button
+                                                    onClick={() => {
+                                                        setPreviewImage(item.image)
+                                                        setIsPreviewOpen(true)
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+                                                >
+                                                    <ImageIcon className="w-3.5 h-3.5" />
+                                                    Lihat Bukti
+                                                </button>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground italic flex items-center gap-1.5 px-2 py-1">
+                                                    Tidak ada bukti
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleOpenModal(item)}
+                                                className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-md transition-colors flex items-center gap-1"
+                                                title="Edit Pengeluaran"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                                <span className="text-[10px] font-medium hidden sm:inline">Edit</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {expenses.length > 0 && !isLoading && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-4 mx-4 flex justify-between items-center">
+                            <span className="font-semibold text-sm text-foreground">Total Periode Ini</span>
+                            <span className="font-bold text-primary">{formatCurrency(totalAmount)}</span>
+                        </div>
+                    )}
+                </div>
+
                 {expenses.length > 0 && !isLoading && (
                     <TablePagination
                         currentPage={currentPage}
@@ -532,6 +646,49 @@ export default function ExpenseDashboardAdmin() {
                                     )
                                 })}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Monthly Bar Chart */}
+                    <div className="mt-8 pt-6 border-t border-border">
+                        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                            Trend Pengeluaran Selama Tahun {currentYear}
+                        </h3>
+                        <div className="h-[300px] w-full mt-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={monthlyExpenses}
+                                    margin={{ top: 20, right: 10, left: 10, bottom: 0 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                    <XAxis
+                                        dataKey="name"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        width={60}
+                                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                                        tickFormatter={(value: number) => {
+                                            if (value >= 1000000) return `Rp ${value / 1000000}M`
+                                            if (value >= 1000) return `Rp ${value / 1000}K`
+                                            return value.toString()
+                                        }}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} cursor={false} />
+                                    <Bar
+                                        dataKey="total"
+                                        fill="#3b82f6"
+                                        radius={[4, 4, 0, 0]}
+                                        maxBarSize={50}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>

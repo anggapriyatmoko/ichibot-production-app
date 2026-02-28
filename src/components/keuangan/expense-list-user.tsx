@@ -306,7 +306,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                         </div>
                     }
                 />
-                <div className="overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -397,6 +397,86 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                         )}
                     </Table>
                 </div>
+
+                {/* Mobile View (List) */}
+                <div className="block md:hidden mt-4">
+                    {expenses.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-border border-dashed mx-4">
+                            Belum ada riwayat pengeluaran
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-border border-t border-b border-border">
+                            {expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
+                                <div key={item.id} className="py-4 px-4 flex flex-col gap-3">
+                                    <div className="flex justify-between items-start gap-2">
+                                        <div className="space-y-1">
+                                            <h4 className="font-semibold text-foreground text-sm leading-tight">{item.name}</h4>
+                                            <p className="text-xs text-muted-foreground">
+                                                {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })} • {format(new Date(item.createdAt || item.date), 'HH:mm')}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            <span className="font-bold text-foreground text-sm">{formatCurrency(item.amount)}</span>
+                                            <span className="px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded-md w-fit">
+                                                {item.category?.name || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-1">
+                                        <div>
+                                            {item.image ? (
+                                                <button
+                                                    onClick={() => {
+                                                        setPreviewImage(item.image)
+                                                        setIsPreviewOpen(true)
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+                                                >
+                                                    <ImageIcon className="w-3.5 h-3.5" />
+                                                    Lihat Bukti
+                                                </button>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground italic flex items-center gap-1.5 px-2 py-1">
+                                                    Tidak ada bukti
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleOpenModal(item)}
+                                                className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-md transition-colors flex items-center gap-1"
+                                                title="Edit"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                                <span className="text-[10px] font-medium hidden sm:inline">Edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(item.id)}
+                                                disabled={deletingId === item.id}
+                                                className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md transition-colors disabled:opacity-50 flex items-center gap-1"
+                                                title="Hapus"
+                                            >
+                                                {deletingId === item.id ? (
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {expenses.length > 0 && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-4 mx-4 flex justify-between items-center">
+                            <span className="font-semibold text-sm text-foreground">Total Akumulasi</span>
+                            <span className="font-bold text-primary">{formatCurrency(totalAmount)}</span>
+                        </div>
+                    )}
+                </div>
+
                 {expenses.length > 0 && (
                     <TablePagination
                         currentPage={currentPage}

@@ -144,7 +144,7 @@ export default function StoreLowStockList({
 
             if (selectedSuppliers.length === 0) return true
             if (!p.storeName) return false
-            const productSuppliers = p.storeName.split(',').map((n: string) => n.trim()).filter(Boolean)
+            const productSuppliers = p.storeName.split('||').map((n: string) => n.trim()).filter(Boolean)
             return selectedSuppliers.some(s => productSuppliers.includes(s))
         }
 
