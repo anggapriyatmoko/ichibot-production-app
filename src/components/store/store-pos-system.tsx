@@ -6,14 +6,15 @@ import { cn } from '@/lib/utils'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import Image from 'next/image'
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { searchWooCommerceProducts, getProductVariations } from '@/app/actions/store-product'
+import { searchStoreProducts, getLocalProductVariations, syncSingleStoreProduct } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { createWooCommerceOrder } from '@/app/actions/store-order'
 import CheckoutReceipt from '@/components/store/checkout-receipt'
 import POSOrderHistory from '@/components/store/pos-order-history'
-import { Loader2, History, List } from 'lucide-react'
+import { Loader2, History, List, RefreshCw } from 'lucide-react'
 import ProductDetailModal from '@/components/shared/product-detail-modal'
+import Modal from '@/components/ui/modal'
 
 type WooCommerceProduct = {
     id: number
@@ -66,6 +67,9 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const [showNotePopup, setShowNotePopup] = useState(false)
     const [amountPaid, setAmountPaid] = useState(0)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [syncingProductId, setSyncingProductId] = useState<number | null>(null)
+    const [syncStatusMap, setSyncStatusMap] = useState<Record<number, 'loading' | 'success' | 'error'>>({})
+    const [syncProductName, setSyncProductName] = useState('')
 
     const lastSearchedRef = useRef('')
     const lastPageRef = useRef(1)
@@ -115,7 +119,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
 
         setLoading(true)
         try {
-            const { products: results, totalPages: total, totalItems: items } = await searchWooCommerceProducts(trimmedQuery, pageNum)
+            const { products: results, totalPages: total, totalItems: items } = await searchStoreProducts(trimmedQuery, pageNum)
             setProducts(results || [])
             setTotalPages(total)
             setTotalItems(items)
@@ -319,7 +323,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
             const fetchVariations = async () => {
                 setLoadingVariations(true)
                 try {
-                    const data = await getProductVariations(product.id)
+                    const data = await getLocalProductVariations(product.id)
                     setVariations(data)
                 } catch (error) {
                     showError('Gagal mengambil variasi produk.')
@@ -332,6 +336,62 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
             setVariations([])
         }
     }, [selectedProduct?.id, variationPickerProduct?.id, showError])
+
+    const handleSyncProduct = async (product: WooCommerceProduct) => {
+        setSyncingProductId(product.id)
+        setSyncProductName(product.name)
+        setSyncStatusMap(prev => ({ ...prev, [product.id]: 'loading' }))
+
+        try {
+            const result = await syncSingleStoreProduct(product.id, product.parentId)
+            if (result.success && result.product) {
+                const synced = result.product
+                let images: any[] = []
+                try { if (synced.images) images = typeof synced.images === 'string' ? JSON.parse(synced.images) : synced.images } catch (e) { }
+                let attributes: any[] = []
+                try { if (synced.attributes) attributes = typeof synced.attributes === 'string' ? JSON.parse(synced.attributes) : synced.attributes } catch (e) { }
+
+                const updated: WooCommerceProduct = {
+                    id: synced.wcId,
+                    name: synced.name,
+                    sku: synced.sku || '',
+                    type: synced.type || 'simple',
+                    attributes,
+                    price: synced.price || 0,
+                    regularPrice: synced.regularPrice || 0,
+                    salePrice: synced.salePrice || 0,
+                    stockQuantity: synced.stockQuantity || 0,
+                    image: images?.[0]?.src || null,
+                    images: images?.map((img: any) => img.src || img) || [],
+                    description: synced.description || '',
+                    barcode: synced.backupGudang || null,
+                    slug: synced.slug || '',
+                    parentId: synced.parentId || undefined,
+                }
+                setProducts(prev => prev.map(p => p.id === updated.id ? updated : p))
+                // Also update variations if they're loaded
+                setVariations(prev => prev.map(v => v.id === updated.id ? updated : v))
+
+                setSyncStatusMap(prev => ({ ...prev, [product.id]: 'success' }))
+            } else {
+                setSyncStatusMap(prev => ({ ...prev, [product.id]: 'error' }))
+            }
+        } catch (error: any) {
+            setSyncStatusMap(prev => ({ ...prev, [product.id]: 'error' }))
+        } finally {
+            setSyncingProductId(null)
+            setSyncProductName('')
+
+            // Clear status after 5 seconds
+            setTimeout(() => {
+                setSyncStatusMap(prev => {
+                    const newMap = { ...prev };
+                    delete newMap[product.id];
+                    return newMap;
+                });
+            }, 5000)
+        }
+    }
 
     // Modal scroll lock
     useEffect(() => {
@@ -559,14 +619,42 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                 )}
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-0">
                                                     <span className="text-primary font-bold">{formatCurrency(product.price)}</span>
-                                                    <span className={cn(
-                                                        "text-xs px-2 py-1 rounded font-bold w-fit",
-                                                        product.stockQuantity <= 0
-                                                            ? "bg-destructive/10 text-destructive"
-                                                            : "bg-emerald-500/10 text-emerald-600"
-                                                    )}>
-                                                        {product.type === 'variable' ? 'Variable' : `Stok: ${product.stockQuantity}`}
-                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                if (syncStatusMap[product.id] !== 'loading') {
+                                                                    handleSyncProduct(product)
+                                                                }
+                                                            }}
+                                                            disabled={syncStatusMap[product.id] === 'loading'}
+                                                            className={cn(
+                                                                "p-1 rounded transition-colors",
+                                                                syncStatusMap[product.id] === 'success' ? "text-emerald-500 bg-emerald-500/10" :
+                                                                    syncStatusMap[product.id] === 'error' ? "text-destructive bg-destructive/10" :
+                                                                        "text-muted-foreground hover:bg-muted hover:text-primary"
+                                                            )}
+                                                            title="Sync data produk"
+                                                        >
+                                                            {syncStatusMap[product.id] === 'loading' ? (
+                                                                <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+                                                            ) : syncStatusMap[product.id] === 'success' ? (
+                                                                <Check className="w-3 h-3" />
+                                                            ) : syncStatusMap[product.id] === 'error' ? (
+                                                                <X className="w-3 h-3" />
+                                                            ) : (
+                                                                <RefreshCw className="w-3 h-3" />
+                                                            )}
+                                                        </button>
+                                                        <span className={cn(
+                                                            "text-xs px-2 py-1 rounded font-bold w-fit",
+                                                            product.stockQuantity <= 0
+                                                                ? "bg-destructive/10 text-destructive"
+                                                                : "bg-emerald-500/10 text-emerald-600"
+                                                        )}>
+                                                            {product.type === 'variable' ? 'Variable' : `Stok: ${product.stockQuantity}`}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 {product.attributes && product.attributes.length > 0 && (
                                                     <div className="flex flex-wrap gap-1 mt-1">
@@ -1115,8 +1203,21 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
-                            <h4 className="font-bold text-sm truncate pr-4">{variationPickerProduct.name}</h4>
-                            <button onClick={() => setVariationPickerProduct(null)} className="p-1 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground">
+                            <div className="flex items-center gap-2 pr-4 min-w-0">
+                                <h4 className="font-bold text-sm truncate">{variationPickerProduct.name}</h4>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setVariationPickerProduct(null)
+                                        handleSyncProduct(variationPickerProduct)
+                                    }}
+                                    className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
+                                    title="Sync semua variasi"
+                                >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                            <button onClick={() => setVariationPickerProduct(null)} className="p-1 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground shrink-0">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
@@ -1128,30 +1229,59 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                 </div>
                             ) : variations.length > 0 ? (
                                 variations.map(v => (
-                                    <button
-                                        key={v.id}
-                                        onClick={() => {
-                                            if (variationPickerProduct) {
-                                                addToCart({ ...v, name: variationPickerProduct.name });
-                                                setVariationPickerProduct(null);
-                                            }
-                                        }}
-                                        className="w-full p-3 bg-muted/30 border border-border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center justify-between group"
-                                    >
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex flex-wrap gap-1">
-                                                {v.attributes.map((attr: any) => (
-                                                    <span key={attr.name} className="px-1.5 py-0.5 rounded bg-background text-[9px] font-bold border border-border text-primary uppercase">
-                                                        {attr.option}
-                                                    </span>
-                                                ))}
+                                    <div key={v.id} className="relative group">
+                                        <button
+                                            onClick={() => {
+                                                if (variationPickerProduct) {
+                                                    addToCart({ ...v, name: variationPickerProduct.name });
+                                                    setVariationPickerProduct(null);
+                                                }
+                                            }}
+                                            className="w-full p-3 pr-10 bg-muted/30 border border-border rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center justify-between"
+                                        >
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex flex-wrap gap-1">
+                                                    {v.attributes.map((attr: any) => (
+                                                        <span key={attr.name} className="px-1.5 py-0.5 rounded bg-background text-[9px] font-bold border border-border text-primary uppercase">
+                                                            {attr.option}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-[9px] font-medium text-muted-foreground">Stok: {v.stockQuantity}</span>
                                             </div>
-                                            <span className="text-[9px] font-medium text-muted-foreground">Stok: {v.stockQuantity}</span>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="font-black text-primary group-hover:scale-105 transition-transform">{formatCurrency(v.price)}</div>
-                                        </div>
-                                    </button>
+                                            <div className="text-right">
+                                                <div className="font-black text-primary group-hover:scale-105 transition-transform">{formatCurrency(v.price)}</div>
+                                            </div>
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                if (syncStatusMap[v.id] !== 'loading') {
+                                                    setVariationPickerProduct(null)
+                                                    handleSyncProduct(v)
+                                                }
+                                            }}
+                                            disabled={syncStatusMap[v.id] === 'loading'}
+                                            className={cn(
+                                                "absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg backdrop-blur-sm border border-border shadow-sm transition-all",
+                                                syncStatusMap[v.id] === 'loading' ? "opacity-100 bg-background/80" :
+                                                    syncStatusMap[v.id] === 'success' ? "opacity-100 bg-emerald-500 text-white border-emerald-600" :
+                                                        syncStatusMap[v.id] === 'error' ? "opacity-100 bg-destructive text-white border-destructive" :
+                                                            "opacity-0 group-hover:opacity-100 bg-background/80 hover:bg-primary hover:text-white"
+                                            )}
+                                            title="Sync variasi ini"
+                                        >
+                                            {syncStatusMap[v.id] === 'loading' ? (
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                            ) : syncStatusMap[v.id] === 'success' ? (
+                                                <Check className="w-3.5 h-3.5" />
+                                            ) : syncStatusMap[v.id] === 'error' ? (
+                                                <X className="w-3.5 h-3.5" />
+                                            ) : (
+                                                <RefreshCw className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    </div>
                                 ))
                             ) : (
                                 <div className="text-center py-8 space-y-2">
@@ -1186,6 +1316,28 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                     </div>
                 </div>
             )}
+            {/* Sync Modal for Loading State Only */}
+            <Modal
+                isOpen={syncingProductId !== null}
+                onClose={() => { }} // User cannot close while loading
+                title="Sync Data Produk"
+                maxWidth="sm"
+            >
+                <div className="py-6 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+                        <div className="relative bg-primary/10 p-4 rounded-full">
+                            <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg">Menyinkronkan Data</h3>
+                        <p className="text-sm text-muted-foreground mt-1 px-4 line-clamp-2">
+                            Mengambil data terbaru untuk: <br /><span className="font-medium text-foreground">{syncProductName}</span>
+                        </p>
+                    </div>
+                </div>
+            </Modal>
         </div>
     )
 }

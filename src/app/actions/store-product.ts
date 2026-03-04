@@ -520,6 +520,143 @@ export async function getStoreProducts() {
     }
 }
 
+export async function searchStoreProducts(query: string, page: number = 1, perPage: number = 50) {
+    if (!query || query.trim().length === 0) return { products: [], totalPages: 0, totalItems: 0 }
+
+    const trimmed = query.trim()
+
+    try {
+        const where = {
+            AND: [
+                { type: { not: 'variation' } },
+                { status: 'publish' },
+                {
+                    OR: [
+                        { name: { contains: trimmed } },
+                        { sku: { contains: trimmed } },
+                        { backupGudang: { contains: trimmed } },
+                    ]
+                }
+            ]
+        }
+
+        const [totalItems, rawProducts] = await Promise.all([
+            prisma.storeProduct.count({ where }),
+            prisma.storeProduct.findMany({
+                where,
+                orderBy: { name: 'asc' },
+            })
+        ])
+
+        const lowerQuery = trimmed.toLowerCase()
+
+        // Map DB records to WooCommerceProduct shape for POS
+        const mapped = rawProducts.map((p: any) => {
+            let images: any[] = []
+            try { if (p.images) images = JSON.parse(p.images) } catch (e) { }
+            let attributes: any[] = []
+            try { if (p.attributes) attributes = JSON.parse(p.attributes) } catch (e) { }
+
+            return {
+                id: p.wcId,
+                name: p.name,
+                sku: p.sku || '',
+                type: p.type || 'simple',
+                attributes,
+                price: p.price || 0,
+                regularPrice: p.regularPrice || 0,
+                salePrice: p.salePrice || 0,
+                stockQuantity: p.stockQuantity || 0,
+                image: images?.[0]?.src || null,
+                images: images?.map((img: any) => img.src || img) || [],
+                description: p.description || '',
+                barcode: p.backupGudang || null,
+                slug: p.slug || '',
+                parentId: p.parentId || undefined,
+            }
+        })
+
+        // Smart sort: SKU prefix > name prefix > contains > alphabetical
+        mapped.sort((a: any, b: any) => {
+            const aName = a.name.toLowerCase()
+            const bName = b.name.toLowerCase()
+            const aSku = (a.sku || '').toLowerCase()
+            const bSku = (b.sku || '').toLowerCase()
+
+            const aSkuMatch = aSku.startsWith(lowerQuery)
+            const bSkuMatch = bSku.startsWith(lowerQuery)
+            if (aSkuMatch && !bSkuMatch) return -1
+            if (!aSkuMatch && bSkuMatch) return 1
+
+            const aStarts = aName.startsWith(lowerQuery)
+            const bStarts = bName.startsWith(lowerQuery)
+            if (aStarts && !bStarts) return -1
+            if (!aStarts && bStarts) return 1
+
+            const aContains = aName.includes(lowerQuery)
+            const bContains = bName.includes(lowerQuery)
+            if (aContains && !bContains) return -1
+            if (!aContains && bContains) return 1
+
+            return aName.localeCompare(bName)
+        })
+
+        // Paginate after sorting
+        const start = (page - 1) * perPage
+        const paginated = mapped.slice(start, start + perPage)
+        const totalPages = Math.ceil(mapped.length / perPage)
+
+        return {
+            products: paginated,
+            totalPages,
+            totalItems: mapped.length
+        }
+    } catch (error: any) {
+        console.error('searchStoreProducts error:', error.message)
+        return { products: [], totalPages: 0, totalItems: 0 }
+    }
+}
+
+export async function getLocalProductVariations(parentWcId: number) {
+    try {
+        const variations = await prisma.storeProduct.findMany({
+            where: {
+                parentId: parentWcId,
+                type: 'variation',
+            },
+            orderBy: { wcId: 'asc' }
+        })
+
+        return variations.map((v: any) => {
+            let images: any[] = []
+            try { if (v.images) images = JSON.parse(v.images) } catch (e) { }
+            let attributes: any[] = []
+            try { if (v.attributes) attributes = JSON.parse(v.attributes) } catch (e) { }
+
+            return {
+                id: v.wcId,
+                name: v.name || `Variation #${v.wcId}`,
+                sku: v.sku || '',
+                type: 'variation' as const,
+                parentId: parentWcId,
+                attributes,
+                price: v.price || 0,
+                regularPrice: v.regularPrice || 0,
+                salePrice: v.salePrice || 0,
+                stockQuantity: v.stockQuantity || 0,
+                image: images?.[0]?.src || null,
+                images: images?.map((img: any) => img.src || img) || [],
+                description: v.description || '',
+                barcode: v.backupGudang || null,
+                slug: v.slug || '',
+            }
+        })
+    } catch (error: any) {
+        console.error('getLocalProductVariations error:', error.message)
+        return []
+    }
+}
+
 export async function getStoreLowStockProducts() {
     try {
         const products = await prisma.storeProduct.findMany({
