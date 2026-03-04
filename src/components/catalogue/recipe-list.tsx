@@ -30,11 +30,11 @@ type RecipeWithCount = {
 export default function RecipeList({
     recipes,
     categories,
-    userRole
+    canEdit
 }: {
     recipes: RecipeWithCount[]
     categories: Category[]
-    userRole?: string
+    canEdit?: boolean
 }) {
     const [isAdding, setIsAdding] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
@@ -131,7 +131,7 @@ export default function RecipeList({
 
     return (
         <div className="space-y-6">
-            {['ADMIN', 'HRD'].includes(userRole || '') && (
+            {canEdit && (
                 <div className="flex justify-end gap-3">
                     <ImportRecipeModal />
                     <button
@@ -282,7 +282,7 @@ export default function RecipeList({
                                                 </td>
                                                 <td className="px-4 md:px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                                        {canEdit && (
                                                             <>
                                                                 <button
                                                                     onClick={() => handleEdit(recipe)}
@@ -364,7 +364,7 @@ export default function RecipeList({
                                             </td>
                                             <td className="px-4 md:px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                                    {canEdit && (
                                                         <>
                                                             <button
                                                                 onClick={() => handleEdit(recipe)}

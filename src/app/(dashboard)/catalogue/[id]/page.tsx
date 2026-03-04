@@ -3,8 +3,7 @@ import { notFound } from 'next/navigation'
 import IngredientManager from '@/components/catalogue/ingredient-manager'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { isAllowedForPage } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,10 +47,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         orderBy: { name: 'asc' }
     })
 
-    const session: any = await getServerSession(authOptions)
+    const canEdit = await isAllowedForPage('/catalogue')
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8">
+        <div className="space-y-8">
             <Link href="/catalogue" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Back to Produk
@@ -69,7 +68,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                     initialIngredients={recipe.ingredients}
                     initialSections={recipe.sections}
                     allProducts={allProducts}
-                    userRole={session?.user?.role}
+                    canEdit={canEdit}
                     existingSectionNames={existingSectionNames}
                     sectionCategories={sectionCategories.map(c => c.name)}
                 />

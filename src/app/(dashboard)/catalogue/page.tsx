@@ -1,7 +1,4 @@
 import prisma from '@/lib/prisma'
-import { Plus, BookOpen } from 'lucide-react'
-import Link from 'next/link'
-import { createRecipe } from '@/app/actions/recipe'
 import RecipeList from '@/components/catalogue/recipe-list'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +7,7 @@ import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 export default async function CataloguePage() {
-    const session: any = await requireAuth()
+    await requireAuth()
     const allowed = await isAllowedForPage('/catalogue');
     if (!allowed) redirect('/dashboard');
 
@@ -39,7 +36,7 @@ export default async function CataloguePage() {
                 // @ts-ignore
                 recipes={recipes}
                 categories={categories}
-                userRole={session?.user?.role}
+                canEdit={allowed}
             />
         </div>
     )

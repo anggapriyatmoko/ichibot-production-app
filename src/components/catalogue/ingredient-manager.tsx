@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx'
 import { formatNumber } from '@/utils/format'
 import ImportRecipeModal from './import-recipe-modal'
 import { useAlert } from '@/hooks/use-alert'
+import Modal from '@/components/ui/modal'
 
 type Ingredient = {
     id: string
@@ -47,7 +48,7 @@ export default function IngredientManager({
     initialIngredients,
     initialSections,
     allProducts,
-    userRole,
+    canEdit,
     existingSectionNames,
     sectionCategories
 }: {
@@ -56,7 +57,7 @@ export default function IngredientManager({
     initialIngredients: Ingredient[],
     initialSections: Section[],
     allProducts: Product[]
-    userRole?: string
+    canEdit?: boolean
     existingSectionNames?: string[]
     sectionCategories?: string[]
 }) {
@@ -356,7 +357,7 @@ export default function IngredientManager({
                     <p className="text-sm text-muted-foreground">List of materials required to produce one unit.</p>
                 </div>
                 <div className="flex gap-3">
-                    {userRole === 'ADMIN' && (
+                    {canEdit && (
                         <>
                             <ImportRecipeModal targetRecipeName={recipeName} />
                             <button
@@ -370,7 +371,7 @@ export default function IngredientManager({
                         </>
                     )}
 
-                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                    {canEdit && (
                         <button
                             onClick={() => setIsEditing(!isEditing)}
                             className={`p-2 rounded-lg transition-colors shadow-sm ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-primary hover:bg-primary/90 text-primary-foreground'}`}
@@ -393,7 +394,7 @@ export default function IngredientManager({
             <div className="flex justify-between items-center no-print py-2 px-1">
                 <div></div>
                 <div className="flex gap-2">
-                    {isEditing && ['ADMIN', 'HRD'].includes(userRole || '') && (
+                    {isEditing && canEdit && (
                         <button
                             onClick={() => setIsAddingSection(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors font-medium text-sm shadow-sm"
@@ -461,7 +462,7 @@ export default function IngredientManager({
                                         <div className="flex items-center gap-2">
                                             {isEditing && (
                                                 <>
-                                                    {['ADMIN', 'HRD'].includes(userRole || '') && (
+                                                    {canEdit && (
                                                         <button onClick={() => openAddModal(section.id)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
                                                             <Plus className="w-3 h-3" /> Add Item
                                                         </button>
@@ -515,7 +516,7 @@ export default function IngredientManager({
                                     </div>
                                 )}
                             </div>
-                            {isEditing && ['ADMIN', 'HRD'].includes(userRole || '') && (
+                            {isEditing && canEdit && (
                                 <button onClick={() => openAddModal(null)} className="text-xs flex items-center gap-1 text-primary hover:underline font-medium px-2 py-1">
                                     <Plus className="w-3 h-3" /> Add Item
                                 </button>
@@ -712,219 +713,220 @@ export default function IngredientManager({
 
 
             {/* Edit Section Modal */}
-            {
-                editingSectionId && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
-                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-                            <h3 className="text-lg font-bold text-foreground mb-4">Edit Section</h3>
-                            <form action={handleUpdateSection} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
-                                    <input
-                                        name="name"
-                                        autoFocus
-                                        required
-                                        defaultValue={sections.find(s => s.id === editingSectionId)?.name}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
-                                    <select
-                                        name="category"
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none"
-                                        defaultValue={sections.find(s => s.id === editingSectionId)?.category || ""}
-                                    >
-                                        <option value="">No Category</option>
-                                        {categorySuggestions.map((cat: string) => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex justify-end gap-3 pt-2">
-                                    <button type="button" onClick={() => setEditingSectionId(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Save Changes</button>
-                                </div>
-                            </form>
-                        </div>
+            <Modal
+                isOpen={!!editingSectionId}
+                onClose={() => setEditingSectionId(null)}
+                title="Edit Section"
+                maxWidth="sm"
+                footer={
+                    <div className="flex justify-end gap-3 w-full">
+                        <button type="button" onClick={() => setEditingSectionId(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        <button disabled={isLoading} type="submit" form="edit-section-form" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Save Changes</button>
                     </div>
-                )
-            }
+                }
+            >
+                <form id="edit-section-form" action={handleUpdateSection} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
+                        <input
+                            name="name"
+                            autoFocus
+                            required
+                            defaultValue={sections.find(s => s.id === editingSectionId)?.name}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
+                        <select
+                            name="category"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none"
+                            defaultValue={sections.find(s => s.id === editingSectionId)?.category || ""}
+                        >
+                            <option value="">No Category</option>
+                            {categorySuggestions.map((cat: string) => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                    </div>
+                </form>
+            </Modal>
 
 
             {/* Create Section Modal */}
-            {
-                isAddingSection && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
-                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
-                            <h3 className="text-lg font-bold text-foreground mb-4">New Section</h3>
-                            <form action={handleCreateSection} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
-                                    <input
-                                        name="name"
-                                        autoFocus
-                                        required
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                        placeholder="e.g. Dry Sparepart"
-                                    />
-                                    <p className="text-[10px] text-muted-foreground mt-1">
-                                        Type a name for the new folder/section.
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
-                                    <select
-                                        name="category_select"
-                                        required
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none h-10"
-                                        defaultValue=""
-                                    >
-                                        <option value="" disabled>Select a category...</option>
-                                        {categorySuggestions.map((cat: string) => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex justify-end gap-3 pt-2">
-                                    <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Create</button>
-                                </div>
-                            </form>
-                        </div>
+            <Modal
+                isOpen={isAddingSection}
+                onClose={() => setIsAddingSection(false)}
+                title="New Section"
+                maxWidth="sm"
+                footer={
+                    <div className="flex justify-end gap-3 w-full">
+                        <button type="button" onClick={() => setIsAddingSection(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        <button disabled={isLoading} type="submit" form="create-section-form" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">Create</button>
                     </div>
-                )
-            }
+                }
+            >
+                <form id="create-section-form" action={handleCreateSection} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Section Name</label>
+                        <input
+                            name="name"
+                            autoFocus
+                            required
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                            placeholder="e.g. Dry Sparepart"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                            Type a name for the new folder/section.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Category</label>
+                        <select
+                            name="category_select"
+                            required
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none appearance-none h-10"
+                            defaultValue=""
+                        >
+                            <option value="" disabled>Select a category...</option>
+                            {categorySuggestions.map((cat: string) => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                    </div>
+                </form>
+            </Modal>
 
             {/* Add Sparepart Modal */}
-            {
-                isAddingIngredient && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
-                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
-                            <h3 className="text-lg font-bold text-foreground mb-4">
-                                Add Sparepart {activeSectionId ? 'to Section' : ''}
-                            </h3>
-
-                            {!selectedProduct ? (
-                                <div className="space-y-4">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <input
-                                            autoFocus
-                                            placeholder="Search inventory..."
-                                            value={searchQuery}
-                                            onChange={e => setSearchQuery(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                    <div className="max-h-60 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-background/50">
-                                        {filteredProducts.map(p => (
-                                            <button
-                                                key={p.id}
-                                                onClick={() => handleProductSelect(p)}
-                                                className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors text-left"
-                                            >
-                                                <div className="w-8 h-8 rounded bg-muted relative overflow-hidden shrink-0">
-                                                    {p.image ? <Image src={p.image} fill className="object-cover" alt={p.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-foreground">{p.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{p.sku} • Stock: {p.stock}</p>
-                                                </div>
-                                            </button>
-                                        ))}
-                                        {filteredProducts.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No items found.</p>}
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <button onClick={() => setIsAddingIngredient(false)} className="px-4 py-2 text-sm text-muted-foreground">Cancel</button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <form action={handleAddIngredient} className="space-y-4">
-                                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
-                                        <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
-                                            {selectedProduct.image ? <Image src={selectedProduct.image} fill className="object-cover" alt={selectedProduct.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="font-bold text-foreground">{selectedProduct.name}</p>
-                                            <p className="text-xs text-muted-foreground">{selectedProduct.sku}</p>
-                                        </div>
-                                        <button type="button" onClick={() => setSelectedProduct(null)} className="text-xs text-primary hover:underline">Change</button>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
-                                        <input name="quantity" type="number" min="0" step="any" required autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. 5.5" />
+            <Modal
+                isOpen={isAddingIngredient}
+                onClose={() => { setIsAddingIngredient(false); setSelectedProduct(null); setSearchQuery(''); }}
+                title={`Add Sparepart ${activeSectionId ? 'to Section' : ''}`}
+                maxWidth="md"
+                footer={
+                    selectedProduct ? (
+                        <div className="flex justify-end gap-3 w-full">
+                            <button type="button" onClick={() => { setIsAddingIngredient(false); setSelectedProduct(null); setSearchQuery(''); }} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                            <button disabled={isLoading} type="submit" form="add-sparepart-form" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">
+                                {isLoading ? 'Adding...' : 'Add Sparepart'}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex justify-end w-full">
+                            <button onClick={() => { setIsAddingIngredient(false); setSelectedProduct(null); setSearchQuery(''); }} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        </div>
+                    )
+                }
+            >
+                {!selectedProduct ? (
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <input
+                                autoFocus
+                                placeholder="Search inventory..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg outline-none focus:border-primary"
+                            />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto space-y-2 border border-border rounded-lg p-2 bg-background/50">
+                            {filteredProducts.map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => handleProductSelect(p)}
+                                    className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-lg transition-colors text-left"
+                                >
+                                    <div className="w-8 h-8 rounded bg-muted relative overflow-hidden shrink-0">
+                                        {p.image ? <Image src={p.image} fill className="object-cover" alt={p.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
-                                        <input name="notes" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. grams" />
+                                        <p className="text-sm font-medium text-foreground">{p.name}</p>
+                                        <p className="text-xs text-muted-foreground">{p.sku} • Stock: {p.stock}</p>
                                     </div>
-
-                                    <div className="flex justify-end gap-3 pt-2">
-                                        <button type="button" onClick={() => setIsAddingIngredient(false)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                        <button disabled={isLoading} type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium">
-                                            {isLoading ? 'Adding...' : 'Add Sparepart'}
-                                        </button>
-                                    </div>
-                                </form>
-                            )}
+                                </button>
+                            ))}
+                            {filteredProducts.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">No items found.</p>}
                         </div>
                     </div>
-                )
-            }
+                ) : (
+                    <form id="add-sparepart-form" action={handleAddIngredient} className="space-y-4">
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
+                            <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
+                                {selectedProduct.image ? <Image src={selectedProduct.image} fill className="object-cover" alt={selectedProduct.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-foreground">{selectedProduct.name}</p>
+                                <p className="text-xs text-muted-foreground">{selectedProduct.sku}</p>
+                            </div>
+                            <button type="button" onClick={() => setSelectedProduct(null)} className="text-xs text-primary hover:underline">Change</button>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
+                            <input name="quantity" type="number" min="0" step="any" required autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. 5.5" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                            <input name="notes" className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none" placeholder="e.g. grams" />
+                        </div>
+                    </form>
+                )}
+            </Modal>
 
             {/* Edit Ingredient Modal */}
-            {
-                editingIngredient && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
-                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
-                            <h3 className="text-lg font-bold text-foreground mb-4">Edit Sparepart</h3>
-
-                            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
-                                <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
-                                    {editingIngredient.product.image ? <Image src={editingIngredient.product.image} fill className="object-cover" alt={editingIngredient.product.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-foreground">{editingIngredient.product.name}</p>
-                                    <p className="text-xs text-muted-foreground">{editingIngredient.product.sku}</p>
-                                </div>
-                            </div>
-
-                            <form action={handleUpdateIngredient} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
-                                    <input
-                                        name="quantity"
-                                        type="number"
-                                        min="0"
-                                        step="any"
-                                        required
-                                        defaultValue={editingIngredient.quantity}
-                                        autoFocus
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
-                                    <input
-                                        name="notes"
-                                        defaultValue={editingIngredient.notes || ''}
-                                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-2">
-                                    <button type="button" onClick={() => setEditingIngredient(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-                                    <button disabled={isLoading} type="submit" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
-                                        {isLoading ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+            <Modal
+                isOpen={!!editingIngredient}
+                onClose={() => setEditingIngredient(null)}
+                title="Edit Sparepart"
+                maxWidth="md"
+                footer={
+                    <div className="flex justify-end gap-3 w-full">
+                        <button type="button" onClick={() => setEditingIngredient(null)} className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+                        <button disabled={isLoading} type="submit" form="edit-ingredient-form" className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium">
+                            {isLoading ? 'Saving...' : 'Save Changes'}
+                        </button>
                     </div>
-                )
-            }
+                }
+            >
+                {editingIngredient && (
+                    <>
+                        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg mb-4 border border-border">
+                            <div className="w-10 h-10 rounded bg-muted relative overflow-hidden shrink-0">
+                                {editingIngredient.product.image ? <Image src={editingIngredient.product.image} fill className="object-cover" alt={editingIngredient.product.name} /> : <Package className="p-2 w-full h-full text-muted-foreground" />}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-bold text-foreground">{editingIngredient.product.name}</p>
+                                <p className="text-xs text-muted-foreground">{editingIngredient.product.sku}</p>
+                            </div>
+                        </div>
+
+                        <form id="edit-ingredient-form" action={handleUpdateIngredient} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Quantity Required</label>
+                                <input
+                                    name="quantity"
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    required
+                                    defaultValue={editingIngredient.quantity}
+                                    autoFocus
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Notes (Optional)</label>
+                                <input
+                                    name="notes"
+                                    defaultValue={editingIngredient.notes || ''}
+                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
+                                />
+                            </div>
+                        </form>
+                    </>
+                )}
+            </Modal>
 
 
         </div >
