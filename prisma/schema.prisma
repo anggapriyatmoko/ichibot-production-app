@@ -398,18 +398,18 @@ model rack {
 }
 
 model StoreRack {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  drawerCount   Int      @default(0)
-  rows          Int?
-  cols          Int?
-  drawerColors     Json?    // Per-drawer colors
-  drawerNotes      Json?    // Per-drawer custom notes
-  drawerNoteColors Json?    // Per-drawer note indicator colors
-  drawerUpdatedTimes Json?   // Per-drawer last update timestamps
-  description      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  name               String   @unique
+  drawerCount        Int      @default(0)
+  rows               Int?
+  cols               Int?
+  drawerColors       Json? // Per-drawer colors
+  drawerNotes        Json? // Per-drawer custom notes
+  drawerNoteColors   Json? // Per-drawer note indicator colors
+  drawerUpdatedTimes Json? // Per-drawer last update timestamps
+  description        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("StoreRack")
 }
@@ -744,13 +744,13 @@ model serviceOrderItem {
 }
 
 model PriceListGroup {
-  id        String          @id @default(cuid())
-  name      String
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  uncategorizedOrder Int    @default(0)
-  categories PriceListCategory[]
-  items     PriceListItem[]
+  id                 String              @id @default(cuid())
+  name               String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  uncategorizedOrder Int                 @default(0)
+  categories         PriceListCategory[]
+  items              PriceListItem[]
 
   @@map("PriceListGroup")
 }
@@ -770,23 +770,23 @@ model PriceListCategory {
 }
 
 model PriceListItem {
-  id          String         @id @default(cuid())
-  groupId     String
-  categoryId  String?        // Relation FK
-  name        String         @db.Text
-  shortDescription String?   @db.LongText
-  quantity    String? // Flexible quantity (e.g. "1 pcs", "1 box")
-  price       Float          @default(0)
-  discount    Float          @default(0)
-  description String?        @db.LongText // Rich text
-  category    String?        @db.Text // Deprecated: Old string field
-  image           String?        @db.Text
-  additionalImages String?       @db.Text // JSON array of strings
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  group       PriceListGroup @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "fk_pli_group_unique")
-  categoryRel PriceListCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  prices      PriceListPrice[]
+  id               String             @id @default(cuid())
+  groupId          String
+  categoryId       String? // Relation FK
+  name             String             @db.Text
+  shortDescription String?            @db.LongText
+  quantity         String? // Flexible quantity (e.g. "1 pcs", "1 box")
+  price            Float              @default(0)
+  discount         Float              @default(0)
+  description      String?            @db.LongText // Rich text
+  category         String?            @db.Text // Deprecated: Old string field
+  image            String?            @db.Text
+  additionalImages String?            @db.Text // JSON array of strings
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  group            PriceListGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "fk_pli_group_unique")
+  categoryRel      PriceListCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  prices           PriceListPrice[]
 
   @@index([groupId], map: "idx_pli_group_unique")
   @@index([categoryId])
@@ -794,15 +794,15 @@ model PriceListItem {
 }
 
 model PriceListPrice {
-  id       String        @id @default(cuid())
-  itemId   String
-  label    String        // e.g. "Online", "Offline", "Dalam Kota"
-  price    Float         @default(0)
-  discount Float         @default(0)
-  qty      String?       // e.g. "1 pcs", "Per Orang"
-  description String?    @db.Text // Keterangan varian
-  order    Int           @default(0)
-  item     PriceListItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  id          String        @id @default(cuid())
+  itemId      String
+  label       String // e.g. "Online", "Offline", "Dalam Kota"
+  price       Float         @default(0)
+  discount    Float         @default(0)
+  qty         String? // e.g. "1 pcs", "Per Orang"
+  description String?       @db.Text // Keterangan varian
+  order       Int           @default(0)
+  item        PriceListItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
   @@map("PriceListPrice")
@@ -833,19 +833,28 @@ model bankAccount {
 }
 
 model expense {
-  id          String          @id @default(cuid())
-  userId      String
-  categoryId  String
-  date        DateTime
-  amountEnc   String          @db.Text
-  nameEnc     String          @db.Text
-  image       String?         @db.LongText
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  user        user            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    expenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id         String          @id @default(cuid())
+  userId     String
+  categoryId String
+  date       DateTime
+  amountEnc  String          @db.Text
+  nameEnc    String          @db.Text
+  image      String?         @db.LongText
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  user       user            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   expenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([categoryId])
   @@map("Expense")
+}
+
+model WebAccessUser {
+  id_admin Int    @id @default(autoincrement())
+  email    String @unique
+  username String
+  password String
+
+  @@map("web_access_users")
 }

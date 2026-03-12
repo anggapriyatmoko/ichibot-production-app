@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/auth";
 import ApiConfigManager from "@/components/settings/api-config-manager";
 import SyncProductionsButton from "@/components/settings/sync-productions-button";
 import RbacManager from "@/components/settings/rbac-manager";
+import SuperAdminManager from "@/components/settings/web-access-manager";
 
 export const metadata = {
   title: "Settings | Ichibot Production",
@@ -12,16 +13,14 @@ export default async function SettingsPage() {
   await requireAdmin();
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto max-w-5xl space-y-10">
       <h1 className="text-3xl font-bold mb-8">System Settings</h1>
 
-      <div className="mb-10">
-        <ApiConfigManager />
-      </div>
+      <ApiConfigManager />
 
-      <div className="mb-10">
-        <SyncProductionsButton />
-      </div>
+      <SyncProductionsButton />
+
+      <SuperAdminManager />
 
       <div className="mb-10">
         <RbacManager />
