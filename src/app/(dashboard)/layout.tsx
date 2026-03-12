@@ -4,6 +4,7 @@ import MobileHeader from '@/components/layout/mobile-header'
 import { SidebarProvider } from '@/components/providers/sidebar-provider'
 import ChatWidget from '@/components/chat/chat-widget'
 import RbacGuard from '@/components/providers/rbac-guard'
+import MoodProvider from '@/components/providers/mood-provider'
 
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
@@ -60,6 +61,9 @@ export default async function DashboardLayout({
                         </div>
                     </main>
                 </div>
+
+                {/* Mood Popup Provider */}
+                <MoodProvider />
 
                 {/* Chat Widget - Desktop Only */}
                 <ChatWidget />

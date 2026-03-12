@@ -609,8 +609,26 @@ model user {
   targetedAnnouncements announcement[]    @relation("targetedusers")
   targetedDocuments     hRDocument[]      @relation("HRDocumentTargetUsers")
   expenses              expense[]
+  moods                 UserMood[]
 
   @@map("User")
+}
+
+model UserMood {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  type      String   // "CHECK_IN" or "CHECK_OUT"
+  mood      String   // "JOYFUL", "HAPPY", "RELAXED", "SAD", "ANGRY"
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, type])
+  @@index([userId])
+  @@index([date])
+  @@map("UserMood")
 }
 
 model workSchedule {

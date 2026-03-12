@@ -226,3 +226,41 @@ export async function deleteExpense(id: string) {
         return { success: false, error: 'Failed to delete expense' }
     }
 }
+
+export async function getAllExpensesForYear(year: number, categoryIds?: string[]) {
+    try {
+        await requirePageAccess('/keuangan/dashboard')
+        
+        const startDate = new Date(year, 0, 1)
+        const endDate = new Date(year, 11, 31, 23, 59, 59, 999)
+
+        const whereClause: any = {
+            date: {
+                gte: startDate,
+                lte: endDate
+            }
+        }
+        
+        if (categoryIds !== undefined) {
+            whereClause.categoryId = { in: categoryIds }
+        }
+
+        const expenses = await (prisma as any).expense.findMany({
+            where: whereClause,
+            select: {
+                date: true,
+                amountEnc: true
+            }
+        })
+
+        const decryptedExpenses = expenses.map((expense: any) => ({
+            date: expense.date,
+            amount: decrypt(expense.amountEnc) || '0'
+        }))
+
+        return { success: true, data: decryptedExpenses }
+    } catch (error) {
+        console.error('Error fetching yearly expenses:', error)
+        return { success: false, error: 'Failed to fetch yearly expenses: ' + (error as any).message }
+    }
+}

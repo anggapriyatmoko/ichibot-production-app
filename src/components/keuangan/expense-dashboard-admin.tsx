@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X, BarChart3 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
-import { getAllExpenses, updateExpenseAdmin, ExpenseData } from '@/app/actions/expense'
+import { getAllExpenses, updateExpenseAdmin, ExpenseData, getAllExpensesForYear } from '@/app/actions/expense'
 import { getExpenseCategories } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
 import {
@@ -40,6 +41,25 @@ interface Expense {
     userName?: string
 }
 
+// Helper functions for week picker
+function getWeekNumber(d: Date) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
+function getDateOfISOWeek(w: number, y: number) {
+    var simple = new Date(y, 0, 1 + (w - 1) * 7)
+    var dow = simple.getDay()
+    var ISOweekStart = simple
+    if (dow <= 4)
+        ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1)
+    else
+        ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay())
+    return ISOweekStart
+}
+
 export default function ExpenseDashboardAdmin() {
     const { showAlert, showError } = useAlert()
     const [expenses, setExpenses] = useState<Expense[]>([])
@@ -51,12 +71,54 @@ export default function ExpenseDashboardAdmin() {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' })
 
     // Filter state
-    const [startDate, setStartDate] = useState(() => {
+    type PeriodType = 'daily' | 'weekly' | 'monthly' | 'yearly'
+    const [periodType, setPeriodType] = useState<PeriodType>('monthly')
+    
+    // Generic selected date (will represent the chosen day, week-start, month, or year)
+    const [selectedDate, setSelectedDate] = useState(() => {
         const d = new Date()
-        d.setMonth(d.getMonth() - 1) // default 1 bulan terakhir
-        return d.toISOString().substring(0, 10)
+        return d.toISOString().substring(0, 10) // YYYY-MM-DD
     })
-    const [endDate, setEndDate] = useState(() => new Date().toISOString().substring(0, 10))
+    
+    const [startDate, endDate] = React.useMemo(() => {
+        const d = new Date(selectedDate)
+        const yyyy = d.getFullYear()
+        const mm = d.getMonth()
+        
+        switch (periodType) {
+            case 'daily':
+                return [selectedDate, selectedDate]
+            case 'weekly':
+                // Get monday of the current selected date's week
+                const day = d.getDay()
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+                const monday = new Date(d.setDate(diff))
+                const sunday = new Date(monday)
+                sunday.setDate(monday.getDate() + 6)
+                
+                const formatD = (date: Date) => {
+                    const y = date.getFullYear()
+                    const m = String(date.getMonth() + 1).padStart(2, '0')
+                    const dt = String(date.getDate()).padStart(2, '0')
+                    return `${y}-${m}-${dt}`
+                }
+                return [formatD(monday), formatD(sunday)]
+            case 'monthly':
+                const lastDay = new Date(yyyy, mm + 1, 0)
+                const smm = String(mm + 1).padStart(2, '0')
+                return [`${yyyy}-${smm}-01`, `${yyyy}-${smm}-${String(lastDay.getDate()).padStart(2, '0')}`]
+            case 'yearly':
+                return [`${yyyy}-01-01`, `${yyyy}-12-31`]
+            default:
+                return [selectedDate, selectedDate]
+        }
+    }, [periodType, selectedDate])
+
+    // Chart state
+    const [chartCategoryIds, setChartCategoryIds] = useState<string[]>([])
+    const [isChartCategoriesInitialized, setIsChartCategoriesInitialized] = useState(false)
+    const [isChartCategoryFilterVisible, setIsChartCategoryFilterVisible] = useState(false)
+    const [yearlyData, setYearlyData] = useState<{name: string, total: number}[]>([])
 
     // Preview Image State
     const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -113,9 +175,14 @@ export default function ExpenseDashboardAdmin() {
             }
 
             if (categoriesRes.success && categoriesRes.data) {
-                setCategories(categoriesRes.data as Category[])
-                if (defaultFormData.categoryId === '' && categoriesRes.data.length > 0) {
-                    defaultFormData.categoryId = categoriesRes.data[0].id
+                const cats = categoriesRes.data as Category[]
+                setCategories(cats)
+                if (!isChartCategoriesInitialized) {
+                    setChartCategoryIds(cats.map(c => c.id))
+                    setIsChartCategoriesInitialized(true)
+                }
+                if (defaultFormData.categoryId === '' && cats.length > 0) {
+                    defaultFormData.categoryId = cats[0].id
                 }
             }
         } catch (error) {
@@ -126,11 +193,41 @@ export default function ExpenseDashboardAdmin() {
         }
     }, [startDate, endDate]) // Removed showError to prevent loops if it's not memoized
 
-    // Fetch on initial load
+    // Fetch on initial load and when month changes
     useEffect(() => {
         fetchExpenses()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []) // Empty dependency array prevents recursive fetch
+    }, [fetchExpenses])
+
+    const fetchYearlyData = useCallback(async () => {
+        if (!isChartCategoriesInitialized) return
+        try {
+            const currentYear = new Date().getFullYear()
+            const res = await getAllExpensesForYear(currentYear, chartCategoryIds)
+            
+            if (res.success && res.data) {
+                const monthly = Array.from({ length: 12 }, (_, i) => ({
+                    name: format(new Date(currentYear, i, 1), 'MMM', { locale: localeId }),
+                    total: 0
+                }))
+                
+                res.data.forEach((exp: any) => {
+                    const expDate = new Date(exp.date)
+                    const val = parseFloat(exp.amount)
+                    if (!isNaN(val)) {
+                        monthly[expDate.getMonth()].total += val
+                    }
+                })
+                
+                setYearlyData(monthly)
+            }
+        } catch (error) {
+            console.error('Error fetching yearly data:', error)
+        }
+    }, [chartCategoryIds, isChartCategoriesInitialized])
+
+    useEffect(() => {
+        fetchYearlyData()
+    }, [fetchYearlyData])
 
     // Close category dropdown on outside click
     useEffect(() => {
@@ -242,31 +339,7 @@ export default function ExpenseDashboardAdmin() {
 
     const sortedUsers = Object.entries(userDistribution).sort((a, b) => b[1] - a[1])
 
-    // Data for Monthly Chart (Current Year)
     const currentYear = new Date().getFullYear()
-
-    // Check if the selected date range includes any part of the current year
-    // For a cleaner UX, we ideally want to show the full year's data regardless of the active filter
-    // So we'll use all fetched expenses and filter them by the current year
-    const monthlyExpenses = Array.from({ length: 12 }, (_, i) => {
-        const monthDate = new Date(currentYear, i, 1)
-        return {
-            name: format(monthDate, 'MMM', { locale: localeId }),
-            total: 0
-        }
-    })
-
-    // Populate monthly expenses from the loaded expenses (which are constrained by the startDate/endDate filters)
-    // NOTE: If the filter doesn't span the whole year, some months will naturally be 0.
-    expenses.forEach((exp) => {
-        const expDate = new Date(exp.date)
-        if (expDate.getFullYear() === currentYear) {
-            const val = parseFloat(exp.amount)
-            if (!isNaN(val)) {
-                monthlyExpenses[expDate.getMonth()].total += val
-            }
-        }
-    })
 
     // Custom Tooltip for Chart
     const CustomTooltip = ({ active, payload, label }: any) => {
@@ -344,35 +417,69 @@ export default function ExpenseDashboardAdmin() {
                     title="Riwayat Semua Pengeluaran"
                     description="Menampilkan semua pengeluaran dari seluruh user. Data didekripsi dari database secara real-time."
                     actions={
-                        <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1 border border-border rounded-lg">
-                            <div className="flex items-center gap-2 px-2">
-                                <span className="text-sm text-muted-foreground font-medium">Dari:</span>
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0"
-                                />
+                            <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1.5 border border-border rounded-lg">
+                                <div className="flex items-center gap-2 px-2">
+                                    <span className="text-sm text-muted-foreground font-medium">Periode:</span>
+                                    <select
+                                        value={periodType}
+                                        onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                                        className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer text-foreground"
+                                    >
+                                        <option value="daily">Harian</option>
+                                        <option value="weekly">Mingguan</option>
+                                        <option value="monthly">Bulanan</option>
+                                        <option value="yearly">Tahunan</option>
+                                    </select>
+                                </div>
+                                <div className="hidden sm:block w-px h-5 bg-border" />
+                                <div className="flex items-center gap-2 px-2">
+                                    {periodType === 'daily' && (
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                        />
+                                    )}
+                                    {periodType === 'weekly' && (
+                                        <input
+                                            type="week"
+                                            value={`${new Date(selectedDate).getFullYear()}-W${getWeekNumber(new Date(selectedDate))}`}
+                                            onChange={(e) => {
+                                                if (!e.target.value) return
+                                                const [y, w] = e.target.value.split('-W')
+                                                const date = getDateOfISOWeek(parseInt(w), parseInt(y))
+                                                setSelectedDate(date.toISOString().substring(0, 10))
+                                            }}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                        />
+                                    )}
+                                    {periodType === 'monthly' && (
+                                        <input
+                                            type="month"
+                                            value={selectedDate.substring(0, 7)}
+                                            onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                        />
+                                    )}
+                                    {periodType === 'yearly' && (
+                                        <select
+                                            value={new Date(selectedDate).getFullYear()}
+                                            onChange={(e) => setSelectedDate(`${e.target.value}-01-01`)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[100px]"
+                                        >
+                                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                                <option key={year} value={year}>{year}</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                                {(periodType === 'weekly') && (
+                                    <div className="text-xs text-muted-foreground px-2 bg-muted/50 rounded py-1 whitespace-nowrap">
+                                        {format(new Date(startDate), 'dd MMM', { locale: localeId })} - {format(new Date(endDate), 'dd MMM yyyy', { locale: localeId })}
+                                    </div>
+                                )}
                             </div>
-                            <div className="hidden sm:block w-px h-5 bg-border" />
-                            <div className="flex items-center gap-2 px-2">
-                                <span className="text-sm text-muted-foreground font-medium">Sampai:</span>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0"
-                                />
-                            </div>
-                            <button
-                                onClick={fetchExpenses}
-                                disabled={isLoading}
-                                className="bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                title="Filter Data"
-                            >
-                                <Search className="w-4 h-4" />
-                            </button>
-                        </div>
                     }
                 />
 
@@ -651,14 +758,100 @@ export default function ExpenseDashboardAdmin() {
 
                     {/* Monthly Bar Chart */}
                     <div className="mt-8 pt-6 border-t border-border">
-                        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                            Trend Pengeluaran Selama Tahun {currentYear}
-                        </h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                                Trend Pengeluaran Selama Tahun {currentYear}
+                            </h3>
+                            <button
+                                onClick={() => setIsChartCategoryFilterVisible(!isChartCategoryFilterVisible)}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-colors",
+                                    isChartCategoryFilterVisible 
+                                        ? "bg-primary text-primary-foreground border-primary" 
+                                        : "bg-background text-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                <span className="font-medium">Filter Kategori</span>
+                            </button>
+                        </div>
+                        
+                        {isChartCategoryFilterVisible && (
+                            <div className="mb-4 p-4 border rounded-xl bg-muted/10 flex flex-wrap items-center gap-4">
+                                <span className="text-xs font-bold text-foreground">Filter :</span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {categories.map((cat, idx) => {
+                                        const isSelected = chartCategoryIds.includes(cat.id)
+                                        // Cycle through colors
+                                        const colors = ['blue', 'emerald', 'amber', 'purple', 'rose', 'cyan']
+                                        const colorBase = colors[idx % colors.length]
+                                        
+                                        const colorMap: Record<string, string> = {
+                                            blue: isSelected ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' : '',
+                                            emerald: isSelected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : '',
+                                            amber: isSelected ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : '',
+                                            purple: isSelected ? 'bg-purple-500/10 border-purple-500/30 text-purple-600' : '',
+                                            rose: isSelected ? 'bg-rose-500/10 border-rose-500/30 text-rose-600' : '',
+                                            cyan: isSelected ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-600' : '',
+                                        }
+                                        const dotMap: Record<string, string> = {
+                                            blue: isSelected ? 'bg-blue-500 ring-blue-500/20' : '',
+                                            emerald: isSelected ? 'bg-emerald-500 ring-emerald-500/20' : '',
+                                            amber: isSelected ? 'bg-amber-500 ring-amber-500/20' : '',
+                                            purple: isSelected ? 'bg-purple-500 ring-purple-500/20' : '',
+                                            rose: isSelected ? 'bg-rose-500 ring-rose-500/20' : '',
+                                            cyan: isSelected ? 'bg-cyan-500 ring-cyan-500/20' : '',
+                                        }
+
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setChartCategoryIds(chartCategoryIds.filter(id => id !== cat.id))
+                                                    } else {
+                                                        setChartCategoryIds([...chartCategoryIds, cat.id])
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    'flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] font-bold transition-all',
+                                                    isSelected ? colorMap[colorBase] : 'bg-background border-border text-muted-foreground/50 hover:bg-muted'
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    'w-1.5 h-1.5 rounded-full ring-2 ring-offset-1 ring-offset-transparent',
+                                                    isSelected ? dotMap[colorBase] : 'bg-muted-foreground/20 ring-transparent'
+                                                )} />
+                                                {cat.name}
+                                            </button>
+                                        )
+                                    })}
+
+                                    {categories.length > 0 && (
+                                        <>
+                                            <div className="h-4 w-[1px] bg-border mx-1" />
+                                            <button
+                                                onClick={() => {
+                                                    const allSelected = chartCategoryIds.length === categories.length
+                                                    if (allSelected) {
+                                                        setChartCategoryIds([])
+                                                    } else {
+                                                        setChartCategoryIds(categories.map(c => c.id))
+                                                    }
+                                                }}
+                                                className="text-[10px] font-bold text-primary hover:text-primary/80 transition-colors"
+                                            >
+                                                {chartCategoryIds.length === categories.length ? 'Unselect All' : 'Select All'}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         <div className="h-[300px] w-full mt-4">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
-                                    data={monthlyExpenses}
+                                    data={yearlyData}
                                     margin={{ top: 20, right: 10, left: 10, bottom: 0 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />

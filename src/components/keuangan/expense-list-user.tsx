@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info } from 'lucide-react'
@@ -43,6 +43,25 @@ interface Props {
     categories: Category[]
 }
 
+// Helper functions for week picker
+function getWeekNumber(d: Date) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
+function getDateOfISOWeek(w: number, y: number) {
+    var simple = new Date(y, 0, 1 + (w - 1) * 7)
+    var dow = simple.getDay()
+    var ISOweekStart = simple
+    if (dow <= 4)
+        ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1)
+    else
+        ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay())
+    return ISOweekStart
+}
+
 export default function ExpenseListUser({ userId, initialExpenses, categories }: Props) {
     const { showAlert, showError } = useAlert()
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
@@ -65,12 +84,53 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
     const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
     // Filter state
-    const [startDate, setStartDate] = useState(() => {
+    type PeriodType = 'daily' | 'weekly' | 'monthly' | 'yearly'
+    const [periodType, setPeriodType] = useState<PeriodType>('monthly')
+    
+    // Generic selected date
+    const [selectedDate, setSelectedDate] = useState(() => {
         const d = new Date()
-        d.setMonth(d.getMonth() - 1)
-        return d.toISOString().substring(0, 10)
+        return d.toISOString().substring(0, 10) // YYYY-MM-DD
     })
-    const [endDate, setEndDate] = useState(() => new Date().toISOString().substring(0, 10))
+    
+    const [startDate, endDate] = useMemo(() => {
+        const d = new Date(selectedDate)
+        const yyyy = d.getFullYear()
+        const mm = d.getMonth()
+        
+        switch (periodType) {
+            case 'daily':
+                return [selectedDate, selectedDate]
+            case 'weekly':
+                const day = d.getDay()
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+                const monday = new Date(d.setDate(diff))
+                const sunday = new Date(monday)
+                sunday.setDate(monday.getDate() + 6)
+                
+                const formatD = (date: Date) => {
+                    const y = date.getFullYear()
+                    const m = String(date.getMonth() + 1).padStart(2, '0')
+                    const dt = String(date.getDate()).padStart(2, '0')
+                    return `${y}-${m}-${dt}`
+                }
+                return [formatD(monday), formatD(sunday)]
+            case 'monthly':
+                const lastDay = new Date(yyyy, mm + 1, 0)
+                const smm = String(mm + 1).padStart(2, '0')
+                return [`${yyyy}-${smm}-01`, `${yyyy}-${smm}-${String(lastDay.getDate()).padStart(2, '0')}`]
+            case 'yearly':
+                return [`${yyyy}-01-01`, `${yyyy}-12-31`]
+            default:
+                return [selectedDate, selectedDate]
+        }
+    }, [periodType, selectedDate])
+
+    // Auto-fetch on date change
+    useEffect(() => {
+        fetchExpenses()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startDate, endDate])
 
     const fetchExpenses = async () => {
         setIsLoadingData(true)
@@ -267,34 +327,68 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                     description="Seluruh pengeluaran pribadi Anda beserta buktinya."
                     actions={
                         <div className="flex flex-col sm:flex-row items-center gap-3">
-                            <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1 border border-border rounded-lg">
+                            <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1.5 border border-border rounded-lg">
                                 <div className="flex items-center gap-2 px-2">
-                                    <span className="text-sm text-muted-foreground font-medium">Dari:</span>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0"
-                                    />
+                                    <span className="text-sm text-muted-foreground font-medium">Periode:</span>
+                                    <select
+                                        value={periodType}
+                                        onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                                        className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer text-foreground"
+                                    >
+                                        <option value="daily">Harian</option>
+                                        <option value="weekly">Mingguan</option>
+                                        <option value="monthly">Bulanan</option>
+                                        <option value="yearly">Tahunan</option>
+                                    </select>
                                 </div>
                                 <div className="hidden sm:block w-px h-5 bg-border" />
                                 <div className="flex items-center gap-2 px-2">
-                                    <span className="text-sm text-muted-foreground font-medium">Sampai:</span>
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0"
-                                    />
+                                    {periodType === 'daily' && (
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                        />
+                                    )}
+                                    {periodType === 'weekly' && (
+                                        <input
+                                            type="week"
+                                            value={`${new Date(selectedDate).getFullYear()}-W${getWeekNumber(new Date(selectedDate))}`}
+                                            onChange={(e) => {
+                                                if (!e.target.value) return
+                                                const [y, w] = e.target.value.split('-W')
+                                                const date = getDateOfISOWeek(parseInt(w), parseInt(y))
+                                                setSelectedDate(date.toISOString().substring(0, 10))
+                                            }}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                        />
+                                    )}
+                                    {periodType === 'monthly' && (
+                                        <input
+                                            type="month"
+                                            value={selectedDate.substring(0, 7)}
+                                            onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                        />
+                                    )}
+                                    {periodType === 'yearly' && (
+                                        <select
+                                            value={new Date(selectedDate).getFullYear()}
+                                            onChange={(e) => setSelectedDate(`${e.target.value}-01-01`)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[100px]"
+                                        >
+                                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                                <option key={year} value={year}>{year}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                 </div>
-                                <button
-                                    onClick={fetchExpenses}
-                                    disabled={isLoadingData}
-                                    className="bg-primary text-primary-foreground p-1.5 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                    title="Filter Data"
-                                >
-                                    <Search className="w-4 h-4" />
-                                </button>
+                                {(periodType === 'weekly') && (
+                                    <div className="text-xs text-muted-foreground px-2 bg-muted/50 rounded py-1 whitespace-nowrap">
+                                        {format(new Date(startDate), 'dd MMM', { locale: localeId })} - {format(new Date(endDate), 'dd MMM yyyy', { locale: localeId })}
+                                    </div>
+                                )}
                             </div>
                             <button
                                 onClick={() => handleOpenModal()}

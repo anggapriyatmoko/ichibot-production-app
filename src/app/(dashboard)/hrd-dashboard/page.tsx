@@ -18,7 +18,8 @@ import { getAdminMonthlyAttendanceReport } from '@/app/actions/attendance'
 import ConfidentialAccess from '@/components/auth/confidential-access'
 import HRDTabs from '@/components/hr/hrd-tabs'
 import AttendanceDataView from '@/components/attendance/attendance-data-view'
-import { Wallet, FileText, Fingerprint } from 'lucide-react'
+import MoodTodayView from '@/components/hr/mood-today-view'
+import { Wallet, FileText, Fingerprint, Smile } from 'lucide-react'
 
 export const metadata = {
     title: 'HRD Dashboard | Ichibot Production',
@@ -141,6 +142,12 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
             </div>
         )
 
+        const moodTodayTabContent = (
+            <div className="fade-in">
+                <MoodTodayView />
+            </div>
+        )
+
         const tabs = [
             {
                 id: 'attendance-recap',
@@ -177,6 +184,12 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
                 label: 'Karyawan',
                 icon: <Users className="w-4 h-4" />,
                 content: employeesTabContent
+            },
+            {
+                id: 'mood-today',
+                label: 'Mood Today',
+                icon: <Smile className="w-4 h-4" />,
+                content: moodTodayTabContent
             }
         ]
 
