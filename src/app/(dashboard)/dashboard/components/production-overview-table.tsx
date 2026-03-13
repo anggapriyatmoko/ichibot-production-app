@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment } from 'react'
+import Link from 'next/link'
 import YearSelector from './year-selector'
 
 interface ProductionOverviewTableProps {
@@ -11,6 +12,7 @@ interface ProductionOverviewTableProps {
             month: number // 1-12
             plan: number
             done: number
+            sold: number
         }[]
     }[]
     year: number
@@ -80,12 +82,14 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                             <th rowSpan={2} className="px-2 py-2 text-left font-bold text-slate-700 w-48 sticky left-0 bg-slate-50 z-20 border-r border-slate-200">
                                 Product
                             </th>
-                            {MONTHS.map((month) => (
-                                <th key={month} colSpan={2} className="px-1 py-1 font-bold text-slate-700 border-r border-slate-200 last:border-r-0 min-w-[60px] text-[10px] uppercase">
-                                    {month}
+                            {MONTHS.map((month, index) => (
+                                <th key={month} colSpan={3} className="px-1 py-1 font-bold text-slate-700 border-r border-slate-200 last:border-r-0 min-w-[80px] text-[10px] uppercase group-th">
+                                    <Link href={`/production-plan?month=${index + 1}&year=${year}`} className="hover:text-primary hover:underline hover:cursor-pointer block w-full h-full">
+                                        {month}
+                                    </Link>
                                 </th>
                             ))}
-                            <th colSpan={3} className="px-1 py-1 font-bold text-slate-900 border-l-2 border-slate-200 bg-slate-100/50">
+                            <th colSpan={4} className="px-1 py-1 font-bold text-slate-900 border-l-2 border-slate-200 bg-slate-100/50">
                                 Summary
                             </th>
                         </tr>
@@ -94,11 +98,13 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                             {MONTHS.map((month) => (
                                 <Fragment key={month}>
                                     <th className="px-1 py-1 text-slate-400 border-r border-slate-100">P</th>
-                                    <th className="px-1 py-1 font-bold text-slate-700 border-r border-slate-200">D</th>
+                                    <th className="px-1 py-1 font-bold text-slate-700 border-r border-slate-100">D</th>
+                                    <th className="px-1 py-1 font-bold text-emerald-600 border-r border-slate-200">S</th>
                                 </Fragment>
                             ))}
                             <th className="px-2 py-1 text-slate-500 border-l-2 border-slate-200 bg-slate-100/30">Plan</th>
                             <th className="px-2 py-1 font-bold text-slate-700 border-r border-slate-200 bg-slate-100/30">Done</th>
+                            <th className="px-2 py-1 font-bold text-emerald-600 border-r border-slate-200 bg-slate-100/30">Sold</th>
                             <th className="px-2 py-1 font-bold text-emerald-600 bg-emerald-50/50">%</th>
                         </tr>
                     </thead>
@@ -106,6 +112,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                         {sortedData.map((row) => {
                             const totalPlan = row.monthlyData.reduce((acc, curr) => acc + curr.plan, 0)
                             const totalDone = row.monthlyData.reduce((acc, curr) => acc + curr.done, 0)
+                            const totalSold = row.monthlyData.reduce((acc, curr) => acc + curr.sold, 0)
                             const efficiency = totalPlan > 0 ? Math.round((totalDone / totalPlan) * 100) : 0
 
                             return (
@@ -115,20 +122,23 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                                     </td>
                                     {MONTHS.map((_, index) => {
                                         const monthIndex = index + 1
-                                        const monthData = row.monthlyData.find(d => d.month === monthIndex) || { plan: 0, done: 0 }
+                                        const monthData = row.monthlyData.find(d => d.month === monthIndex) || { plan: 0, done: 0, sold: 0 }
 
                                         return (
                                             <Fragment key={index}>
                                                 <td className={`px-1 py-1 border-r border-slate-100 font-mono text-[10px] text-center ${monthData.plan === 0 ? 'text-slate-200' : 'text-slate-500'}`}>
                                                     {monthData.plan > 0 ? monthData.plan : '-'}
                                                 </td>
-                                                <td className={`px-1 py-1 border-r border-slate-200 font-mono font-bold text-[10px] text-center ${monthData.done >= monthData.plan && monthData.plan > 0
+                                                <td className={`px-1 py-1 border-r border-slate-100 font-mono font-bold text-[10px] text-center ${monthData.done >= monthData.plan && monthData.plan > 0
                                                     ? 'text-emerald-600 bg-emerald-50/30'
                                                     : monthData.done > 0
                                                         ? 'text-blue-600'
                                                         : 'text-slate-200'
                                                     }`}>
                                                     {monthData.done > 0 ? monthData.done : '-'}
+                                                </td>
+                                                <td className={`px-1 py-1 border-r border-slate-200 font-mono font-bold text-[10px] text-center ${monthData.sold > 0 ? 'text-emerald-600 bg-emerald-50/30' : 'text-slate-200'}`}>
+                                                    {monthData.sold > 0 ? monthData.sold : '-'}
                                                 </td>
                                             </Fragment>
                                         )
@@ -138,6 +148,9 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                                     </td>
                                     <td className="px-2 py-1 border-r border-slate-200 font-mono text-xs text-center font-bold text-blue-600 bg-slate-50/30">
                                         {totalDone}
+                                    </td>
+                                    <td className="px-2 py-1 border-r border-slate-200 font-mono text-xs text-center font-bold text-emerald-600 bg-slate-50/30">
+                                        {totalSold}
                                     </td>
                                     <td className={`px-2 py-1 font-mono text-xs text-center font-bold ${efficiency >= 100 ? 'text-emerald-600 bg-emerald-50' : efficiency >= 80 ? 'text-blue-600' : efficiency >= 50 ? 'text-orange-600' : 'text-red-500'}`}>
                                         {efficiency}%
@@ -158,6 +171,7 @@ export default function ProductionOverviewTable({ data, year }: ProductionOvervi
                 <div className="flex gap-4 text-[10px] text-slate-500">
                     <span><span className="font-bold text-slate-700">P</span> : Plan</span>
                     <span><span className="font-bold text-slate-700">D</span> : Done (Assembled)</span>
+                    <span><span className="font-bold text-emerald-600">S</span> : Sold</span>
                 </div>
 
                 <div className="flex flex-wrap gap-3 items-center">

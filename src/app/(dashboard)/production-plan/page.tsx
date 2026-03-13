@@ -11,6 +11,7 @@ import ImportPlanModal from './components/import-plan-modal'
 import { ExportButton } from './components/export-button'
 import DeletePlanButton from './components/delete-plan-button'
 import { isAllowedForPage } from '@/lib/auth'
+import MonthYearFilter from './components/month-year-filter'
 
 export const dynamic = 'force-dynamic'
 
@@ -152,11 +153,6 @@ export default async function ProductionPlanPage({
     const plannedRecipeIds = new Set(productionPlans.map(p => p.recipeId))
     const availableRecipes = recipes.filter(r => !plannedRecipeIds.has(r.id))
 
-    const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ]
-
     const years = Array.from({ length: 5 }, (_, i) => today.getFullYear() - 2 + i)
 
     return (
@@ -169,37 +165,9 @@ export default async function ProductionPlanPage({
             {/* Filters and Action Buttons */}
             <div className="mb-6">
                 {/* Filters Row */}
-                <form className="flex gap-4 mb-4">
-                    <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">Month</label>
-                        <select
-                            name="month"
-                            defaultValue={currentMonth}
-                            className="bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                        >
-                            {months.map((m, i) => (
-                                <option key={i} value={i + 1}>{m}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">Year</label>
-                        <select
-                            name="year"
-                            defaultValue={currentYear}
-                            className="bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:border-primary outline-none"
-                        >
-                            {years.map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex items-end">
-                        <button type="submit" className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors">
-                            Filter
-                        </button>
-                    </div>
-                </form>
+                <div className="flex gap-4 mb-4 items-end">
+                    <MonthYearFilter currentMonth={currentMonth} currentYear={currentYear} years={years} />
+                </div>
 
                 {/* Action Buttons Row */}
                 {isAdmin && (

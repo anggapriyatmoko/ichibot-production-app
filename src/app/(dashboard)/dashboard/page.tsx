@@ -96,15 +96,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 const month = i + 1
                 const itemPlan = annualPlans.find(p => p.recipeId === recipe.id && p.month === month)
 
-                if (!itemPlan) return { month, plan: 0, done: 0 }
+                if (!itemPlan) return { month, plan: 0, done: 0, sold: 0 }
 
                 const totalSections = recipe.sections.length
                 const doneCount = itemPlan.units.filter(u => !!u.assembledAt).length
+                const soldCount = itemPlan.units.filter(u => !!u.isSold).length
 
                 return {
                     month,
                     plan: itemPlan.quantity,
-                    done: doneCount // "Done" means assembled -> all ingredients checked
+                    done: doneCount, // "Done" means assembled -> all ingredients checked
+                    sold: soldCount
                 }
             })
 
@@ -168,6 +170,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         else if (stat.serviceStatus === 'DONE') serviceStats.done = stat._count.serviceStatus
         else if (stat.serviceStatus === 'DELIVERED') serviceStats.delivered = stat._count.serviceStatus
     })
+
+    // Robot Ready Stock
+    const readyStockUnits = await prisma.productionUnit.findMany({
+        where: {
+            isSold: false,
+            assembledAt: { not: null }
+        },
+        include: {
+            productionPlan: {
+                include: {
+                    recipe: true
+                }
+            }
+        },
+        orderBy: {
+            assembledAt: 'desc'
+        }
+    })
+
+    const readyStockGrouped = readyStockUnits.reduce((acc: any, unit: any) => {
+        const recipeName = unit.productionPlan.recipe.name
+        if (!acc[recipeName]) acc[recipeName] = []
+        acc[recipeName].push(unit)
+        return acc
+    }, {})
 
     return (
         <div className="space-y-8">
@@ -290,7 +317,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                             <History className="w-5 h-5 text-muted-foreground" />
-                            Last Month ({new Date(selectedLastYear, selectedLastMonth - 1).toLocaleString('default', { month: 'long' })} {selectedLastYear})
+                            {new Date(selectedLastYear, selectedLastMonth - 1).toLocaleString('default', { month: 'long' })} {selectedLastYear}
                         </h3>
                         <MonthYearSelector selectedMonth={selectedLastMonth} selectedYear={selectedLastYear} />
                     </div>
@@ -390,6 +417,56 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
             </div>
 
+
+            {/* Robot Ready Stock */}
+            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                        <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        Robot Ready Stock
+                    </h3>
+                    <span className="text-xs font-semibold text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-lg">
+                        {Object.values(readyStockGrouped).reduce((acc: number, units: any) => acc + units.length, 0)} Total
+                    </span>
+                </div>
+                {Object.keys(readyStockGrouped).length === 0 ? (
+                    <div className="text-center text-muted-foreground p-6 text-sm">No robots are currently ready in stock.</div>
+                ) : (
+                    <div className="divide-y divide-border">
+                        {Object.entries(readyStockGrouped).map(([recipeName, units]: [string, any]) => (
+                            <div key={recipeName} className="px-5 py-3">
+                                <div className="flex items-center gap-2 mb-2.5">
+                                    <span className="text-sm font-semibold text-foreground">{recipeName}</span>
+                                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded">{units.length} Pcs</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {units.map((unit: any) => {
+                                        const computedSerial = `${unit.productionPlan.recipe.productionId}${unit.productionPlan.year}${unit.productionPlan.month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
+                                        return (
+                                            <Link
+                                                key={unit.id}
+                                                href={`/production-plan/${unit.productionPlan.id}`}
+                                                className={`inline-flex items-center gap-1.5 font-mono text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all hover:shadow-sm ${unit.isPacked
+                                                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-400 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 dark:hover:border-blue-400'
+                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 dark:hover:border-emerald-400'
+                                                    }`}
+                                            >
+                                                {unit.productIdentifier || computedSerial}
+                                                {unit.isPacked && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                            </Link>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="px-5 py-2.5 border-t border-border bg-muted/20 flex gap-4 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Assembled</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Packed</span>
+                </div>
+            </div>
+
             {/* Service Robot Stats */}
             <div className="bg-card border border-border rounded-2xl shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -422,6 +499,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     </div>
                 </div>
             </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Recent Activity */}
