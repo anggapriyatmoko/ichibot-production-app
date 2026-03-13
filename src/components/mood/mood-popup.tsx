@@ -216,7 +216,6 @@ export default function MoodPopup() {
                             {selectedMoodData?.emoji || '✅'}
                         </div>
                         <p className="text-lg font-semibold text-foreground">Terima kasih!</p>
-                        <p className="text-sm text-muted-foreground mt-1">Mood kamu sudah tercatat</p>
                     </div>
                 ) : (
                     <>
