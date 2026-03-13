@@ -56,16 +56,19 @@ export default function MoodPopup() {
             const [endH, endM] = schedule.endTime.split(':').map(Number)
             const startTotal = startH * 60 + startM
             const endTotal = endH * 60 + endM
-            const checkOutTotal = endTotal - 60 // 1 hour before end
+
+            const checkInLimit = startTotal + (4 * 60) // 4 hours after start time
+            const checkOutStart = endTotal - (1 * 60) // 2 hours before end time
+            const checkOutEnd = endTotal + (3 * 60) // 4 hours after end time
 
             // Determine which mood type to show
-            // CHECK_IN: within 60 min window from start time
-            // CHECK_OUT: from (endTime - 1 hour) until endTime
+            // CHECK_IN: from start time until 4 hours after
+            // CHECK_OUT: from 2 hours before end time until 2 hours after
             let typeToShow: MoodType | null = null
 
-            if (currentTotal >= startTotal && currentTotal <= startTotal + 60) {
+            if (currentTotal >= startTotal && currentTotal <= checkInLimit) {
                 typeToShow = 'CHECK_IN'
-            } else if (currentTotal >= checkOutTotal && currentTotal <= endTotal) {
+            } else if (currentTotal >= checkOutStart && currentTotal <= checkOutEnd) {
                 typeToShow = 'CHECK_OUT'
             }
 
