@@ -10,9 +10,15 @@ import IssueModal from './issue-modal'
 interface UnitCardMobileProps {
     unit: any
     sections: any[]
+    recipeProductionId: string
+    year: number
+    month: number
 }
 
-export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) {
+export default function UnitCardMobile({ unit, sections, recipeProductionId, year, month }: UnitCardMobileProps) {
+    // Compute Serial: ProdID + Year + Month(2) + Unit(3)
+    const computedSerial = `${recipeProductionId}${year.toString()}${month.toString().padStart(2, '0')}${unit.unitNumber.toString().padStart(3, '0')}`
+
     const [isPending, startTransition] = useTransition()
     const [completedIds, setCompletedIds] = useState<string[]>(() => {
         try {
@@ -36,7 +42,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
     })
 
     // Temporary states for editing unit info
-    const [tempSerial, setTempSerial] = useState(unit.productIdentifier || '')
+    const [tempSerial, setTempSerial] = useState(unit.productIdentifier || computedSerial)
     const [tempCustomId, setTempCustomId] = useState(unit.customId || '')
 
     // Sales Data States
@@ -61,9 +67,9 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
             setCompletedIds([])
         }
 
-        setTempSerial(unit.productIdentifier || '')
+        setTempSerial(unit.productIdentifier || computedSerial)
         setTempCustomId(unit.customId || '')
-    }, [unit])
+    }, [unit, computedSerial])
 
     // Calculate if all sections are checked
     const isAllSectionsChecked = sections.length > 0 && sections.every(section => completedIds.includes(section.id))
@@ -150,7 +156,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
             })
             const a = document.createElement('a')
             a.href = qrDataUrl
-            a.download = `${unit.productIdentifier || `Unit-${unit.unitNumber}`}.png`
+            a.download = `${unit.productIdentifier || computedSerial}.png`
             a.click()
         } catch (err) {
             console.error('QR generation failed:', err)
@@ -228,7 +234,7 @@ export default function UnitCardMobile({ unit, sections }: UnitCardMobileProps) 
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => {
-                                    setTempSerial(unit.productIdentifier || '')
+                                    setTempSerial(unit.productIdentifier || computedSerial)
                                     setTempCustomId(unit.customId || '')
                                     setIsUnitInfoModalOpen(false)
                                 }}

@@ -1,10 +1,11 @@
 import prisma from '@/lib/prisma'
-import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History, Plus, Minus, CheckCircle, Edit2, Bot, Wrench } from 'lucide-react'
+import { Package, AlertTriangle, ArrowUpRight, ArrowDownLeft, Clock, Calendar, History, Plus, Minus, CheckCircle, Edit2, Bot, Wrench, ClipboardList, ExternalLink } from 'lucide-react'
 import { formatNumber } from '@/utils/format'
 import { cn } from '@/lib/utils'
 import ProductionOverviewTable from './components/production-overview-table'
 import MonthYearSelector from './components/month-year-selector'
 import Link from 'next/link'
+import { getItems } from '@/app/actions/item'
 
 export const dynamic = 'force-dynamic'
 
@@ -195,6 +196,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         acc[recipeName].push(unit)
         return acc
     }, {})
+
+    // Permintaan Barang (Belum Diorder)
+    const permintaanBarang = await getItems({ status: 'Belum Diorder', per_page: 50 })
+    const pendingItems = permintaanBarang.success && permintaanBarang.data ? permintaanBarang.data.items : []
 
     return (
         <div className="space-y-8">
@@ -500,6 +505,35 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
             </div>
 
+            {/* Permintaan Barang (Belum Diorder) */}
+            <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        Permintaan Barang
+                        <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded">{pendingItems.length} Belum Diorder</span>
+                    </h3>
+                    <Link href="/administrasi/permintaan-barang" className="text-xs text-primary hover:text-blue-500 font-medium">Lihat Semua</Link>
+                </div>
+                {pendingItems.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-6 text-sm">Tidak ada permintaan barang yang menunggu.</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 border-t border-border">
+                        {pendingItems.map((item: any, idx: number) => (
+                            <Link key={item.id} href="/administrasi/permintaan-barang" className={`px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-accent/50 transition-colors group border-b border-border ${idx % 2 === 0 ? 'md:border-r' : ''}`}>
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-2 py-1 rounded-md shrink-0">{item.quantity}x</span>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{item.item_name}</p>
+                                        <p className="text-[11px] text-muted-foreground truncate">{item.requester_name} • {item.division}</p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">{new Date(item.request_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Recent Activity */}

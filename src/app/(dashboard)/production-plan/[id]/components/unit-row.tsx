@@ -201,8 +201,8 @@ export default function UnitRow({ unit, items, recipeProductionId, year, month }
                     )}
                 </td>
                 <td className="p-1 border-r border-border bg-white font-mono text-slate-600 text-center select-all sticky left-[45px] z-20 shadow-[1px_0_0_0_#E5E7EB]">
-                    {/* Display Computed Serial */}
-                    {computedSerial}
+                    {/* Display Computed Serial or Custom Identifier */}
+                    {unit.productIdentifier || computedSerial}
                 </td>
                 <td className="p-1 border-r border-border bg-white sticky left-[145px] z-20 shadow-[1px_0_0_0_#E5E7EB]">
                     <input

@@ -54,11 +54,9 @@ export async function createProductionPlan(formData: FormData) {
             units: {
                 create: Array.from({ length: quantity }).map((_, i) => {
                     const unitNumber = i + 1
-                    const serial = `${recipe.productionId}${year}${month.toString().padStart(2, '0')}${unitNumber.toString().padStart(3, '0')}`
 
                     return {
                         unitNumber,
-                        productIdentifier: serial,
                         completed: '[]' // Initialize with empty array
                     }
                 })

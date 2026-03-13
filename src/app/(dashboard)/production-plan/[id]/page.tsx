@@ -188,6 +188,9 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                         key={unit.id}
                         unit={unit}
                         sections={sectionsWithColors}
+                        recipeProductionId={(plan as any).recipe.productionId}
+                        year={(plan as any).year}
+                        month={(plan as any).month}
                     />
                 ))}
             </div>
