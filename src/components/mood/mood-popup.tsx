@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { submitMood, getUserMoodToday } from '@/app/actions/mood'
 import { cn } from '@/lib/utils'
@@ -24,12 +24,18 @@ export default function MoodPopup() {
     const [note, setNote] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
+    const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Test mode: ?test-mood=check_in or ?test-mood=check_out
     const testMood = searchParams.get('test-mood')
 
     const checkScheduleAndMood = useCallback(async () => {
         try {
+            if (checkTimeoutRef.current) {
+                clearTimeout(checkTimeoutRef.current)
+                checkTimeoutRef.current = null
+            }
+
             // TEST MODE: bypass time checks
             if (testMood) {
                 const type = testMood.toUpperCase() === 'CHECK_OUT' ? 'CHECK_OUT' : 'CHECK_IN'
@@ -74,6 +80,22 @@ export default function MoodPopup() {
 
             if (!typeToShow) return
 
+            // Check if snoozed
+            if (typeof window !== 'undefined') {
+                const snoozedUntilStr = localStorage.getItem('mood_snoozed_until')
+                if (snoozedUntilStr) {
+                    const snoozedUntil = parseInt(snoozedUntilStr, 10)
+                    const currentTime = Date.now()
+                    if (currentTime < snoozedUntil) {
+                        const remaining = snoozedUntil - currentTime
+                        checkTimeoutRef.current = setTimeout(checkScheduleAndMood, remaining)
+                        return
+                    } else {
+                        localStorage.removeItem('mood_snoozed_until')
+                    }
+                }
+            }
+
             // Check if already submitted
             const existing = await getUserMoodToday(typeToShow)
             if (existing) return
@@ -92,9 +114,28 @@ export default function MoodPopup() {
         // Re-check every 5 minutes (only in non-test mode)
         if (!testMood) {
             const interval = setInterval(checkScheduleAndMood, 5 * 60 * 1000)
-            return () => clearInterval(interval)
+            return () => {
+                clearInterval(interval)
+                if (checkTimeoutRef.current) {
+                    clearTimeout(checkTimeoutRef.current)
+                }
+            }
         }
     }, [checkScheduleAndMood, testMood])
+
+    const handleClose = () => {
+        setIsOpen(false)
+        if (typeof window !== 'undefined') {
+            const snoozeDuration = 30 * 1000 // 30 seconds
+            const snoozeUntil = Date.now() + snoozeDuration
+            localStorage.setItem('mood_snoozed_until', snoozeUntil.toString())
+
+            if (checkTimeoutRef.current) {
+                clearTimeout(checkTimeoutRef.current)
+            }
+            checkTimeoutRef.current = setTimeout(checkScheduleAndMood, snoozeDuration)
+        }
+    }
 
     const handleSubmit = async () => {
         if (!selectedMood) return
@@ -130,6 +171,17 @@ export default function MoodPopup() {
                 "relative w-full max-w-md bg-card border border-border rounded-3xl shadow-2xl overflow-hidden",
                 "animate-in fade-in zoom-in-95 duration-300"
             )}>
+                {/* Close Button */}
+                {!submitted && (
+                    <button
+                        onClick={handleClose}
+                        className="absolute top-4 right-4 z-10 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white/50 hover:text-white transition-colors"
+                        title="Close for 30 seconds"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
+
                 {/* Header gradient */}
                 <div className={cn(
                     "relative px-6 pt-8 pb-6 text-center",
@@ -244,3 +296,4 @@ export default function MoodPopup() {
         </div>
     )
 }
+
