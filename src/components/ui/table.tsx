@@ -547,6 +547,113 @@ const TablePagination = ({
 TablePagination.displayName = 'TablePagination'
 
 // ============================================================================
+// TABLE CARD VIEW - Premium Mobile View Components
+// ============================================================================
+
+interface TableCardViewProps extends React.HTMLAttributes<HTMLDivElement> {
+    /** Show loading overlay */
+    loading?: boolean
+    /** Message when empty */
+    emptyMessage?: string
+    /** colSpan for desktop (not used here but for consistency) */
+    totalItems?: number
+}
+
+const TableCardView = ({ className, loading, emptyMessage = "No data found", children, totalItems = 0, ...props }: TableCardViewProps) => {
+    if (loading) {
+        return (
+            <div className="md:hidden flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        )
+    }
+
+    if (totalItems === 0 && !children) {
+        return (
+            <div className="md:hidden py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border mx-4 my-2">
+                {emptyMessage}
+            </div>
+        )
+    }
+
+    return (
+        <div className={cn("md:hidden divide-y divide-border", className)} {...props}>
+            {children}
+        </div>
+    )
+}
+
+const TableMobileCard = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    <div className={cn("p-4 space-y-3 bg-card hover:bg-muted/20 transition-colors", className)} {...props} />
+)
+
+const TableMobileCardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    <div className={cn("flex justify-between items-start gap-4 mb-1", className)} {...props} />
+)
+
+const TableMobileCardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    <div className={cn("grid grid-cols-2 gap-4", className)} {...props} />
+)
+
+const TableMobileCardFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    <div className={cn("flex items-center justify-between pt-2 border-t border-border/50 mt-1", className)} {...props} />
+)
+
+// ============================================================================
+// TABLE RESPONSIVE - High-level component for auto-mobile switching
+// ============================================================================
+interface TableResponsiveProps<T> {
+    /** Data source */
+    data: T[]
+    /** Show loading state */
+    loading?: boolean
+    /** Message when no data is found */
+    emptyMessage?: string
+    /** Function to render each item as a mobile card */
+    renderMobileCard: (item: T) => React.ReactNode
+    /** Desktop content (usually <Table>...</Table>) */
+    children: React.ReactNode
+    /** Optional header (usually <TableHeaderContent />) */
+    header?: React.ReactNode
+    /** Additional classes for the scroll area */
+    className?: string
+    /** Additional classes for the wrapper */
+    wrapperClassName?: string
+}
+
+function TableResponsive<T>({
+    data,
+    loading,
+    emptyMessage,
+    renderMobileCard,
+    children,
+    header,
+    className,
+    wrapperClassName
+}: TableResponsiveProps<T>) {
+    return (
+        <TableWrapper loading={loading} className={wrapperClassName}>
+            {header}
+            <TableScrollArea className={cn("hidden md:block", className)}>
+                {children}
+            </TableScrollArea>
+            <TableCardView
+                loading={loading}
+                totalItems={data.length}
+                emptyMessage={emptyMessage}
+            >
+                {data.map((item, idx) => (
+                    <React.Fragment key={idx}>
+                        {renderMobileCard(item)}
+                    </React.Fragment>
+                ))}
+            </TableCardView>
+        </TableWrapper>
+    )
+}
+
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 export {
@@ -565,6 +672,12 @@ export {
     TablePagination,
     TableAnalysis,
     TableAnalysisCard,
+    TableCardView,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
+    TableResponsive,
     type TableAnalysisCardProps,
     type TableAnalysisProps,
 }

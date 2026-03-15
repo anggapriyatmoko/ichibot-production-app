@@ -17,6 +17,11 @@ import {
     TableEmpty,
     TablePagination,
     TableHeaderContent,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter
 } from "@/components/ui/table";
 
 export default function StoreSupplierManager({
@@ -145,7 +150,96 @@ export default function StoreSupplierManager({
                     }
                 />
 
-                <TableScrollArea>
+                <TableResponsive
+                    data={paginatedSuppliers}
+                    renderMobileCard={(supplier) => (
+                        <TableMobileCard key={supplier.id}>
+                            <TableMobileCardHeader>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-mono text-muted-foreground">{supplier.id}</span>
+                                    {editingId === supplier.id ? (
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateSupplier(supplier.id)}
+                                            className="w-full bg-background border border-primary/30 rounded px-2 py-1 text-sm outline-none focus:border-primary mt-1"
+                                        />
+                                    ) : (
+                                        <span className="font-bold text-foreground text-sm">{supplier.name}</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {editingId === supplier.id ? (
+                                        <>
+                                            <button
+                                                onClick={() => handleUpdateSupplier(supplier.id)}
+                                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                                            >
+                                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingId(null)}
+                                                className="p-2 text-destructive hover:bg-destructive/5 rounded-lg"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => startEditing(supplier)}
+                                                className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteSupplier(supplier.id)}
+                                                className="p-2 text-muted-foreground hover:text-destructive hover:bg-muted rounded-lg"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </TableMobileCardHeader>
+                        </TableMobileCard>
+                    )}
+                >
+                    {isAdding && (
+                        <div className="md:hidden px-4 py-3 bg-primary/5 border-b border-border animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Tambah Supplier Baru</span>
+                                <div className="flex gap-2">
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        value={newSupplierName}
+                                        onChange={(e) => setNewSupplierName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddSupplier()}
+                                        placeholder="Nama supplier..."
+                                        className="flex-1 bg-background border border-primary/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+                                    />
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={handleAddSupplier}
+                                            disabled={isSubmitting || !newSupplierName.trim()}
+                                            className="p-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                        </button>
+                                        <button
+                                            onClick={() => setIsAdding(false)}
+                                            className="p-2 bg-muted text-foreground rounded-lg"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -156,7 +250,7 @@ export default function StoreSupplierManager({
                         </TableHeader>
                         <TableBody>
                             {isAdding && (
-                                <TableRow hoverable={false} className="bg-primary/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <TableRow hoverable={false} className="bg-primary/5 animate-in fade-in slide-in-from-top-2 duration-200 hidden md:table-row">
                                     <TableCell className="text-xs text-muted-foreground font-mono">
                                         [AUTO]
                                     </TableCell>
@@ -255,7 +349,7 @@ export default function StoreSupplierManager({
                             )}
                         </TableBody>
                     </Table>
-                </TableScrollArea>
+                </TableResponsive>
 
                 <TablePagination
                     currentPage={currentPage}

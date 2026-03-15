@@ -10,7 +10,11 @@ import Image from 'next/image'
 import PayrollModal from './payroll-modal'
 import {
     TableWrapper,
-    TableScrollArea,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
     Table,
     TableHeader,
     TableBody,
@@ -327,7 +331,118 @@ export default function UserManagementTable({ userRole }: Props) {
                     </div>
                 </div>
 
-                <TableScrollArea>
+                <TableResponsive
+                    data={paginatedUsers}
+                    loading={false}
+                    renderMobileCard={(user: User) => (
+                        <TableMobileCard key={user.id}>
+                            <TableMobileCardHeader>
+                                <div className="flex items-center gap-3 max-w-[70%]">
+                                    <div className="w-10 h-10 rounded-full bg-muted overflow-hidden flex-shrink-0 border border-border shadow-sm">
+                                        {user.photo ? (
+                                            <Image
+                                                src={user.photo}
+                                                alt={user.name || 'User'}
+                                                width={40}
+                                                height={40}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <Users className="w-5 h-5 m-auto text-muted-foreground" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-0.5 overflow-hidden">
+                                        <h4 className="font-bold text-sm tracking-tight text-foreground truncate">
+                                            {user.name || '-'}
+                                        </h4>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border",
+                                                user.role === 'ADMIN' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                                                    user.role === 'HRD' ? 'bg-purple-500/10 text-purple-600 border-purple-500/20' :
+                                                        user.role === 'TEKNISI' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
+                                                            user.role === 'EXTERNAL' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                                                                'bg-gray-500/10 text-gray-600 border-gray-500/20'
+                                            )}>
+                                                {user.role}
+                                            </span>
+                                            <span className="text-[9px] text-muted-foreground font-bold truncate">
+                                                {user.department || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xs border border-primary/20 shadow-sm">
+                                        {user.leaveQuota || 0}
+                                    </div>
+                                    <span className="text-[8px] font-bold text-muted-foreground uppercase mt-0.5 tracking-tighter">Cuti</span>
+                                </div>
+                            </TableMobileCardHeader>
+
+                            <TableMobileCardContent>
+                                <div className="space-y-3">
+                                    <div className="bg-muted/30 rounded-lg p-2.5 grid grid-cols-2 gap-3 border border-border/50">
+                                        <div>
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Kontak & Email</span>
+                                            <p className="text-[10px] font-bold text-foreground truncate">{user.email || '-'}</p>
+                                            <p className="text-[10px] font-bold text-blue-600 mt-0.5">{user.phone || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Masa Kontrak</span>
+                                            <p className="text-[10px] font-bold text-foreground">
+                                                {user.contractEndDate ? new Date(user.contractEndDate).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) : '-'}
+                                            </p>
+                                            <div className="mt-0.5 truncate">{calculateRemainingTime(user.contractEndDate)}</div>
+                                        </div>
+                                    </div>
+                                    {user.ktpNumber && (
+                                        <div className="px-1">
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">No. KTP & Alamat</span>
+                                            <p className="text-[10px] font-mono font-bold text-foreground">{user.ktpNumber}</p>
+                                            <p className="text-[10px] text-muted-foreground leading-relaxed italic mt-1 line-clamp-2">{user.address || 'Alamat tidak tersedia'}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </TableMobileCardContent>
+
+                            <TableMobileCardFooter>
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-1.5">
+                                        {(user.leaveQuota || 0) > 0 && (
+                                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20 shadow-sm">
+                                                Sisa Cuti: {(user.leaveQuota || 0) - (user.takenLeaves || 0)} Hari
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => openEditModal(user)}
+                                            className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg border border-blue-500/20 shadow-sm transition-all"
+                                            title="Edit"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => setPayrollUser(user)}
+                                            className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-sm transition-all"
+                                            title="Input Gaji"
+                                        >
+                                            <Banknote className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => openLeaveQuotaModal(user)}
+                                            className="p-2 text-cyan-600 hover:bg-cyan-500/10 rounded-lg border border-cyan-500/20 shadow-sm transition-all"
+                                            title="Jatah Cuti"
+                                        >
+                                            <CalendarDays className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </TableMobileCardFooter>
+                        </TableMobileCard>
+                    )}
+                >
                     <Table>
                         <TableHeader>
                             <TableRow hoverable={false} className="bg-muted/50">
@@ -342,7 +457,7 @@ export default function UserManagementTable({ userRole }: Props) {
                         <TableBody>
                             {users.length === 0 ? (
                                 <TableEmpty
-                                    colSpan={5}
+                                    colSpan={6}
                                     message="Belum ada data karyawan."
                                     icon={<Users className="w-12 h-12 opacity-20" />}
                                 />
@@ -417,34 +532,36 @@ export default function UserManagementTable({ userRole }: Props) {
                                             </div>
                                         </TableCell>
                                         <TableCell align="center">
-                                            <button
-                                                onClick={() => openEditModal(user)}
-                                                className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => setPayrollUser(user)}
-                                                className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-500/10 rounded-lg transition-colors"
-                                                title="Input Gaji"
-                                            >
-                                                <Banknote className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => openLeaveQuotaModal(user)}
-                                                className="p-2 text-muted-foreground hover:text-cyan-600 hover:bg-cyan-500/10 rounded-lg transition-colors"
-                                                title="Set Jatah Cuti"
-                                            >
-                                                <CalendarDays className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => openEditModal(user)}
+                                                    className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setPayrollUser(user)}
+                                                    className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-500/10 rounded-lg transition-colors"
+                                                    title="Input Gaji"
+                                                >
+                                                    <Banknote className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => openLeaveQuotaModal(user)}
+                                                    className="p-2 text-muted-foreground hover:text-cyan-600 hover:bg-cyan-500/10 rounded-lg transition-colors"
+                                                    title="Set Jatah Cuti"
+                                                >
+                                                    <CalendarDays className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             )}
                         </TableBody>
                     </Table>
-                </TableScrollArea>
+                </TableResponsive>
 
                 <TablePagination
                     currentPage={page}

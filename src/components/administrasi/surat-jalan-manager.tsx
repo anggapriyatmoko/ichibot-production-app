@@ -31,13 +31,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableWrapper,
-  TableScrollArea,
   TableEmpty,
   TablePagination,
   TableHeaderContent,
   TableAnalysis,
   TableAnalysisCardProps,
+  TableResponsive,
+  TableMobileCard,
+  TableMobileCardHeader,
+  TableMobileCardContent,
+  TableMobileCardFooter,
 } from "@/components/ui/table";
 import { SignatureType } from "@/components/ui/pdf-signature-modal";
 import PdfSignatureModal from "@/components/ui/pdf-signature-modal";
@@ -289,250 +292,235 @@ export default function SuratJalanManager({
 
   return (
     <div className="space-y-6">
-      <TableWrapper>
-        <TableHeaderContent
-          title="Surat Jalan"
-          description="Kelola pengiriman barang dan cetak surat jalan resmi."
-          icon={<Truck className="w-5 h-5 font-bold text-primary" />}
-          actions={
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Cari surat jalan..."
-                  value={search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
-                />
-              </div>
-              <button
-                onClick={openAddModal}
-                className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4" />
-                Buat Surat Jalan
-              </button>
-            </div>
-          }
-        />
-        <TableScrollArea>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No. SJ</TableHead>
-                  <TableHead>Penerima</TableHead>
-                  <TableHead>Alamat</TableHead>
-                  <TableHead>Expedisi</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                  <TableHead>PDF</TableHead>
-                  <TableHead align="right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {suratJalanList.map((sj) => (
-                  <TableRow key={sj.id}>
-                    <TableCell>
-                      <span className="font-mono text-sm font-medium text-blue-600">
-                        {sj.sj_number}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-sm">{sj.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {sj.phone || "-"}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <p
-                        className="text-xs truncate max-w-[200px]"
-                        title={sj.address}
-                      >
-                        {sj.address}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {sj.expedition || "Internal"}
-                      </p>
-                    </TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">
-                      {new Date(sj.sj_date).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <button
-                        onClick={() => {
-                          setSelectedSJForPdf(sj);
-                          setIsPdfModalOpen(true);
-                        }}
-                        className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </TableCell>
-                    <TableCell align="right">
-                      <div className="flex gap-1 justify-end">
-                        <button
-                          onClick={() => openEditModal(sj)}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(sj.id)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {suratJalanList.length === 0 && (
-                  <TableEmpty
-                    colSpan={7}
-                    message="Belum ada data surat jalan."
+      <TableResponsive
+        data={suratJalanList}
+        loading={loading}
+        header={
+          <TableHeaderContent
+            title="Surat Jalan"
+            description="Kelola pengiriman barang dan cetak surat jalan resmi."
+            icon={<Truck className="w-5 h-5 font-bold text-primary" />}
+            actions={
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Cari surat jalan..."
+                    value={search}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                   />
-                )}
-              </TableBody>
-              {suratJalanList.length > 0 && (
-                <TableFooter>
-                  <TableRow hoverable={false}>
-                    <TableCell colSpan={7} className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Surat Jalan:</span>
-                        <span className="text-sm font-bold text-primary">{suratJalanList.length} Dokumen</span>
+                </div>
+                <button
+                  onClick={openAddModal}
+                  className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Buat Surat Jalan
+                </button>
+              </div>
+            }
+          />
+        }
+        renderMobileCard={(sj) => (
+          <TableMobileCard key={sj.id}>
+            <TableMobileCardHeader>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold text-blue-600 uppercase">
+                  {sj.sj_number}
+                </span>
+                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase tracking-tight">
+                  {new Date(sj.sj_date).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setSelectedSJForPdf(sj);
+                    setIsPdfModalOpen(true);
+                  }}
+                  className="p-2 text-red-600 bg-red-500/10 rounded-lg"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => openEditModal(sj)}
+                  className="p-2 text-blue-600 bg-blue-500/10 rounded-lg"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(sj.id)}
+                  className="p-2 text-red-600 bg-red-500/10 rounded-lg"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </TableMobileCardHeader>
+
+            <TableMobileCardContent>
+              <div className="col-span-2 space-y-1">
+                <h4 className="font-bold text-sm tracking-tight">{sj.name}</h4>
+                <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                  {sj.address}
+                </p>
+              </div>
+
+              {sj.items && sj.items.length > 0 && (
+                <div className="col-span-2 p-3 bg-muted/30 rounded-lg space-y-2 mt-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                      Barang
+                    </p>
+                    <span className="text-[9px] font-bold text-blue-600">
+                      {sj.items.length} Item
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {sj.items.slice(0, 2).map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between items-center text-[10px]"
+                      >
+                        <span className="text-foreground font-medium truncate flex-1 mr-2">
+                          {item.item_name}
+                        </span>
+                        <span className="text-muted-foreground shrink-0 tabular-nums">
+                          {item.qty} {item.unit}
+                        </span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                </TableFooter>
+                    ))}
+                    {sj.items.length > 2 && (
+                      <p className="text-[9px] text-muted-foreground italic pt-1 text-center">
+                        +{sj.items.length - 2} items lainnya
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
-            </Table>
-          )}
-        </TableScrollArea>
-      </TableWrapper>
+            </TableMobileCardContent>
 
-      <TableAnalysis cards={analysisCards} />
-
-      {/* Mobile/Tablet Card View - Premium List */}
-      <div className="md:hidden space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <>
-            {suratJalanList.map((sj) => (
-              <div
-                key={sj.id}
-                className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <span className="font-mono text-sm font-bold text-blue-600 uppercase">
+            <TableMobileCardFooter>
+              <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                {sj.expedition || "Tanpa Ekspedisi"}
+              </span>
+              <div className="flex items-center gap-1">
+                <CalendarIcon className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  {new Date(sj.sj_date).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </TableMobileCardFooter>
+          </TableMobileCard>
+        )}
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>No. SJ</TableHead>
+              <TableHead>Penerima</TableHead>
+              <TableHead>Alamat</TableHead>
+              <TableHead>Expedisi</TableHead>
+              <TableHead>Tanggal</TableHead>
+              <TableHead>PDF</TableHead>
+              <TableHead align="right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {suratJalanList.length === 0 ? (
+              <TableEmpty
+                colSpan={7}
+                message="Belum ada data surat jalan."
+              />
+            ) : (
+              suratJalanList.map((sj) => (
+                <TableRow key={sj.id}>
+                  <TableCell>
+                    <span className="font-mono text-sm font-medium text-blue-600">
                       {sj.sj_number}
                     </span>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(sj.sj_date).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium text-sm">{sj.name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {sj.phone || "-"}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <p
+                      className="text-xs truncate max-w-[200px]"
+                      title={sj.address}
+                    >
+                      {sj.address}
                     </p>
-                  </div>
-                  <div className="flex gap-2">
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {sj.expedition || "Internal"}
+                    </p>
+                  </TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">
+                    {new Date(sj.sj_date).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell>
                     <button
                       onClick={() => {
                         setSelectedSJForPdf(sj);
                         setIsPdfModalOpen(true);
                       }}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                      className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors border border-transparent hover:border-red-100"
                     >
                       <Download className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => openEditModal(sj)}
-                      className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sj.id)}
-                      className="p-2 bg-red-500/10 text-red-600 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-sm tracking-tight">
-                    {sj.name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1 italic">
-                    {sj.address}
-                  </p>
-                </div>
-
-                {sj.items && sj.items.length > 0 && (
-                  <div className="p-3 bg-muted/30 rounded-lg space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        Barang
-                      </span>
-                      <span className="text-[10px] font-bold text-blue-600">
-                        {sj.items.length} Item
-                      </span>
+                  </TableCell>
+                  <TableCell align="right">
+                    <div className="flex gap-1 justify-end">
+                      <button
+                        onClick={() => openEditModal(sj)}
+                        className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(sj.id)}
+                        className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="space-y-1.5">
-                      {sj.items.slice(0, 2).map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between items-center text-[11px]"
-                        >
-                          <span className="text-gray-700 font-medium truncate flex-1 mr-2">
-                            {item.item_name}
-                          </span>
-                          <span className="text-gray-500 shrink-0">
-                            {item.qty} {item.unit}
-                          </span>
-                        </div>
-                      ))}
-                      {sj.items.length > 2 && (
-                        <p className="text-[9px] text-muted-foreground italic pt-1 text-center">
-                          +{sj.items.length - 2} more items
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-3 border-t border-border flex justify-between items-center">
-                  <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                    {sj.expedition || "Tanpa Ekspedisi"}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {suratJalanList.length === 0 && (
-              <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                Belum ada data surat jalan.
-              </div>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-          </>
-        )}
-      </div>
+          </TableBody>
+          {suratJalanList.length > 0 && (
+            <TableFooter>
+              <TableRow hoverable={false}>
+                <TableCell colSpan={7} className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Surat Jalan:</span>
+                    <span className="text-sm font-bold text-primary">{suratJalanList.length} Dokumen</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
+      </TableResponsive>
 
       <TablePagination
         currentPage={currentPage}
@@ -540,6 +528,8 @@ export default function SuratJalanManager({
         onPageChange={(page) => fetchSJ(page, search)}
         totalCount={total}
       />
+
+      <TableAnalysis cards={analysisCards} className="mt-6" />
 
       {/* Modal */}
       {isModalOpen && (

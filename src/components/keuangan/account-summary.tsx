@@ -8,8 +8,6 @@ import { useConfirmation } from '@/components/providers/modal-provider'
 import AccountFormModal from './account-form-modal'
 import { formatCurrency, formatDateTime, formatNumber } from '@/utils/format'
 import {
-    TableWrapper,
-    TableScrollArea,
     Table,
     TableHeader,
     TableBody,
@@ -17,7 +15,12 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
-    TableHeaderContent
+    TableHeaderContent,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
@@ -66,202 +69,191 @@ export default function AccountSummaryList({
 
     return (
         <div className="space-y-6">
-            <TableWrapper>
-                <TableHeaderContent
-                    title="Ringkasan Akun Bank"
-                    description="Kelola seluruh akun bank dan pantau distribusi saldo."
-                    icon={<Building2 className="w-5 h-5 font-bold" />}
-                    actions={
-                        <button
-                            onClick={() => {
-                                setEditingAccount(null)
-                                setIsFormModalOpen(true)
-                            }}
-                            className="flex items-center justify-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm whitespace-nowrap"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Tambah Akun
-                        </button>
-                    }
-                />
+            <TableResponsive
+                data={initialData}
+                header={
+                    <TableHeaderContent
+                        title="Ringkasan Akun Bank"
+                        description="Kelola seluruh akun bank dan pantau distribusi saldo."
+                        icon={<Building2 className="w-5 h-5 font-bold" />}
+                        actions={
+                            <button
+                                onClick={() => {
+                                    setEditingAccount(null)
+                                    setIsFormModalOpen(true)
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Tambah Akun
+                            </button>
+                        }
+                    />
+                }
+                renderMobileCard={(account) => (
+                    <TableMobileCard key={account.id}>
+                        <TableMobileCardHeader>
+                            <div className="space-y-0.5">
+                                <h4 className="font-bold text-sm tracking-tight">{account.bankName}</h4>
+                                <p className="text-[10px] text-muted-foreground font-medium">{account.accountName}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => openEditForm(account)}
+                                    className="p-2 text-blue-600 bg-blue-500/10 rounded-lg transition-colors"
+                                >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(account)}
+                                    className="p-2 text-red-600 bg-red-500/10 rounded-lg transition-colors"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </TableMobileCardHeader>
 
-                <TableScrollArea className="hidden md:block">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nama Bank</TableHead>
-                                <TableHead>Atas Nama</TableHead>
-                                <TableHead>No. Rekening</TableHead>
-                                <TableHead align="right">Saldo</TableHead>
-                                <TableHead align="center" className="w-[120px]">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {initialData.length > 0 ? (
-                                initialData.map((account) => (
-                                    <TableRow key={account.id}>
-                                        <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-foreground">{account.bankName}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="font-medium text-foreground">{account.accountName}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            {account.accountNumber ? (
-                                                <span className="font-mono text-sm text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
-                                                    {account.accountNumber}
-                                                </span>
-                                            ) : (
-                                                <span className="text-muted-foreground text-sm italic">-</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <div className="flex flex-col items-end">
-                                                <span className="font-bold text-lg text-primary">
-                                                    {account.currency === 'USD' ? '$' : account.currency === 'CNY' ? '¥' : 'Rp'}{' '}
-                                                    {formatNumber(account.balance)}
-                                                </span>
-                                                {account.currency !== 'IDR' && (
-                                                    <span className="text-xs text-muted-foreground font-medium mt-0.5">
-                                                        (Rp {formatNumber(getBalanceInIdr(account))})
-                                                    </span>
-                                                )}
-                                                <span className="text-[10px] text-muted-foreground mt-0.5">
-                                                    Diperbarui: {formatDateTime(account.updatedAt)}, {
-                                                        (() => {
-                                                            const now = new Date();
-                                                            const updated = new Date(account.updatedAt);
+                        <TableMobileCardContent>
+                            <div className="col-span-1">
+                                <span className="text-[10px] text-muted-foreground block mb-0.5">No. Rekening</span>
+                                {account.accountNumber ? (
+                                    <span className="font-mono text-xs text-foreground bg-muted/50 px-2 py-0.5 rounded">
+                                        {account.accountNumber}
+                                    </span>
+                                ) : (
+                                    <span className="text-muted-foreground text-xs italic">-</span>
+                                )}
+                            </div>
+                            <div className="col-span-1 text-right">
+                                <span className="text-[10px] text-muted-foreground block mb-0.5">Saldo</span>
+                                <div className="flex flex-col items-end">
+                                    <span className="font-bold text-sm text-foreground">
+                                        {account.currency === 'USD' ? '$' : account.currency === 'CNY' ? '¥' : 'Rp'}{' '}
+                                        {formatNumber(account.balance)}
+                                    </span>
+                                    {account.currency !== 'IDR' && (
+                                        <span className="text-[10px] text-muted-foreground font-medium">
+                                            (Rp {formatNumber(getBalanceInIdr(account))})
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </TableMobileCardContent>
 
-                                                            // Set both dates to midnight to compare calendar days
-                                                            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                                                            const updatedMidnight = new Date(updated.getFullYear(), updated.getMonth(), updated.getDate());
-
-                                                            const diffMs = todayMidnight.getTime() - updatedMidnight.getTime();
-                                                            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-                                                            if (diffDays === 0) return 'hari ini';
-                                                            if (diffDays === 1) return 'kemarin';
-                                                            return `${diffDays} hari yang lalu`;
-                                                        })()
-                                                    }
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <div className="flex justify-center items-center gap-2">
-                                                <button
-                                                    onClick={() => openEditForm(account)}
-                                                    className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
-                                                    title="Edit Akun"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(account)}
-                                                    className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-                                                    title="Hapus Akun"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableEmpty
-                                    colSpan={5}
-                                    icon={<Building2 className="w-12 h-12 opacity-10" />}
-                                    message="Belum ada akun bank"
-                                    description={<p>Klik "Tambah Akun" untuk mulai mencatat saldo.</p>}
-                                />
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableScrollArea>
-
-                {/* Mobile View (List) */}
-                <div className="block md:hidden mt-4">
-                    {initialData.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-border border-dashed mx-4">
-                            Belum ada akun bank
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-border border-t border-b border-border">
-                            {initialData.map((account) => (
-                                <div key={account.id} className="py-4 px-4 flex flex-col gap-3">
-                                    <div className="flex justify-between items-start gap-2">
-                                        <div className="space-y-1">
-                                            <h4 className="font-bold text-foreground text-sm leading-tight">{account.bankName}</h4>
-                                            <p className="font-medium text-foreground text-xs">{account.accountName}</p>
-                                            <div className="mt-1">
-                                                {account.accountNumber ? (
-                                                    <span className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
-                                                        {account.accountNumber}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-muted-foreground text-xs italic">-</span>
-                                                )}
-                                            </div>
+                        <TableMobileCardFooter>
+                            <div className="text-[10px] text-muted-foreground italic">
+                                Diperbarui: {formatDateTime(account.updatedAt)}, {
+                                    (() => {
+                                        const now = new Date();
+                                        const updated = new Date(account.updatedAt);
+                                        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                        const updatedMidnight = new Date(updated.getFullYear(), updated.getMonth(), updated.getDate());
+                                        const diffMs = todayMidnight.getTime() - updatedMidnight.getTime();
+                                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                                        if (diffDays === 0) return 'hari ini';
+                                        if (diffDays === 1) return 'kemarin';
+                                        return `${diffDays} hari yang lalu`;
+                                    })()
+                                }
+                            </div>
+                        </TableMobileCardFooter>
+                    </TableMobileCard>
+                )}
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nama Bank</TableHead>
+                            <TableHead>Atas Nama</TableHead>
+                            <TableHead>No. Rekening</TableHead>
+                            <TableHead align="right">Saldo</TableHead>
+                            <TableHead align="center" className="w-[120px]">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {initialData.length > 0 ? (
+                            initialData.map((account) => (
+                                <TableRow key={account.id}>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-foreground">{account.bankName}</span>
                                         </div>
-                                        <div className="flex flex-col items-end gap-1 shrink-0">
-                                            <span className="font-bold text-foreground text-sm whitespace-nowrap">
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="font-medium text-foreground">{account.accountName}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        {account.accountNumber ? (
+                                            <span className="font-mono text-sm text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                                                {account.accountNumber}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground text-sm italic">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        <div className="flex flex-col items-end">
+                                            <span className="font-bold text-lg text-primary">
                                                 {account.currency === 'USD' ? '$' : account.currency === 'CNY' ? '¥' : 'Rp'}{' '}
                                                 {formatNumber(account.balance)}
                                             </span>
                                             {account.currency !== 'IDR' && (
-                                                <span className="text-[10px] text-muted-foreground font-medium">
+                                                <span className="text-xs text-muted-foreground font-medium mt-0.5">
                                                     (Rp {formatNumber(getBalanceInIdr(account))})
                                                 </span>
                                             )}
+                                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                                                Diperbarui: {formatDateTime(account.updatedAt)}, {
+                                                    (() => {
+                                                        const now = new Date();
+                                                        const updated = new Date(account.updatedAt);
+
+                                                        // Set both dates to midnight to compare calendar days
+                                                        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                                        const updatedMidnight = new Date(updated.getFullYear(), updated.getMonth(), updated.getDate());
+
+                                                        const diffMs = todayMidnight.getTime() - updatedMidnight.getTime();
+                                                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                                                        if (diffDays === 0) return 'hari ini';
+                                                        if (diffDays === 1) return 'kemarin';
+                                                        return `${diffDays} hari yang lalu`;
+                                                    })()
+                                                }
+                                            </span>
                                         </div>
-                                    </div>
-
-                                    <div className="flex justify-between items-center pt-1">
-                                        <div className="text-[10px] text-muted-foreground">
-                                            Diperbarui: {formatDateTime(account.updatedAt)}, {
-                                                (() => {
-                                                    const now = new Date();
-                                                    const updated = new Date(account.updatedAt);
-
-                                                    // Set both dates to midnight to compare calendar days
-                                                    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                                                    const updatedMidnight = new Date(updated.getFullYear(), updated.getMonth(), updated.getDate());
-
-                                                    const diffMs = todayMidnight.getTime() - updatedMidnight.getTime();
-                                                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-                                                    if (diffDays === 0) return 'hari ini';
-                                                    if (diffDays === 1) return 'kemarin';
-                                                    return `${diffDays} hari yang lalu`;
-                                                })()
-                                            }
-                                        </div>
-                                        <div className="flex items-center gap-2">
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <div className="flex justify-center items-center gap-2">
                                             <button
                                                 onClick={() => openEditForm(account)}
-                                                className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-md transition-colors flex items-center gap-1"
-                                                title="Edit"
+                                                className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                                                title="Edit Akun"
                                             >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                                <span className="text-[10px] font-medium hidden sm:inline">Edit</span>
+                                                <Edit2 className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(account)}
-                                                className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md transition-colors flex items-center gap-1"
-                                                title="Hapus"
+                                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                                                title="Hapus Akun"
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </TableWrapper>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableEmpty
+                                colSpan={5}
+                                icon={<Building2 className="w-12 h-12 opacity-10" />}
+                                message="Belum ada akun bank"
+                                description={<p>Klik "Tambah Akun" untuk mulai mencatat saldo.</p>}
+                            />
+                        )}
+                    </TableBody>
+                </Table>
+            </TableResponsive>
 
             {/* Analytics Section */}
             {initialData.length > 0 && (

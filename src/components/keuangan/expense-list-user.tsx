@@ -3,21 +3,25 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info, Calendar } from 'lucide-react'
 import { getExpenses, createExpense, updateExpense, deleteExpense, ExpenseData } from '@/app/actions/expense'
 import { useAlert } from '@/hooks/use-alert'
 import {
-    TableWrapper,
     Table,
     TableHeader,
+    TableHeaderContent,
     TableBody,
     TableRow,
     TableHead,
     TableCell,
-    TableHeaderContent,
     TableEmpty,
     TableFooter,
-    TablePagination
+    TablePagination,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
 } from '@/components/ui/table'
 import Modal from '@/components/ui/modal'
 
@@ -321,267 +325,257 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
 
     return (
         <div className="space-y-6">
-            <TableWrapper loading={isLoadingData}>
-                <TableHeaderContent
-                    title="Riwayat Pengeluaran"
-                    description="Seluruh pengeluaran pribadi Anda beserta buktinya."
-                    actions={
-                        <div className="flex flex-col sm:flex-row items-center gap-3">
-                            <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1.5 border border-border rounded-lg">
-                                <div className="flex items-center gap-2 px-2">
-                                    <span className="text-sm text-muted-foreground font-medium">Periode:</span>
-                                    <select
-                                        value={periodType}
-                                        onChange={(e) => setPeriodType(e.target.value as PeriodType)}
-                                        className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer text-foreground"
-                                    >
-                                        <option value="daily">Harian</option>
-                                        <option value="weekly">Mingguan</option>
-                                        <option value="monthly">Bulanan</option>
-                                        <option value="yearly">Tahunan</option>
-                                    </select>
-                                </div>
-                                <div className="hidden sm:block w-px h-5 bg-border" />
-                                <div className="flex items-center gap-2 px-2">
-                                    {periodType === 'daily' && (
-                                        <input
-                                            type="date"
-                                            value={selectedDate}
-                                            onChange={(e) => setSelectedDate(e.target.value)}
-                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
-                                        />
-                                    )}
-                                    {periodType === 'weekly' && (
-                                        <input
-                                            type="week"
-                                            value={`${new Date(selectedDate).getFullYear()}-W${getWeekNumber(new Date(selectedDate))}`}
-                                            onChange={(e) => {
-                                                if (!e.target.value) return
-                                                const [y, w] = e.target.value.split('-W')
-                                                const date = getDateOfISOWeek(parseInt(w), parseInt(y))
-                                                setSelectedDate(date.toISOString().substring(0, 10))
-                                            }}
-                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
-                                        />
-                                    )}
-                                    {periodType === 'monthly' && (
-                                        <input
-                                            type="month"
-                                            value={selectedDate.substring(0, 7)}
-                                            onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
-                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
-                                        />
-                                    )}
-                                    {periodType === 'yearly' && (
+            <TableResponsive
+                data={expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+                loading={isLoadingData}
+                header={
+                    <TableHeaderContent
+                        title="Riwayat Pengeluaran"
+                        description="Seluruh pengeluaran pribadi Anda beserta buktinya."
+                        actions={
+                            <div className="flex flex-col sm:flex-row items-center gap-3">
+                                <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1.5 border border-border rounded-lg">
+                                    <div className="flex items-center gap-2 px-2">
+                                        <span className="text-sm text-muted-foreground font-medium">Periode:</span>
                                         <select
-                                            value={new Date(selectedDate).getFullYear()}
-                                            onChange={(e) => setSelectedDate(`${e.target.value}-01-01`)}
-                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[100px]"
+                                            value={periodType}
+                                            onChange={(e) => setPeriodType(e.target.value as PeriodType)}
+                                            className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer text-foreground"
                                         >
-                                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                                                <option key={year} value={year}>{year}</option>
-                                            ))}
+                                            <option value="daily">Harian</option>
+                                            <option value="weekly">Mingguan</option>
+                                            <option value="monthly">Bulanan</option>
+                                            <option value="yearly">Tahunan</option>
                                         </select>
+                                    </div>
+                                    <div className="hidden sm:block w-px h-5 bg-border" />
+                                    <div className="flex items-center gap-2 px-2">
+                                        {periodType === 'daily' && (
+                                            <input
+                                                type="date"
+                                                value={selectedDate}
+                                                onChange={(e) => setSelectedDate(e.target.value)}
+                                                className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                            />
+                                        )}
+                                        {periodType === 'weekly' && (
+                                            <input
+                                                type="week"
+                                                value={`${new Date(selectedDate).getFullYear()}-W${getWeekNumber(new Date(selectedDate))}`}
+                                                onChange={(e) => {
+                                                    if (!e.target.value) return
+                                                    const [y, w] = e.target.value.split('-W')
+                                                    const date = getDateOfISOWeek(parseInt(w), parseInt(y))
+                                                    setSelectedDate(date.toISOString().substring(0, 10))
+                                                }}
+                                                className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                            />
+                                        )}
+                                        {periodType === 'monthly' && (
+                                            <input
+                                                type="month"
+                                                value={selectedDate.substring(0, 7)}
+                                                onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
+                                                className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[130px]"
+                                            />
+                                        )}
+                                        {periodType === 'yearly' && (
+                                            <select
+                                                value={new Date(selectedDate).getFullYear()}
+                                                onChange={(e) => setSelectedDate(`${e.target.value}-01-01`)}
+                                                className="px-2 py-1 text-sm bg-transparent border-none focus:outline-none focus:ring-0 cursor-pointer min-w-[100px]"
+                                            >
+                                                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                                    <option key={year} value={year}>{year}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                    {(periodType === 'weekly') && (
+                                        <div className="text-xs text-muted-foreground px-2 bg-muted/50 rounded py-1 whitespace-nowrap">
+                                            {format(new Date(startDate), 'dd MMM', { locale: localeId })} - {format(new Date(endDate), 'dd MMM yyyy', { locale: localeId })}
+                                        </div>
                                     )}
                                 </div>
-                                {(periodType === 'weekly') && (
-                                    <div className="text-xs text-muted-foreground px-2 bg-muted/50 rounded py-1 whitespace-nowrap">
-                                        {format(new Date(startDate), 'dd MMM', { locale: localeId })} - {format(new Date(endDate), 'dd MMM yyyy', { locale: localeId })}
-                                    </div>
+                                <button
+                                    onClick={() => handleOpenModal()}
+                                    className="bg-primary text-primary-foreground px-4 py-2 h-[38px] rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Catat
+                                </button>
+                            </div>
+                        }
+                    />
+                }
+                renderMobileCard={(item) => (
+                    <TableMobileCard key={item.id}>
+                        <TableMobileCardHeader>
+                            <div className="flex flex-col gap-0.5">
+                                <h4 className="font-bold text-sm tracking-tight text-foreground">{item.name}</h4>
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                                    <Calendar className="w-3 h-3" />
+                                    {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
+                                    <span>•</span>
+                                    <span>{format(new Date(item.createdAt || item.date), 'HH:mm')}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => handleOpenModal(item)}
+                                    className="p-2 text-blue-600 bg-blue-500/10 rounded-lg transition-colors"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(item.id)}
+                                    disabled={deletingId === item.id}
+                                    className="p-2 text-red-600 bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {deletingId === item.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                </button>
+                            </div>
+                        </TableMobileCardHeader>
+
+                        <TableMobileCardContent>
+                            <div className="flex items-center justify-between col-span-2 bg-muted/30 p-2.5 rounded-lg border border-border/10">
+                                <span className="px-2 py-1 bg-white border border-border text-foreground rounded-lg text-[10px] font-bold shadow-sm">
+                                    {item.category?.name || 'Umum'}
+                                </span>
+                                <span className="font-black text-sm text-foreground tabular-nums">
+                                    {formatCurrency(item.amount)}
+                                </span>
+                            </div>
+                        </TableMobileCardContent>
+
+                        <TableMobileCardFooter>
+                            <div>
+                                {item.image ? (
+                                    <button
+                                        onClick={() => {
+                                            setPreviewImage(item.image)
+                                            setIsPreviewOpen(true)
+                                        }}
+                                        className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2.5 py-1.5 rounded-lg transition-all hover:bg-primary/20"
+                                    >
+                                        <ImageIcon className="w-3.5 h-3.5" />
+                                        Lihat Bukti PDF
+                                    </button>
+                                ) : (
+                                    <span className="text-[10px] text-muted-foreground font-medium italic bg-muted/50 px-2.5 py-1.5 rounded-lg border border-dotted border-border">
+                                        Tanpa lampiran bukti
+                                    </span>
                                 )}
                             </div>
-                            <button
-                                onClick={() => handleOpenModal()}
-                                className="bg-primary text-primary-foreground px-4 py-2 h-[38px] rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Catat
-                            </button>
-                        </div>
-                    }
-                />
-                <div className="hidden md:block overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px] text-center">No</TableHead>
-                                <TableHead>Tanggal</TableHead>
-                                <TableHead>Kategori</TableHead>
-                                <TableHead>Nama Pengeluaran</TableHead>
-                                <TableHead align="right">Jumlah</TableHead>
-                                <TableHead align="center">Bukti</TableHead>
-                                <TableHead className="w-[100px] text-center">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {expenses.length === 0 ? (
-                                <TableEmpty colSpan={7} message="Belum ada riwayat pengeluaran" />
-                            ) : (
-                                expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
-                                    <TableRow key={item.id}>
-                                        <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
-                                        <TableCell className="font-medium whitespace-nowrap">
-                                            {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
-                                            <div className="text-xs text-muted-foreground mt-0.5">
-                                                Jam {format(new Date(item.createdAt || item.date), 'HH:mm')}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
-                                                {item.category?.name || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>{item.name}</TableCell>
-                                        <TableCell align="right" className="font-semibold text-foreground">
-                                            {formatCurrency(item.amount)}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            {item.image ? (
-                                                <button
-                                                    onClick={() => {
-                                                        setPreviewImage(item.image)
-                                                        setIsPreviewOpen(true)
-                                                    }}
-                                                    className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors inline-block"
-                                                    title="Lihat Foto"
-                                                >
-                                                    <ImageIcon className="w-4 h-4" />
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground">-</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    onClick={() => handleOpenModal(item)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(item.id)}
-                                                    disabled={deletingId === item.id}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50/50 rounded-md transition-colors disabled:opacity-50"
-                                                    title="Hapus"
-                                                >
-                                                    {deletingId === item.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="w-4 h-4" />
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                        {expenses.length > 0 && (
-                            <TableFooter>
-                                <TableRow>
-                                    <TableCell colSpan={4} className="text-right font-bold py-4">Total Akumulasi</TableCell>
-                                    <TableCell align="right" className="font-bold text-lg text-primary py-4">
-                                        {formatCurrency(totalAmount)}
+                        </TableMobileCardFooter>
+                    </TableMobileCard>
+                )}
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px] text-center">No</TableHead>
+                            <TableHead>Tanggal</TableHead>
+                            <TableHead>Kategori</TableHead>
+                            <TableHead>Nama Pengeluaran</TableHead>
+                            <TableHead align="right">Jumlah</TableHead>
+                            <TableHead align="center">Bukti</TableHead>
+                            <TableHead className="w-[100px] text-center">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {expenses.length === 0 ? (
+                            <TableEmpty colSpan={7} message="Belum ada riwayat pengeluaran" />
+                        ) : (
+                            expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
+                                <TableRow key={item.id}>
+                                    <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
+                                    <TableCell className="font-medium whitespace-nowrap">
+                                        {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                            Jam {format(new Date(item.createdAt || item.date), 'HH:mm')}
+                                        </div>
                                     </TableCell>
-                                    <TableCell colSpan={2}></TableCell>
-                                </TableRow>
-                            </TableFooter>
-                        )}
-                    </Table>
-                </div>
-
-                {/* Mobile View (List) */}
-                <div className="block md:hidden mt-4">
-                    {expenses.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-border border-dashed mx-4">
-                            Belum ada riwayat pengeluaran
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-border border-t border-b border-border">
-                            {expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
-                                <div key={item.id} className="py-4 px-4 flex flex-col gap-3">
-                                    <div className="flex justify-between items-start gap-2">
-                                        <div className="space-y-1">
-                                            <h4 className="font-semibold text-foreground text-sm leading-tight">{item.name}</h4>
-                                            <p className="text-xs text-muted-foreground">
-                                                {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })} • {format(new Date(item.createdAt || item.date), 'HH:mm')}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1 shrink-0">
-                                            <span className="font-bold text-foreground text-sm">{formatCurrency(item.amount)}</span>
-                                            <span className="px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded-md w-fit">
-                                                {item.category?.name || '-'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center pt-1">
-                                        <div>
-                                            {item.image ? (
-                                                <button
-                                                    onClick={() => {
-                                                        setPreviewImage(item.image)
-                                                        setIsPreviewOpen(true)
-                                                    }}
-                                                    className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
-                                                >
-                                                    <ImageIcon className="w-3.5 h-3.5" />
-                                                    Lihat Bukti
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground italic flex items-center gap-1.5 px-2 py-1">
-                                                    Tidak ada bukti
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
+                                    <TableCell>
+                                        <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
+                                            {item.category?.name || '-'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell align="right" className="font-semibold text-foreground">
+                                        {formatCurrency(item.amount)}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        {item.image ? (
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewImage(item.image)
+                                                    setIsPreviewOpen(true)
+                                                }}
+                                                className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors inline-block"
+                                                title="Lihat Foto"
+                                            >
+                                                <ImageIcon className="w-4 h-4" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <div className="flex items-center justify-center gap-2">
                                             <button
                                                 onClick={() => handleOpenModal(item)}
-                                                className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-md transition-colors flex items-center gap-1"
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors"
                                                 title="Edit"
                                             >
-                                                <Pencil className="w-3.5 h-3.5" />
-                                                <span className="text-[10px] font-medium hidden sm:inline">Edit</span>
+                                                <Pencil className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(item.id)}
                                                 disabled={deletingId === item.id}
-                                                className="p-1.5 text-red-600 bg-red-50/50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 rounded-md transition-colors disabled:opacity-50 flex items-center gap-1"
+                                                className="p-1.5 text-red-600 hover:bg-red-50/50 rounded-md transition-colors disabled:opacity-50"
                                                 title="Hapus"
                                             >
                                                 {deletingId === item.id ? (
-                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
                                                 ) : (
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    <Trash2 className="w-4 h-4" />
                                                 )}
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
                     {expenses.length > 0 && (
-                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-4 mx-4 flex justify-between items-center">
-                            <span className="font-semibold text-sm text-foreground">Total Akumulasi</span>
-                            <span className="font-bold text-primary">{formatCurrency(totalAmount)}</span>
-                        </div>
+                        <TableFooter>
+                            <TableRow hoverable={false}>
+                                <TableCell colSpan={4} className="text-right font-bold py-4">Total Akumulasi</TableCell>
+                                <TableCell align="right" className="font-bold text-lg text-primary py-4">
+                                    {formatCurrency(totalAmount)}
+                                </TableCell>
+                                <TableCell colSpan={2}></TableCell>
+                            </TableRow>
+                        </TableFooter>
                     )}
-                </div>
+                </Table>
+            </TableResponsive>
 
-                {expenses.length > 0 && (
-                    <TablePagination
-                        currentPage={currentPage}
-                        totalPages={Math.ceil(expenses.length / itemsPerPage)}
-                        onPageChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
-                        onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
-                        totalCount={expenses.length}
-                    />
-                )}
-            </TableWrapper>
+            {expenses.length > 0 && (
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(expenses.length / itemsPerPage)}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
+                    totalCount={expenses.length}
+                />
+            )}
 
             {/* Analytics Section */}
             {expenses.length > 0 && (

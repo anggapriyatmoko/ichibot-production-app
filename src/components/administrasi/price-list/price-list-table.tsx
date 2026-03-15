@@ -13,7 +13,12 @@ import {
     TableScrollArea,
     TableEmpty,
     TableHeaderContent,
-    TablePagination
+    TablePagination,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Trash2, AlertCircle, Pencil, Banknote, List, Check, X, Search, FileText, FileDown, Tag } from 'lucide-react'
@@ -209,10 +214,8 @@ export default function PriceListTable({ group }: PriceListTableProps) {
         currentPage * itemsPerPage
     )
 
-
-
     return (
-        <TableWrapper>
+        <div className="space-y-4">
             <PriceListItemPdfModal
                 isOpen={!!previewItem}
                 onClose={() => setPreviewItem(null)}
@@ -226,52 +229,176 @@ export default function PriceListTable({ group }: PriceListTableProps) {
                 items={sortedItems}
             />
 
-            <TableHeaderContent
-                title={<GroupTitle />}
-                description={`${items.length} Item terdaftar dalam grup ini`}
-                icon={<Banknote className="w-5 h-5" />}
-                actions={
-                    <div className="flex items-center gap-2">
-                        <div className="relative w-40 sm:w-64">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Cari item..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-8 h-9 font-sans"
-                            />
-                        </div>
-                        <div className="w-px h-6 bg-border mx-1" />
+            <TableResponsive
+                data={paginatedItems}
+                loading={false}
+                header={
+                    <TableHeaderContent
+                        title={<GroupTitle />}
+                        description={`${items.length} Item terdaftar dalam grup ini`}
+                        icon={<Banknote className="w-5 h-5" />}
+                        actions={
+                            <div className="flex items-center gap-2">
+                                <div className="relative w-40 sm:w-64">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="Cari item..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-8 h-9 font-sans"
+                                    />
+                                </div>
+                                <div className="w-px h-6 bg-border mx-1" />
 
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
-                            onClick={() => setShowGroupPreview(true)}
-                            title="Preview Daftar Harga (PDF)"
-                        >
-                            <FileDown className="w-4 h-4" />
-                        </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+                                    onClick={() => setShowGroupPreview(true)}
+                                    title="Preview Daftar Harga (PDF)"
+                                >
+                                    <FileDown className="w-4 h-4" />
+                                </Button>
 
-                        <PriceListItemForm
-                            groupId={group.id}
-                            existingCategories={existingCategories}
-                            uncategorizedOrder={group.uncategorizedOrder ?? 0}
-                        />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={handleDeleteGroup}
-                            title="Hapus Grup"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
-                    </div>
+                                <PriceListItemForm
+                                    groupId={group.id}
+                                    existingCategories={existingCategories}
+                                    uncategorizedOrder={group.uncategorizedOrder ?? 0}
+                                />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                    onClick={handleDeleteGroup}
+                                    title="Hapus Grup"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        }
+                    />
                 }
-            />
+                renderMobileCard={(item: any) => (
+                    <TableMobileCard key={item.id}>
+                        <TableMobileCardHeader>
+                            <div className="flex flex-col gap-1 max-w-[70%]">
+                                <h4 className="font-bold text-sm tracking-tight text-foreground line-clamp-2">
+                                    {item.name}
+                                </h4>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="px-1.5 py-0.5 bg-muted rounded text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                                        {item.categoryRel?.name || 'Umum'}
+                                    </span>
+                                    {item.quantity && (
+                                        <span className="text-[10px] text-muted-foreground font-medium italic">
+                                            · {item.quantity} Qty
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-600 bg-blue-500/10 rounded-lg"
+                                    onClick={() => setPreviewItem(item)}
+                                >
+                                    <FileText className="w-3.5 h-3.5" />
+                                </Button>
+                                <PriceListItemForm
+                                    item={item}
+                                    existingCategories={existingCategories}
+                                    uncategorizedOrder={group.uncategorizedOrder ?? 0}
+                                />
+                            </div>
+                        </TableMobileCardHeader>
 
-            <TableScrollArea>
+                        <TableMobileCardContent>
+                            <div className="flex gap-4 col-span-2">
+                                {item.image ? (
+                                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-border shrink-0 shadow-sm">
+                                        <Image
+                                            src={item.image}
+                                            alt={item.name}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 rounded-xl border border-dashed border-border bg-muted/30 flex items-center justify-center text-muted-foreground shrink-0 shadow-inner">
+                                        <AlertCircle className="w-6 h-6 opacity-20" />
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col justify-center flex-1 py-1">
+                                    {item.prices && item.prices.length > 0 ? (
+                                        <div className="space-y-1.5">
+                                            {item.prices.map((p: any, pi: number) => (
+                                                <div key={pi} className="flex flex-col gap-0.5">
+                                                    {item.prices.length > 1 && (
+                                                        <span className="text-[10px] text-muted-foreground font-medium italic">
+                                                            {p.label}{p.qty ? ` · ${p.qty}` : ''}
+                                                        </span>
+                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-sm text-foreground tabular-nums">
+                                                            {formatRupiah(p.discount > 0 ? p.discount : p.price)}
+                                                        </span>
+                                                        {p.discount > 0 && (
+                                                            <span className="px-1 py-0.5 bg-red-100 text-red-600 border border-red-200 rounded text-[9px] font-bold">
+                                                                -{Math.round((1 - p.discount / p.price) * 100)}%
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-black text-sm text-foreground tabular-nums">
+                                                    {formatRupiah(item.discount > 0 ? item.discount : item.price)}
+                                                </span>
+                                                {item.discount > 0 && (
+                                                    <span className="px-1 py-0.5 bg-red-100 text-red-600 border border-red-200 rounded text-[9px] font-bold">
+                                                        -{Math.round((1 - item.discount / item.price) * 100)}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {item.discount > 0 && (
+                                                <span className="text-[10px] text-muted-foreground line-through">
+                                                    {formatRupiah(item.price)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </TableMobileCardContent>
+
+                        <TableMobileCardFooter>
+                            <div className="flex-1 text-[11px] text-muted-foreground line-clamp-2 italic pr-4">
+                                {item.description ? (
+                                    <SimpleWysiwygDisplay
+                                        content={item.description}
+                                        className="[&_p]:inline [&_p]:mr-1 [&_div]:inline [&_div]:mr-1 [&_br]:hidden"
+                                    />
+                                ) : (
+                                    'Tidak ada keterangan tambahan'
+                                )}
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-rose-600 bg-rose-500/10 rounded-lg shrink-0"
+                                onClick={() => handleDeleteItem(item.id, item.name)}
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                        </TableMobileCardFooter>
+                    </TableMobileCard>
+                )}
+            >
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -417,7 +544,7 @@ export default function PriceListTable({ group }: PriceListTableProps) {
                         )}
                     </TableBody>
                 </Table>
-            </TableScrollArea>
+            </TableResponsive>
 
             <TablePagination
                 currentPage={currentPage}
@@ -427,6 +554,6 @@ export default function PriceListTable({ group }: PriceListTableProps) {
                 onItemsPerPageChange={setItemsPerPage}
                 totalCount={filteredItems.length}
             />
-        </TableWrapper>
+        </div>
     )
 }

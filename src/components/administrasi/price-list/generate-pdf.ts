@@ -2,31 +2,52 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 const getBase64ImageFromUrl = async (imageUrl: string) => {
-    try {
-        const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' })
-        const blob = await res.blob()
-        return await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.onerror = reject
-            reader.readAsDataURL(blob)
-        })
-    } catch (e) {
-        return new Promise<string>((resolve, reject) => {
-            const img = new Image()
-            img.crossOrigin = 'Anonymous'
+    // Helper to convert image to PNG via canvas for maximum compatibility with jsPDF
+    const convertToPng = (url: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
             img.onload = () => {
-                const canvas = document.createElement('canvas')
-                canvas.width = img.width
-                canvas.height = img.height
-                const ctx = canvas.getContext('2d')
-                if (!ctx) return reject('No ctx')
-                ctx.drawImage(img, 0, 0)
-                resolve(canvas.toDataURL('image/png'))
-            }
-            img.onerror = reject
-            img.src = imageUrl
-        })
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    reject('Could not get canvas context');
+                    return;
+                }
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = () => reject(`Failed to load image: ${url}`);
+            img.src = url;
+        });
+    };
+
+    try {
+        // First attempt: direct fetch (faster for JPEG/PNG)
+        const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' });
+        const blob = await res.blob();
+        
+        // Check if it's webp
+        if (blob.type === 'image/webp') {
+            return await convertToPng(imageUrl);
+        }
+
+        return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        // Fallback: use canvas conversion
+        try {
+            return await convertToPng(imageUrl);
+        } catch (err) {
+            console.error('Error in getBase64ImageFromUrl:', err);
+            throw err;
+        }
     }
 }
 
@@ -53,11 +74,13 @@ const addImageWithAspectRatio = (doc: any, imgData: string, type: string, x: num
     }
 }
 
+let currentPdfFont = 'helvetica';
+
 const initPdfWithFonts = async () => {
     const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [210, 330]
+        format: [210, 297] // Standard A4 for better compatibility
     });
 
     try {
@@ -78,9 +101,11 @@ const initPdfWithFonts = async () => {
         await fetchAndAddFont('/fonts/Manrope-Bold.ttf', 'Manrope-Bold.ttf', 'bold')
 
         doc.setFont('Manrope')
+        currentPdfFont = 'Manrope';
     } catch (error) {
         console.error('Failed to load local fonts, falling back to standard', error)
         doc.setFont('helvetica') // fallback
+        currentPdfFont = 'helvetica';
     }
 
     return doc
@@ -128,7 +153,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
     // ==========================================
     doc.setFontSize(18)
     doc.setTextColor(17, 24, 39)
-    doc.setFont('Manrope', 'bold')
+    doc.setFont(currentPdfFont, 'bold')
 
     const displayTitle = sequenceNumber ? `${sequenceNumber}. ${item.name}` : item.name
     const titleLines = doc.splitTextToSize(displayTitle, pw - 28)
@@ -179,13 +204,13 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
     if (rawShortDesc) {
         doc.setFontSize(10)
         doc.setTextColor(107, 114, 128)
-        doc.setFont('Manrope', 'bold')
+        doc.setFont(currentPdfFont, 'bold')
         doc.text('Deskripsi Singkat', rightX, textY)
         textY += 6
 
         doc.setFontSize(10)
         doc.setTextColor(107, 114, 128)
-        doc.setFont('Manrope', 'normal')
+        doc.setFont(currentPdfFont, 'normal')
 
         const shortDescLines = doc.splitTextToSize(rawShortDesc, rightWidth)
         const imageBottomY = imageStartY + actualImageHeight + imageGap
@@ -236,7 +261,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
             textY += 8
             doc.setFontSize(12)
             doc.setTextColor(156, 163, 175)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             const origPrice = formatRupiah(item.price)
             doc.text(origPrice, rightX, textY)
             const w = doc.getTextWidth(origPrice)
@@ -248,7 +273,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
         if (item.quantity) {
             doc.setFontSize(10)
             doc.setTextColor(107, 114, 128)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text(`Qty / Satuan: ${item.quantity}`, rightX, textY)
         }
     }
@@ -377,7 +402,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
                 if (!seg.text) continue
 
                 const fontStyle = seg.bold ? 'bold' : 'normal'
-                doc.setFont('Manrope', fontStyle)
+                doc.setFont(currentPdfFont, fontStyle)
 
                 const words = seg.text.split(' ')
                 for (const word of words) {
@@ -452,7 +477,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
             if (p.qty) h += 5
             if (p.description) {
                 doc.setFontSize(8)
-                doc.setFont('Manrope', 'normal')
+                doc.setFont(currentPdfFont, 'normal')
                 const descLines = doc.splitTextToSize(p.description, colW - 8)
                 h += 0.5 + descLines.length * 4
             }
@@ -486,7 +511,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
 
             doc.setFontSize(9)
             doc.setTextColor(107, 114, 128)
-            doc.setFont('Manrope', 'bold')
+            doc.setFont(currentPdfFont, 'bold')
             const labelText = doc.splitTextToSize(p.label || `Varian ${i + 1}`, colW - 8)
             doc.text(labelText, colX + 4, cardY + 5)
 
@@ -495,7 +520,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
 
             doc.setFontSize(14)
             doc.setTextColor(37, 99, 235)
-            doc.setFont('Manrope', 'bold')
+            doc.setFont(currentPdfFont, 'bold')
             const priceText = formatRupiah(finalPrice)
             doc.text(priceText, colX + 4, cardY + 12)
 
@@ -504,7 +529,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
             if (hasDiscount) {
                 doc.setFontSize(9)
                 doc.setTextColor(156, 163, 175)
-                doc.setFont('Manrope', 'normal')
+                doc.setFont(currentPdfFont, 'normal')
                 const origText = formatRupiah(p.price)
                 doc.text(origText, colX + 4, contentY + 3)
                 const tw = doc.getTextWidth(origText)
@@ -515,7 +540,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
                 const badgeText = `DISC ${discPercent}%`
                 doc.setFontSize(7)
                 doc.setTextColor(255, 255, 255)
-                doc.setFont('Manrope', 'bold')
+                doc.setFont(currentPdfFont, 'bold')
                 const bw = doc.getTextWidth(badgeText) + 3
                 doc.setFillColor(220, 38, 38)
                 doc.roundedRect(colX + 4 + tw + 2, contentY, bw, 4, 0.5, 0.5, 'F')
@@ -527,7 +552,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
                 contentY += 2
                 doc.setFontSize(8)
                 doc.setTextColor(107, 114, 128)
-                doc.setFont('Manrope', 'normal')
+                doc.setFont(currentPdfFont, 'normal')
                 doc.text(p.qty, colX + 4, contentY)
                 contentY += 4
             }
@@ -536,7 +561,7 @@ const renderProductDetail = async (doc: any, item: any, currentY: number, pw: nu
                 contentY += 1
                 doc.setFontSize(8)
                 doc.setTextColor(107, 114, 128)
-                doc.setFont('Manrope', 'normal')
+                doc.setFont(currentPdfFont, 'normal')
                 const descLines = doc.splitTextToSize(p.description, colW - 8)
                 for (const line of descLines) {
                     doc.text(line, colX + 4, contentY)
@@ -625,18 +650,18 @@ export const generateProductPdf = async (item: any, returnBlob = false) => {
             }
             doc.setFontSize(8)
             doc.setTextColor(102, 102, 102)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
             doc.text('www.ichibot.id', 14, 26)
 
             doc.setFontSize(16)
             doc.setTextColor(37, 99, 235)
-            doc.setFont('Manrope', 'bold')
+            doc.setFont(currentPdfFont, 'bold')
             doc.text(`DETAIL PRODUK`, pw - 14, 16, { align: 'right' })
 
             doc.setFontSize(10)
             doc.setTextColor(102, 102, 102)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text(date, pw - 14, 22, { align: 'right' })
 
             doc.setDrawColor(37, 99, 235)
@@ -704,7 +729,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
         const cellPadding = 5
 
         // Calculate name height (bold, fontSize 10)
-        doc.setFont('Manrope', 'bold')
+        doc.setFont(currentPdfFont, 'bold')
         doc.setFontSize(10)
         const nameLines = doc.splitTextToSize(item.name, descColWidth)
         const nameLineHeight = doc.getLineHeight() * ptToMm
@@ -713,7 +738,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
         // Calculate description height (normal, fontSize 9)
         let descHeight = 0
         if (cleanDesc) {
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.setFontSize(9)
             const descLines = doc.splitTextToSize(cleanDesc, descColWidth)
             const descLineHeight = doc.getLineHeight() * ptToMm
@@ -822,11 +847,11 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
 
                     // Style based on absolute position in the full text
                     if (absoluteLineIndex < nameLinesCount) {
-                        doc.setFont('Manrope', 'bold')
+                        doc.setFont(currentPdfFont, 'bold')
                         doc.setFontSize(10)
                         doc.setTextColor(17, 24, 39)
                     } else {
-                        doc.setFont('Manrope', 'normal')
+                        doc.setFont(currentPdfFont, 'normal')
                         doc.setFontSize(9)
                         doc.setTextColor(107, 114, 128)
                     }
@@ -873,7 +898,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
                     style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
                 }).format(finalPrice)
 
-                doc.setFont('Manrope', 'bold')
+                doc.setFont(currentPdfFont, 'bold')
                 doc.setFontSize(10)
                 doc.setTextColor(37, 99, 235) // Blue-600
                 doc.text(formattedPrice, cell.x + cell.width - padding, cell.y + padding + 3.5, { align: 'right' })
@@ -883,7 +908,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
                         style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
                     }).format(item.price)
 
-                    doc.setFont('Manrope', 'normal')
+                    doc.setFont(currentPdfFont, 'normal')
                     doc.setFontSize(8)
                     doc.setTextColor(55, 65, 81) // Gray-700
                     const yPosOrig = cell.y + padding + 8.5
@@ -902,7 +927,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
 
                     doc.setFontSize(8)
                     doc.setTextColor(255, 255, 255)
-                    doc.setFont('Manrope', 'bold')
+                    doc.setFont(currentPdfFont, 'bold')
 
                     const badgeWidth = doc.getTextWidth(badgeText) + 3
                     const badgeHeight = 5
@@ -930,13 +955,13 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
             }
             doc.setFontSize(8)
             doc.setTextColor(102, 102, 102)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
             doc.text('www.ichibot.id', 14, 26)
 
             doc.setFontSize(14)
             doc.setTextColor(37, 99, 235)
-            doc.setFont('Manrope', 'bold')
+            doc.setFont(currentPdfFont, 'bold')
             doc.text('DAFTAR HARGA', pw - 14, 16, { align: 'right' })
 
             doc.setFontSize(12)
@@ -945,7 +970,7 @@ export const generatePriceListPdf = async (group: any, items: any[], returnBlob 
 
             doc.setFontSize(10)
             doc.setTextColor(102, 102, 102)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text(date, pw - 14, 27, { align: 'right' })
 
             const pageHeight = doc.internal.pageSize.getHeight()
@@ -995,13 +1020,13 @@ export const generatePriceListGroupDetailPdf = async (group: any, items: any[], 
             }
             doc.setFontSize(8)
             doc.setTextColor(102, 102, 102)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text('ICHIBOT - Platform Edukasi AI untuk Project IoT', 14, 22)
             doc.text('www.ichibot.id', 14, 26)
 
             doc.setFontSize(16)
             doc.setTextColor(37, 99, 235)
-            doc.setFont('Manrope', 'bold')
+            doc.setFont(currentPdfFont, 'bold')
             doc.text(`DAFTAR HARGA`, pw - 14, 16, { align: 'right' })
 
             doc.setFontSize(12)
@@ -1010,7 +1035,7 @@ export const generatePriceListGroupDetailPdf = async (group: any, items: any[], 
 
             doc.setFontSize(10)
             doc.setTextColor(102, 102, 102)
-            doc.setFont('Manrope', 'normal')
+            doc.setFont(currentPdfFont, 'normal')
             doc.text(date, pw - 14, 27, { align: 'right' })
 
             doc.setDrawColor(37, 99, 235)

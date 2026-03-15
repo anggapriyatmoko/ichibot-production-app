@@ -23,6 +23,11 @@ import {
     TableCell,
     TableEmpty,
     TablePagination,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter
 } from '@/components/ui/table'
 
 function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { key: string, direction: 'asc' | 'desc' | null } }) {
@@ -299,7 +304,187 @@ export default function StoreLowStockList({
                         ))}
                     </div>
                 )}
-                <TableScrollArea minHeight="400px">
+                <TableResponsive
+                    data={paginatedProducts}
+                    renderMobileCard={(product) => (
+                        <TableMobileCard key={product.wcId}>
+                            <TableMobileCardHeader>
+                                <div className="flex gap-3">
+                                    <div className={cn(
+                                        "rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border flex-shrink-0 transition-transform active:scale-95",
+                                        product.isVariation ? "w-10 h-10" : "w-14 h-14"
+                                    )}>
+                                        {product.images?.[0]?.src ? (
+                                            <img
+                                                src={product.images[0].src}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <Package className={product.isVariation ? "w-4 h-4 text-muted-foreground" : "w-6 h-6 text-muted-foreground"} />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {product.isVariation && <span className="text-[10px] font-black text-primary bg-primary/10 px-1.5 rounded uppercase leading-none py-0.5">Varian</span>}
+                                            <span className={cn(
+                                                "font-bold text-foreground text-sm line-clamp-2 leading-tight",
+                                                product.purchased && "line-through text-muted-foreground",
+                                                product.isVariation && "text-muted-foreground font-medium"
+                                            )}>
+                                                {product.name}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1 rounded">
+                                                ID: {product.wcId}
+                                            </span>
+                                            {product.sku && (
+                                                <span className="text-[10px] text-primary font-bold font-mono">
+                                                    {product.sku}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleTogglePurchased(product)}
+                                    className={cn(
+                                        "transition-colors p-1 rounded-full hover:bg-muted",
+                                        product.purchased ? "text-primary" : "text-muted-foreground hover:text-primary"
+                                    )}
+                                >
+                                    {product.purchased ? (
+                                        <CheckCircle2 className="w-6 h-6" />
+                                    ) : (
+                                        <Circle className="w-6 h-6" />
+                                    )}
+                                </button>
+                            </TableMobileCardHeader>
+
+                            <TableMobileCardContent>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3 text-amber-500" /> Sisa Stok
+                                    </p>
+                                    <div className="flex flex-col">
+                                        <span className={cn(
+                                            "text-sm font-black",
+                                            (product.stockQuantity || 0) <= 0 ? "text-destructive" : "text-amber-600"
+                                        )}>
+                                            {formatNumber(product.stockQuantity || 0)} item
+                                        </span>
+                                        {product.stockStatus !== 'outofstock' && (
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold">{product.stockStatus}</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Harga Jual</p>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-black text-foreground">{formatCurrency(product.price || 0)}</span>
+                                        {product.salePrice > 0 && product.salePrice < product.regularPrice && (
+                                            <span className="text-xs text-muted-foreground line-through decoration-destructive/30">
+                                                {formatCurrency(product.regularPrice)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Supplier</p>
+                                    <div className="scale-90 origin-top-left -ml-1">
+                                        <SupplierPicker
+                                            wcId={product.wcId}
+                                            initialValue={product.storeName || ''}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="col-span-2 space-y-1 bg-muted/30 p-2 rounded-lg border border-border/50 mt-1">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider flex items-center gap-1">
+                                        Keterangan
+                                    </p>
+                                    <div className="scale-95 origin-top-left">
+                                        <KeteranganEdit
+                                            wcId={product.wcId}
+                                            initialValue={product.keterangan}
+                                            productName={product.name}
+                                            compact
+                                        />
+                                    </div>
+                                </div>
+
+                                {product.isVariation && product.attributes && Array.isArray(product.attributes) && (
+                                    <div className="col-span-2 flex flex-wrap gap-1.5 mt-1">
+                                        {product.attributes.map((attr: any) => (
+                                            <span key={attr.name} className="px-2 py-0.5 rounded-md bg-primary/5 text-[10px] border border-primary/10 text-primary font-bold uppercase">
+                                                {attr.name}: {attr.option}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </TableMobileCardContent>
+
+                            <TableMobileCardFooter>
+                                <div className="flex flex-wrap items-center gap-1.5 w-full">
+                                    <button
+                                        onClick={() => setEditingProduct(product)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-[10px] font-black uppercase transition-all border border-border/50 active:scale-95"
+                                    >
+                                        <Edit2 className="w-3 h-3" /> Edit
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            const id = product.wcId
+                                            if (syncingItems.has(id)) return
+                                            setSyncingItems(prev => new Set(prev).add(id))
+                                            try {
+                                                const result = await syncSingleStoreProduct(id, product.parentId)
+                                                if (result.success && result.product) {
+                                                    setLocalProducts(prev => prev.map(p => p.wcId === id ? result.product : p))
+                                                }
+                                            } catch { /* ignore */ } finally {
+                                                setSyncingItems(prev => { const n = new Set(prev); n.delete(id); return n })
+                                            }
+                                        }}
+                                        disabled={syncingItems.has(product.wcId)}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all border border-border/50 active:scale-95",
+                                            syncingItems.has(product.wcId) ? "bg-primary text-white" : "bg-muted text-foreground hover:bg-muted/80"
+                                        )}
+                                    >
+                                        <RefreshCw className={cn("w-3 h-3", syncingItems.has(product.wcId) && "animate-spin")} />
+                                        {syncingItems.has(product.wcId) ? "Sync..." : "Sync"}
+                                    </button>
+                                    {product.purchased && (
+                                        <button
+                                            onClick={() => setPurchaseTarget(product)}
+                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-sm shadow-amber-500/20 active:scale-95"
+                                        >
+                                            <ShoppingCart className="w-3 h-3" /> Beli
+                                        </button>
+                                    )}
+                                    {product.hasVariations && (
+                                        <button
+                                            onClick={() => toggleRow(product.wcId)}
+                                            className={cn(
+                                                "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all border shadow-sm active:scale-95",
+                                                expandedRows.includes(product.wcId)
+                                                    ? "bg-blue-600 text-white border-blue-600"
+                                                    : "bg-blue-50 text-blue-600 border-blue-100"
+                                            )}
+                                        >
+                                            {expandedRows.includes(product.wcId) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                            Varian
+                                        </button>
+                                    )}
+                                </div>
+                            </TableMobileCardFooter>
+                        </TableMobileCard>
+                    )}
+                >
                     <Table>
                         <TableHeader>
                             <TableRow hoverable={false}>
@@ -449,7 +634,6 @@ export default function StoreLowStockList({
                                                         </a>
                                                     )}
                                                 </div>
-
                                                 {product.hasVariations && (
                                                     <button
                                                         onClick={() => toggleRow(product.wcId)}
@@ -531,7 +715,7 @@ export default function StoreLowStockList({
                             )}
                         </TableBody>
                     </Table>
-                </TableScrollArea>
+                </TableResponsive>
 
                 {filteredProducts.length > 0 && (
                     <TablePagination

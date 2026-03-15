@@ -8,7 +8,11 @@ import { deletePayroll, getPayslipData } from '@/app/actions/payroll'
 import PayrollPdfModal from './payroll-pdf-modal'
 import {
     TableWrapper,
-    TableScrollArea,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
     Table,
     TableHeader,
     TableBody,
@@ -241,7 +245,96 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                 </div>
             </div>
 
-            <TableScrollArea>
+            <TableResponsive
+                data={paginatedData}
+                loading={false}
+                renderMobileCard={(item: PayrollRecapItem) => (
+                    <TableMobileCard key={item.id}>
+                        <TableMobileCardHeader>
+                            <div className="flex flex-col gap-0.5 max-w-[70%]">
+                                <h4 className="font-bold text-sm tracking-tight text-foreground truncate">
+                                    {item.name || '-'}
+                                </h4>
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                    {item.role} {item.department ? ` • ${item.department}` : ''}
+                                </span>
+                            </div>
+                            <div className="flex flex-col items-end shrink-0">
+                                {item.hasPayroll ? (
+                                    <span className="text-sm font-black text-primary tabular-nums">
+                                        {formatCurrency(item.netSalary)}
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-bold text-muted-foreground italic bg-muted px-1.5 py-0.5 rounded">
+                                        No Data
+                                    </span>
+                                )}
+                            </div>
+                        </TableMobileCardHeader>
+
+                        {item.hasPayroll && (
+                            <TableMobileCardContent>
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-1">
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Gaji Pokok</span>
+                                        <span className="text-xs font-bold text-foreground tabular-nums">{formatCurrency(item.basicSalary)}</span>
+                                    </div>
+                                    <div className="space-y-0.5 text-right">
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block text-right">Total Tambahan</span>
+                                        <span className="text-xs font-bold text-green-600 tabular-nums">+{formatCurrency(item.totalAdditions)}</span>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <span className="text-[9px] font-bold text-red-600/70 uppercase tracking-wider block">Total Potongan</span>
+                                        <span className="text-xs font-bold text-red-600 tabular-nums">-{formatCurrency(item.totalDeductions)}</span>
+                                    </div>
+                                    <div className="space-y-0.5 text-right">
+                                        <span className="text-[9px] font-bold text-primary/70 uppercase tracking-wider block text-right">Gaji Bersih</span>
+                                        <span className="text-sm font-black text-primary tabular-nums">{formatCurrency(item.netSalary)}</span>
+                                    </div>
+                                </div>
+                            </TableMobileCardContent>
+                        )}
+
+                        <TableMobileCardFooter>
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-2">
+                                    {item.hasPayroll && item.salarySlip && (
+                                        <a
+                                            href={item.salarySlip}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black border border-blue-100 hover:bg-blue-100 transition-colors"
+                                        >
+                                            <FileText className="w-3.5 h-3.5" />
+                                            LIHAT SLIP
+                                        </a>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {item.hasPayroll && item.payrollId && (
+                                        <>
+                                            <button
+                                                onClick={() => handleOpenPdf(item.payrollId!)}
+                                                className="p-2 text-muted-foreground hover:bg-blue-50 hover:text-blue-600 rounded-lg border border-border transition-colors"
+                                                title="Unduh Slip"
+                                            >
+                                                <FileDown className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(item.payrollId!)}
+                                                className="p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600 rounded-lg border border-border transition-colors"
+                                                title="Hapus"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </TableMobileCardFooter>
+                    </TableMobileCard>
+                )}
+            >
                 <Table>
                     <TableHeader>
                         <TableRow hoverable={false} className="bg-muted/50">
@@ -358,7 +451,7 @@ export default function PayrollRecapTable({ data, currentMonth, currentYear }: P
                         </TableFooter>
                     )}
                 </Table>
-            </TableScrollArea>
+            </TableResponsive>
 
             <TablePagination
                 currentPage={page}

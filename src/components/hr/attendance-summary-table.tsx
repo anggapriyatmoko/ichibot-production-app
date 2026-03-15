@@ -7,7 +7,11 @@ import { useRouter } from 'next/navigation'
 import { getPayrollPeriodAttendanceSummary } from '@/app/actions/attendance'
 import {
     TableWrapper,
-    TableScrollArea,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
     Table,
     TableHeader,
     TableBody,
@@ -417,7 +421,86 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                 )}
             </div>
 
-            <TableScrollArea>
+            <TableResponsive
+                data={paginatedData}
+                loading={false}
+                renderMobileCard={(item: any) => (
+                    <TableMobileCard key={item.id}>
+                        <TableMobileCardHeader>
+                            <div className="flex flex-col gap-0.5 max-w-[80%]">
+                                <h4 className="font-bold text-sm tracking-tight text-foreground truncate">
+                                    {item.name || '-'}
+                                </h4>
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                    {item.department || '-'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-muted text-foreground text-[10px] font-bold">
+                                    {item.totalWorkDays} Hari
+                                </span>
+                            </div>
+                        </TableMobileCardHeader>
+
+                        <TableMobileCardContent>
+                            <div className="grid grid-cols-2 gap-3 py-1">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-orange-600 uppercase tracking-tight">
+                                        <Clock className="w-3 h-3" />
+                                        Terlambat
+                                    </div>
+                                    {item.lateCount > 0 ? (
+                                        <div className="flex items-baseline gap-1.5">
+                                            <span className="text-sm font-black text-foreground">{item.lateCount}x</span>
+                                            <span className="text-[10px] text-orange-500 font-medium italic">
+                                                ({formatMinutes(item.lateMinutes)})
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-sm font-medium text-muted-foreground/30">-</span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase tracking-tight">
+                                        <XCircle className="w-3 h-3" />
+                                        Mangkir
+                                    </div>
+                                    {item.absentCount > 0 ? (
+                                        <span className="text-sm font-black text-foreground">{item.absentCount} hari</span>
+                                    ) : (
+                                        <span className="text-sm font-medium text-muted-foreground/30">-</span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 uppercase tracking-tight">
+                                        <FileWarning className="w-3 h-3" />
+                                        Izin/Sakit
+                                    </div>
+                                    {item.permitCount > 0 ? (
+                                        <span className="text-sm font-black text-foreground">{item.permitCount} hari</span>
+                                    ) : (
+                                        <span className="text-sm font-medium text-muted-foreground/30">-</span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-yellow-600 uppercase tracking-tight">
+                                        <AlertCircle className="w-3 h-3" />
+                                        Tanpa Pulang
+                                    </div>
+                                    {item.noClockOutCount > 0 ? (
+                                        <span className="text-sm font-black text-foreground">{item.noClockOutCount}x</span>
+                                    ) : (
+                                        <span className="text-sm font-medium text-muted-foreground/30">-</span>
+                                    )}
+                                </div>
+                            </div>
+                        </TableMobileCardContent>
+                    </TableMobileCard>
+                )}
+            >
                 <Table>
                     <TableHeader>
                         <TableRow hoverable={false} className="bg-muted/50">
@@ -521,7 +604,7 @@ export default function AttendanceSummaryTable({ currentMonth, currentYear }: Pr
                         )}
                     </TableBody>
                 </Table>
-            </TableScrollArea>
+            </TableResponsive>
 
             <TablePagination
                 currentPage={page}

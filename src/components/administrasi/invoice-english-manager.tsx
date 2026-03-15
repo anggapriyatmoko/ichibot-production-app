@@ -42,6 +42,11 @@ import {
   TableHeaderContent,
   TableAnalysis,
   TableAnalysisCardProps,
+  TableResponsive,
+  TableMobileCard,
+  TableMobileCardHeader,
+  TableMobileCardContent,
+  TableMobileCardFooter,
 } from "@/components/ui/table";
 import PdfSignatureModal, {
   SignatureType,
@@ -396,263 +401,235 @@ export default function InvoiceEnglishManager({
 
   return (
     <div className="space-y-6">
-      <TableWrapper>
-        <TableHeaderContent
-          title="English Invoices"
-          description="Manage international invoices and generate PDFs."
-          icon={<Receipt className="w-5 h-5 font-bold text-primary" />}
-          actions={
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search invoice..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
-                />
-              </div>
-              <button
-                onClick={openAddModal}
-                className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4" />
-                Add Invoice
-              </button>
-            </div>
-          }
-        />
-        <TableScrollArea>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice No.</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Order Notes</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead align="right">Total</TableHead>
-                  <TableHead>PDF</TableHead>
-                  <TableHead align="right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>
-                      <span className="font-mono text-sm font-medium text-primary">
-                        {invoice.invoice_number}
-                      </span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {new Date(invoice.invoice_date).toLocaleDateString(
-                        "en-US",
-                        {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        },
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{invoice.customer_name}</p>
-                        {invoice.customer_address && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            {invoice.customer_address}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {invoice.order_notes ? (
-                        <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
-                          {invoice.order_notes}
-                        </p>
-                      ) : (
-                        <span className="text-xs text-muted-foreground/50">
-                          -
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 bg-muted rounded-full text-xs">
-                        {invoice.items?.length || 0} item(s)
-                      </span>
-                    </TableCell>
-                    <TableCell align="right">
-                      <span className="font-semibold text-green-600">
-                        {formatCurrency(invoice.grand_total)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <button
-                        onClick={() => {
-                          setSelectedInvoiceForPdf(invoice);
-                          setIsPdfModalOpen(true);
-                        }}
-                        className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors inline-flex"
-                        title="Download PDF"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </button>
-                    </TableCell>
-                    <TableCell align="right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(invoice)}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(invoice)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {invoices.length === 0 && (
-                  <TableEmpty
-                    colSpan={8}
-                    icon={<Receipt className="w-12 h-12 opacity-20" />}
+      <TableResponsive
+        data={invoices}
+        loading={loading}
+        header={
+          <TableHeaderContent
+            title="English Invoices"
+            description="Manage international invoices and generate PDFs."
+            icon={<Receipt className="w-5 h-5 font-bold text-primary" />}
+            actions={
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search invoice..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                   />
-                )}
-              </TableBody>
-              {invoices.length > 0 && (
-                <TableFooter>
-                  <TableRow hoverable={false}>
-                    <TableCell colSpan={4} className="px-6 py-4 font-bold text-foreground bg-muted/50">
-                      TOTAL (This Page)
-                    </TableCell>
-                    <TableCell className="px-4 py-4 whitespace-nowrap bg-muted/50">
-                      <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
-                        {pageTotalItems} Item(s)
-                      </span>
-                    </TableCell>
-                    <TableCell align="right" className="px-4 py-4 bg-muted/50">
-                      <span className="font-bold text-green-600 tabular-nums">
-                        {formatCurrency(pageGrandTotal)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="bg-muted/50" />
-                    <TableCell className="bg-muted/50" />
-                  </TableRow>
-                </TableFooter>
-              )}
-            </Table>
-          )}
-        </TableScrollArea>
-      </TableWrapper>
-
-      <TableAnalysis cards={analysisCards} />
-
-      {/* Mobile/Tablet Card View - Premium List */}
-      <div className="md:hidden space-y-4" >
-        {
-          loading ? (
-            <div className="flex items-center justify-center py-12" >
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            </div >
-          ) : (
-            <>
-              {invoices.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="bg-card border border-border rounded-xl p-5 space-y-4 shadow-sm"
+                </div>
+                <button
+                  onClick={openAddModal}
+                  className="px-4 h-9 bg-primary text-primary-foreground rounded-lg text-sm font-bold transition-all hover:bg-primary/90 shadow-sm flex items-center gap-2 whitespace-nowrap"
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <span className="font-mono text-sm font-bold text-primary">
-                        {invoice.invoice_number}
-                      </span>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(invoice.invoice_date).toLocaleDateString(
-                          "en-US",
-                          {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          },
-                        )}
-                      </p>
+                  <Plus className="w-4 h-4" />
+                  Add Invoice
+                </button>
+              </div>
+            }
+          />
+        }
+        renderMobileCard={(invoice) => (
+          <TableMobileCard key={invoice.id}>
+            <TableMobileCardHeader>
+              <div className="flex items-center gap-2 max-w-[60%]">
+                <span className="font-mono text-sm font-bold text-primary truncate">
+                  #{invoice.invoice_number}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setSelectedInvoiceForPdf(invoice);
+                    setIsPdfModalOpen(true);
+                  }}
+                  className="p-2 text-blue-600 bg-blue-500/10 rounded-lg"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => openEditModal(invoice)}
+                  className="p-2 text-blue-600 bg-blue-500/10 rounded-lg"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(invoice)}
+                  className="p-2 text-red-600 bg-red-500/10 rounded-lg"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </TableMobileCardHeader>
+
+            <TableMobileCardContent>
+              <div className="col-span-2 space-y-1">
+                <h4 className="font-bold text-sm tracking-tight">{invoice.customer_name}</h4>
+                {invoice.customer_address && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {invoice.customer_address}
+                  </p>
+                )}
+              </div>
+            </TableMobileCardContent>
+
+            <TableMobileCardFooter>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
+                  {invoice.items?.length || 0} item
+                </span>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <CalendarIcon className="w-3 h-3" />
+                  <span className="text-[10px] font-medium">
+                    {new Date(invoice.invoice_date).toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+              </div>
+              <p className="font-bold text-green-600 text-sm">
+                {formatCurrency(invoice.grand_total)}
+              </p>
+            </TableMobileCardFooter>
+          </TableMobileCard>
+        )}
+      >
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Invoice No.</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Order Notes</TableHead>
+              <TableHead>Items</TableHead>
+              <TableHead align="right">Total</TableHead>
+              <TableHead>PDF</TableHead>
+              <TableHead align="right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoices.length === 0 ? (
+              <TableEmpty
+                colSpan={8}
+                icon={<Receipt className="w-12 h-12 opacity-20" />}
+              />
+            ) : (
+              invoices.map((invoice) => (
+                <TableRow key={invoice.id}>
+                  <TableCell>
+                    <span className="font-mono text-sm font-medium text-primary">
+                      {invoice.invoice_number}
+                    </span>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {new Date(invoice.invoice_date).toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{invoice.customer_name}</p>
+                      {invoice.customer_address && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {invoice.customer_address}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedInvoiceForPdf(invoice);
-                          setIsPdfModalOpen(true);
-                        }}
-                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </button>
+                  </TableCell>
+                  <TableCell>
+                    {invoice.order_notes ? (
+                      <p className="text-sm text-muted-foreground line-clamp-2 max-w-xs">
+                        {invoice.order_notes}
+                      </p>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="px-2 py-1 bg-muted rounded-full text-xs">
+                      {invoice.items?.length || 0} item(s)
+                    </span>
+                  </TableCell>
+                  <TableCell align="right">
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency(invoice.grand_total)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      onClick={() => {
+                        setSelectedInvoiceForPdf(invoice);
+                        setIsPdfModalOpen(true);
+                      }}
+                      className="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors inline-flex"
+                      title="Download PDF"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                  </TableCell>
+                  <TableCell align="right">
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditModal(invoice)}
-                        className="p-2 bg-blue-500/10 text-blue-600 rounded-lg"
+                        className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                        title="Edit"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(invoice)}
-                        className="p-2 bg-red-500/10 text-red-600 rounded-lg"
+                        className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                        title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-sm">{invoice.customer_name}</h4>
-                    {invoice.customer_address && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {invoice.customer_address}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-3 border-t border-border flex justify-between items-center">
-                    <span className="px-2 py-1 bg-muted rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      {invoice.items?.length || 0} item
-                    </span>
-                    <p className="font-bold text-green-600">
-                      {formatCurrency(invoice.grand_total)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {invoices.length === 0 && (
-                <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
-                  No invoices found
-                </div>
-              )}
-            </>
-          )
-        }
-      </div >
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+          {invoices.length > 0 && (
+            <TableFooter>
+              <TableRow hoverable={false}>
+                <TableCell colSpan={4} className="px-6 py-4 font-bold text-foreground bg-muted/50">
+                  TOTAL (This Page)
+                </TableCell>
+                <TableCell className="px-4 py-4 whitespace-nowrap bg-muted/50">
+                  <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
+                    {pageTotalItems} Item(s)
+                  </span>
+                </TableCell>
+                <TableCell align="right" className="px-4 py-4 bg-muted/50">
+                  <span className="font-bold text-green-600 tabular-nums">
+                    {formatCurrency(pageGrandTotal)}
+                  </span>
+                </TableCell>
+                <TableCell className="bg-muted/50" />
+                <TableCell className="bg-muted/50" />
+              </TableRow>
+            </TableFooter>
+          )}
+        </Table>
+      </TableResponsive>
 
       {/* Pagination */}
-      {
-        totalPages > 1 && (
-          <TablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => fetchInvoices(page, search)}
-            totalCount={total}
-          />
-        )
-      }
+      {totalPages > 1 && (
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => fetchInvoices(page, search)}
+          totalCount={total}
+        />
+      )}
+
+      <TableAnalysis cards={analysisCards} className="mt-6" />
 
       {/* Modal */}
       {isModalOpen && (

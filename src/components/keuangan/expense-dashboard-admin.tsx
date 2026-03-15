@@ -3,24 +3,28 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { format, parseISO } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X, BarChart3 } from 'lucide-react'
+import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X, BarChart3, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { getAllExpenses, updateExpenseAdmin, ExpenseData, getAllExpensesForYear } from '@/app/actions/expense'
 import { getExpenseCategories } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
 import {
-    TableWrapper,
     Table,
     TableHeader,
+    TableHeaderContent,
     TableBody,
     TableRow,
     TableHead,
     TableCell,
-    TableHeaderContent,
     TableEmpty,
     TableFooter,
-    TablePagination
+    TablePagination,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
 } from '@/components/ui/table'
 import Modal from '@/components/ui/modal'
 
@@ -412,11 +416,14 @@ export default function ExpenseDashboardAdmin() {
 
     return (
         <div className="space-y-4">
-            <TableWrapper loading={isLoading}>
-                <TableHeaderContent
-                    title="Riwayat Semua Pengeluaran"
-                    description="Menampilkan semua pengeluaran dari seluruh user. Data didekripsi dari database secara real-time."
-                    actions={
+            <TableResponsive
+                data={sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+                loading={isLoading}
+                header={
+                    <TableHeaderContent
+                        title="Riwayat Semua Pengeluaran"
+                        description="Menampilkan semua pengeluaran dari seluruh user. Data didekripsi dari database secara real-time."
+                        actions={
                             <div className="flex flex-col sm:flex-row items-center gap-2 bg-background p-1.5 border border-border rounded-lg">
                                 <div className="flex items-center gap-2 px-2">
                                     <span className="text-sm text-muted-foreground font-medium">Periode:</span>
@@ -480,185 +487,176 @@ export default function ExpenseDashboardAdmin() {
                                     </div>
                                 )}
                             </div>
-                    }
-                />
-
-                <div className="hidden md:block overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px] text-center">No</TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('date')}>
-                                    Tanggal {renderSortIcon('date')}
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('userName')}>
-                                    Penginput (User) {renderSortIcon('userName')}
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('category')}>
-                                    Kategori {renderSortIcon('category')}
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('name')}>
-                                    Nama Pengeluaran {renderSortIcon('name')}
-                                </TableHead>
-                                <TableHead align="right" className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('amount')}>
-                                    Jumlah {renderSortIcon('amount')}
-                                </TableHead>
-                                <TableHead align="center">Bukti</TableHead>
-                                <TableHead align="center" className="w-[80px]">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedExpenses.length === 0 && !isLoading ? (
-                                <TableEmpty colSpan={7} message="Tidak ada data pengeluaran pada rentang tanggal ini." />
-                            ) : (
-                                sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
-                                    <TableRow key={item.id}>
-                                        <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
-                                        <TableCell className="font-medium whitespace-nowrap">
-                                            {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
-                                            <div className="text-xs text-muted-foreground mt-0.5">
-                                                Jam {format(new Date(item.createdAt || item.date), 'HH:mm')}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="font-medium text-foreground">{item.userName || 'Unknown'}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
-                                                {item.category?.name || '-'}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>{item.name}</TableCell>
-                                        <TableCell align="right" className="font-semibold text-foreground">
-                                            {formatCurrency(item.amount)}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            {item.image ? (
-                                                <button
-                                                    onClick={() => {
-                                                        setPreviewImage(item.image)
-                                                        setIsPreviewOpen(true)
-                                                    }}
-                                                    className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors inline-block"
-                                                    title="Lihat Foto"
-                                                >
-                                                    <ImageIcon className="w-4 h-4" />
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground">-</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            <button
-                                                onClick={() => handleOpenModal(item)}
-                                                className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors inline-block"
-                                                title="Edit Pengeluaran"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                        {expenses.length > 0 && !isLoading && (
-                            <TableFooter>
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-right font-bold py-4 text-muted-foreground uppercase text-xs tracking-wider">
-                                        Total Akumulasi Periode Ini
-                                    </TableCell>
-                                    <TableCell align="right" className="font-bold text-lg text-primary py-4">
-                                        {formatCurrency(totalAmount)}
-                                    </TableCell>
-                                    <TableCell colSpan={2}></TableCell>
-                                </TableRow>
-                            </TableFooter>
-                        )}
-                    </Table>
-                </div>
-
-                {/* Mobile View (List) */}
-                <div className="block md:hidden mt-4">
-                    {sortedExpenses.length === 0 && !isLoading ? (
-                        <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-border border-dashed mx-4">
-                            Tidak ada data pengeluaran pada rentang tanggal ini.
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-border border-t border-b border-border">
-                            {sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
-                                <div key={item.id} className="py-4 px-4 flex flex-col gap-3">
-                                    <div className="flex justify-between items-start gap-2">
-                                        <div className="space-y-1">
-                                            <h4 className="font-semibold text-foreground text-sm leading-tight">{item.name}</h4>
-                                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })} • {format(new Date(item.createdAt || item.date), 'HH:mm')}
-                                            </p>
-                                            <div className="text-xs font-medium text-foreground bg-muted/50 w-fit px-2 py-0.5 rounded flex items-center gap-1.5 mt-1">
-                                                <Users className="w-3 h-3 text-muted-foreground" />
-                                                {item.userName || 'Unknown'}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1 shrink-0">
-                                            <span className="font-bold text-foreground text-sm">{formatCurrency(item.amount)}</span>
-                                            <span className="px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded-md w-fit">
-                                                {item.category?.name || '-'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center pt-1">
-                                        <div>
-                                            {item.image ? (
-                                                <button
-                                                    onClick={() => {
-                                                        setPreviewImage(item.image)
-                                                        setIsPreviewOpen(true)
-                                                    }}
-                                                    className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
-                                                >
-                                                    <ImageIcon className="w-3.5 h-3.5" />
-                                                    Lihat Bukti
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground italic flex items-center gap-1.5 px-2 py-1">
-                                                    Tidak ada bukti
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleOpenModal(item)}
-                                                className="p-1.5 text-blue-600 bg-blue-50/50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 rounded-md transition-colors flex items-center gap-1"
-                                                title="Edit Pengeluaran"
-                                            >
-                                                <Pencil className="w-3.5 h-3.5" />
-                                                <span className="text-[10px] font-medium hidden sm:inline">Edit</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {expenses.length > 0 && !isLoading && (
-                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-4 mx-4 flex justify-between items-center">
-                            <span className="font-semibold text-sm text-foreground">Total Periode Ini</span>
-                            <span className="font-bold text-primary">{formatCurrency(totalAmount)}</span>
-                        </div>
-                    )}
-                </div>
-
-                {expenses.length > 0 && !isLoading && (
-                    <TablePagination
-                        currentPage={currentPage}
-                        totalPages={Math.ceil(sortedExpenses.length / itemsPerPage)}
-                        onPageChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
-                        onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
-                        totalCount={sortedExpenses.length}
+                        }
                     />
+                }
+                renderMobileCard={(item) => (
+                    <TableMobileCard key={item.id}>
+                        <TableMobileCardHeader>
+                            <div className="flex flex-col gap-0.5">
+                                <h4 className="font-bold text-sm tracking-tight text-foreground">{item.name}</h4>
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                                    <Calendar className="w-3 h-3" />
+                                    {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
+                                    <span>•</span>
+                                    <span>{format(new Date(item.createdAt || item.date), 'HH:mm')}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => handleOpenModal(item)}
+                                    className="p-2 text-blue-600 bg-blue-500/10 rounded-lg transition-colors"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </TableMobileCardHeader>
+
+                        <TableMobileCardContent>
+                            <div className="flex flex-col gap-2.5 col-span-2">
+                                <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border border-border/10">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="px-2 py-0.5 bg-white border border-border text-foreground rounded-lg text-[10px] font-bold shadow-sm w-fit">
+                                            {item.category?.name || 'Umum'}
+                                        </span>
+                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium italic">
+                                            <Users className="w-2.5 h-2.5 text-primary" />
+                                            {item.userName || 'Unknown'}
+                                        </div>
+                                    </div>
+                                    <span className="font-black text-sm text-foreground tabular-nums">
+                                        {formatCurrency(item.amount)}
+                                    </span>
+                                </div>
+                            </div>
+                        </TableMobileCardContent>
+
+                        <TableMobileCardFooter>
+                            <div>
+                                {item.image ? (
+                                    <button
+                                        onClick={() => {
+                                            setPreviewImage(item.image)
+                                            setIsPreviewOpen(true)
+                                        }}
+                                        className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2.5 py-1.5 rounded-lg transition-all hover:bg-primary/20"
+                                    >
+                                        <ImageIcon className="w-3.5 h-3.5" />
+                                        Pratinjau Bukti
+                                    </button>
+                                ) : (
+                                    <span className="text-[10px] text-muted-foreground font-medium italic bg-muted/50 px-2.5 py-1.5 rounded-lg border border-dotted border-border">
+                                        Data tidak memiliki lampiran
+                                    </span>
+                                )}
+                            </div>
+                        </TableMobileCardFooter>
+                    </TableMobileCard>
                 )}
-            </TableWrapper>
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px] text-center">No</TableHead>
+                            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('date')}>
+                                Tanggal {renderSortIcon('date')}
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('userName')}>
+                                Penginput (User) {renderSortIcon('userName')}
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('category')}>
+                                Kategori {renderSortIcon('category')}
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('name')}>
+                                Nama Pengeluaran {renderSortIcon('name')}
+                            </TableHead>
+                            <TableHead align="right" className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('amount')}>
+                                Jumlah {renderSortIcon('amount')}
+                            </TableHead>
+                            <TableHead align="center">Bukti</TableHead>
+                            <TableHead align="center" className="w-[80px]">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {sortedExpenses.length === 0 && !isLoading ? (
+                            <TableEmpty colSpan={7} message="Tidak ada data pengeluaran pada rentang tanggal ini." />
+                        ) : (
+                            sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
+                                <TableRow key={item.id}>
+                                    <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
+                                    <TableCell className="font-medium whitespace-nowrap">
+                                        {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                            Jam {format(new Date(item.createdAt || item.date), 'HH:mm')}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="font-medium text-foreground">{item.userName || 'Unknown'}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
+                                            {item.category?.name || '-'}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell align="right" className="font-semibold text-foreground">
+                                        {formatCurrency(item.amount)}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        {item.image ? (
+                                            <button
+                                                onClick={() => {
+                                                    setPreviewImage(item.image)
+                                                    setIsPreviewOpen(true)
+                                                }}
+                                                className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors inline-block"
+                                                title="Lihat Foto"
+                                            >
+                                                <ImageIcon className="w-4 h-4" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">-</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <button
+                                            onClick={() => handleOpenModal(item)}
+                                            className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors inline-block"
+                                            title="Edit Pengeluaran"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                    {expenses.length > 0 && !isLoading && (
+                        <TableFooter>
+                            <TableRow hoverable={false}>
+                                <TableCell colSpan={5} className="text-right font-bold py-4 text-muted-foreground uppercase text-xs tracking-wider">
+                                    Total Akumulasi Periode Ini
+                                </TableCell>
+                                <TableCell align="right" className="font-bold text-lg text-primary py-4">
+                                    {formatCurrency(totalAmount)}
+                                </TableCell>
+                                <TableCell colSpan={2}></TableCell>
+                            </TableRow>
+                        </TableFooter>
+                    )}
+                </Table>
+            </TableResponsive>
+
+            {expenses.length > 0 && !isLoading && (
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(sortedExpenses.length / itemsPerPage)}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
+                    totalCount={sortedExpenses.length}
+                />
+            )}
 
             {/* Analytics Section */}
             {expenses.length > 0 && !isLoading && (

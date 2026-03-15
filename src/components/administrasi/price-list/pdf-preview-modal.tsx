@@ -144,7 +144,7 @@ export default function PriceListItemPdfModal({
 
                         {pdfUrl && (
                             <iframe
-                                src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                                src={pdfUrl}
                                 className="w-full h-full border-0"
                                 title="PDF Preview"
                             />

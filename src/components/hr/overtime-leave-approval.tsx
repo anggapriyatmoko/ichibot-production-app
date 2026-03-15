@@ -11,7 +11,11 @@ import Modal from '@/components/ui/modal'
 import { Combobox } from '@/components/ui/combobox'
 import {
     TableWrapper,
-    TableScrollArea,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
     Table,
     TableHeader,
     TableBody,
@@ -395,7 +399,137 @@ export default function OvertimeLeaveApproval() {
                         </div>
                     </div>
 
-                    <TableScrollArea>
+                    <TableResponsive
+                        data={requests}
+                        loading={false}
+                        renderMobileCard={(req: any) => (
+                            <TableMobileCard key={req.id}>
+                                <TableMobileCardHeader>
+                                    <div className="flex items-center gap-3 max-w-[70%]">
+                                        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-xs border border-border shrink-0">
+                                            {req.user?.name?.[0] || req.user?.username?.[0]?.toUpperCase() || '?'}
+                                        </div>
+                                        <div className="flex flex-col gap-0.5 overflow-hidden">
+                                            <h4 className="font-bold text-sm tracking-tight text-foreground truncate">
+                                                {req.user?.name || req.user?.username || 'Unknown'}
+                                            </h4>
+                                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                                {req.user?.role || 'USER'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <div className={cn(
+                                            "px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter",
+                                            getStatusBadge(req.status)
+                                        )}>
+                                            {getStatusText(req.status)}
+                                        </div>
+                                        <span className="text-[9px] font-bold text-muted-foreground tabular-nums">
+                                            {req.date ? new Date(req.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        </span>
+                                    </div>
+                                </TableMobileCardHeader>
+
+                                <TableMobileCardContent>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                                                req.type === 'LEAVE' ? "bg-blue-500/10 text-blue-600" :
+                                                    req.type === 'VACATION' ? "bg-orange-500/10 text-orange-600" :
+                                                        req.requesterName ? "bg-emerald-500/10 text-emerald-600" : "bg-purple-500/10 text-purple-600"
+                                            )}>
+                                                {req.type === 'LEAVE' ? 'Izin' :
+                                                    req.type === 'VACATION' ? 'Cuti' :
+                                                        req.requesterName ? 'Perintah Lembur' : 'Pengajuan Lembur'}
+                                            </span>
+                                            {req.amount && (
+                                                <span className="text-sm font-black text-foreground tabular-nums">
+                                                    Rp {req.amount.toLocaleString('id-ID')}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-muted/30 rounded-lg p-2.5 space-y-2 border border-border/50">
+                                            <div>
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block mb-0.5">Alasan / Pekerjaan</span>
+                                                <p className="text-xs font-medium text-foreground italic leading-relaxed">
+                                                    {req.job ? req.job : `"${req.reason}"`}
+                                                </p>
+                                            </div>
+                                            {(req.requesterName || req.adminNote) && (
+                                                <div className="pt-2 border-t border-border/50 grid grid-cols-2 gap-2">
+                                                    {req.requesterName && (
+                                                        <div>
+                                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Pemberi Tugas</span>
+                                                            <span className="text-[10px] font-bold text-foreground truncate block">{req.requesterName}</span>
+                                                        </div>
+                                                    )}
+                                                    {req.adminNote && (
+                                                        <div>
+                                                            <span className="text-[9px] font-bold text-primary uppercase tracking-wider block">Note Admin</span>
+                                                            <span className="text-[10px] font-bold text-primary italic truncate block leading-tight">{req.adminNote}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </TableMobileCardContent>
+
+                                <TableMobileCardFooter>
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-2">
+                                            {req.attachment && (
+                                                <a
+                                                    href={req.attachment}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-secondary text-secondary-foreground rounded-lg text-[10px] font-bold border border-border hover:bg-muted transition-colors"
+                                                >
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                    Lampiran
+                                                </a>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {req.status === 'PENDING' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleAction(req.id, 'REJECTED')}
+                                                        disabled={processingId === req.id}
+                                                        className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg border border-rose-500/20 disabled:opacity-50"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction(req.id, 'APPROVED')}
+                                                        disabled={processingId === req.id}
+                                                        className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg border border-emerald-500/20 disabled:opacity-50"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                </>
+                                            )}
+                                            <button
+                                                onClick={() => startEdit(req)}
+                                                className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg border border-blue-500/20"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(req.id)}
+                                                className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg border border-rose-500/20"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </TableMobileCardFooter>
+                            </TableMobileCard>
+                        )}
+                    >
                         <Table>
                             <TableHeader>
                                 <TableRow hoverable={false} className="bg-muted/50">
@@ -536,7 +670,7 @@ export default function OvertimeLeaveApproval() {
                                 )}
                             </TableBody>
                         </Table>
-                    </TableScrollArea>
+                    </TableResponsive>
 
                     {/* Pagination Controls */}
                     <TablePagination
@@ -589,7 +723,42 @@ export default function OvertimeLeaveApproval() {
                         )}
                     </div>
 
-                    <TableScrollArea>
+                    <TableResponsive
+                        data={recapData}
+                        loading={false}
+                        renderMobileCard={(data: any) => (
+                            <TableMobileCard key={data.userId}>
+                                <TableMobileCardHeader>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold text-xs border border-emerald-500/20 shrink-0">
+                                            {data.name?.[0] || data.username?.[0]?.toUpperCase() || '?'}
+                                        </div>
+                                        <div className="flex flex-col gap-0.5 overflow-hidden">
+                                            <h4 className="font-bold text-sm tracking-tight text-foreground truncate">
+                                                {data.name || data.username || 'Unknown'}
+                                            </h4>
+                                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                                {data.role || 'USER'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded-full text-[9px] font-black uppercase tracking-tighter">
+                                            {data.totalOvertime}x Lembur
+                                        </span>
+                                    </div>
+                                </TableMobileCardHeader>
+                                <TableMobileCardContent>
+                                    <div className="flex items-center justify-between py-1">
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Akumulasi Nominal</span>
+                                        <span className="text-base font-black text-primary tabular-nums">
+                                            Rp {data.totalNominal.toLocaleString('id-ID')}
+                                        </span>
+                                    </div>
+                                </TableMobileCardContent>
+                            </TableMobileCard>
+                        )}
+                    >
                         <Table>
                             <TableHeader>
                                 <TableRow hoverable={false} className="bg-muted/50">
@@ -657,7 +826,7 @@ export default function OvertimeLeaveApproval() {
                                 )}
                             </TableBody>
                         </Table>
-                    </TableScrollArea>
+                    </TableResponsive>
                 </>
             )}
             {/* Perintah Lembur Modal */}

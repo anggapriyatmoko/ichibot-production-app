@@ -32,8 +32,6 @@ import { RESI_STATUS_OPTIONS } from "@/lib/resi-constants";
 import { useConfirmation } from "@/components/providers/modal-provider";
 import { useAlert } from "@/hooks/use-alert";
 import {
-  TableWrapper,
-  TableScrollArea,
   Table,
   TableHeader,
   TableBody,
@@ -43,6 +41,11 @@ import {
   TableEmpty,
   TableHeaderContent,
   TablePagination,
+  TableResponsive,
+  TableMobileCard,
+  TableMobileCardHeader,
+  TableMobileCardContent,
+  TableMobileCardFooter,
 } from "@/components/ui/table";
 import PdfPreviewModal from "@/components/ui/pdf-preview-modal";
 import Modal from "@/components/ui/modal";
@@ -320,278 +323,257 @@ export default function ResiManager({
 
   return (
     <>
-      <TableWrapper loading={loading}>
-        <TableHeaderContent
-          title={
-            <div className="flex items-center gap-3">
-              <span>Daftar Resi</span>
-              <div className="hidden sm:flex items-center gap-2 px-2 py-0.5 bg-blue-500/10 rounded-full border border-blue-500/20">
-                <Package className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-[10px] font-bold text-blue-700">
-                  {total} Total
+      <TableResponsive
+        data={resis}
+        loading={loading}
+        header={
+          <TableHeaderContent
+            title={
+              <div className="flex items-center gap-3">
+                <span>Daftar Resi</span>
+                <div className="hidden sm:flex items-center gap-2 px-2 py-0.5 bg-blue-500/10 rounded-full border border-blue-500/20">
+                  <Package className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-[10px] font-bold text-blue-700">
+                    {total} Total
+                  </span>
+                </div>
+              </div>
+            }
+            description="Kelola data resi pengiriman Anda"
+            actions={
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Cari resi..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm"
+                  />
+                </div>
+                <div className="relative w-full sm:w-44">
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="">Semua Status</option>
+                    {RESI_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={openAddModal}
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-sm text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah</span>
+                </button>
+              </div>
+            }
+          />
+        }
+        renderMobileCard={(resi) => (
+          <TableMobileCard key={resi.id}>
+            <TableMobileCardHeader>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold text-blue-600">
+                  #{resi.id}
+                </span>
+                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase tracking-tight">
+                  {new Date(resi.created_at).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </span>
               </div>
-            </div>
-          }
-          description="Kelola data resi pengiriman Anda"
-          actions={
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Cari resi..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm"
-                />
-              </div>
-              <div className="relative w-full sm:w-44">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm appearance-none cursor-pointer"
+              <div className="flex items-center gap-1">
+                {resi.pdf_urls?.preview && (
+                  <button
+                    onClick={() => {
+                      setSelectedResiForPdf(resi);
+                      setIsPdfModalOpen(true);
+                    }}
+                    className="p-2 text-green-600 bg-green-500/10 rounded-lg"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => openEditModal(resi)}
+                  className="p-2 text-blue-600 bg-blue-500/10 rounded-lg"
                 >
-                  <option value="">Semua Status</option>
-                  {RESI_STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(resi)}
+                  className="p-2 text-red-600 bg-red-500/10 rounded-lg"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                onClick={openAddModal}
-                className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-sm text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah</span>
-              </button>
-            </div>
-          }
-        />
+            </TableMobileCardHeader>
 
-        <TableScrollArea>
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative w-10 h-10">
-                  <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <p className="text-sm text-muted-foreground animate-pulse">
-                  Memuat data...
+            <TableMobileCardContent>
+              <div className="space-y-0.5">
+                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Pengirim
                 </p>
+                <p className="font-medium text-xs text-foreground truncate">{resi.sender.name}</p>
               </div>
-            </div>
-          ) : (
-            <>
-              {/* Desktop Table */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30" hoverable={false}>
-                      <TableHead className="w-[80px]">ID</TableHead>
-                      <TableHead>Pengirim</TableHead>
-                      <TableHead>Penerima</TableHead>
-                      <TableHead>Kurir</TableHead>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead align="right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {resis.map((resi) => (
-                      <TableRow key={resi.id} className="hover:bg-muted/30 transition-colors group">
-                        <TableCell>
-                          <span className="font-mono text-sm font-medium text-blue-600">
-                            #{resi.id}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-[180px]">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {resi.sender.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {resi.sender.phone}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-[200px]">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {resi.receiver.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {resi.receiver.phone}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
-                              {resi.receiver.address}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {resi.courier?.service_image_url && (
-                              <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center p-0.5 border border-border">
-                                <img
-                                  src={resi.courier.service_image_url}
-                                  alt={resi.courier.service_name}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                            )}
-                            <span className="text-xs font-medium text-foreground">
-                              {resi.courier?.service_name || "-"}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                            {new Date(resi.created_at).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            {resi.pdf_urls?.preview && (
-                              <button
-                                onClick={() => {
-                                  setSelectedResiForPdf(resi);
-                                  setIsPdfModalOpen(true);
-                                }}
-                                className="p-2 text-green-600 hover:bg-green-500/10 rounded-lg transition-colors border border-transparent hover:border-green-500/20"
-                                title="Lihat PDF"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => openEditModal(resi)}
-                              className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors border border-transparent hover:border-blue-500/20"
-                              title="Edit"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(resi)}
-                              className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
-                              title="Hapus"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-0.5">
+                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
+                  Penerima
+                </p>
+                <p className="font-medium text-xs text-foreground truncate">{resi.receiver.name}</p>
               </div>
+            </TableMobileCardContent>
 
-              {/* Mobile View */}
-              <div className="md:hidden divide-y divide-border">
-                {resis.map((resi) => (
-                  <div key={resi.id} className="p-4 space-y-3 bg-card hover:bg-muted/20 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-blue-600">
-                          #{resi.id}
-                        </span>
-                        <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase tracking-tight">
-                          {new Date(resi.created_at).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {resi.pdf_urls?.preview && (
-                          <button
-                            onClick={() => {
-                              setSelectedResiForPdf(resi);
-                              setIsPdfModalOpen(true);
-                            }}
-                            className="p-2 text-green-600 bg-green-500/10 rounded-lg"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => openEditModal(resi)}
-                          className="p-2 text-blue-600 bg-blue-500/10 rounded-lg"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(resi)}
-                          className="p-2 text-red-600 bg-red-500/10 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+            <TableMobileCardFooter>
+              <div className="flex items-center gap-2">
+                {resi.courier?.service_image_url && (
+                  <img
+                    src={resi.courier.service_image_url}
+                    alt={resi.courier.service_name}
+                    className="w-4 h-4 object-contain"
+                  />
+                )}
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {resi.courier?.service_name || "Belum dipilih"}
+                </span>
+              </div>
+            </TableMobileCardFooter>
+          </TableMobileCard>
+        )}
+      >
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30" hoverable={false}>
+              <TableHead className="w-[80px]">ID</TableHead>
+              <TableHead>Pengirim</TableHead>
+              <TableHead>Penerima</TableHead>
+              <TableHead>Kurir</TableHead>
+              <TableHead>Tanggal</TableHead>
+              <TableHead align="right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {resis.length === 0 ? (
+              <TableEmpty
+                colSpan={6}
+                icon={<Package className="w-10 h-10 opacity-20" />}
+                message="Tidak ada resi"
+                description="Mulai dengan menambah resi baru"
+              />
+            ) : (
+              resis.map((resi) => (
+                <TableRow key={resi.id} className="hover:bg-muted/30 transition-colors group">
+                  <TableCell>
+                    <span className="font-mono text-sm font-medium text-blue-600">
+                      #{resi.id}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[180px]">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {resi.sender.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {resi.sender.phone}
+                      </p>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-0.5">
-                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
-                          Pengirim
-                        </p>
-                        <p className="font-medium text-xs text-foreground truncate">{resi.sender.name}</p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">
-                          Penerima
-                        </p>
-                        <p className="font-medium text-xs text-foreground truncate">{resi.receiver.name}</p>
-                      </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px]">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {resi.receiver.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {resi.receiver.phone}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                        {resi.receiver.address}
+                      </p>
                     </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                      <div className="flex items-center gap-2">
-                        {resi.courier?.service_image_url && (
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {resi.courier?.service_image_url && (
+                        <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center p-0.5 border border-border">
                           <img
                             src={resi.courier.service_image_url}
                             alt={resi.courier.service_name}
-                            className="w-4 h-4 object-contain"
+                            className="w-full h-full object-contain"
                           />
-                        )}
-                        <span className="text-[11px] font-medium text-muted-foreground">
-                          {resi.courier?.service_name || "Belum dipilih"}
-                        </span>
-                      </div>
+                        </div>
+                      )}
+                      <span className="text-xs font-medium text-foreground">
+                        {resi.courier?.service_name || "-"}
+                      </span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      {new Date(resi.created_at).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      {resi.pdf_urls?.preview && (
+                        <button
+                          onClick={() => {
+                            setSelectedResiForPdf(resi);
+                            setIsPdfModalOpen(true);
+                          }}
+                          className="p-2 text-green-600 hover:bg-green-500/10 rounded-lg transition-colors border border-transparent hover:border-green-500/20"
+                          title="Lihat PDF"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openEditModal(resi)}
+                        className="p-2 text-blue-600 hover:bg-blue-500/10 rounded-lg transition-colors border border-transparent hover:border-blue-500/20"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(resi)}
+                        className="p-2 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableResponsive>
 
-              {resis.length === 0 && (
-                <TableEmpty
-                  colSpan={6}
-                  icon={<Package className="w-10 h-10 opacity-20" />}
-                  message="Tidak ada resi"
-                  description="Mulai dengan menambah resi baru"
-                />
-              )}
-            </>
-          )}
-        </TableScrollArea>
-
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={total}
-          itemsPerPage={itemsPerPage}
-          onPageChange={(page) => fetchResis(page, search, statusFilter)}
-          onItemsPerPageChange={(count) => {
-            setItemsPerPage(count);
-            fetchResis(1, search, statusFilter);
-          }}
-        />
-      </TableWrapper>
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={total}
+        itemsPerPage={itemsPerPage}
+        onPageChange={(page) => fetchResis(page, search, statusFilter)}
+        onItemsPerPageChange={(count) => {
+          setItemsPerPage(count);
+          fetchResis(1, search, statusFilter);
+        }}
+      />
 
       {/* Modal */}
       {/* Modal */}

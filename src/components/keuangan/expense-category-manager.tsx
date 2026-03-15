@@ -5,7 +5,13 @@ import { Plus, Pencil, Trash2, Loader2, Save, X } from 'lucide-react'
 import { createExpenseCategory, updateExpenseCategory, deleteExpenseCategory } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
 import {
-    TableWrapper,
+    TableAnalysis,
+    TableAnalysisCardProps,
+    TableResponsive,
+    TableMobileCard,
+    TableMobileCardHeader,
+    TableMobileCardContent,
+    TableMobileCardFooter,
     Table,
     TableHeader,
     TableBody,
@@ -114,69 +120,104 @@ export default function ExpenseCategoryManager({ initialCategories }: Props) {
 
     return (
         <div className="space-y-4">
-            <TableWrapper>
-                <TableHeaderContent
-                    title="Kategori Pengeluaran"
-                    description="Kelola daftar kategori untuk memudahkan pengelompokan biaya."
-                    actions={
-                        <button
-                            onClick={() => handleOpenModal()}
-                            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Tambah Kategori
-                        </button>
-                    }
-                />
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px] text-center">No</TableHead>
-                                <TableHead>Nama Kategori</TableHead>
-                                <TableHead>Keterangan</TableHead>
-                                <TableHead className="w-[100px] text-center">Aksi</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {categories.length === 0 ? (
-                                <TableEmpty colSpan={4} message="Belum ada kategori pengeluaran" />
-                            ) : (
-                                categories.map((cat, idx) => (
-                                    <TableRow key={cat.id}>
-                                        <TableCell align="center" className="text-muted-foreground">{idx + 1}</TableCell>
-                                        <TableCell className="font-medium">{cat.name}</TableCell>
-                                        <TableCell className="text-muted-foreground">{cat.description || '-'}</TableCell>
-                                        <TableCell align="center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    onClick={() => handleOpenModal(cat)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(cat.id)}
-                                                    disabled={deletingId === cat.id}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50/50 rounded-md transition-colors disabled:opacity-50"
-                                                    title="Hapus"
-                                                >
-                                                    {deletingId === cat.id ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="w-4 h-4" />
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </TableWrapper>
+            <TableResponsive
+                data={categories}
+                header={
+                    <TableHeaderContent
+                        title="Kategori Pengeluaran"
+                        description="Kelola daftar kategori untuk memudahkan pengelompokan biaya."
+                        actions={
+                            <button
+                                onClick={() => handleOpenModal()}
+                                className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Tambah Kategori
+                            </button>
+                        }
+                    />
+                }
+                renderMobileCard={(cat) => (
+                    <TableMobileCard key={cat.id}>
+                        <TableMobileCardHeader>
+                            <span className="font-bold text-sm text-foreground">{cat.name}</span>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => handleOpenModal(cat)}
+                                    className="p-2 text-blue-600 bg-blue-500/10 rounded-lg transition-colors"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(cat.id)}
+                                    disabled={deletingId === cat.id}
+                                    className="p-2 text-red-600 bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {deletingId === cat.id ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                </button>
+                            </div>
+                        </TableMobileCardHeader>
+                        <TableMobileCardContent>
+                            <div className="col-span-2 space-y-1">
+                                <p className="text-xs text-muted-foreground italic">
+                                    {cat.description || 'Tanpa keterangan'}
+                                </p>
+                            </div>
+                        </TableMobileCardContent>
+                    </TableMobileCard>
+                )}
+            >
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px] text-center">No</TableHead>
+                            <TableHead>Nama Kategori</TableHead>
+                            <TableHead>Keterangan</TableHead>
+                            <TableHead className="w-[100px] text-center">Aksi</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {categories.length === 0 ? (
+                            <TableEmpty colSpan={4} message="Belum ada kategori pengeluaran" />
+                        ) : (
+                            categories.map((cat, idx) => (
+                                <TableRow key={cat.id}>
+                                    <TableCell align="center" className="text-muted-foreground">{idx + 1}</TableCell>
+                                    <TableCell className="font-medium">{cat.name}</TableCell>
+                                    <TableCell className="text-muted-foreground">{cat.description || '-'}</TableCell>
+                                    <TableCell align="center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={() => handleOpenModal(cat)}
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(cat.id)}
+                                                disabled={deletingId === cat.id}
+                                                className="p-1.5 text-red-600 hover:bg-red-50/50 rounded-md transition-colors disabled:opacity-50"
+                                                title="Hapus"
+                                            >
+                                                {deletingId === cat.id ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </TableResponsive>
 
             <Modal
                 isOpen={isModalOpen}

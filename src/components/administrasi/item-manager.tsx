@@ -20,6 +20,8 @@ import {
   CheckSquare,
   RefreshCw,
   Edit2,
+  Calendar,
+  User,
 } from "lucide-react";
 import {
   getItems,
@@ -36,8 +38,6 @@ import { useConfirmation } from "@/components/providers/modal-provider";
 import { useAlert } from "@/hooks/use-alert";
 import { cn } from "@/lib/utils";
 import {
-  TableWrapper,
-  TableScrollArea,
   Table,
   TableHeader,
   TableHeaderContent,
@@ -47,6 +47,11 @@ import {
   TableCell,
   TableEmpty,
   TablePagination,
+  TableResponsive,
+  TableMobileCard,
+  TableMobileCardHeader,
+  TableMobileCardContent,
+  TableMobileCardFooter,
 } from "@/components/ui/table";
 
 import Modal from "@/components/ui/modal";
@@ -322,193 +327,333 @@ export default function ItemManager({
   const canMarkOrder = userRole === "ADMIN" || userRole === "ADMINISTRASI";
 
   return (
-    <TableWrapper loading={loading}>
-      <TableHeaderContent
-        title="Permintaan Barang"
-        description="Pantau dan kelola permintaan pengadaan barang dari berbagai divisi secara real-time."
-        icon={<Package className="w-5 h-5" />}
-        actions={
-          <>
-            <div className="relative flex-1 sm:min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Cari permintaan..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              />
-            </div>
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full sm:w-[160px] pl-4 pr-10 py-2 bg-background border border-border rounded-xl text-sm outline-none cursor-pointer hover:bg-accent transition-colors appearance-none"
-              >
-                <option value="all">Semua Status</option>
-                <option value="Belum Diorder">Belum Diorder</option>
-                <option value="Sudah Diorder">Sudah Diorder</option>
-              </select>
-              <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            </div>
-            <button
-              onClick={() => {
-                setEditingItem(null);
-                setReorderingItem(null);
-                setFormData({
-                  requester_name: isAdmin ? "" : userName,
-                  division: isAdmin ? "" : userRole,
-                  request_date: new Date().toISOString().split("T")[0],
-                  items: [{ name: "", quantity: 1, link: "" }],
-                });
-                setIsModalOpen(true);
-              }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" /> Buat Permintaan
-            </button>
-          </>
+    <div className="space-y-6">
+      <TableResponsive
+        data={items}
+        loading={loading}
+        header={
+          <TableHeaderContent
+            title="Permintaan Barang"
+            description="Pantau dan kelola permintaan pengadaan barang dari berbagai divisi secara real-time."
+            icon={<Package className="w-5 h-5" />}
+            actions={
+              <>
+                <div className="relative flex-1 sm:min-w-[300px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Cari permintaan..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                <div className="relative">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full sm:w-[160px] pl-4 pr-10 py-2 bg-background border border-border rounded-xl text-sm outline-none cursor-pointer hover:bg-accent transition-colors appearance-none"
+                  >
+                    <option value="all">Semua Status</option>
+                    <option value="Belum Diorder">Belum Diorder</option>
+                    <option value="Sudah Diorder">Sudah Diorder</option>
+                  </select>
+                  <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setReorderingItem(null);
+                    setFormData({
+                      requester_name: isAdmin ? "" : userName,
+                      division: isAdmin ? "" : userRole,
+                      request_date: new Date().toISOString().split("T")[0],
+                      items: [{ name: "", quantity: 1, link: "" }],
+                    });
+                    setIsModalOpen(true);
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" /> Buat Permintaan
+                </button>
+              </>
+            }
+          />
         }
-      />
-
-      <TableScrollArea>
-        <Table>
-          <TableHeader>
-            <TableRow hoverable={false}>
-              <TableHead>Status</TableHead>
-              <TableHead>Pemohon</TableHead>
-              <TableHead>Barang</TableHead>
-              <TableHead>Qty</TableHead>
-              <TableHead align="right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
+        renderMobileCard={(item) => (
+          <TableMobileCard key={item.id}>
+            <TableMobileCardHeader>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      "inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border",
+                      "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
                       item.status_order === "Sudah Diorder"
-                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                        : "bg-orange-500/10 text-orange-600 border-orange-500/20",
+                        ? "bg-emerald-500/10 text-emerald-600"
+                        : "bg-orange-500/10 text-orange-600",
                     )}
                   >
                     {item.status_order}
                   </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="text-foreground text-sm font-medium">
-                      {item.requester_name}
-                    </span>
-                    <span className="text-xs text-muted-foreground italic">
-                      {item.division}
-                    </span>
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium italic">
+                    <User className="w-2.5 h-2.5 text-primary" />
+                    {item.division}
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div className="max-w-[300px]">
-                    <p className="text-foreground leading-tight">{item.item_name}</p>
-                    {item.link && (
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-primary flex items-center gap-1 mt-1 hover:underline font-bold uppercase tracking-wider"
-                      >
-                        <ExternalLink className="w-3 h-3" /> Buka Tautan
-                      </a>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="px-2 py-0.5 bg-muted rounded-md text-xs font-bold text-foreground">
-                    {item.quantity}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    {/* Admin & Administrasi: Mark as Done / Undone */}
-                    {canMarkOrder && (
-                      <>
-                        {item.status_order === "Belum Diorder" ? (
-                          <button
-                            onClick={() => {
-                              setSelectedItem(item);
-                              setDoneQuantity(item.quantity);
-                              setShowDoneDialog(true);
-                            }}
-                            className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200"
-                            title="Tandai Sudah Diorder"
-                          >
-                            <CheckSquare className="w-4.5 h-4.5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleMarkAsUndone(item.id)}
-                            className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-all duration-200"
-                            title="Tandai Belum Diorder"
-                          >
-                            <RotateCcw className="w-4.5 h-4.5" />
-                          </button>
-                        )}
-                      </>
-                    )}
-                    {/* Re-Order Button - only for items already ordered */}
-                    {item.status_order === "Sudah Diorder" && (
+                </div>
+                <h4 className="font-bold text-sm tracking-tight text-foreground mt-1">
+                  {item.item_name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {canMarkOrder && (
+                  <>
+                    {item.status_order === "Belum Diorder" ? (
                       <button
-                        onClick={() => handleReorder(item)}
-                        className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
-                        title="Reorder"
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setDoneQuantity(item.quantity);
+                          setShowDoneDialog(true);
+                        }}
+                        className="p-2 text-emerald-600 bg-emerald-500/10 rounded-lg hover:bg-emerald-500/20 transition-colors"
                       >
-                        <RefreshCw className="w-4.5 h-4.5" />
+                        <CheckSquare className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleMarkAsUndone(item.id)}
+                        className="p-2 text-amber-600 bg-amber-500/10 rounded-lg hover:bg-amber-500/20 transition-colors"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    <button
-                      onClick={() => {
-                        setEditingItem(item);
-                        setReorderingItem(null);
-                        setFormData({
-                          requester_name: item.requester_name,
-                          division: item.division,
-                          request_date: item.request_date,
-                          items: [
-                            {
-                              name: item.item_name,
-                              quantity: item.quantity,
-                              link: item.link || "",
-                            },
-                          ],
-                        });
-                        setIsModalOpen(true);
-                      }}
-                      className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-4.5 h-4.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all duration-200"
-                      title="Hapus"
-                    >
-                      <Trash2 className="w-4.5 h-4.5" />
-                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    setEditingItem(item);
+                    setReorderingItem(null);
+                    setFormData({
+                      requester_name: item.requester_name,
+                      division: item.division,
+                      request_date: item.request_date,
+                      items: [
+                        {
+                          name: item.item_name,
+                          quantity: item.quantity,
+                          link: item.link || "",
+                        },
+                      ],
+                    });
+                    setIsModalOpen(true);
+                  }}
+                  className="p-2 text-blue-600 bg-blue-500/10 rounded-lg hover:bg-blue-500/20 transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </TableMobileCardHeader>
+
+            <TableMobileCardContent>
+              <div className="col-span-2">
+                <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border border-border/10">
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                      <User className="w-3 h-3 text-primary/60" />
+                      <span>Oleh: <span className="text-foreground font-bold">{item.requester_name}</span></span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                      <Calendar className="w-3 h-3 text-primary/60" />
+                      <span>{new Date(item.request_date).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}</span>
+                    </div>
                   </div>
-                </TableCell>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="px-2.5 py-1 bg-white border border-border text-foreground rounded-lg text-[10px] font-black shadow-sm tracking-tight flex items-center gap-1">
+                      <Package className="w-2.5 h-2.5" />
+                      {item.quantity} Unit
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </TableMobileCardContent>
+
+            <TableMobileCardFooter>
+              <div className="flex items-center gap-3">
+                {item.link ? (
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2.5 py-1.5 rounded-lg transition-all hover:bg-primary/20"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Tautan Barang
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground font-medium italic bg-muted/50 px-2.5 py-1.5 rounded-lg border border-border/10">
+                    Tanpa tautan
+                  </span>
+                )}
+                {item.status_order === "Sudah Diorder" && (
+                  <button
+                    onClick={() => handleReorder(item)}
+                    className="flex items-center gap-1.5 text-[10px] font-bold text-blue-600 uppercase tracking-wider bg-blue-500/10 px-2.5 py-1.5 rounded-lg transition-all hover:bg-blue-500/20"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Reorder
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className="p-2 text-rose-600 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </TableMobileCardFooter>
+          </TableMobileCard>
+        )}
+      >
+        <Table>
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>Status</TableHead>
+                <TableHead>Pemohon</TableHead>
+                <TableHead>Barang</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead align="right">Aksi</TableHead>
               </TableRow>
-            ))}
-            {items.length === 0 && (
-              <TableEmpty
-                colSpan={5}
-                icon={<Package className="w-12 h-12 opacity-20" />}
-                message="Belum ada data permintaan barang."
-              />
-            )}
-          </TableBody>
-        </Table>
-      </TableScrollArea>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border",
+                        item.status_order === "Sudah Diorder"
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          : "bg-orange-500/10 text-orange-600 border-orange-500/20",
+                      )}
+                    >
+                      {item.status_order}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-foreground text-sm font-medium">
+                        {item.requester_name}
+                      </span>
+                      <span className="text-xs text-muted-foreground italic">
+                        {item.division}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[300px]">
+                      <p className="text-foreground leading-tight">{item.item_name}</p>
+                      {item.link && (
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-primary flex items-center gap-1 mt-1 hover:underline font-bold uppercase tracking-wider"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Buka Tautan
+                        </a>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="px-2 py-0.5 bg-muted rounded-md text-xs font-bold text-foreground">
+                      {item.quantity}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Admin & Administrasi: Mark as Done / Undone */}
+                      {canMarkOrder && (
+                        <>
+                          {item.status_order === "Belum Diorder" ? (
+                            <button
+                              onClick={() => {
+                                setSelectedItem(item);
+                                setDoneQuantity(item.quantity);
+                                setShowDoneDialog(true);
+                              }}
+                              className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200"
+                              title="Tandai Sudah Diorder"
+                            >
+                              <CheckSquare className="w-4.5 h-4.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleMarkAsUndone(item.id)}
+                              className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50 hover:text-amber-700 transition-all duration-200"
+                              title="Tandai Belum Diorder"
+                            >
+                              <RotateCcw className="w-4.5 h-4.5" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {/* Re-Order Button - only for items already ordered */}
+                      {item.status_order === "Sudah Diorder" && (
+                        <button
+                          onClick={() => handleReorder(item)}
+                          className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
+                          title="Reorder"
+                        >
+                          <RefreshCw className="w-4.5 h-4.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setEditingItem(item);
+                          setReorderingItem(null);
+                          setFormData({
+                            requester_name: item.requester_name,
+                            division: item.division,
+                            request_date: item.request_date,
+                            items: [
+                              {
+                                name: item.item_name,
+                                quantity: item.quantity,
+                                link: item.link || "",
+                              },
+                            ],
+                          });
+                          setIsModalOpen(true);
+                        }}
+                        className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-700 transition-all duration-200"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4.5 h-4.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-1.5 h-8 w-8 !opacity-100 flex items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all duration-200"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-4.5 h-4.5" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {items.length === 0 && (
+                <TableEmpty
+                  colSpan={5}
+                  icon={<Package className="w-12 h-12 opacity-20" />}
+                  message="Belum ada data permintaan barang."
+                />
+              )}
+            </TableBody>
+          </Table>
+      </TableResponsive>
 
       <TablePagination
         currentPage={currentPage}
@@ -837,6 +982,6 @@ export default function ItemManager({
             </div>
           </Modal>
         )}
-    </TableWrapper>
+    </div>
   );
 }
