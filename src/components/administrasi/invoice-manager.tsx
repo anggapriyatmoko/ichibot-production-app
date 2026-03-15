@@ -391,6 +391,7 @@ export default function InvoiceManager({
   ];
 
   return (
+    <div>
       <TableResponsive
         data={invoices}
         loading={loading}
