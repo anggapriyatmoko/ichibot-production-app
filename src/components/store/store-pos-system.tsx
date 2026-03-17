@@ -453,7 +453,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                             <Home className="w-5 h-5 md:w-6 md:h-6" />
                         </Link>
                         <a
-                            href={process.env.NEXT_PUBLIC_WC_URL}
+                            href={process.env.NEXT_PUBLIC_WC_URL || 'https://store.ichibot.id'}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 md:p-3 bg-card border border-border rounded-xl md:rounded-2xl text-muted-foreground hover:text-primary hover:border-primary transition-all shadow-sm"

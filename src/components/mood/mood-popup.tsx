@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { submitMood, getUserMoodToday } from '@/app/actions/mood'
 import { cn } from '@/lib/utils'
-import { X, Send, Loader2 } from 'lucide-react'
+import { X, Send, Loader2, Quote } from 'lucide-react'
 
 const MOODS = [
     { value: 'JOYFUL', emoji: '🤩', label: 'Joyful', color: 'from-yellow-400 to-orange-400', bg: 'bg-yellow-500/10', ring: 'ring-yellow-400' },
@@ -13,6 +13,116 @@ const MOODS = [
     { value: 'SAD', emoji: '😞', label: 'Sad', color: 'from-indigo-400 to-purple-400', bg: 'bg-indigo-500/10', ring: 'ring-indigo-400' },
     { value: 'ANGRY', emoji: '😡', label: 'Angry', color: 'from-red-400 to-rose-400', bg: 'bg-red-500/10', ring: 'ring-red-400' },
 ]
+
+const MOTIVATIONAL_QUOTES = [
+    // --- 8 Quotes Awal ---
+    "Istirahat sejenak, esok kita tempur lagi dengan semangat baru! 🚀",
+    "Kerja kerasmu hari ini adalah investasi untuk masa depanmu. ✨",
+    "Pulanglah dengan senyum, kamu sudah memberikan yang terbaik hari ini. 😊",
+    "Keluarga menantimu di rumah, nikmati waktu bersama mereka. 🏠",
+    "Satu langkah lebih dekat menuju kesuksesan. Selamat beristirahat! 🏆",
+    "Terima kasih atas dedikasimu hari ini. Sampai jumpa besok! 👋",
+    "Jangan lupa bersyukur atas pencapaian hari ini, sekecil apapun itu. 🙏",
+    "Hari yang produktif! Sekarang saatnya me-recharge energimu. 🔋",
+
+    // --- Versi Serius & Menyentuh Hati (Pengganti) ---
+    "Setiap tetap keringatmu adalah bukti cinta untuk orang-orang tersayang di rumah. ❤️",
+    "Di balik setiap tugas yang selesai, ada ketulusan yang tak ternilai harganya. Terima kasih. 💎",
+    "Kamu telah menjadi pahlawan bagi keluargamu hari ini. Pulanglah dengan bangga. 🦸",
+    "Pekerjaanmu mungkin berat, tapi niat baikmu akan membukakan jalan yang lebih terang. 🕯️",
+    "Terima kasih telah bertahan meski hari ini terasa melelahkan. Kamu luar biasa. 🤝",
+    "Ingatlah, kesehatanmu adalah harta terbesar yang harus kamu bawa pulang ke rumah. 🩺",
+    "Dunia mungkin tidak selalu melihat lelahmu, tapi Tuhan mencatat setiap usahamu. 🙏",
+    "Kamu bukan sekadar angka di perusahaan ini, kamu adalah bagian penting dari keluarga kami. 👨‍👩‍👧‍👦",
+    "Jangan biarkan lelahmu memadamkan semangatmu untuk menjadi versi terbaik setiap harinya. 🔥",
+    "Istirahatlah malam ini, biarkan tubuhmu pulih agar esok bisa kembali menebar manfaat. 🌱",
+    "Ketekunanmu hari ini adalah doa yang sedang kamu wujudkan untuk masa depan. ✨",
+    "Tinggalkan sejenak beban dunia kerja, berikan kehadiran utuh untuk dirimu dan keluarga. 🏠",
+    "Keberhasilan besar selalu dimulai dari kesabaran dalam menghadapi hari-hari sulit. 🧗",
+    "Terima kasih sudah memberikan hati dan pikiranmu untuk kemajuan bersama hari ini. 🎖️",
+    "Apapun hasilnya hari ini, kamu tetaplah pribadi yang berharga dan patut diapresiasi. 💖",
+    "Ketenangan pikiran adalah upah terbaik setelah seharian penuh dengan tanggung jawab. 🌌",
+    "Jangan pernah meremehkan langkah kecilmu, karena itulah yang membawamu ke puncak. ⛰️",
+    "Kamu sudah berjuang hebat. Sekarang, biarkan hatimu menemukan kedamaian di rumah. 🕊️",
+    "Kesuksesan sejati adalah ketika kamu bisa pulang dengan rasa syukur di dalam dada. 🙌",
+    "Jadilah inspirasi bagi rekan sekitarmu dengan dedikasi yang tanpa henti seperti hari ini. 🌟",
+    "Meski hari ini tak sempurna, usahamu tetap bermakna bagi banyak orang. 🌻",
+    "Selamat beristirahat, pejuang. Esok adalah kesempatan baru untuk menjadi lebih baik. 🌅",
+    "Fokusmu adalah kekuatanmu. Terima kasih telah menjaga komitmen hingga akhir hari. 🎯",
+    "Setiap tantangan yang kamu hadapi hari ini telah membentuk mentalmu menjadi lebih kuat. 🥊",
+    "Beristirahatlah dengan tenang, tugasmu hari ini telah tertunaikan dengan sangat baik. ✅",
+    "Jangan lupa mencintai dirimu sendiri sama besarnya dengan caramu mencintai pekerjaanmu. ❤️",
+    "Waktu bersama keluarga adalah obat paling ampuh untuk segala bentuk kelelahan kerja. 🧴",
+    "Ketulusanmu dalam bekerja akan membuahkan berkah yang mengalir tanpa putus. 🌊",
+    "Tetaplah rendah hati dan penuh semangat, karena integritasmu adalah jati dirimu. 🛡️",
+    "Kamu adalah bagian dari perubahan besar yang sedang kita bangun bersama. Terima kasih! 🏗️",
+    "Malam ini, biarkan matamu terpejam dengan keyakinan bahwa esok akan lebih indah. 🌙",
+    "Satu hari lagi telah tuntas. Terima kasih atas integritas dan profesionalisme Anda. 💼",
+
+    // --- Versi Motivasi & Apresiasi ---
+    "Dedikasimu hari ini adalah tangga menuju impianmu. Terus melangkah! 🧗",
+    "Hasil tidak pernah mengkhianati usaha. Terima kasih untuk hari ini! 💎",
+    "Setiap keringatmu adalah benih keberhasilan di masa depan. 🌱",
+    "Bangga atas segala upaya yang kamu berikan hari ini. Luar biasa! 🌟",
+    "Kamu telah melakukan hal-hal besar hari ini. Sekarang saatnya jeda. 🛑",
+    "Istirahatlah, karena pikiran yang jernih adalah senjata paling tajam. 🗡️",
+    "Jangan bandingkan prosesmu dengan orang lain. Kamu sudah di jalur yang benar! 🛤️",
+    "Pekerjaan hebat dimulai dari hati yang semangat. Sampai jumpa besok! ❤️",
+    "Kesuksesan adalah kumpulan dari usaha kecil yang diulang setiap hari. 🔄",
+    "Kamu lebih kuat dari yang kamu bayangkan, dan lebih hebat dari yang kamu duga. 💪",
+    "Jadikan hari ini pelajaran, dan jadikan esok sebuah pembuktian. 📚",
+    "Fokusmu hari ini patut diacungi jempol. Selamat beristirahat, Champion! 👍",
+    "Satu hari lagi telah terlewati dengan penuh makna. Syukuri itu. 🙌",
+    "Jangan lupa beri apresiasi pada dirimu sendiri sebelum tidur nanti. 🏅",
+    "Kamu adalah aset paling berharga bagi perusahaan ini. Jaga dirimu! 💎",
+    "Esok adalah halaman baru, pastikan kamu punya energi untuk menulisnya. ✍️",
+    "Terima kasih telah bertahan di tengah tekanan. Kamu sungguh tangguh! 🥊",
+    "Bekerja untuk hidup, bukan hidup untuk bekerja. Nikmati waktumu! 🌈",
+    "Kreativitas butuh ruang, dan istirahat adalah ruang terbaik. 🌌",
+    "Semangatmu adalah api yang menghangatkan suasana kantor ini. 🔥",
+    "Jangan hitung berapa banyak tugasnya, hitung berapa banyak berkatnya. ✨",
+    "Pulanglah dengan perasaan puas, karena tugas telah tuntas. ✅",
+    "Rehat sejenak bukan berarti berhenti, tapi bersiap untuk melompat lebih tinggi. 🦘",
+    "Kesabaranmu hari ini akan berbuah manis pada waktunya. 🍎",
+    "Setiap masalah yang kamu selesaikan hari ini membuatmu semakin ahli. 🎓",
+    "Dunia kerja memang keras, tapi kamu jauh lebih keras kepala untuk menyerah! 😤",
+    "Jadilah versi terbaik dirimu, dimulai dengan istirahat yang cukup. 🛌",
+    "Kesehatanmu adalah modal utama untuk meraih mimpimu. 🩺",
+    "Tidak ada usaha yang sia-sia di mata Tuhan. Semangat terus! 🙏",
+    "Keberhasilan hari ini adalah hasil dari fokusmu yang luar biasa. 🎯",
+    "Mimpi besar butuh tenaga besar. Ayo charge bateraimu malam ini! 🔋",
+    "Kamu telah menebar banyak kebaikan melalui pekerjaanmu hari ini. 🌻",
+    "Setiap tantangan hari ini adalah latihan untuk kemenangan esok hari. 🏆",
+    "Istirahatlah dengan damai agar esok bangun dengan penuh ambisi. 🦁",
+    "Bangga melihat perkembanganmu dari hari ke hari. Pertahankan! 📈",
+
+    // --- Versi Singkat & Manis ---
+    "Hati-hati di jalan, ada orang tersayang menunggumu. ❤️",
+    "Hargai tubuhmu dengan istirahat yang berkualitas malam ini. 🛌",
+    "Terima kasih untuk senyummu di kantor hari ini. 😊",
+    "Matikan notifikasi, hidupkan mode santai. 📴",
+    "Kamu luar biasa! Titik. Tak pakai tapi. 💯",
+    "Nikmati secangkir teh hangat di rumah. Kamu pantas mendapatkannya. ☕",
+    "Tidurlah yang nyenyak, pahlawan keluarga! 🦸",
+    "Esok adalah hari yang indah untuk memulai kembali. ☀️",
+    "Pekerjaan selesai, hati tenang, pikiran senang. ✨",
+    "Selamat menikmati waktu berkualitas bersama keluarga. 👨‍👩‍👦",
+    "Hargai setiap progres, sekecil apapun itu. 🐌",
+    "Kamu sudah memberikan 100% hari ini. Luar biasa! 💯",
+    "Sampai jumpa di hari esok yang lebih cerah! 🌅",
+    "Jangan lupa makan enak malam ini sebagai reward diri sendiri. 🍕",
+    "Pikiran positif dimulai dari tidur yang cukup. 🛌",
+    "Sudah sore, mari kita ganti seragam dengan baju santai. 👕",
+    "Tinggalkan kelelahan di pintu keluar, bawa pulang kebahagiaan. 🗑️",
+    "Jaga kesehatan, karena kamu tak tergantikan. 💖",
+    "Satu hari produktif lagi telah selesai. Kerja bagus! 👏",
+    "Malam ini adalah milikmu, nikmati tanpa gangguan kerja. 🌙",
+    "Recharge, Refresh, Restart! 🔄",
+    "Selamat beristirahat, jiwa-jiwa pemenang! 🏁",
+    "Tetap semangat, sedikit lagi menuju akhir pekan! 🗓️",
+    "Terima kasih telah menjadi bagian dari tim hebat ini. 🤝",
+    "Istirahat total ya, jangan biarkan urusan kantor mengganggu tidurmu. 📧❌"
+];
 
 type MoodType = 'CHECK_IN' | 'CHECK_OUT'
 
@@ -24,6 +134,7 @@ export default function MoodPopup() {
     const [note, setNote] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
+    const [randomQuote, setRandomQuote] = useState('')
     const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     // Test mode: ?test-mood=check_in or ?test-mood=check_out
@@ -101,6 +212,13 @@ export default function MoodPopup() {
             if (existing) return
 
             setMoodType(typeToShow)
+
+            // If check out, pick random quote
+            if (typeToShow === 'CHECK_OUT') {
+                const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]
+                setRandomQuote(quote)
+            }
+
             setIsOpen(true)
         } catch (error) {
             console.error('Error checking mood schedule:', error)
@@ -215,10 +333,29 @@ export default function MoodPopup() {
                         <div className="text-6xl mb-4 animate-bounce">
                             {selectedMoodData?.emoji || '✅'}
                         </div>
-                        <p className="text-lg font-semibold text-foreground">Terima kasih!</p>
+                        <p className="text-lg font-semibold text-foreground"></p>
+                        {moodType === 'CHECK_OUT' && (
+                            <p className="text-sm text-muted-foreground mt-2 italic px-4">
+                                "{randomQuote}"
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <>
+                        {/* Quote for CHECK_OUT */}
+                        {moodType === 'CHECK_OUT' && (
+                            <div className="px-6 pt-4 border-b border-border/50 bg-muted/20">
+                                {/* Motivational Quote */}
+                                <div className="pb-4 text-center">
+                                    <div className="relative group">
+                                        <p className="relative text-lg font-medium leading-relaxed text-blue-600 italic">
+                                            "{randomQuote}"
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Mood Selection */}
                         <div className="px-6 py-6">
                             <div className="flex items-center justify-center gap-3">

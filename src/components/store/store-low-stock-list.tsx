@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react'
+import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
-import { toggleStoreProductPurchased, syncSingleStoreProduct } from '@/app/actions/store-product'
+import { toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -68,6 +68,30 @@ export default function StoreLowStockList({
     })
     const { showError, showAlert } = useAlert()
     const router = useRouter()
+
+    const handleTogglePriority = async (product: any) => {
+        const wcId = product.wcId
+        const newPriority = !product.priority
+
+        setLocalProducts(prev => prev.map(p =>
+            p.wcId === wcId ? { ...p, priority: newPriority } : p
+        ))
+
+        try {
+            const result = await toggleStoreProductPriority(wcId, newPriority)
+            if (!result.success) {
+                setLocalProducts(prev => prev.map(p =>
+                    p.wcId === wcId ? { ...p, priority: product.priority } : p
+                ))
+                showError('Gagal memperbarui status prioritas.')
+            }
+        } catch (error) {
+            setLocalProducts(prev => prev.map(p =>
+                p.wcId === wcId ? { ...p, priority: product.priority } : p
+            ))
+            showError('Terjadi kesalahan sistem.')
+        }
+    }
 
     // Update local products when initialProducts change
     useEffect(() => {
@@ -489,6 +513,7 @@ export default function StoreLowStockList({
                         <TableHeader>
                             <TableRow hoverable={false}>
                                 <TableHead align="center" className="w-10">Beli</TableHead>
+                                <TableHead align="center" className="w-10">Prioritas</TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
                                 <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/80 transition-colors">
                                     Info Produk <SortIcon columnKey="name" sortConfig={sortConfig} />
@@ -533,6 +558,18 @@ export default function StoreLowStockList({
                                                 ) : (
                                                     <Circle className="w-5 h-5" />
                                                 )}
+                                            </button>
+                                        </TableCell>
+                                        <TableCell align="center">
+                                            <button
+                                                onClick={() => handleTogglePriority(product)}
+                                                className={cn(
+                                                    "transition-colors",
+                                                    product.priority ? "text-amber-500" : "text-muted-foreground/30 hover:text-amber-400"
+                                                )}
+                                                title={product.priority ? 'Hapus prioritas' : 'Tandai prioritas'}
+                                            >
+                                                <Star className={cn("w-5 h-5", product.priority && "fill-amber-500")} />
                                             </button>
                                         </TableCell>
                                         <TableCell>
@@ -703,7 +740,7 @@ export default function StoreLowStockList({
                                 ))
                             ) : (
                                 <TableEmpty
-                                    colSpan={8}
+                                    colSpan={9}
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk low stock ditemukan."
                                     description={searchTerm ? (

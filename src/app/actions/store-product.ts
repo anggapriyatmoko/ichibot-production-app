@@ -804,6 +804,22 @@ export async function updateStoreProductKeterangan(wcId: number, keterangan: str
     }
 }
 
+export async function toggleStoreProductPriority(wcId: number, priority: boolean) {
+    try {
+        await prisma.storeProduct.update({
+            where: { wcId },
+            data: { priority }
+        })
+        revalidatePath('/store/product')
+        revalidatePath('/store/low-stock')
+        revalidatePath('/store/purchased')
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error toggling priority:', error)
+        return { success: false, error: error.message }
+    }
+}
+
 export async function getStorePurchasedProducts() {
     try {
         const products = await prisma.storeProduct.findMany({

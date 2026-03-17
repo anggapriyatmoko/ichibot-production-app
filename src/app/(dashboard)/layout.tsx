@@ -1,6 +1,7 @@
 import Sidebar from '@/components/layout/sidebar'
 import Header from '@/components/layout/header'
 import MobileHeader from '@/components/layout/mobile-header'
+import { Suspense } from 'react'
 import { SidebarProvider } from '@/components/providers/sidebar-provider'
 import ChatWidget from '@/components/chat/chat-widget'
 import RbacGuard from '@/components/providers/rbac-guard'
@@ -63,7 +64,9 @@ export default async function DashboardLayout({
                 </div>
 
                 {/* Mood Popup Provider */}
-                <MoodProvider />
+                <Suspense fallback={null}>
+                    <MoodProvider />
+                </Suspense>
 
                 {/* Chat Widget - Desktop Only */}
                 <ChatWidget />

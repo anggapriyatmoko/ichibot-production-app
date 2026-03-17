@@ -6,7 +6,6 @@ import { ModalProvider } from "@/components/providers/modal-provider"
 import { SessionProvider } from "@/components/providers/session-provider"
 
 import { PwaRegistration } from "@/components/pwa-registration";
-import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -48,7 +47,6 @@ export default function RootLayout({
           <SessionProvider>
             <ModalProvider>
               <PwaRegistration />
-              <PwaInstallPrompt />
               {children}
             </ModalProvider>
           </SessionProvider>

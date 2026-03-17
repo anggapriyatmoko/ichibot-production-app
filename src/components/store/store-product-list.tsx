@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart } from 'lucide-react'
+import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
-import { syncStoreProducts, toggleStoreProductPurchased, syncSingleStoreProduct, getStoreProducts } from '@/app/actions/store-product'
+import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -278,7 +278,30 @@ export default function StoreProductList({
         }
     }
 
+    const handleTogglePriority = async (wcId: number, currentPriority: boolean) => {
+        const newPriority = !currentPriority
 
+        // Optimistic UI update
+        setLocalProducts(prev => prev.map(p =>
+            p.wcId === wcId ? { ...p, priority: newPriority } : p
+        ))
+
+        try {
+            const result = await toggleStoreProductPriority(wcId, newPriority)
+            if (!result.success) {
+                // Revert on error
+                setLocalProducts(prev => prev.map(p =>
+                    p.wcId === wcId ? { ...p, priority: currentPriority } : p
+                ))
+                showError('Gagal memperbarui status prioritas.')
+            }
+        } catch (error) {
+            setLocalProducts(prev => prev.map(p =>
+                p.wcId === wcId ? { ...p, priority: currentPriority } : p
+            ))
+            showError('Terjadi kesalahan sistem.')
+        }
+    }
 
     const analysis = useMemo(() => {
         // Filter out 'variable' type to avoid double counting stock (count only simple and variations)
@@ -330,6 +353,7 @@ export default function StoreProductList({
             draft: physicalProducts.filter(p => p.status === 'draft').length,
             variationProducts: localProducts.filter(p => p.type === 'variable').length,
             multiPaket: physicalProducts.filter(p => (p.purchasePackage || 0) > 1).length,
+            priorityProducts: physicalProducts.filter(p => p.priority).length,
             withSku: physicalProducts.filter(p => p.sku && p.sku.trim() !== '').length,
             withoutSku: physicalProducts.filter(p => !p.sku || p.sku.trim() === '').length,
             totalOmset: physicalProducts
@@ -1025,6 +1049,7 @@ export default function StoreProductList({
                         <TableHeader>
                             <TableRow>
                                 {showPurchasedColumn && <TableHead align="center" className="w-10">Beli</TableHead>}
+                                <TableHead align="center" className="w-10">Prioritas</TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
                                 <TableHead
                                     className="cursor-pointer hover:bg-muted/80 transition-colors"
@@ -1114,6 +1139,18 @@ export default function StoreProductList({
                                                 </button>
                                             </TableCell>
                                         )}
+                                        <TableCell align="center">
+                                            <button
+                                                onClick={() => handleTogglePriority(product.wcId, product.priority)}
+                                                className={cn(
+                                                    "transition-colors",
+                                                    product.priority ? "text-amber-500" : "text-muted-foreground/30 hover:text-amber-400"
+                                                )}
+                                                title={product.priority ? 'Hapus prioritas' : 'Tandai prioritas'}
+                                            >
+                                                <Star className={cn("w-5 h-5", product.priority && "fill-amber-500")} />
+                                            </button>
+                                        </TableCell>
                                         <TableCell>
                                             <div
                                                 className={cn(
@@ -1597,6 +1634,15 @@ export default function StoreProductList({
                             </div>
                         </>
                     )}
+                    <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-100/50">
+                        <p className="text-xs font-semibold text-amber-600/70 uppercase tracking-wider mb-1 flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> Produk Prioritas
+                        </p>
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-2xl font-bold text-amber-600">{formatNumber(analysis.priorityProducts)}</p>
+                            <span className="text-[10px] font-medium text-amber-600/60">Produk</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

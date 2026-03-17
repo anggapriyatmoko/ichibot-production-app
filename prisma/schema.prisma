@@ -687,6 +687,7 @@ model StoreProduct {
   parentId         Int?
   backupGudang     String?   @db.Text
   orderBatchId     String?
+  priority         Boolean   @default(false)
 
   @@map("StoreProduct")
 }

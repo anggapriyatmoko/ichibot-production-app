@@ -98,3 +98,27 @@ export async function getAllMoodsForDate(dateStr: string) {
 
     return { success: true, data: decryptedMoods }
 }
+// Get summary of moods for a specific type today
+export async function getMoodSummaryToday(type: 'CHECK_IN' | 'CHECK_OUT') {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const moodCounts = await (prisma.userMood as any).groupBy({
+        by: ['mood'],
+        where: {
+            date: today,
+            type
+        },
+        _count: {
+            mood: true
+        }
+    })
+
+    return { 
+        success: true, 
+        data: moodCounts.map((m: any) => ({
+            mood: m.mood,
+            count: m._count.mood
+        }))
+    }
+}
