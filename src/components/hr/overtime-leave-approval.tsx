@@ -140,7 +140,7 @@ export default function OvertimeLeaveApproval() {
 
     const loadUsers = async () => {
         const data = await getUsers()
-        setUsers(data)
+        setUsers(data.filter((u: any) => u.isActive))
     }
 
     const handleAction = async (id: string, status: 'APPROVED' | 'REJECTED') => {

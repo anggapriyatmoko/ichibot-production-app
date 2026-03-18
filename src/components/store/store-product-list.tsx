@@ -1049,7 +1049,9 @@ export default function StoreProductList({
                         <TableHeader>
                             <TableRow>
                                 {showPurchasedColumn && <TableHead align="center" className="w-10">Beli</TableHead>}
-                                <TableHead align="center" className="w-10">Prioritas</TableHead>
+                                <TableHead align="center" className="w-10">
+                                    <Star className="w-4 h-4 mx-auto fill-amber-500 text-amber-500" />
+                                </TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
                                 <TableHead
                                     className="cursor-pointer hover:bg-muted/80 transition-colors"

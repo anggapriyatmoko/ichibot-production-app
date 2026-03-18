@@ -81,6 +81,11 @@ export const authOptions: AuthOptions = {
                         try {
                             const decryptedPin = decrypt(user.pinEnc)
                             if (decryptedPin === pinAttempt) {
+                                // Check if user is active
+                                if (user.isActive === false) {
+                                    throw new Error('Akun Anda dinonaktifkan. Hubungi admin.')
+                                }
+
                                 // Match found! Reset rate limit
                                 rateLimitStore.delete(ip)
 
@@ -143,6 +148,11 @@ export const authOptions: AuthOptions = {
                             })
                         }
                         throw new Error('Email not registered')
+                    }
+
+                    // Check if user is active
+                    if (user.isActive === false) {
+                        throw new Error('Akun Anda dinonaktifkan. Hubungi admin.')
                     }
 
                     // Validate Password

@@ -319,7 +319,7 @@ export async function getMonthlyPayrollRecap(month: number, year: number) {
         // We want ALL users, and attach their payroll if it exists for this month/year.
 
         const users = await (prisma.user as any).findMany({
-            where: {},
+            where: { isActive: true },
             orderBy: {
                 id: 'asc'
             },

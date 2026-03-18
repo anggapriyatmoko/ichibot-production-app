@@ -513,7 +513,9 @@ export default function StoreLowStockList({
                         <TableHeader>
                             <TableRow hoverable={false}>
                                 <TableHead align="center" className="w-10">Beli</TableHead>
-                                <TableHead align="center" className="w-10">Prioritas</TableHead>
+                                <TableHead align="center" className="w-10">
+                                    <Star className="w-4 h-4 mx-auto fill-amber-500 text-amber-500" />
+                                </TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
                                 <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/80 transition-colors">
                                     Info Produk <SortIcon columnKey="name" sortConfig={sortConfig} />

@@ -51,6 +51,7 @@ export default async function HRDDashboardPage(props: { searchParams: Promise<{ 
             getSalaryComponents('ADDITION'),
             getHRDocuments(),
             (prisma.user as any).findMany({
+                where: { isActive: true },
                 select: { id: true, nameEnc: true, usernameEnc: true, roleEnc: true },
                 orderBy: { createdAt: 'desc' }
             })

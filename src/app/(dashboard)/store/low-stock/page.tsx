@@ -2,8 +2,8 @@ import StoreLowStockList from '@/components/store/store-low-stock-list';
 import { getStoreLowStockProducts } from '@/app/actions/store-product';
 import { getStoreSuppliers } from '@/app/actions/store-supplier';
 import { getSystemSetting } from '@/app/actions/system-settings';
+import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getUserRole } from '@/lib/auth';
 import { Suspense } from 'react';
 import StoreSkeleton from '@/components/store/store-skeleton';
 
@@ -22,8 +22,9 @@ async function StoreLowStockContent() {
 }
 
 export default async function StoreLowStockPage() {
-    const role = await getUserRole();
-    if (role !== 'ADMIN') {
+    const session = await requireAuth();
+    const allowed = await isAllowedForPage('/store/low-stock');
+    if (!allowed) {
         redirect('/dashboard');
     }
 

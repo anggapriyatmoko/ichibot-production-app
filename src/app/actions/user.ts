@@ -15,6 +15,7 @@ export async function getUsers() {
             usernameEnc: true,
             departmentEnc: true,
             roleEnc: true,
+            isActive: true,
             createdAt: true,
         }
     })
@@ -25,7 +26,8 @@ export async function getUsers() {
         email: decrypt(user.emailEnc),
         username: decrypt(user.usernameEnc),
         department: decrypt(user.departmentEnc),
-        role: decrypt(user.roleEnc) || 'USER'
+        role: decrypt(user.roleEnc) || 'USER',
+        isActive: user.isActive,
     }))
 }
 
@@ -153,6 +155,28 @@ export async function toggleUserRole(id: string) {
         where: { id },
         data: {
             roleEnc: encrypt(newRole)
+        }
+    })
+    revalidatePath('/users')
+}
+
+export async function toggleUserStatus(id: string) {
+    const user = await prisma.user.findUnique({
+        where: { id }
+    })
+
+    if (!user) throw new Error('User not found')
+
+    // Admin users must always be active
+    const role = decrypt(user.roleEnc)
+    if (role === 'ADMIN') {
+        throw new Error('Admin status tidak bisa diubah')
+    }
+
+    await prisma.user.update({
+        where: { id },
+        data: {
+            isActive: !user.isActive
         }
     })
     revalidatePath('/users')

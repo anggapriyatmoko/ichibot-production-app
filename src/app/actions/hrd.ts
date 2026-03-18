@@ -62,6 +62,7 @@ export async function getAllUsersForHRD() {
     await requirePageAccess('/hrd-dashboard')
 
     const users = await (prisma.user as any).findMany({
+        where: { isActive: true },
         select: {
             id: true,
             emailEnc: true,

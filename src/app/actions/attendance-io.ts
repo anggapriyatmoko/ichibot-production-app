@@ -33,6 +33,7 @@ function formatTime(date: Date | null | undefined) {
 export async function getValidUserIds() {
     await requireAuth()
     const users = await prisma.user.findMany({
+        where: { isActive: true },
         select: { id: true }
     })
     return users.map(u => u.id)
@@ -43,6 +44,7 @@ export async function getAttendanceTemplate() {
     await requirePageAccess('/attendance')
 
     const users = await prisma.user.findMany({
+        where: { isActive: true },
         orderBy: { id: 'asc' },
         select: { id: true, nameEnc: true }
     })

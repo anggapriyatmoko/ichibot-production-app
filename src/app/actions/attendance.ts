@@ -34,6 +34,7 @@ export async function getAttendances(dateStr?: string) {
 
     // Get all users
     const users = await prisma.user.findMany({
+        where: { isActive: true },
         orderBy: { id: 'asc' },
         select: {
             id: true,
@@ -147,7 +148,7 @@ export async function upsertAttendance(formData: FormData) {
 
     // If updating global holiday status (checked or unchecked)
     if (updateHolidayGlobal) {
-        const allUsers = await prisma.user.findMany({ select: { id: true } })
+        const allUsers = await prisma.user.findMany({ where: { isActive: true }, select: { id: true } })
 
         for (const user of allUsers) {
             await prisma.attendance.upsert({
@@ -250,7 +251,7 @@ export async function getPayrollPeriodAttendanceSummary(salaryCalcDay: number, m
 
     // Get all users
     const users = await prisma.user.findMany({
-        where: {},
+        where: { isActive: true },
         orderBy: { id: 'asc' },
         select: {
             id: true,
@@ -587,6 +588,7 @@ export async function getAdminMonthlyAttendanceReport(month: number, year: numbe
 
     // Get all users
     const usersRaw = await prisma.user.findMany({
+        where: { isActive: true },
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,

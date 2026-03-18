@@ -197,6 +197,7 @@ export async function getOrCreateGroupChat() {
 
     // Create new group chat with all users
     const allUsers = await prisma.user.findMany({
+        where: { isActive: true },
         select: { id: true }
     })
 
@@ -393,7 +394,8 @@ export async function getChatUsers() {
 
     const users = await (prisma.user as any).findMany({
         where: {
-            id: { not: user.id }
+            id: { not: user.id },
+            isActive: true
         },
         select: {
             id: true,

@@ -4,13 +4,14 @@ import StoreSupplierManager from '@/components/store/store-supplier-manager'
 import CurrencyConversionManager from '@/components/store/currency-conversion-manager'
 import StoreFeeManager from '@/components/store/store-fee-manager'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/auth'
+import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function StoreSettingsPage() {
-    const role = await getUserRole()
-    if (role !== 'ADMIN') {
+    const session = await requireAuth()
+    const allowed = await isAllowedForPage('/store/settings')
+    if (!allowed) {
         redirect('/dashboard')
     }
 

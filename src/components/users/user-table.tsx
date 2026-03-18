@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Edit2, Trash2, Search, UserPlus, Shield, User as UserIcon, Loader2 } from 'lucide-react'
-import { deleteUser } from '@/app/actions/user'
+import { Edit2, Trash2, Search, UserPlus, Shield, User as UserIcon, Loader2, Power } from 'lucide-react'
+import { deleteUser, toggleUserStatus } from '@/app/actions/user'
 import UserDialog from './user-dialog'
 import {
     TableWrapper,
@@ -28,6 +28,7 @@ export default function UserTable({ users }: UserTableProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<any>(null)
     const [isDeleting, setIsDeleting] = useState<string | null>(null)
+    const [isToggling, setIsToggling] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
 
@@ -61,6 +62,17 @@ export default function UserTable({ users }: UserTableProps) {
             alert('Failed to delete user')
         } finally {
             setIsDeleting(null)
+        }
+    }
+
+    const handleToggleStatus = async (id: string) => {
+        setIsToggling(id)
+        try {
+            await toggleUserStatus(id)
+        } catch (error) {
+            alert('Failed to toggle user status')
+        } finally {
+            setIsToggling(null)
         }
     }
 
@@ -166,9 +178,32 @@ export default function UserTable({ users }: UserTableProps) {
                                         {user.department || 'No Dept'}
                                     </span>
                                 </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${
+                                        user.isActive
+                                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                    }`}>
+                                        {user.isActive ? 'AKTIF' : 'NONAKTIF'}
+                                    </span>
+                                </div>
                             </div>
 
                             <div className="flex justify-end gap-2 pt-3 border-t border-border mt-2">
+                                {user.role !== 'ADMIN' && (
+                                    <button
+                                        onClick={() => handleToggleStatus(user.id)}
+                                        disabled={isToggling === user.id}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                                            user.isActive
+                                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 dark:text-amber-300'
+                                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 dark:text-emerald-300'
+                                        }`}
+                                    >
+                                        {isToggling === user.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Power className="w-3.5 h-3.5" />}
+                                        {user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => handleEdit(user)}
                                     className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
@@ -203,13 +238,14 @@ export default function UserTable({ users }: UserTableProps) {
                                     <TableHead className="px-6 font-semibold">User</TableHead>
                                     <TableHead className="px-6 font-semibold">Role</TableHead>
                                     <TableHead className="px-6 font-semibold">Department</TableHead>
+                                    <TableHead className="px-6 font-semibold">Status</TableHead>
                                     <TableHead className="px-6 font-semibold" align="right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredUsers.length === 0 ? (
                                     <TableEmpty
-                                        colSpan={4}
+                                        colSpan={5}
                                         message="No users found matches your search."
                                         icon={<UserIcon className="w-12 h-12 opacity-20" />}
                                     />
@@ -237,6 +273,31 @@ export default function UserTable({ users }: UserTableProps) {
                                                 <span className="text-sm font-medium text-muted-foreground">
                                                     {user.department || '-'}
                                                 </span>
+                                            </TableCell>
+                                            <TableCell className="px-6">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${
+                                                        user.isActive
+                                                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    }`}>
+                                                        {user.isActive ? 'AKTIF' : 'NONAKTIF'}
+                                                    </span>
+                                                    {user.role !== 'ADMIN' && (
+                                                        <button
+                                                            onClick={() => handleToggleStatus(user.id)}
+                                                            disabled={isToggling === user.id}
+                                                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
+                                                                user.isActive
+                                                                    ? 'hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600'
+                                                                    : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600'
+                                                            }`}
+                                                            title={user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                                                        >
+                                                            {isToggling === user.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Power className="w-3.5 h-3.5" />}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                             <TableCell className="px-6" align="right">
                                                 <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">

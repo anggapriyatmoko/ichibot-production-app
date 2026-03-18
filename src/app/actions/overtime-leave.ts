@@ -148,7 +148,9 @@ export async function getOvertimeLeaves(page = 1, limit = 50, filterTypes: strin
     try {
         // Fetch all relevant data and filter in memory because fields are encrypted
         const allData = await (prisma as any).overtimeleave.findMany({
-            where: isAdmin && !ownOnly ? {} : { userId: session.user.id },
+            where: isAdmin && !ownOnly 
+                ? { user: { isActive: true } } 
+                : { userId: session.user.id },
             include: {
                 user: {
                     select: {
@@ -297,6 +299,7 @@ export async function createOvertimeOrder(formData: FormData) {
 export async function getPendingOvertimeLeaveCount() {
     try {
         const allData = await (prisma as any).overtimeleave.findMany({
+            where: { user: { isActive: true } },
             include: { user: { select: { nameEnc: true, usernameEnc: true } } }
         })
         const decrypted = allData.map(decryptOvertimeLeave)
@@ -309,6 +312,7 @@ export async function getPendingOvertimeLeaveCount() {
 export async function getPendingOvertimeLeavesDetails() {
     try {
         const allData = await (prisma as any).overtimeleave.findMany({
+            where: { user: { isActive: true } },
             include: { user: { select: { nameEnc: true, usernameEnc: true } } }
         })
         const decrypted = allData.map(decryptOvertimeLeave)
@@ -465,6 +469,7 @@ export async function getOvertimeRecapSequence(month: number, year: number, payr
 
         // Query all Overtime
         const allData = await (prisma as any).overtimeleave.findMany({
+            where: { user: { isActive: true } },
             include: {
                 user: {
                     select: {

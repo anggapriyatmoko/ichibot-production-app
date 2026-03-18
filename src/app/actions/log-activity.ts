@@ -241,6 +241,7 @@ export async function getUsersForLog() {
     const { decrypt } = require('@/lib/crypto')
 
     const users = await prisma.user.findMany({
+        where: { isActive: true },
         select: {
             id: true,
             nameEnc: true,
@@ -289,6 +290,7 @@ export async function getDailyActivityRecap(dateStr: string) {
     dateObj.setHours(0, 0, 0, 0)
 
     const rawUsers = await prisma.user.findMany({
+        where: { isActive: true },
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,

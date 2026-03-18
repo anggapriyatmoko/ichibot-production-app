@@ -593,6 +593,7 @@ model user {
   phoneEnc              String?           @db.Text
   photoEnc              String?           @db.Text
   roleEnc               String?           @db.Text
+  isActive              Boolean           @default(true)
   pinEnc                String?           @db.Text
   leaveQuota            Int?              @default(0)
   createdAnnouncements  announcement[]    @relation("announcement_creatorIdTouser")
