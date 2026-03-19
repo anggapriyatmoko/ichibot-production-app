@@ -183,12 +183,30 @@ export default function StoreLowStockList({
         // Apply Sorting to Parents
         if (sortConfig.direction) {
             parents.sort((a, b) => {
+
+                if (sortConfig.key === 'stok') {
+                    const aStock = a.stockQuantity || 0
+                    const bStock = b.stockQuantity || 0
+                    const aIsRed = aStock <= 0
+                    const bIsRed = bStock <= 0
+
+                    if (aIsRed !== bIsRed) {
+                        return (aIsRed ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1)
+                    }
+
+                    if (aIsRed && a.priority !== b.priority) {
+                        return (a.priority ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1)
+                    }
+
+                    return (aStock - bStock) * (sortConfig.direction === 'asc' ? 1 : -1)
+                }
+
                 let aValue = a[sortConfig.key]
                 let bValue = b[sortConfig.key]
 
-                if (sortConfig.key === 'stok') {
-                    aValue = a.stockQuantity || 0
-                    bValue = b.stockQuantity || 0
+                if (sortConfig.key === 'priority') {
+                    aValue = a.priority ? 1 : 0
+                    bValue = b.priority ? 1 : 0
                 } else if (sortConfig.key === 'name') {
                     aValue = a.name.toLowerCase()
                     bValue = b.name.toLowerCase()
@@ -221,12 +239,30 @@ export default function StoreLowStockList({
             // Sort variations
             if (sortConfig.direction) {
                 matchingChildren.sort((a, b) => {
+
+                    if (sortConfig.key === 'stok') {
+                        const aStock = a.stockQuantity || 0
+                        const bStock = b.stockQuantity || 0
+                        const aIsRed = aStock <= 0
+                        const bIsRed = bStock <= 0
+
+                        if (aIsRed !== bIsRed) {
+                            return (aIsRed ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1)
+                        }
+
+                        if (aIsRed && a.priority !== b.priority) {
+                            return (a.priority ? -1 : 1) * (sortConfig.direction === 'asc' ? 1 : -1)
+                        }
+
+                        return (aStock - bStock) * (sortConfig.direction === 'asc' ? 1 : -1)
+                    }
+
                     let aValue = a[sortConfig.key]
                     let bValue = b[sortConfig.key]
 
-                    if (sortConfig.key === 'stok') {
-                        aValue = a.stockQuantity || 0
-                        bValue = b.stockQuantity || 0
+                    if (sortConfig.key === 'priority') {
+                        aValue = a.priority ? 1 : 0
+                        bValue = b.priority ? 1 : 0
                     } else if (sortConfig.key === 'name') {
                         aValue = a.name.toLowerCase()
                         bValue = b.name.toLowerCase()
@@ -371,19 +407,30 @@ export default function StoreLowStockList({
                                         </div>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleTogglePurchased(product)}
-                                    className={cn(
-                                        "transition-colors p-1 rounded-full hover:bg-muted",
-                                        product.purchased ? "text-primary" : "text-muted-foreground hover:text-primary"
-                                    )}
-                                >
-                                    {product.purchased ? (
-                                        <CheckCircle2 className="w-6 h-6" />
-                                    ) : (
-                                        <Circle className="w-6 h-6" />
-                                    )}
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleTogglePriority(product)}
+                                        className={cn(
+                                            "transition-colors p-1 rounded-full hover:bg-muted",
+                                            product.priority ? "text-amber-500" : "text-muted-foreground/30"
+                                        )}
+                                    >
+                                        <Star className={cn("w-6 h-6", product.priority && "fill-amber-500")} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleTogglePurchased(product)}
+                                        className={cn(
+                                            "transition-colors p-1 rounded-full hover:bg-muted",
+                                            product.purchased ? "text-primary" : "text-muted-foreground hover:text-primary"
+                                        )}
+                                    >
+                                        {product.purchased ? (
+                                            <CheckCircle2 className="w-6 h-6" />
+                                        ) : (
+                                            <Circle className="w-6 h-6" />
+                                        )}
+                                    </button>
+                                </div>
                             </TableMobileCardHeader>
 
                             <TableMobileCardContent>
@@ -513,8 +560,15 @@ export default function StoreLowStockList({
                         <TableHeader>
                             <TableRow hoverable={false}>
                                 <TableHead align="center" className="w-10">Beli</TableHead>
-                                <TableHead align="center" className="w-10">
-                                    <Star className="w-4 h-4 mx-auto fill-amber-500 text-amber-500" />
+                                <TableHead
+                                    align="center"
+                                    className="w-10 cursor-pointer hover:bg-muted/80 transition-colors"
+                                    onClick={() => handleSort('priority')}
+                                >
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                                        <SortIcon columnKey="priority" sortConfig={sortConfig} />
+                                    </div>
                                 </TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
                                 <TableHead onClick={() => handleSort('name')} className="cursor-pointer hover:bg-muted/80 transition-colors">

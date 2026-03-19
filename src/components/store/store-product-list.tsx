@@ -897,21 +897,32 @@ export default function StoreProductList({
                                         </div>
                                     </div>
                                 </div>
-                                {showPurchasedColumn && (
+                                <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => handleTogglePurchased(product.wcId, product.purchased)}
+                                        onClick={() => handleTogglePriority(product.wcId, product.priority)}
                                         className={cn(
                                             "transition-colors p-1 rounded-full hover:bg-muted",
-                                            product.purchased ? "text-primary" : "text-muted-foreground hover:text-primary"
+                                            product.priority ? "text-amber-500" : "text-muted-foreground/30"
                                         )}
                                     >
-                                        {product.purchased ? (
-                                            <CheckCircle2 className="w-6 h-6" />
-                                        ) : (
-                                            <Circle className="w-6 h-6" />
-                                        )}
+                                        <Star className={cn("w-6 h-6", product.priority && "fill-amber-500")} />
                                     </button>
-                                )}
+                                    {showPurchasedColumn && (
+                                        <button
+                                            onClick={() => handleTogglePurchased(product.wcId, product.purchased)}
+                                            className={cn(
+                                                "transition-colors p-1 rounded-full hover:bg-muted",
+                                                product.purchased ? "text-primary" : "text-muted-foreground hover:text-primary"
+                                            )}
+                                        >
+                                            {product.purchased ? (
+                                                <CheckCircle2 className="w-6 h-6" />
+                                            ) : (
+                                                <Circle className="w-6 h-6" />
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             </TableMobileCardHeader>
 
                             <TableMobileCardContent>
@@ -1049,8 +1060,15 @@ export default function StoreProductList({
                         <TableHeader>
                             <TableRow>
                                 {showPurchasedColumn && <TableHead align="center" className="w-10">Beli</TableHead>}
-                                <TableHead align="center" className="w-10">
-                                    <Star className="w-4 h-4 mx-auto fill-amber-500 text-amber-500" />
+                                <TableHead
+                                    align="center"
+                                    className="w-10 cursor-pointer hover:bg-muted/80 transition-colors"
+                                    onClick={() => handleSort('priority')}
+                                >
+                                    <div className="flex flex-col items-center justify-center gap-0.5">
+                                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                                        <SortIcon columnKey="priority" sortConfig={sortConfig} />
+                                    </div>
                                 </TableHead>
                                 <TableHead align="center" className="w-16">Gambar</TableHead>
                                 <TableHead
