@@ -91,6 +91,7 @@ export const navigationGroups = [
         icon: Package,
         children: [
           { name: "Daftar Produk", href: "/store/product", icon: Package },
+          { name: "Analisa Harga", href: "/store/price-analysis", icon: TrendingUp },
           {
             name: "Low Stock",
             href: "/store/low-stock",

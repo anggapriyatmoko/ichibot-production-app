@@ -403,13 +403,13 @@ model StoreRack {
   drawerCount        Int      @default(0)
   rows               Int?
   cols               Int?
-  drawerColors       Json? // Per-drawer colors
-  drawerNotes        Json? // Per-drawer custom notes
-  drawerNoteColors   Json? // Per-drawer note indicator colors
-  drawerUpdatedTimes Json? // Per-drawer last update timestamps
   description        String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+  drawerColors       String?  @db.LongText
+  drawerNotes        String?  @db.LongText
+  drawerNoteColors   String?  @db.LongText
+  drawerUpdatedTimes String?  @db.LongText
 
   @@map("StoreRack")
 }
@@ -593,24 +593,24 @@ model user {
   phoneEnc              String?           @db.Text
   photoEnc              String?           @db.Text
   roleEnc               String?           @db.Text
-  isActive              Boolean           @default(true)
   pinEnc                String?           @db.Text
   leaveQuota            Int?              @default(0)
+  isActive              Boolean           @default(true)
   createdAnnouncements  announcement[]    @relation("announcement_creatorIdTouser")
   attendances           attendance[]
   messages              chatMessage[]
   participants          chatParticipant[]
+  expenses              expense[]
   activities            logActivity[]
   orders                order[]
   payrolls              payroll[]
   transactions          transaction[]
+  moods                 UserMood[]
   projecttouser         projecttouser[]
   overtimeLeaves        overtimeleave[]
   serviceOrders         serviceOrder[]
-  targetedAnnouncements announcement[]    @relation("targetedusers")
   targetedDocuments     hRDocument[]      @relation("HRDocumentTargetUsers")
-  expenses              expense[]
-  moods                 UserMood[]
+  targetedAnnouncements announcement[]    @relation("targetedusers")
 
   @@map("User")
 }
@@ -619,8 +619,8 @@ model UserMood {
   id        String   @id @default(cuid())
   userId    String
   date      DateTime
-  type      String   // "CHECK_IN" or "CHECK_OUT"
-  mood      String   // "JOYFUL", "HAPPY", "RELAXED", "SAD", "ANGRY"
+  type      String
+  mood      String
   note      String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -689,6 +689,7 @@ model StoreProduct {
   backupGudang     String?   @db.Text
   orderBatchId     String?
   priority         Boolean   @default(false)
+  simulationQty    Int       @default(0)
 
   @@map("StoreProduct")
 }
@@ -774,20 +775,20 @@ model PriceListCategory {
 model PriceListItem {
   id               String             @id @default(cuid())
   groupId          String
-  categoryId       String? // Relation FK
+  categoryId       String?
   name             String             @db.Text
   shortDescription String?            @db.LongText
-  quantity         String? // Flexible quantity (e.g. "1 pcs", "1 box")
+  quantity         String?
   price            Float              @default(0)
   discount         Float              @default(0)
-  description      String?            @db.LongText // Rich text
-  category         String?            @db.Text // Deprecated: Old string field
+  description      String?            @db.LongText
+  category         String?            @db.Text
   image            String?            @db.Text
-  additionalImages String?            @db.Text // JSON array of strings
+  additionalImages String?            @db.Text
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  categoryRel      PriceListCategory? @relation(fields: [categoryId], references: [id])
   group            PriceListGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade, map: "fk_pli_group_unique")
-  categoryRel      PriceListCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   prices           PriceListPrice[]
 
   @@index([groupId], map: "idx_pli_group_unique")
@@ -798,11 +799,11 @@ model PriceListItem {
 model PriceListPrice {
   id          String        @id @default(cuid())
   itemId      String
-  label       String // e.g. "Online", "Offline", "Dalam Kota"
+  label       String
   price       Float         @default(0)
   discount    Float         @default(0)
-  qty         String? // e.g. "1 pcs", "Per Orang"
-  description String?       @db.Text // Keterangan varian
+  qty         String?
+  description String?       @db.Text
   order       Int           @default(0)
   item        PriceListItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
@@ -827,9 +828,9 @@ model bankAccount {
   accountNumberEnc String   @db.Text
   accountNameEnc   String   @db.Text
   balanceEnc       String   @db.Text
-  currency         String   @default("IDR")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  currency         String   @default("IDR")
 
   @@map("BankAccount")
 }
@@ -844,8 +845,8 @@ model expense {
   image      String?         @db.LongText
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
-  user       user            @relation(fields: [userId], references: [id], onDelete: Cascade)
   category   expenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user       user            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([categoryId])

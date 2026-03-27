@@ -32,6 +32,8 @@ interface PurchaseInputModalProps {
     additionalFee?: number
     /** When true, only updates purchase data without toggling purchased status */
     editMode?: boolean
+    /** When true, hides the supplier selection column */
+    hideSupplier?: boolean
 }
 
 export default function PurchaseInputModal({
@@ -41,7 +43,8 @@ export default function PurchaseInputModal({
     kursYuan,
     kursUsd,
     additionalFee = 0,
-    editMode = false
+    editMode = false,
+    hideSupplier = false
 }: PurchaseInputModalProps) {
     const [purchasePackage, setPurchasePackage] = useState<number | ''>('')
     const [purchaseQty, setPurchaseQty] = useState<number | ''>(1)
@@ -75,10 +78,10 @@ export default function PurchaseInputModal({
     }
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !hideSupplier) {
             getStoreSuppliers().then(setSuppliers).catch(console.error)
         }
-    }, [isOpen])
+    }, [isOpen, hideSupplier])
 
     // Pre-fill fields when editing or if product has history
     useEffect(() => {
@@ -197,7 +200,7 @@ export default function PurchaseInputModal({
                 </div>
             }
         >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className={cn("grid grid-cols-1 gap-8", !hideSupplier && "md:grid-cols-2")}>
                 {/* Left Column (Inputs) */}
                 <div className="flex flex-col gap-6">
                     {/* Product Info Box */}
@@ -358,64 +361,65 @@ export default function PurchaseInputModal({
                     </div>
                 </div>
 
-                {/* Right Column (Data Supplier) */}
-                <div className="flex flex-col h-full md:pl-6 md:border-l border-border mt-6 md:mt-0">
-                    <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
-                        <Package className="w-4 h-4 text-muted-foreground" />
-                        Data Supplier
-                    </label>
-                    <div className="relative mb-4">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <input
-                            autoFocus
-                            type="text"
-                            value={supplierSearch}
-                            onChange={(e) => setSupplierSearch(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 bg-background border-2 border-primary/60 hover:border-primary/80 focus:border-primary rounded-xl text-sm text-foreground outline-none transition-all shadow-sm"
-                            placeholder="Cari supplier..."
-                        />
-                    </div>
+                {!hideSupplier && (
+                    <div className="flex flex-col h-full md:pl-6 md:border-l border-border mt-6 md:mt-0">
+                        <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
+                            <Package className="w-4 h-4 text-muted-foreground" />
+                            Data Supplier
+                        </label>
+                        <div className="relative mb-4">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <input
+                                autoFocus
+                                type="text"
+                                value={supplierSearch}
+                                onChange={(e) => setSupplierSearch(e.target.value)}
+                                className="w-full pl-11 pr-4 py-3 bg-background border-2 border-primary/60 hover:border-primary/80 focus:border-primary rounded-xl text-sm text-foreground outline-none transition-all shadow-sm"
+                                placeholder="Cari supplier..."
+                            />
+                        </div>
 
-                    <div className="flex-1 overflow-y-auto min-h-[300px] max-h-[500px] custom-scrollbar -mx-2 px-2">
-                        {(() => {
-                            const filtered = suppliers.filter(s => s.name.toLowerCase().includes(supplierSearch.toLowerCase()));
-                            if (filtered.length > 0) {
-                                return (
-                                    <div className="space-y-1 mt-2">
-                                        {filtered.map((supplier) => (
-                                            <label
-                                                key={supplier.id}
-                                                className="flex items-center gap-4 px-2 py-3 cursor-pointer group"
-                                                onClick={() => toggleSupplier(supplier.name)}
-                                            >
-                                                <div className={cn(
-                                                    "w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0",
-                                                    selectedSuppliers.includes(supplier.name)
-                                                        ? "bg-primary border-primary text-primary-foreground"
-                                                        : "border-border bg-background group-hover:border-primary/50"
-                                                )}>
-                                                    {selectedSuppliers.includes(supplier.name) && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
-                                                </div>
-                                                <span className={cn(
-                                                    "text-sm transition-colors",
-                                                    selectedSuppliers.includes(supplier.name) ? "font-medium text-foreground" : "text-foreground/80 group-hover:text-foreground"
-                                                )}>
-                                                    {supplier.name}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                );
-                            } else {
-                                return (
-                                    <div className="p-8 text-center text-muted-foreground text-sm italic">
-                                        {supplierSearch ? "Supplier tidak ditemukan." : "Belum ada data supplier."}
-                                    </div>
-                                );
-                            }
-                        })()}
+                        <div className="flex-1 overflow-y-auto min-h-[300px] max-h-[500px] custom-scrollbar -mx-2 px-2">
+                            {(() => {
+                                const filtered = suppliers.filter(s => s.name.toLowerCase().includes(supplierSearch.toLowerCase()));
+                                if (filtered.length > 0) {
+                                    return (
+                                        <div className="space-y-1 mt-2">
+                                            {filtered.map((supplier) => (
+                                                <label
+                                                    key={supplier.id}
+                                                    className="flex items-center gap-4 px-2 py-3 cursor-pointer group"
+                                                    onClick={() => toggleSupplier(supplier.name)}
+                                                >
+                                                    <div className={cn(
+                                                        "w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0",
+                                                        selectedSuppliers.includes(supplier.name)
+                                                            ? "bg-primary border-primary text-primary-foreground"
+                                                            : "border-border bg-background group-hover:border-primary/50"
+                                                    )}>
+                                                        {selectedSuppliers.includes(supplier.name) && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                                                    </div>
+                                                    <span className={cn(
+                                                        "text-sm transition-colors",
+                                                        selectedSuppliers.includes(supplier.name) ? "font-medium text-foreground" : "text-foreground/80 group-hover:text-foreground"
+                                                    )}>
+                                                        {supplier.name}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    );
+                                } else {
+                                    return (
+                                        <div className="p-8 text-center text-muted-foreground text-sm italic">
+                                            {supplierSearch ? "Supplier tidak ditemukan." : "Belum ada data supplier."}
+                                        </div>
+                                    );
+                                }
+                            })()}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </Modal>
     )

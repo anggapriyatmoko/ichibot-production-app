@@ -1616,3 +1616,40 @@ export async function getStoreProductBySku(sku: string) {
         return null
     }
 }
+
+/**
+ * Forced type refresh for new simulationQty field
+ */
+
+/**
+ * Update simulation quantity for a store product
+ */
+export async function updateStoreProductSimulationQty(wcId: number, qty: number) {
+    try {
+        await (prisma.storeProduct as any).update({
+            where: { wcId },
+            data: { simulationQty: qty }
+        })
+        revalidatePath('/store/price-analysis')
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error updating simulation qty:', error)
+        return { success: false, error: error.message }
+    }
+}
+
+/**
+ * Clear simulation quantity for ALL store products
+ */
+export async function clearAllStoreProductSimulationQty() {
+    try {
+        await (prisma.storeProduct as any).updateMany({
+            data: { simulationQty: 0 }
+        })
+        revalidatePath('/store/price-analysis')
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error clearing all simulation qty:', error)
+        return { success: false, error: error.message }
+    }
+}

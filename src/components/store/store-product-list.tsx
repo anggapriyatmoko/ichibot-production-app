@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart, Star } from 'lucide-react'
+import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart, Star, TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
-import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts } from '@/app/actions/store-product'
+import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts, updateStoreProductSimulationQty, clearAllStoreProductSimulationQty } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -46,10 +46,15 @@ export default function StoreProductList({
     showPurchasedStyles = true,
     showSupplierColumn = true,
     showPurchasedColumn = true,
+    showQuantityColumn = true,
     showPurchasedAt = false,
     showSyncButton = true,
     showPurchaseColumns = false,
     showAddButton = true,
+    hideSupplierInput = false,
+    hideSkuColumn = false,
+    hideTotalsInCells = false,
+    isAnalisaHarga = false,
     kursYuan,
     kursUsd,
     additionalFee = 0
@@ -58,10 +63,15 @@ export default function StoreProductList({
     showPurchasedStyles?: boolean,
     showSupplierColumn?: boolean,
     showPurchasedColumn?: boolean,
+    showQuantityColumn?: boolean,
     showPurchasedAt?: boolean,
     showSyncButton?: boolean,
     showPurchaseColumns?: boolean,
     showAddButton?: boolean,
+    hideSupplierInput?: boolean,
+    hideSkuColumn?: boolean,
+    hideTotalsInCells?: boolean,
+    isAnalisaHarga?: boolean,
     kursYuan?: number,
     kursUsd?: number,
     additionalFee?: number
@@ -110,12 +120,63 @@ export default function StoreProductList({
     // Update local products when initialProducts change (e.g., after sync)
     useEffect(() => {
         setLocalProducts(initialProducts)
+        // Also update simulation data if it's new from DB
+        const data: Record<number, number> = {}
+        initialProducts.forEach(p => {
+            if (p.simulationQty) data[p.wcId] = p.simulationQty
+        })
+        setSimulationData(data)
     }, [initialProducts])
 
     // Reset page to 1 when search term changes
     useEffect(() => {
         setCurrentPage(1)
     }, [searchTerm])
+
+    // Set default sort to priority for Analisa Harga
+    useEffect(() => {
+        if (isAnalisaHarga) {
+            setSortConfig({ key: 'priority', direction: 'desc' })
+        }
+    }, [isAnalisaHarga])
+
+    const [simulationData, setSimulationData] = useState<Record<number, number>>(() => {
+        const data: Record<number, number> = {}
+        initialProducts.forEach(p => {
+            if (p.simulationQty) data[p.wcId] = p.simulationQty
+        })
+        return data
+    })
+
+    const handleSimulationChange = async (wcId: number, qty: number) => {
+        const newQty = Math.max(0, qty)
+        setSimulationData(prev => ({
+            ...prev,
+            [wcId]: newQty
+        }))
+        
+        // Persist to DB
+        await updateStoreProductSimulationQty(wcId, newQty)
+    }
+
+    const handleClearSimulation = () => {
+        showConfirmation({
+            title: 'Hapus Simulasi',
+            message: 'Apakah Anda yakin ingin menghapus semua data simulasi? Data yang sudah diinput akan hilang.',
+            confirmLabel: 'Ya, Hapus',
+            cancelLabel: 'Batal',
+            type: 'confirm',
+            action: async () => {
+                const res = await clearAllStoreProductSimulationQty()
+                if (res.success) {
+                    setSimulationData({})
+                    showAlert('Data simulasi berhasil dihapus.')
+                } else {
+                    showError(res.error || 'Gagal menghapus data simulasi.')
+                }
+            }
+        })
+    }
 
     const handleSync = async () => {
         setIsSyncing(true)
@@ -382,9 +443,75 @@ export default function StoreProductList({
                     const labaPerPcs = hargaJual - perPcs
                     return acc + (labaPerPcs * paket * jumlah)
                 }, 0),
+            withPurchasePrice: physicalProducts.filter(p => p.purchasePrice && p.purchasePrice > 0).length,
+            withoutPurchasePrice: physicalProducts.filter(p => !p.purchasePrice || p.purchasePrice <= 0).length,
+            avgLaba: 0,
+            avgMargin: 0
         }
-        return stats
-    }, [localProducts, kursYuan, kursUsd, additionalFee])
+
+        // Calculate averages for products with purchase price
+        let analyzedProducts = physicalProducts.filter(p => p.purchasePrice && p.purchasePrice > 0 && p.price && p.price > 0)
+        
+        // Simulation Metrics
+        const simulationStats = {
+            count: 0,
+            laba: 0,
+            omset: 0,
+            modal: 0
+        }
+
+        if (isAnalisaHarga) {
+            physicalProducts.forEach(p => {
+                const qty = simulationData[p.wcId] || 0
+                if (qty > 0) {
+                    simulationStats.count++
+                    const hargaJual = p.price || 0
+                    simulationStats.omset += hargaJual * qty
+
+                    if (p.purchasePrice) {
+                        const paket = (p.purchasePackage || 1)
+                        let priceInIdr = p.purchasePrice
+                        const currency = p.purchaseCurrency || 'IDR'
+                        if (currency === 'CNY' && kursYuan) priceInIdr *= kursYuan
+                        else if (currency === 'USD' && kursUsd) priceInIdr *= kursUsd
+                        
+                        const totalHarga = priceInIdr * paket * (1 + (additionalFee || 0) / 100)
+                        const perPcs = totalHarga / ((paket * (p.purchaseQty || 1)) || 1)
+                        const labaPerPcs = hargaJual - perPcs
+                        
+                        simulationStats.laba += labaPerPcs * qty
+                        simulationStats.modal += perPcs * qty
+                    }
+                }
+            })
+        }
+
+        if (analyzedProducts.length > 0) {
+            let totalMargin = 0
+            let totalLabaPcs = 0
+            analyzedProducts.forEach(p => {
+                const paket = (p.purchasePackage || 1)
+                const jumlah = (p.purchaseQty || 1)
+                let priceInputIdr = p.purchasePrice || 0
+                const currency = p.purchaseCurrency || 'IDR'
+                if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
+                else if (currency === 'USD' && kursUsd) priceInputIdr *= kursUsd
+
+                const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                const perPcs = totalHarga / ((paket * jumlah) || 1)
+                const hargaJual = p.price || 0
+                const labaPerPcs = hargaJual - perPcs
+                const margin = hargaJual > 0 ? (labaPerPcs / hargaJual) * 100 : 0
+
+                totalMargin += margin
+                totalLabaPcs += labaPerPcs
+            })
+            stats.avgLaba = totalLabaPcs / analyzedProducts.length
+            stats.avgMargin = totalMargin / analyzedProducts.length
+        }
+
+        return { ...stats, ...simulationStats }
+    }, [localProducts, kursYuan, kursUsd, additionalFee, isAnalisaHarga, simulationData])
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' | null = 'asc'
@@ -495,6 +622,24 @@ export default function StoreProductList({
                     }
                     aValue = getLaba(a)
                     bValue = getLaba(b)
+                } else if (sortConfig.key === 'totalSimLaba') {
+                    const getSimLabaValue = (p: any) => {
+                        const simQty = simulationData[p.wcId] || 0
+                        if (simQty === 0) return -Infinity
+                        
+                        let price = p.purchasePrice || 0
+                        const currency = p.purchaseCurrency || 'IDR'
+                        if (currency === 'CNY' && kursYuan) price *= kursYuan
+                        else if (currency === 'USD' && kursUsd) price *= kursUsd
+                        
+                        const paket = p.purchasePackage || 1
+                        const total = (price * paket) * (1 + (additionalFee || 0) / 100)
+                        const perPcs = total / ((paket * (p.purchaseQty || 1)) || 1)
+                        const labaPerPcs = (p.price || 0) - perPcs
+                        return labaPerPcs * simQty
+                    }
+                    aValue = getSimLabaValue(a)
+                    bValue = getSimLabaValue(b)
                 }
 
                 // Push empty values to the bottom
@@ -561,6 +706,24 @@ export default function StoreProductList({
                         }
                         aValue = getLaba(a)
                         bValue = getLaba(b)
+                    } else if (sortConfig.key === 'totalSimLaba') {
+                        const getSimLabaValue = (p: any) => {
+                            const simQty = simulationData[p.wcId] || 0
+                            if (simQty === 0) return -Infinity
+                            
+                            let price = p.purchasePrice || 0
+                            const currency = p.purchaseCurrency || 'IDR'
+                            if (currency === 'CNY' && kursYuan) price *= kursYuan
+                            else if (currency === 'USD' && kursUsd) price *= kursUsd
+                            
+                            const paket = p.purchasePackage || 1
+                            const total = (price * paket) * (1 + (additionalFee || 0) / 100)
+                            const perPcs = total / ((paket * (p.purchaseQty || 1)) || 1)
+                            const labaPerPcs = (p.price || 0) - perPcs
+                            return labaPerPcs * simQty
+                        }
+                        aValue = getSimLabaValue(a)
+                        bValue = getSimLabaValue(b)
                     }
 
                     // Push empty values to the bottom
@@ -889,7 +1052,7 @@ export default function StoreProductList({
                                             <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1 rounded">
                                                 ID: {product.wcId}
                                             </span>
-                                            {product.sku && (
+                                            {!hideSkuColumn && product.sku && (
                                                 <span className="text-[10px] text-primary font-bold font-mono">
                                                     {product.sku}
                                                 </span>
@@ -971,13 +1134,15 @@ export default function StoreProductList({
 
                                 {showPurchaseColumns && (
                                     <>
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Pembelian</p>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-foreground">{formatNumber((product.purchasePackage || 1) * (product.purchaseQty || 0))} pcs</span>
-                                                <span className="text-[10px] text-muted font-medium">Qty: {product.purchaseQty}</span>
+                                        {showQuantityColumn && (
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Pembelian</p>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-foreground">{formatNumber((product.purchasePackage || 1) * (product.purchaseQty || 0))} pcs</span>
+                                                    <span className="text-[10px] text-muted font-medium">Qty: {product.purchaseQty}</span>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                         <div className="space-y-1">
                                             <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Laba Est.</p>
                                             <div className="flex flex-col">
@@ -1023,7 +1188,7 @@ export default function StoreProductList({
                                         <RefreshCw className={cn("w-3 h-3", syncingItems.has(product.wcId) && "animate-spin")} />
                                         {syncingItems.has(product.wcId) ? "Sync..." : "Sync"}
                                     </button>
-                                    {showPurchaseColumns && product.purchased && (
+                                    {showPurchaseColumns && (
                                         <button
                                             onClick={() => setEditPurchaseProduct(product)}
                                             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase transition-all shadow-sm shadow-amber-500/20 active:scale-95"
@@ -1087,13 +1252,15 @@ export default function StoreProductList({
                                         <SortIcon columnKey="storeName" sortConfig={sortConfig} />
                                     </TableHead>
                                 )}
-                                <TableHead
-                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
-                                    onClick={() => handleSort('sku')}
-                                >
-                                    SKU
-                                    <SortIcon columnKey="sku" sortConfig={sortConfig} />
-                                </TableHead>
+                                {!hideSkuColumn && (
+                                    <TableHead
+                                        className="cursor-pointer hover:bg-muted/80 transition-colors"
+                                        onClick={() => handleSort('sku')}
+                                    >
+                                        SKU
+                                        <SortIcon columnKey="sku" sortConfig={sortConfig} />
+                                    </TableHead>
+                                )}
                                 {!showPurchaseColumns && <TableHead>Keterangan</TableHead>}
                                 <TableHead
                                     align="right"
@@ -1105,14 +1272,16 @@ export default function StoreProductList({
                                 </TableHead>
                                 {showPurchaseColumns && (
                                     <>
-                                        <TableHead
-                                            align="center"
-                                            className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
-                                            onClick={() => handleSort('jumlahBeli')}
-                                        >
-                                            Jumlah Beli
-                                            <SortIcon columnKey="jumlahBeli" sortConfig={sortConfig} />
-                                        </TableHead>
+                                        {showQuantityColumn && (
+                                            <TableHead
+                                                align="center"
+                                                className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                                onClick={() => handleSort('jumlahBeli')}
+                                            >
+                                                Jumlah Beli
+                                                <SortIcon columnKey="jumlahBeli" sortConfig={sortConfig} />
+                                            </TableHead>
+                                        )}
                                         <TableHead
                                             align="right"
                                             className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
@@ -1129,6 +1298,19 @@ export default function StoreProductList({
                                             Laba
                                             <SortIcon columnKey="labaPerPcs" sortConfig={sortConfig} />
                                         </TableHead>
+                                        {isAnalisaHarga && (
+                                            <>
+                                                <TableHead align="right" className="w-24 px-2">Simulasi Jml</TableHead>
+                                                <TableHead
+                                                    align="right"
+                                                    className="w-40 px-2 font-black whitespace-nowrap cursor-pointer hover:bg-muted/80 transition-colors"
+                                                    onClick={() => handleSort('totalSimLaba')}
+                                                >
+                                                    Total Laba Sim.
+                                                    <SortIcon columnKey="totalSimLaba" sortConfig={sortConfig} />
+                                                </TableHead>
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </TableRow>
@@ -1213,14 +1395,19 @@ export default function StoreProductList({
                                                             • {product.categories.map((c: any) => c.name).join(', ')}
                                                         </span>
                                                     )}
-                                                    {showPurchaseColumns && product.purchased && (
+                                                    {showPurchaseColumns && (
                                                         <button
                                                             onClick={() => setEditPurchaseProduct(product)}
-                                                            className="p-0.5 rounded text-muted-foreground hover:text-amber-600 transition-colors flex items-center gap-0.5 text-[10px] font-bold uppercase"
-                                                            title="Edit Data Pembelian"
+                                                            className={cn(
+                                                                "p-1 rounded transition-colors flex items-center gap-1 text-[10px] font-bold uppercase border",
+                                                                product.purchasePrice
+                                                                    ? "text-muted-foreground hover:text-amber-600 bg-muted/30 border-border"
+                                                                    : "text-amber-600 hover:text-amber-700 bg-amber-50 border-amber-100"
+                                                            )}
+                                                            title={product.purchasePrice ? "Edit Data Pembelian" : "Input Harga Beli"}
                                                         >
                                                             <ShoppingCart className="w-2.5 h-2.5" />
-                                                            Beli
+                                                            {product.purchasePrice ? 'Edit' : 'Beli'}
                                                         </button>
                                                     )}
                                                     <button
@@ -1251,6 +1438,11 @@ export default function StoreProductList({
                                                             )}>
                                                                 {product.status}
                                                             </span>
+                                                            {hideSkuColumn && product.sku && (
+                                                                <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold bg-muted text-muted-foreground uppercase">
+                                                                    {product.sku}
+                                                                </span>
+                                                            )}
                                                         </>
                                                     )}
                                                     {!showPurchaseColumns && (
@@ -1339,18 +1531,20 @@ export default function StoreProductList({
                                                 />
                                             </TableCell>
                                         )}
-                                        <TableCell align="center">
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-mono">
-                                                    {product.sku || '-'}
-                                                </span>
-                                                {product.backupGudang && (
-                                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-[4px] text-[10px] font-bold border border-blue-100 uppercase tracking-tighter">
-                                                        {product.backupGudang}
+                                        {!hideSkuColumn && (
+                                            <TableCell align="center">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-[10px] font-mono">
+                                                        {product.sku || '-'}
                                                     </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
+                                                    {product.backupGudang && (
+                                                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-[4px] text-[10px] font-bold border border-blue-100 uppercase tracking-tighter">
+                                                            {product.backupGudang}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        )}
                                         {!showPurchaseColumns && (
                                             <TableCell className="min-w-[200px]">
                                                 <KeteranganEdit
@@ -1383,27 +1577,29 @@ export default function StoreProductList({
                                         </TableCell>
                                         {showPurchaseColumns && (
                                             <>
-                                                <TableCell align="center" className="whitespace-nowrap">
-                                                    {product.purchaseQty ? (() => {
-                                                        const paket = product.purchasePackage || 1
-                                                        const jumlah = product.purchaseQty
-                                                        const totalBarang = paket * jumlah
-                                                        return (
-                                                            <div className="flex flex-col items-center gap-0.5">
-                                                                <span className="text-sm font-semibold text-foreground">
-                                                                    {formatNumber(totalBarang)} pcs
-                                                                </span>
-                                                                {paket > 1 && (
-                                                                    <span className="text-[10px] text-muted-foreground">
-                                                                        {paket} qty × {jumlah}
+                                                {showQuantityColumn && (
+                                                    <TableCell align="center" className="whitespace-nowrap">
+                                                        {product.purchaseQty ? (() => {
+                                                            const paket = product.purchasePackage || 1
+                                                            const jumlah = product.purchaseQty
+                                                            const totalBarang = paket * jumlah
+                                                            return (
+                                                                <div className="flex flex-col items-center gap-0.5">
+                                                                    <span className="text-sm font-semibold text-foreground">
+                                                                        {formatNumber(totalBarang)} pcs
                                                                     </span>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })() : (
-                                                        <span className="text-muted-foreground text-xs">-</span>
-                                                    )}
-                                                </TableCell>
+                                                                    {paket > 1 && (
+                                                                        <span className="text-[10px] text-muted-foreground">
+                                                                            {paket} qty × {jumlah}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )
+                                                        })() : (
+                                                            <span className="text-muted-foreground text-xs">-</span>
+                                                        )}
+                                                    </TableCell>
+                                                )}
                                                 <TableCell align="right" className="whitespace-nowrap">
                                                     {product.purchasePrice ? (() => {
                                                         const paket = product.purchasePackage || 1
@@ -1431,7 +1627,7 @@ export default function StoreProductList({
                                                                         Rp {formatNumber(Math.round(perPcs))}
                                                                     </span>
                                                                 </div>
-                                                                {jumlah > 0 && (
+                                                                {jumlah > 0 && !hideTotalsInCells && (
                                                                     <div className="flex flex-col items-end border-t border-border pt-1">
                                                                         <span className="text-[10px] text-muted-foreground uppercase">Total Pembelian</span>
                                                                         <span className="text-sm font-bold text-primary flex items-baseline gap-1">
@@ -1472,12 +1668,23 @@ export default function StoreProductList({
                                                         return (
                                                             <div className="flex flex-col items-end gap-1">
                                                                 <div className="flex flex-col items-end">
-                                                                    <span className="text-[10px] text-muted-foreground uppercase">Laba per Pcs</span>
-                                                                    <span className={`text-sm font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                                        {isProfit ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaPerPcs)))}
-                                                                    </span>
-                                                                </div>
-                                                                {totalQty > 0 && (
+                                                                     <span className="text-[10px] text-muted-foreground uppercase leading-none mb-1">Laba per Pcs</span>
+                                                                     <div className="flex flex-col items-end gap-1">
+                                                                         <span className={`text-sm font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                             {isProfit ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaPerPcs)))}
+                                                                         </span>
+                                                                         {hargaJual > 0 && (
+                                                                             <span className={cn(
+                                                                                 "px-1.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1",
+                                                                                 isProfit ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                                                             )}>
+                                                                                 {isProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                                                                 {isProfit ? '+' : ''}{((labaPerPcs / hargaJual) * 100).toFixed(1)}%
+                                                                             </span>
+                                                                         )}
+                                                                     </div>
+                                                                 </div>
+                                                                {totalQty > 0 && !hideTotalsInCells && (
                                                                     <div className="flex flex-col items-end border-t border-border pt-1">
                                                                         <span className="text-[10px] text-muted-foreground uppercase">Total Laba</span>
                                                                         <span className={`text-sm font-bold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -1491,13 +1698,59 @@ export default function StoreProductList({
                                                         <span className="text-muted-foreground text-xs">-</span>
                                                     )}
                                                 </TableCell>
+                                                {isAnalisaHarga && (
+                                                    <>
+                                                        <TableCell align="right" className="px-2">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={simulationData[product.wcId] || ''}
+                                                                onChange={(e) => handleSimulationChange(product.wcId, parseInt(e.target.value) || 0)}
+                                                                onFocus={(e) => e.target.select()}
+                                                                placeholder="0"
+                                                                className="w-20 px-2 py-1 bg-background border border-border rounded text-right text-sm focus:border-primary outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell align="right" className="px-2">
+                                                            {product.purchasePrice && product.price ? (() => {
+                                                                const simQty = simulationData[product.wcId] || 0
+                                                                if (simQty === 0) return <span className="text-muted-foreground/30 font-mono text-xs">-</span>
+                                                                
+                                                                const paket = product.purchasePackage || 1
+                                                                let priceInputIdr = product.purchasePrice
+                                                                const currency = product.purchaseCurrency || 'IDR'
+                                                                if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
+                                                                else if (currency === 'USD' && kursUsd) priceInputIdr *= kursUsd
+                                                                
+                                                                const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                                                                const perPcs = totalHarga / ((paket * (product.purchaseQty || 1)) || 1)
+                                                                const labaPerPcs = (product.price || 0) - perPcs
+                                                                const totalSimLaba = labaPerPcs * simQty
+                                                                
+                                                                return (
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className={cn(
+                                                                            "text-sm font-black whitespace-nowrap",
+                                                                            totalSimLaba >= 0 ? "text-emerald-700" : "text-destructive"
+                                                                        )}>
+                                                                            {totalSimLaba >= 0 ? '+' : ''}Rp {formatNumber(Math.round(totalSimLaba))}
+                                                                        </span>
+                                                                        <span className="text-[10px] text-muted-foreground uppercase font-medium">Laba Sim.</span>
+                                                                    </div>
+                                                                )
+                                                            })() : (
+                                                                <span className="text-muted-foreground/30 font-mono text-xs">-</span>
+                                                            )}
+                                                        </TableCell>
+                                                    </>
+                                                )}
                                             </>
                                         )}
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableEmpty
-                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? 3 : 0) + (showPurchaseColumns ? 4 : 5)}
+                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? (showQuantityColumn ? 3 : 2) : 0) + (hideSkuColumn ? 0 : 1) + (!showPurchaseColumns ? 1 : 0) + (isAnalisaHarga ? 2 : 0) + 4}
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk ditemukan."
                                     description={searchTerm ? (
@@ -1544,58 +1797,62 @@ export default function StoreProductList({
                         <p className="text-xs font-semibold text-red-600/70 uppercase tracking-wider mb-1">Stok Kosong (≤ 0)</p>
                         <p className="text-2xl font-bold text-red-600">{formatNumber(analysis.outOfStock)}</p>
                     </div>
-                    {showPurchaseColumns ? (
-                        <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
-                            <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Pembelian (IDR)</p>
-                            <div className="flex flex-col">
-                                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalPurchaseValue)}</p>
-                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
-                                    * Total dari semua produk yang memiliki data pembelian. Belum termasuk additional fee.
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
-                            <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Aset (Harga x Stok)</p>
-                            <div className="flex flex-col">
-                                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
-                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic leading-relaxed">
-                                    * Hanya produk status <span className="font-bold underline">Publish</span> dengan stok positif yang dihitung. Stok minus dihitung sebagai 0. Kategori JASA, PART, dan ROBOT ICHIBOT dikecualikan.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {showPurchaseColumns ? (
-                        <div className="p-4 rounded-xl bg-orange-50/50 border border-orange-100/50 md:col-span-2">
-                            <p className="text-xs font-semibold text-orange-600/70 uppercase tracking-wider mb-1">Total Pembelian (IDR) include additional fee</p>
-                            <div className="flex flex-col">
-                                <p className="text-2xl font-bold text-orange-600">{formatCurrency(analysis.totalPurchaseValueInclFee)}</p>
-                                <p className="text-[10px] text-orange-600/60 font-medium mt-1 italic">
-                                    * Sudah termasuk tambahan fee sebesar {additionalFee}%
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Publish</p>
-                                <div className="flex items-baseline gap-2">
-                                    <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.published)}</p>
-                                    <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                    {!isAnalisaHarga && (
+                        showPurchaseColumns ? (
+                            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
+                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Pembelian (IDR)</p>
+                                <div className="flex flex-col">
+                                    <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalPurchaseValue)}</p>
+                                    <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
+                                        * Total dari semua produk yang memiliki data pembelian. Belum termasuk additional fee.
+                                    </p>
                                 </div>
                             </div>
-                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Draft</p>
-                                <div className="flex items-baseline gap-2">
-                                    <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.draft)}</p>
-                                    <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                        ) : (
+                            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 md:col-span-2">
+                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Total Aset (Harga x Stok)</p>
+                                <div className="flex flex-col">
+                                    <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
+                                    <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic leading-relaxed">
+                                        * Hanya produk status <span className="font-bold underline">Publish</span> dengan stok positif yang dihitung. Stok minus dihitung sebagai 0. Kategori JASA, PART, dan ROBOT ICHIBOT dikecualikan.
+                                    </p>
                                 </div>
                             </div>
-                        </>
+                        )
                     )}
 
-                    {showPurchaseColumns && (
+                    {!isAnalisaHarga && (
+                        showPurchaseColumns ? (
+                            <div className="p-4 rounded-xl bg-orange-50/50 border border-orange-100/50 md:col-span-2">
+                                <p className="text-xs font-semibold text-orange-600/70 uppercase tracking-wider mb-1">Total Pembelian (IDR) include additional fee</p>
+                                <div className="flex flex-col">
+                                    <p className="text-2xl font-bold text-orange-600">{formatCurrency(analysis.totalPurchaseValueInclFee)}</p>
+                                    <p className="text-[10px] text-orange-600/60 font-medium mt-1 italic">
+                                        * Sudah termasuk tambahan fee sebesar {additionalFee}%
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Publish</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.published)}</p>
+                                        <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                                    </div>
+                                </div>
+                                <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Draft</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.draft)}</p>
+                                        <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
+                                    </div>
+                                </div>
+                            </>
+                        )
+                    )}
+
+                    {showPurchaseColumns && !isAnalisaHarga && (
                         <>
                             <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100/50">
                                 <p className="text-xs font-semibold text-blue-600/70 uppercase tracking-wider mb-1">Omset Total (Jual Semua)</p>
@@ -1622,6 +1879,99 @@ export default function StoreProductList({
                                     <p className={`text-[10px] font-medium mt-1 italic ${analysis.totalLaba >= 0 ? 'text-emerald-600/60' : 'text-red-600/60'}`}>
                                         * Persentase dihitung dari: (Laba Total / Total Pembelian include fee) × 100%
                                     </p>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {isAnalisaHarga && (
+                        <>
+                            <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100/50">
+                                <p className="text-xs font-semibold text-blue-600/70 uppercase tracking-wider mb-1">Produk Teranalisa</p>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl font-bold text-blue-600">{formatNumber(analysis.withPurchasePrice)}</p>
+                                    <span className="text-[10px] font-medium text-blue-600/60 uppercase">Produk</span>
+                                </div>
+                                <p className="text-[10px] text-blue-600/60 font-medium mt-1 italic leading-tight">
+                                    * Memiliki data harga beli.
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-xl bg-orange-50/50 border border-orange-100/50">
+                                <p className="text-xs font-semibold text-orange-600/70 uppercase tracking-wider mb-1">Belum Input Harga</p>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl font-bold text-orange-600">{formatNumber(analysis.withoutPurchasePrice)}</p>
+                                    <span className="text-[10px] font-medium text-orange-600/60 uppercase">Produk</span>
+                                </div>
+                                <p className="text-[10px] text-orange-600/60 font-medium mt-1 italic leading-tight">
+                                    * Data pembelian kosong.
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
+                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Estimasi Laba per Pcs</p>
+                                <p className="text-2xl font-bold text-emerald-600">Rp {formatNumber(Math.round(analysis.avgLaba))}</p>
+                                <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
+                                    * Rata-rata laba dari produk teranalisa.
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50">
+                                <p className="text-xs font-semibold text-indigo-600/70 uppercase tracking-wider mb-1">Margin Rata-rata</p>
+                                <p className="text-2xl font-bold text-indigo-600">{analysis.avgMargin.toFixed(1)}%</p>
+                                <p className="text-[10px] text-indigo-600/60 font-medium mt-1 italic">
+                                    * (Laba / Harga Jual) × 100%
+                                </p>
+                            </div>
+
+                            {/* Simulation Results Highlight */}
+                            <div className="col-span-1 md:col-span-2 lg:col-span-4 mt-2">
+                                <div className="p-1 rounded-2xl bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-emerald-500/20 shadow-sm border border-border/50">
+                                    <div className="bg-card rounded-[14px] p-4 lg:p-6">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 bg-purple-600 rounded-xl shadow-lg shadow-purple-200">
+                                                    <TrendingUp className="w-5 h-5 text-white" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-black text-foreground uppercase tracking-tight">Ringkasan Simulasi</h3>
+                                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">{analysis.count} Produk dalam simulasi</p>
+                                                </div>
+                                            </div>
+                                            {analysis.count > 0 && (
+                                                <button
+                                                    onClick={handleClearSimulation}
+                                                    className="text-[10px] h-7 px-3 bg-red-50 text-red-600 hover:bg-red-100 font-black uppercase tracking-tighter rounded-full border border-red-100 transition-all flex items-center gap-1.5"
+                                                >
+                                                    <X className="w-3 h-3" /> Reset Simulasi
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                            <div className="space-y-1 group">
+                                                <div className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Total Laba Simulasi
+                                                </div>
+                                                <p className="text-2xl lg:text-3xl font-black text-emerald-600 tracking-tighter group-hover:scale-105 origin-left transition-transform">
+                                                    {formatCurrency(Math.round(analysis.laba))}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-[10px] font-black text-blue-600/70 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Total Omset Simulasi
+                                                </div>
+                                                <p className="text-2xl lg:text-3xl font-black text-blue-600 tracking-tighter">
+                                                    {formatCurrency(Math.round(analysis.omset))}
+                                                </p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-[10px] font-black text-orange-600/70 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Total Modal Simulasi
+                                                </div>
+                                                <p className="text-2xl lg:text-3xl font-black text-orange-600 tracking-tighter">
+                                                    {formatCurrency(Math.round(analysis.modal))}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -1719,6 +2069,7 @@ export default function StoreProductList({
                     kursUsd={kursUsd}
                     additionalFee={additionalFee}
                     editMode
+                    hideSupplier={hideSupplierInput}
                 />
             )}
 
