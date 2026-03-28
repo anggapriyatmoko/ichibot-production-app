@@ -596,18 +596,21 @@ export default function StoreProductList({
                     bValue = (b.purchasePackage || 1) * (b.purchaseQty || 0)
                 } else if (sortConfig.key === 'hargaBeliIdr') {
                     const getPriceValue = (p: any) => {
+                        if (!p.purchasePrice || p.purchasePrice <= 0) return -Infinity
                         let price = p.purchasePrice || 0
                         if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
                         else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
 
                         const paket = p.purchasePackage || 1
                         const total = (price * paket) * (1 + (additionalFee || 0) / 100)
-                        return total
+                        const jumlah = p.purchaseQty || 1
+                        return total / ((paket * jumlah) || 1)
                     }
                     aValue = getPriceValue(a)
                     bValue = getPriceValue(b)
                 } else if (sortConfig.key === 'labaPerPcs') {
                     const getLaba = (p: any) => {
+                        if (!p.purchasePrice || p.purchasePrice <= 0) return -Infinity
                         let priceInputIdr = p.purchasePrice || 0
                         const currency = p.purchaseCurrency || 'IDR'
                         if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
@@ -625,7 +628,7 @@ export default function StoreProductList({
                 } else if (sortConfig.key === 'totalSimLaba') {
                     const getSimLabaValue = (p: any) => {
                         const simQty = simulationData[p.wcId] || 0
-                        if (simQty === 0) return -Infinity
+                        if (simQty === 0 || !p.purchasePrice || p.purchasePrice <= 0) return -Infinity
                         
                         let price = p.purchasePrice || 0
                         const currency = p.purchaseCurrency || 'IDR'
@@ -650,6 +653,11 @@ export default function StoreProductList({
                     if (!aEmpty && bEmpty) return -1 // b down
                     if (aEmpty && bEmpty) return 0
                 }
+
+                // Push empty values (-Infinity) to the absolute bottom in both directions
+                if (aValue === -Infinity && bValue !== -Infinity) return 1  // a down
+                if (aValue !== -Infinity && bValue === -Infinity) return -1 // b down
+                if (aValue === -Infinity && bValue === -Infinity) return 0
 
                 if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
                 if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
@@ -679,6 +687,7 @@ export default function StoreProductList({
                         bValue = (b.purchasePackage || 1) * (b.purchaseQty || 0)
                     } else if (sortConfig.key === 'hargaBeliIdr') {
                         const getPriceValue = (p: any) => {
+                            if (!p.purchasePrice || p.purchasePrice <= 0) return -Infinity
                             let price = p.purchasePrice || 0
                             if (p.purchaseCurrency === 'CNY' && kursYuan) price *= kursYuan
                             else if (p.purchaseCurrency === 'USD' && kursUsd) price *= kursUsd
@@ -692,6 +701,7 @@ export default function StoreProductList({
                         bValue = getPriceValue(b)
                     } else if (sortConfig.key === 'labaPerPcs') {
                         const getLaba = (p: any) => {
+                            if (!p.purchasePrice || p.purchasePrice <= 0) return -Infinity
                             let priceInputIdr = p.purchasePrice || 0
                             const currency = p.purchaseCurrency || 'IDR'
                             if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
@@ -709,7 +719,7 @@ export default function StoreProductList({
                     } else if (sortConfig.key === 'totalSimLaba') {
                         const getSimLabaValue = (p: any) => {
                             const simQty = simulationData[p.wcId] || 0
-                            if (simQty === 0) return -Infinity
+                            if (simQty === 0 || !p.purchasePrice || p.purchasePrice <= 0) return -Infinity
                             
                             let price = p.purchasePrice || 0
                             const currency = p.purchaseCurrency || 'IDR'
@@ -735,6 +745,11 @@ export default function StoreProductList({
                         if (aEmpty && bEmpty) return 0
                     }
 
+                    // Push empty values (-Infinity) to the absolute bottom in both directions
+                    if (aValue === -Infinity && bValue !== -Infinity) return 1  // a down
+                    if (aValue !== -Infinity && bValue === -Infinity) return -1 // b down
+                    if (aValue === -Infinity && bValue === -Infinity) return 0
+
                     if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
                     if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
                     return 0
@@ -756,7 +771,7 @@ export default function StoreProductList({
         })
 
         return result
-    }, [localProducts, searchTerm, expandedRows, filters, sortConfig])
+    }, [localProducts, searchTerm, expandedRows, filters, sortConfig, simulationData, kursYuan, kursUsd, additionalFee])
 
     // Pagination calculation
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
@@ -1264,11 +1279,19 @@ export default function StoreProductList({
                                 {!showPurchaseColumns && <TableHead>Keterangan</TableHead>}
                                 <TableHead
                                     align="right"
-                                    className="cursor-pointer hover:bg-muted/80 transition-colors"
+                                    className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
                                     onClick={() => handleSort('price')}
                                 >
-                                    Harga Jual & Stok
+                                    Harga Jual
                                     <SortIcon columnKey="price" sortConfig={sortConfig} />
+                                </TableHead>
+                                <TableHead
+                                    align="right"
+                                    className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                    onClick={() => handleSort('stok')}
+                                >
+                                    Stok
+                                    <SortIcon columnKey="stok" sortConfig={sortConfig} />
                                 </TableHead>
                                 {showPurchaseColumns && (
                                     <>
@@ -1556,24 +1579,22 @@ export default function StoreProductList({
                                             </TableCell>
                                         )}
                                         <TableCell align="right" className="whitespace-nowrap">
-                                            <div className="flex flex-col items-end gap-1">
-                                                <div className="flex flex-col items-end">
-                                                    <div className="text-sm font-medium text-foreground">{formatCurrency(product.price || 0)}</div>
-                                                    {product.salePrice > 0 && product.salePrice < product.regularPrice && (
-                                                        <div className="text-[10px] text-muted-foreground line-through">
-                                                            {formatCurrency(product.regularPrice)}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex flex-col items-end border-t border-border pt-1">
-                                                    <span className={cn(
-                                                        "text-sm font-semibold",
-                                                        (product.stockQuantity || 0) <= 0 ? "text-destructive" : "text-green-600"
-                                                    )}>
-                                                        {formatNumber(product.stockQuantity || 0)} stok
-                                                    </span>
-                                                </div>
+                                            <div className="flex flex-col items-end">
+                                                <div className="text-sm font-medium text-foreground">{formatCurrency(product.price || 0)}</div>
+                                                {product.salePrice > 0 && product.salePrice < product.regularPrice && (
+                                                    <div className="text-[10px] text-muted-foreground line-through">
+                                                        {formatCurrency(product.regularPrice)}
+                                                    </div>
+                                                )}
                                             </div>
+                                        </TableCell>
+                                        <TableCell align="right" className="whitespace-nowrap">
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                (product.stockQuantity || 0) <= 0 ? "text-destructive" : "text-green-600"
+                                            )}>
+                                                {formatNumber(product.stockQuantity || 0)} unit
+                                            </span>
                                         </TableCell>
                                         {showPurchaseColumns && (
                                             <>

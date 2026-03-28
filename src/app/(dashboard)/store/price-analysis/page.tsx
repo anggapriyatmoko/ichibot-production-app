@@ -29,7 +29,7 @@ async function PriceAnalysisContent() {
             showQuantityColumn={false}
             showSyncButton={false}
             showAddButton={false}
-            hideSupplierInput={true}
+            hideSupplierInput={false}
             hideSkuColumn={true}
             hideTotalsInCells={true}
             isAnalisaHarga={true}
