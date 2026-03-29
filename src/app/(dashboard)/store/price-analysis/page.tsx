@@ -9,16 +9,27 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 export const dynamic = 'force-dynamic';
 
 async function PriceAnalysisContent() {
-    const [products, kursYuanStr, kursUsdStr, additionalFeeStr] = await Promise.all([
+    const [
+        products, kursYuanStr, kursUsdStr, additionalFeeStr,
+        shopeeAdminStr, shopeeServiceStr, tokpedAdminStr, tokpedServiceStr
+    ] = await Promise.all([
         getStoreProducts(),
         getSystemSetting('KURS_YUAN'),
         getSystemSetting('KURS_USD'),
-        getSystemSetting('STORE_ADDITIONAL_FEE')
+        getSystemSetting('STORE_ADDITIONAL_FEE'),
+        getSystemSetting('STORE_SHOPEE_ADMIN_FEE'),
+        getSystemSetting('STORE_SHOPEE_SERVICE_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_ADMIN_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_SERVICE_FEE')
     ]);
 
     const kursYuan = kursYuanStr ? parseFloat(kursYuanStr) : undefined;
     const kursUsd = kursUsdStr ? parseFloat(kursUsdStr) : undefined;
     const additionalFee = additionalFeeStr ? parseFloat(additionalFeeStr) : 0;
+    const shopeeAdminFee = shopeeAdminStr ? parseFloat(shopeeAdminStr) : 0;
+    const shopeeServiceFee = shopeeServiceStr ? parseFloat(shopeeServiceStr) : 0;
+    const tokpedAdminFee = tokpedAdminStr ? parseFloat(tokpedAdminStr) : 0;
+    const tokpedServiceFee = tokpedServiceStr ? parseFloat(tokpedServiceStr) : 0;
 
     return (
         <StoreProductList
@@ -36,6 +47,10 @@ async function PriceAnalysisContent() {
             kursYuan={kursYuan}
             kursUsd={kursUsd}
             additionalFee={additionalFee}
+            shopeeAdminFee={shopeeAdminFee}
+            shopeeServiceFee={shopeeServiceFee}
+            tokpedAdminFee={tokpedAdminFee}
+            tokpedServiceFee={tokpedServiceFee}
         />
     );
 }

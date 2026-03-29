@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, Package, Loader2 } from 'lucide-react'
+import { ShoppingCart, Package, Loader2, History } from 'lucide-react'
+
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { useAlert } from '@/hooks/use-alert'
 import { moveToOrderBatch } from '@/app/actions/store-product'
@@ -15,6 +16,10 @@ interface StorePurchasedTabsProps {
     kursYuan?: number
     kursUsd?: number
     additionalFee?: number
+    shopeeAdminFee?: number
+    shopeeServiceFee?: number
+    tokpedAdminFee?: number
+    tokpedServiceFee?: number
 }
 
 export default function StorePurchasedTabs({
@@ -22,8 +27,13 @@ export default function StorePurchasedTabs({
     showSupplierColumn,
     kursYuan,
     kursUsd,
-    additionalFee = 0
+    additionalFee = 0,
+    shopeeAdminFee = 0,
+    shopeeServiceFee = 0,
+    tokpedAdminFee = 0,
+    tokpedServiceFee = 0
 }: StorePurchasedTabsProps) {
+
     const [activeTab, setActiveTab] = useState('cart')
     const [isOrdering, setIsOrdering] = useState(false)
     const { showConfirmation } = useConfirmation()
@@ -170,9 +180,9 @@ export default function StorePurchasedTabs({
                     </button>
                 ))}
 
-                {/* Ordered Button - only visible on Cart tab */}
-                {activeTab === 'cart' && cartProducts.length > 0 && (
-                    <div className="ml-auto flex-shrink-0">
+                {/* Ordered & History Buttons */}
+                <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+                    {activeTab === 'cart' && cartProducts.length > 0 && (
                         <button
                             onClick={handleOrdered}
                             disabled={isOrdering}
@@ -185,8 +195,17 @@ export default function StorePurchasedTabs({
                             )}
                             Ordered
                         </button>
-                    </div>
-                )}
+                    )}
+                    
+                    <button
+                        onClick={() => router.push('/store/order-history')}
+                        className="flex items-center gap-2 px-5 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm"
+                    >
+                        <History className="w-4 h-4" />
+                        History Order
+                    </button>
+                </div>
+
             </div>
 
             {/* Active Tab Content */}
@@ -202,7 +221,24 @@ export default function StorePurchasedTabs({
                 kursYuan={kursYuan}
                 kursUsd={kursUsd}
                 additionalFee={additionalFee}
+                shopeeAdminFee={shopeeAdminFee}
+                shopeeServiceFee={shopeeServiceFee}
+                tokpedAdminFee={tokpedAdminFee}
+                tokpedServiceFee={tokpedServiceFee}
+                isAnalisaHarga={true}
+                hideSkuColumn={true}
+                hideLabaColumn={true}
+                hideSimulasiColumn={true}
+                hideStokColumn={true}
+                hideCategory={true}
+                showExportButton={true}
+                exportFilenamePrefix="ORDERED"
             />
+
+
+
+
+
         </div>
     )
 }

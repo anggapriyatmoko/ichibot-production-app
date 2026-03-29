@@ -702,11 +702,11 @@ export async function toggleStoreProductPurchased(
     wcId: number,
     purchased: boolean,
     purchaseData?: {
-        purchasePackage?: number
-        purchaseQty?: number
-        purchasePrice?: number
-        purchaseCurrency?: string
-        storeName?: string
+        purchasePackage?: number | null
+        purchaseQty?: number | null
+        purchasePrice?: number | null
+        purchaseCurrency?: string | null
+        storeName?: string | null
     }
 ) {
     try {
@@ -715,8 +715,54 @@ export async function toggleStoreProductPurchased(
             purchasedAt: purchased ? new Date() : null,
         }
 
-        // When unchecking, also clear the order batch assignment
+        // When unchecking, move to history if it has an orderBatchId
         if (!purchased) {
+            const currentProduct = await (prisma as any).storeProduct.findUnique({
+                where: { wcId },
+                select: {
+                    orderBatchId: true,
+                    name: true,
+                    sku: true,
+                    price: true,
+                    regularPrice: true,
+                    salePrice: true,
+                    images: true,
+                    weight: true,
+                    purchasePackage: true,
+                    purchaseQty: true,
+                    purchasePrice: true,
+                    purchaseCurrency: true,
+                    storeName: true
+                }
+            })
+
+            if (currentProduct?.orderBatchId) {
+                // Use a dynamic data object to avoid strict runtime validation 
+                // if the dev server is using a stale Prisma client
+                const historyData: any = {
+                    wcId,
+                    name: currentProduct.name,
+                    sku: currentProduct.sku,
+                    price: currentProduct.price,
+                    regularPrice: currentProduct.regularPrice,
+                    salePrice: currentProduct.salePrice,
+                    images: currentProduct.images,
+                    weight: currentProduct.weight,
+                    purchasePackage: currentProduct.purchasePackage,
+                    purchaseQty: currentProduct.purchaseQty,
+                    purchasePrice: currentProduct.purchasePrice,
+                    purchaseCurrency: currentProduct.purchaseCurrency,
+                    storeName: currentProduct.storeName,
+                    orderBatchId: currentProduct.orderBatchId,
+                    arrivedAt: new Date()
+                }
+
+                await (prisma as any).storeOrderHistory.create({
+                    data: historyData
+                })
+            }
+
+
             updateData.orderBatchId = null
         }
 
@@ -737,7 +783,9 @@ export async function toggleStoreProductPurchased(
         revalidatePath('/store/product')
         revalidatePath('/store/low-stock')
         revalidatePath('/store/purchased')
+        revalidatePath('/store/order-history')
         return { success: true }
+
     } catch (error: any) {
         console.error('Error toggling purchased state:', error)
         return { success: false, error: error.message }
@@ -746,11 +794,11 @@ export async function toggleStoreProductPurchased(
 export async function updatePurchaseData(
     wcId: number,
     data: {
-        purchasePackage?: number
-        purchaseQty?: number
-        purchasePrice?: number
-        purchaseCurrency?: string
-        storeName?: string
+        purchasePackage?: number | null
+        purchaseQty?: number | null
+        purchasePrice?: number | null
+        purchaseCurrency?: string | null
+        storeName?: string | null
     }
 ) {
     try {
@@ -878,13 +926,40 @@ export async function moveToOrderBatch() {
             }
         })
 
-        revalidatePath('/store/purchased')
+        revalidatePath('/store/order-history')
         return { success: true, count: result.count, batchId }
     } catch (error: any) {
         console.error('Error moving to order batch:', error)
         return { success: false, error: error.message }
     }
 }
+
+export async function getStoreOrderHistory(batchId: string) {
+    try {
+        const history = await (prisma as any).storeOrderHistory.findMany({
+            where: { orderBatchId: batchId },
+            orderBy: { arrivedAt: 'desc' }
+        })
+        return history
+    } catch (error) {
+        console.error('Error fetching order history:', error)
+        return []
+    }
+}
+
+export async function getStoreOrderHistoryBatches() {
+    try {
+        const batches = await (prisma as any).storeOrderHistory.groupBy({
+            by: ['orderBatchId'],
+            orderBy: { orderBatchId: 'desc' }
+        })
+        return batches.map((b: any) => b.orderBatchId)
+    } catch (error) {
+        console.error('Error fetching history batches:', error)
+        return []
+    }
+}
+
 
 export async function searchWooCommerceProducts(query: string, page: number = 1) {
     if (!query || query.trim().length === 0) return { products: [], totalPages: 0, totalItems: 0 }

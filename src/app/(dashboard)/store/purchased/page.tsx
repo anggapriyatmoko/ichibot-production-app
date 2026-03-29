@@ -9,15 +9,24 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 export const dynamic = 'force-dynamic'
 
 async function StorePurchasedContent({ userRole }: { userRole: string }) {
-    const [products, kursYuanStr, kursUsdStr, additionalFeeStr] = await Promise.all([
+    const [products, kursYuanStr, kursUsdStr, additionalFeeStr, shopeeAdminFeeStr, shopeeServiceFeeStr, tokpedAdminFeeStr, tokpedServiceFeeStr] = await Promise.all([
         getStorePurchasedProducts(),
         getSystemSetting('KURS_YUAN'),
         getSystemSetting('KURS_USD'),
-        getSystemSetting('STORE_ADDITIONAL_FEE')
+        getSystemSetting('STORE_ADDITIONAL_FEE'),
+        getSystemSetting('STORE_SHOPEE_ADMIN_FEE'),
+        getSystemSetting('STORE_SHOPEE_SERVICE_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_ADMIN_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_SERVICE_FEE')
+
     ]);
     const kursYuan = kursYuanStr ? parseFloat(kursYuanStr) : undefined
     const kursUsd = kursUsdStr ? parseFloat(kursUsdStr) : undefined
     const additionalFee = additionalFeeStr ? parseFloat(additionalFeeStr) : 0
+    const shopeeAdminFee = shopeeAdminFeeStr ? parseFloat(shopeeAdminFeeStr) : 0
+    const shopeeServiceFee = shopeeServiceFeeStr ? parseFloat(shopeeServiceFeeStr) : 0
+    const tokpedAdminFee = tokpedAdminFeeStr ? parseFloat(tokpedAdminFeeStr) : 0
+    const tokpedServiceFee = tokpedServiceFeeStr ? parseFloat(tokpedServiceFeeStr) : 0
 
     return (
         <StorePurchasedTabs
@@ -26,9 +35,14 @@ async function StorePurchasedContent({ userRole }: { userRole: string }) {
             kursYuan={kursYuan}
             kursUsd={kursUsd}
             additionalFee={additionalFee}
+            shopeeAdminFee={shopeeAdminFee}
+            shopeeServiceFee={shopeeServiceFee}
+            tokpedAdminFee={tokpedAdminFee}
+            tokpedServiceFee={tokpedServiceFee}
         />
     );
 }
+
 
 export default async function StorePurchasedPage() {
     const session = await requireAuth();

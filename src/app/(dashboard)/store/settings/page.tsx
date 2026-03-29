@@ -3,6 +3,7 @@ import { getSystemSetting } from '@/app/actions/settings'
 import StoreSupplierManager from '@/components/store/store-supplier-manager'
 import CurrencyConversionManager from '@/components/store/currency-conversion-manager'
 import StoreFeeManager from '@/components/store/store-fee-manager'
+import StoreMarketplaceFeeManager from '@/components/store/store-marketplace-fee-manager'
 import { redirect } from 'next/navigation'
 import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
@@ -15,11 +16,18 @@ export default async function StoreSettingsPage() {
         redirect('/dashboard')
     }
 
-    const [suppliers, kursYuan, kursUsd, additionalFee] = await Promise.all([
+    const [
+        suppliers, kursYuan, kursUsd, additionalFee,
+        shopeeAdmin, shopeeService, tokpedAdmin, tokpedService
+    ] = await Promise.all([
         getStoreSuppliers(),
         getSystemSetting('KURS_YUAN'),
         getSystemSetting('KURS_USD'),
-        getSystemSetting('STORE_ADDITIONAL_FEE')
+        getSystemSetting('STORE_ADDITIONAL_FEE'),
+        getSystemSetting('STORE_SHOPEE_ADMIN_FEE'),
+        getSystemSetting('STORE_SHOPEE_SERVICE_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_ADMIN_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_SERVICE_FEE')
     ])
 
     return (
@@ -48,6 +56,17 @@ export default async function StoreSettingsPage() {
                             <StoreFeeManager initialFee={additionalFee} />
                         </section>
                     </div>
+
+                    <hr className="border-border" />
+
+                    <section>
+                        <StoreMarketplaceFeeManager 
+                            initialShopeeAdmin={shopeeAdmin}
+                            initialShopeeService={shopeeService}
+                            initialTokpedAdmin={tokpedAdmin}
+                            initialTokpedService={tokpedService}
+                        />
+                    </section>
                 </div>
             </div>
         </div>

@@ -10,15 +10,50 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 export const dynamic = 'force-dynamic';
 
 async function StoreLowStockContent() {
-    const [products, suppliers, kursYuanRaw, additionalFeeStr] = await Promise.all([
+    const [
+        products, 
+        suppliers, 
+        kursYuanRaw, 
+        kursUsdRaw,
+        additionalFeeStr,
+        shopeeAdminFeeStr,
+        shopeeServiceFeeStr,
+        tokpedAdminFeeStr,
+        tokpedServiceFeeStr
+    ] = await Promise.all([
         getStoreLowStockProducts(),
         getStoreSuppliers(),
         getSystemSetting('KURS_YUAN'),
-        getSystemSetting('STORE_ADDITIONAL_FEE')
+        getSystemSetting('KURS_USD'),
+        getSystemSetting('STORE_ADDITIONAL_FEE'),
+        getSystemSetting('STORE_SHOPEE_ADMIN_FEE'),
+        getSystemSetting('STORE_SHOPEE_SERVICE_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_ADMIN_FEE'),
+        getSystemSetting('STORE_TOKOPEDIA_SERVICE_FEE')
+
     ]);
+
     const kursYuan = kursYuanRaw ? parseFloat(kursYuanRaw) : undefined;
+    const kursUsd = kursUsdRaw ? parseFloat(kursUsdRaw) : undefined;
     const additionalFee = additionalFeeStr ? parseFloat(additionalFeeStr) : 0;
-    return <StoreLowStockList initialProducts={products} suppliers={suppliers} kursYuan={kursYuan} additionalFee={additionalFee} />;
+    const shopeeAdminFee = shopeeAdminFeeStr ? parseFloat(shopeeAdminFeeStr) : 0;
+    const shopeeServiceFee = shopeeServiceFeeStr ? parseFloat(shopeeServiceFeeStr) : 0;
+    const tokpedAdminFee = tokpedAdminFeeStr ? parseFloat(tokpedAdminFeeStr) : 0;
+    const tokpedServiceFee = tokpedServiceFeeStr ? parseFloat(tokpedServiceFeeStr) : 0;
+
+    return (
+        <StoreLowStockList 
+            initialProducts={products} 
+            suppliers={suppliers} 
+            kursYuan={kursYuan} 
+            kursUsd={kursUsd}
+            additionalFee={additionalFee} 
+            shopeeAdminFee={shopeeAdminFee}
+            shopeeServiceFee={shopeeServiceFee}
+            tokpedAdminFee={tokpedAdminFee}
+            tokpedServiceFee={tokpedServiceFee}
+        />
+    );
 }
 
 export default async function StoreLowStockPage() {

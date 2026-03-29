@@ -699,9 +699,33 @@ model StoreSupplier {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("StoreSupplier")
 }
+
+model StoreOrderHistory {
+
+  id               String   @id @default(cuid())
+  wcId             Int
+  name             String   @db.Text
+  sku              String?
+  price            Float?
+  regularPrice     Float?
+  salePrice        Float?
+  images           String?   @db.Text
+  weight           Float?
+  purchasePackage  Int?
+
+  purchaseQty      Int?
+  purchasePrice    Float?
+  purchaseCurrency String?
+  storeName        String?
+  orderBatchId     String
+  arrivedAt        DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  @@map("StoreOrderHistory")
+}
+
 
 model serviceProduct {
   id          String   @id @default(cuid())

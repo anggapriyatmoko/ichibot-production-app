@@ -111,23 +111,14 @@ export default function PurchaseInputModal({
     ]
 
     const handleSubmit = async () => {
-        if (!purchaseQty || purchaseQty <= 0) {
-            showError('Jumlah barang harus diisi.')
-            return
-        }
-        if (!purchasePrice || purchasePrice <= 0) {
-            showError('Harga harus diisi.')
-            return
-        }
-
         setIsSubmitting(true)
         try {
             const data = {
-                purchasePackage: Number(purchasePackage) || 1,
-                purchaseQty: Number(purchaseQty),
-                purchasePrice: Number(purchasePrice),
+                purchasePackage: purchasePackage ? Number(purchasePackage) : null,
+                purchaseQty: purchaseQty ? Number(purchaseQty) : null,
+                purchasePrice: purchasePrice ? Number(purchasePrice) : null,
                 purchaseCurrency,
-                storeName: selectedSuppliers.length > 0 ? selectedSuppliers.join('||') : undefined,
+                storeName: selectedSuppliers.length > 0 ? selectedSuppliers.join('||') : null,
             }
 
             let result
@@ -259,11 +250,10 @@ export default function PurchaseInputModal({
                                 <p className="text-[11px] text-muted-foreground mt-1.5 leading-tight">Jumlah qty yang dibeli</p>
                             </div>
 
-                            {/* Isi per Paket */}
                             <div>
                                 <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                                     <Hash className="w-4 h-4 text-muted-foreground" />
-                                    Isi per Paket <span className="text-destructive">*</span>
+                                    Isi per Paket
                                 </label>
                                 <input
                                     type="text"
@@ -282,11 +272,10 @@ export default function PurchaseInputModal({
                             </div>
                         </div>
 
-                        {/* Harga + Currency */}
                         <div>
                             <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                                 <DollarSign className="w-4 h-4 text-muted-foreground" />
-                                Harga beli per pcs <span className="text-destructive">*</span>
+                                Harga beli per pcs
                             </label>
                             <div className="flex gap-2">
                                 <input
