@@ -231,6 +231,8 @@ export default function StorePurchasedTabs({
                 hideSimulasiColumn={true}
                 hideStokColumn={true}
                 hideCategory={true}
+                useProductPriceOnly={true}
+                hideResetButton={true}
                 showExportButton={true}
                 exportFilenamePrefix="ORDERED"
             />

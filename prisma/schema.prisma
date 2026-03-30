@@ -690,6 +690,7 @@ model StoreProduct {
   orderBatchId     String?
   priority         Boolean   @default(false)
   simulationQty    Int       @default(0)
+  simulationPrice  Float?
 
   @@map("StoreProduct")
 }

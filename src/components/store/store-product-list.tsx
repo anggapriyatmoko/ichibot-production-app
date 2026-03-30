@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import * as XLSX from 'xlsx'
 
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
-import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts, updateStoreProductSimulationQty, clearAllStoreProductSimulationQty } from '@/app/actions/store-product'
+import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts, updateStoreProductSimulationSettings, clearAllStoreProductSimulationSettings } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -117,11 +117,11 @@ export default function StoreProductList({
     hideCategory = false,
     hideProductEdit = false,
     hidePurchaseEdit = false,
+    useProductPriceOnly = false,
+    hideResetButton = false,
     showExportButton = false,
     exportFilenamePrefix = 'EXPORT'
 }: {
-
-
     initialProducts: any[],
     showPurchasedStyles?: boolean,
     showSupplierColumn?: boolean,
@@ -148,6 +148,8 @@ export default function StoreProductList({
     hideCategory?: boolean,
     hideProductEdit?: boolean,
     hidePurchaseEdit?: boolean,
+    useProductPriceOnly?: boolean,
+    hideResetButton?: boolean,
     showExportButton?: boolean,
     exportFilenamePrefix?: string
 }) {
@@ -205,10 +207,13 @@ export default function StoreProductList({
         setLocalProducts(initialProducts)
         // Also update simulation data if it's new from DB
         const data: Record<number, number> = {}
+        const priceData: Record<number, number> = {}
         initialProducts.forEach(p => {
             if (p.simulationQty) data[p.wcId] = p.simulationQty
+            if ((p as any).simulationPrice) priceData[p.wcId] = (p as any).simulationPrice
         })
         setSimulationData(data)
+        setSimulationPriceData(priceData)
     }, [initialProducts])
 
     // Reset page to 1 when search term changes
@@ -231,15 +236,41 @@ export default function StoreProductList({
         return data
     })
 
+    const [simulationPriceData, setSimulationPriceData] = useState<Record<number, number>>(() => {
+        const priceData: Record<number, number> = {}
+        initialProducts.forEach(p => {
+            if ((p as any).simulationPrice) priceData[p.wcId] = (p as any).simulationPrice
+        })
+        return priceData
+    })
+
     const handleSimulationChange = async (wcId: number, qty: number) => {
         const newQty = Math.max(0, qty)
-        setSimulationData(prev => ({
-            ...prev,
-            [wcId]: newQty
-        }))
+        setSimulationData(prev => ({ ...prev, [wcId]: newQty }))
+        
+        let price = simulationPriceData[wcId] !== undefined ? simulationPriceData[wcId] : null
+        await updateStoreProductSimulationSettings(wcId, newQty, price)
+    }
 
-        // Persist to DB
-        await updateStoreProductSimulationQty(wcId, newQty)
+    const handleSimulationPriceChange = async (wcId: number, val: string) => {
+        let newPrice: number | null = null
+        if (val !== '') {
+            newPrice = parseInt(val) || 0
+        }
+        
+        setSimulationPriceData(prev => {
+            const next = { ...prev }
+            if (newPrice === null) {
+                delete next[wcId]
+            } else {
+                next[wcId] = newPrice
+            }
+            localStorage.setItem('simulationPriceDataStorage', JSON.stringify(next))
+            return next
+        })
+        
+        const qty = simulationData[wcId] || 0
+        await updateStoreProductSimulationSettings(wcId, qty, newPrice)
     }
 
     const handleClearSimulation = () => {
@@ -250,9 +281,11 @@ export default function StoreProductList({
             cancelLabel: 'Batal',
             type: 'confirm',
             action: async () => {
-                const res = await clearAllStoreProductSimulationQty()
+                const res = await clearAllStoreProductSimulationSettings()
                 if (res.success) {
                     setSimulationData({})
+                    setSimulationPriceData({})
+                    localStorage.removeItem('simulationPriceDataStorage')
                     showAlert('Data simulasi berhasil dihapus.')
                 } else {
                     showError(res.error || 'Gagal menghapus data simulasi.')
@@ -451,12 +484,9 @@ export default function StoreProductList({
         try {
             // Helper to format number for Indonesian Excel (comma decimal, no dots)
             const formatExcelNum = (num: number) => {
-                if (num === 0) return 0
-                return num.toLocaleString('id-ID', { 
-                    useGrouping: false, 
-                    minimumFractionDigits: 0, 
-                    maximumFractionDigits: 2 
-                })
+                if (num === 0 || isNaN(num)) return 0
+                // Remove thousand separator (dot) and use comma for decimal as requested
+                return num.toFixed(2).replace('.', ',').replace(/,00$/, '')
             }
 
             // Prepare data for export
@@ -464,18 +494,18 @@ export default function StoreProductList({
                 const hargaJual = p.price || 0
                 const paket = p.purchasePackage || 1
                 const qtyPerPaket = p.purchaseQty || 1
-                
+
                 let hargaBeliIdr = p.purchasePrice || 0
                 const currency = p.purchaseCurrency || 'IDR'
                 if (currency === 'CNY' && kursYuan) hargaBeliIdr *= kursYuan
                 else if (currency === 'USD' && kursUsd) hargaBeliIdr *= kursUsd
-                
+
                 const totalHargaBeli = hargaBeliIdr * paket * (1 + (additionalFee || 0) / 100)
                 const hargaBeliPerPcs = totalHargaBeli / (paket * qtyPerPaket)
 
                 const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
                 const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
-                
+
                 const labaShp = hargaJual - hargaBeliPerPcs - shopeeFee
                 const labaTkp = hargaJual - hargaBeliPerPcs - tokpedFee
 
@@ -483,7 +513,20 @@ export default function StoreProductList({
                 const totalLabaShp = labaShp * totalQty
                 const totalLabaTkp = labaTkp * totalQty
 
-                return {
+                const simPriceInput = simulationPriceData[Number(p.wcId)]
+                const simQty = simulationData[Number(p.wcId)] || 0
+                const simHargaJual = (!useProductPriceOnly && simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : hargaJual
+
+                const simShopeeFee = simHargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
+                const simTokpedFee = simHargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
+
+                const simLabaShp = simHargaJual - hargaBeliPerPcs - simShopeeFee
+                const simLabaTkp = simHargaJual - hargaBeliPerPcs - simTokpedFee
+
+                const totalSimLabaShp = simLabaShp * simQty
+                const totalSimLabaTkp = simLabaTkp * simQty
+
+                const baseData: any = {
                     'ID WC': p.wcId,
                     'Nama Produk': p.name,
                     'SKU': p.sku || '',
@@ -498,27 +541,38 @@ export default function StoreProductList({
                     'Laba Satuan Tokopedia': formatExcelNum(labaTkp),
                     'Total Laba Shopee': formatExcelNum(totalLabaShp),
                     'Total Laba Tokopedia': formatExcelNum(totalLabaTkp),
-
-                    'Status': p.status,
-                    'Prioritas': p.priority ? 'Ya' : 'Tidak'
                 }
+
+                if (isAnalisaHarga) {
+                    baseData['Simulasi Qty'] = formatExcelNum(simQty)
+                    baseData['Simulasi Harga'] = formatExcelNum(simHargaJual)
+                    baseData['Laba Unit Shopee (Sim)'] = formatExcelNum(simLabaShp)
+                    baseData['Laba Unit Tokopedia (Sim)'] = formatExcelNum(simLabaTkp)
+                    baseData['Total Laba Shopee (Sim)'] = formatExcelNum(totalSimLabaShp)
+                    baseData['Total Laba Tokopedia (Sim)'] = formatExcelNum(totalSimLabaTkp)
+                }
+
+                baseData['Status'] = p.status
+                baseData['Prioritas'] = p.priority ? 'Ya' : 'Tidak'
+
+                return baseData
 
             })
 
             // Create worksheet
             const ws = XLSX.utils.json_to_sheet(exportData)
-            
+
             // Create workbook
             const wb = XLSX.utils.book_new()
             XLSX.utils.book_append_sheet(wb, ws, 'Products')
-            
+
             // Generate filename based on date and prefix
             const dateStr = new Date().toISOString().split('T')[0]
-            const filename = `${exportFilenamePrefix}-${dateStr}.xlsx`
-            
+            const filename = `${exportFilenamePrefix} - ${dateStr}.xlsx`
+
             // Download file
             XLSX.writeFile(wb, filename)
-            
+
             showAlert('Data berhasil diekspor ke Excel.')
         } catch (error: any) {
             console.error('Export error:', error)
@@ -619,22 +673,25 @@ export default function StoreProductList({
         const simulationStats = {
             count: 0,
             shopee: { laba: 0, omset: 0, modal: 0 },
-            tokped: { laba: 0, omset: 0, modal: 0 }
+            tokped: { laba: 0, omset: 0, modal: 0 },
+            cina: { laba: 0, omset: 0, modal: 0 }
         }
 
         if (isAnalisaHarga) {
-            // Priority 1: Use simulation data if present AND simulation column is visible
-            const hasSimulation = !hideSimulasiColumn && Object.values(simulationData).some(q => q > 0)
-            
+            // Priority 1: Use simulation data if present AND simulation column is visible AND not forced to product price
+            const hasSimulation = !hideSimulasiColumn && !useProductPriceOnly && Object.values(simulationData).some(q => q > 0)
+
             if (hasSimulation) {
 
                 physicalProducts.forEach(p => {
-                    const qty = simulationData[p.wcId] || 0
+                    const id = Number(p.wcId)
+                    const qty = simulationData[id] || 0
                     if (qty > 0) {
                         simulationStats.count++
-                        const hargaJual = p.price || 0
+                        const simPrice = simulationPriceData[id]
+                        const hargaJual = (simPrice !== undefined && simPrice !== 0) ? simPrice : (p.price || 0)
                         const currentOmset = hargaJual * qty
-                        
+
                         simulationStats.shopee.omset += currentOmset
                         simulationStats.tokped.omset += currentOmset
 
@@ -647,19 +704,26 @@ export default function StoreProductList({
 
                             const totalHarga = priceInIdr * paket * (1 + (additionalFee || 0) / 100)
                             const perPcs = totalHarga / ((paket * (p.purchaseQty || 1)) || 1)
-                            const currentModal = perPcs * qty
-                            
-                            simulationStats.shopee.modal += currentModal
-                            simulationStats.tokped.modal += currentModal
-
                             const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
                             const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
-                            
+
+                            const currentCinaModal = perPcs * qty
+                            const shopeeFeeTotal = shopeeFee * qty
+                            const tokpedFeeTotal = tokpedFee * qty
+
+                            simulationStats.shopee.modal += currentCinaModal + shopeeFeeTotal
+                            simulationStats.tokped.modal += currentCinaModal + tokpedFeeTotal
+                            simulationStats.cina.modal += currentCinaModal
+
                             const labaShpPerPcs = hargaJual - perPcs - shopeeFee
                             const labaTkpPerPcs = hargaJual - perPcs - tokpedFee
+                            const labaCinaPerPcs = hargaJual - perPcs
 
                             simulationStats.shopee.laba += labaShpPerPcs * qty
                             simulationStats.tokped.laba += labaTkpPerPcs * qty
+                            simulationStats.cina.laba += labaCinaPerPcs * qty
+
+                            simulationStats.cina.omset += currentOmset
                         }
                     }
                 })
@@ -672,7 +736,7 @@ export default function StoreProductList({
                         simulationStats.count++
                         const hargaJual = p.price || 0
                         const currentOmset = hargaJual * qty
-                        
+
                         simulationStats.shopee.omset += currentOmset
                         simulationStats.tokped.omset += currentOmset
 
@@ -685,19 +749,26 @@ export default function StoreProductList({
 
                             const totalHarga = priceInIdr * paket * (1 + (additionalFee || 0) / 100)
                             const perPcs = totalHarga / ((paket * (p.purchaseQty || 1)) || 1)
-                            const currentModal = perPcs * qty
-                            
-                            simulationStats.shopee.modal += currentModal
-                            simulationStats.tokped.modal += currentModal
-
                             const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
                             const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
-                            
+
+                            const currentCinaModal = perPcs * qty
+                            const shopeeFeeTotal = shopeeFee * qty
+                            const tokpedFeeTotal = tokpedFee * qty
+
+                            simulationStats.shopee.modal += currentCinaModal + shopeeFeeTotal
+                            simulationStats.tokped.modal += currentCinaModal + tokpedFeeTotal
+                            simulationStats.cina.modal += currentCinaModal
+
                             const labaShpPerPcs = hargaJual - perPcs - shopeeFee
                             const labaTkpPerPcs = hargaJual - perPcs - tokpedFee
+                            const labaCinaPerPcs = hargaJual - perPcs
 
                             simulationStats.shopee.laba += labaShpPerPcs * qty
                             simulationStats.tokped.laba += labaTkpPerPcs * qty
+                            simulationStats.cina.laba += labaCinaPerPcs * qty
+
+                            simulationStats.cina.omset += currentOmset
                         }
                     }
                 })
@@ -731,7 +802,7 @@ export default function StoreProductList({
         }
 
         return { ...stats, ...simulationStats }
-    }, [localProducts, kursYuan, kursUsd, additionalFee, isAnalisaHarga, simulationData])
+    }, [localProducts, kursYuan, kursUsd, additionalFee, isAnalisaHarga, simulationData, simulationPriceData, shopeeAdminFee, shopeeServiceFee, tokpedAdminFee, tokpedServiceFee, hideSimulasiColumn, useProductPriceOnly])
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' | null = 'asc'
@@ -1043,6 +1114,15 @@ export default function StoreProductList({
                                         </span>
                                     )}
                                 </button>
+                                {isAnalisaHarga && !hideResetButton && (
+                                    <button
+                                        onClick={handleClearSimulation}
+                                        className="flex items-center justify-center gap-2 px-4 h-9 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-bold transition-all hover:bg-red-100 shadow-sm whitespace-nowrap"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Reset Simulasi
+                                    </button>
+                                )}
                                 {showExportButton && (
                                     <button
                                         onClick={handleExportExcel}
@@ -1374,7 +1454,7 @@ export default function StoreProductList({
                                         <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider flex items-center gap-1">
                                             <Info className="w-3 h-3" /> Keterangan
                                         </p>
-                                        <div className="scale-95 origin-top-left">
+                                        <div className="scale-95 origin-top-left max-w-[280px]">
                                             <KeteranganEdit
                                                 key={`mobile-ket-${product.wcId}`}
                                                 wcId={product.wcId}
@@ -1405,7 +1485,7 @@ export default function StoreProductList({
                                                         const hargaJual = product.price || 0
                                                         const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
                                                         const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
-                                                        
+
                                                         const labaShp = (product.labaPerPcs || 0) - shopeeFee
                                                         const labaTkp = (product.labaPerPcs || 0) - tokpedFee
 
@@ -1553,14 +1633,16 @@ export default function StoreProductList({
                                     </TableHead>
                                 )}
                                 {!showPurchaseColumns && <TableHead>Keterangan</TableHead>}
-                                <TableHead
-                                    align="right"
-                                    className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
-                                    onClick={() => handleSort('price')}
-                                >
-                                    Harga Jual
-                                    <SortIcon columnKey="price" sortConfig={sortConfig} />
-                                </TableHead>
+                                {!isAnalisaHarga && (
+                                    <TableHead
+                                        align="right"
+                                        className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                        onClick={() => handleSort('price')}
+                                    >
+                                        Harga Jual
+                                        <SortIcon columnKey="price" sortConfig={sortConfig} />
+                                    </TableHead>
+                                )}
                                 {!isAnalisaHarga && !hideStokColumn && (
                                     <TableHead
                                         align="right"
@@ -1598,13 +1680,37 @@ export default function StoreProductList({
                                                 className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
                                                 onClick={() => handleSort('labaPerPcs')}
                                             >
-                                                {isAnalisaHarga ? 'Laba (Shopee | Tokped)' : 'Laba'}
+                                                {isAnalisaHarga ? 'Laba (Marketplace)' : 'Laba'}
                                                 <SortIcon columnKey="labaPerPcs" sortConfig={sortConfig} />
                                             </TableHead>
                                         )}
                                         {isAnalisaHarga && (
                                             <>
-                                                {!hideSimulasiColumn && <TableHead align="right" className="w-24 px-2">Simulasi Jml</TableHead>}
+                                                {!hideSimulasiColumn && (
+                                                    <TableHead align="center" className="w-36 px-2 bg-blue-600 text-white border-x border-blue-700/50">
+                                                        <div className="flex flex-col items-center w-full">
+                                                            <div className="text-[10px] font-bold text-white uppercase tracking-widest border-b border-white/20 pb-[3px] w-full text-center mb-1">SIMULASI</div>
+                                                            <div className="flex w-full text-[9px] font-semibold text-white/90 uppercase gap-2">
+                                                                <span className="flex-1 text-right">QTY</span>
+                                                                <span className="flex-1 text-left">HARGA</span>
+                                                            </div>
+                                                        </div>
+                                                    </TableHead>
+                                                )}
+                                                <TableHead align="right" className="w-28 px-2 whitespace-nowrap">
+                                                    <div className="flex flex-col items-end gap-[2px]">
+                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">TOTAL MODAL</span>
+                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">CINA</span>
+                                                        <span className="text-[9px] font-bold text-emerald-600/70 uppercase leading-none">OMSET</span>
+                                                    </div>
+                                                </TableHead>
+                                                <TableHead align="right" className="w-28 px-2 whitespace-nowrap">
+                                                    <div className="flex flex-col items-end gap-[2px]">
+                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">TOTAL MODAL</span>
+                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">MARKETPLACE</span>
+                                                        <span className="text-[9px] font-bold text-emerald-600/70 uppercase leading-none">OMSET</span>
+                                                    </div>
+                                                </TableHead>
                                                 <TableHead
                                                     align="right"
                                                     className="w-40 px-2 font-black whitespace-nowrap cursor-pointer hover:bg-muted/80 transition-colors"
@@ -1697,40 +1803,26 @@ export default function StoreProductList({
                                                     <span className="text-[10px] text-muted-foreground">
                                                         ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
                                                     </span>
-                                                    {product.categories && product.categories.length > 0 && !hideCategory && (
+                                                    {product.categories && product.categories.length > 0 && !hideCategory && !isAnalisaHarga && (
                                                         <span className="text-[10px] text-primary/70 font-medium">
                                                             • {product.categories.map((c: any) => c.name).join(', ')}
                                                         </span>
                                                     )}
 
-                                                    {showPurchaseColumns && !hidePurchaseEdit && (
-                                                        <button
-                                                            onClick={() => setEditPurchaseProduct(product)}
-                                                            className={cn(
-                                                                "p-1 rounded transition-colors flex items-center gap-1 text-[10px] font-bold uppercase border",
-                                                                product.purchasePrice
-                                                                    ? "text-muted-foreground hover:text-amber-600 bg-muted/30 border-border"
-                                                                    : "text-amber-600 hover:text-amber-700 bg-amber-50 border-amber-100"
-                                                            )}
-                                                            title={product.purchasePrice ? "Edit Data Pembelian" : "Input Harga Beli"}
-                                                        >
-                                                            <ShoppingCart className="w-2.5 h-2.5" />
-                                                            {product.purchasePrice ? 'Edit' : 'Beli'}
-                                                        </button>
-                                                    )}
+
                                                     {showSyncButton !== false && (
                                                         <button
                                                             onClick={() => handleSingleSync(product)}
-                                                        disabled={syncingItems.has(product.wcId)}
-                                                        className={cn(
-                                                            "p-0.5 rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5 text-[10px] font-bold uppercase",
-                                                            syncingItems.has(product.wcId) && "text-primary"
-                                                        )}
-                                                        title="Sync dari WooCommerce"
-                                                    >
-                                                        <RefreshCw className={cn("w-2.5 h-2.5", syncingItems.has(product.wcId) && "animate-spin")} />
-                                                        {finishedItems.has(product.wcId) ? "Selesai" : "Sync"}
-                                                    </button>
+                                                            disabled={syncingItems.has(product.wcId)}
+                                                            className={cn(
+                                                                "p-0.5 rounded text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5 text-[10px] font-bold uppercase",
+                                                                syncingItems.has(product.wcId) && "text-primary"
+                                                            )}
+                                                            title="Sync dari WooCommerce"
+                                                        >
+                                                            <RefreshCw className={cn("w-2.5 h-2.5", syncingItems.has(product.wcId) && "animate-spin")} />
+                                                            {finishedItems.has(product.wcId) ? "Selesai" : "Sync"}
+                                                        </button>
                                                     )}
                                                     {showPurchaseColumns && (
                                                         <>
@@ -1800,14 +1892,31 @@ export default function StoreProductList({
 
                                                 {/* Inline keterangan for purchased page */}
                                                 {showPurchaseColumns && (
-                                                    <div className="mt-0.5">
-                                                        <KeteranganEdit
-                                                            key={`inline-${product.wcId}`}
-                                                            wcId={product.wcId}
-                                                            initialValue={product.keterangan}
-                                                            productName={product.name}
-                                                            compact
-                                                        />
+                                                    <div className="flex items-center gap-2 mt-1.5 w-full">
+                                                        {isAnalisaHarga && (
+                                                            <div className="flex items-center flex-shrink-0 gap-1.5 h-fit">
+                                                                <Tag className="w-3 h-3 text-emerald-600/80" />
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-xs font-bold text-emerald-700">
+                                                                        {formatCurrency(product.price || 0)}
+                                                                    </span>
+                                                                    {product.salePrice > 0 && product.salePrice < product.regularPrice && (
+                                                                        <span className="text-[10px] text-emerald-600/60 line-through">
+                                                                            {formatCurrency(product.regularPrice)}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0 max-w-[150px] xl:max-w-[250px]">
+                                                            <KeteranganEdit
+                                                                key={`inline-${product.wcId}`}
+                                                                wcId={product.wcId}
+                                                                initialValue={product.keterangan}
+                                                                productName={product.name}
+                                                                compact
+                                                            />
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -1862,25 +1971,29 @@ export default function StoreProductList({
                                             </TableCell>
                                         )}
                                         {!showPurchaseColumns && (
-                                            <TableCell className="min-w-[200px]">
-                                                <KeteranganEdit
-                                                    key={product.wcId}
-                                                    wcId={product.wcId}
-                                                    initialValue={product.keterangan}
-                                                    productName={product.name}
-                                                />
+                                            <TableCell className="min-w-[200px] max-w-[300px]">
+                                                <div className="truncate">
+                                                    <KeteranganEdit
+                                                        key={product.wcId}
+                                                        wcId={product.wcId}
+                                                        initialValue={product.keterangan}
+                                                        productName={product.name}
+                                                    />
+                                                </div>
                                             </TableCell>
                                         )}
-                                        <TableCell align="right" className="whitespace-nowrap">
-                                            <div className="flex flex-col items-end">
-                                                <div className="text-sm font-medium text-foreground">{formatCurrency(product.price || 0)}</div>
-                                                {product.salePrice > 0 && product.salePrice < product.regularPrice && (
-                                                    <div className="text-[10px] text-muted-foreground line-through">
-                                                        {formatCurrency(product.regularPrice)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </TableCell>
+                                        {!isAnalisaHarga && (
+                                            <TableCell align="right" className="whitespace-nowrap">
+                                                <div className="flex flex-col items-end">
+                                                    <div className="text-sm font-medium text-foreground">{formatCurrency(product.price || 0)}</div>
+                                                    {product.salePrice > 0 && product.salePrice < product.regularPrice && (
+                                                        <div className="text-[10px] text-muted-foreground line-through">
+                                                            {formatCurrency(product.regularPrice)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        )}
                                         {!isAnalisaHarga && !hideStokColumn && (
                                             <TableCell align="right" className="whitespace-nowrap">
                                                 <span className={cn(
@@ -1917,7 +2030,15 @@ export default function StoreProductList({
                                                         )}
                                                     </TableCell>
                                                 )}
-                                                <TableCell align="right" className="whitespace-nowrap">
+                                                <TableCell 
+                                                    align="right" 
+                                                    className={cn(
+                                                        "whitespace-nowrap",
+                                                        !hidePurchaseEdit && "cursor-pointer hover:bg-emerald-50/50 transition-colors"
+                                                    )}
+                                                    onClick={() => !hidePurchaseEdit && setEditPurchaseProduct(product)}
+                                                    title={!hidePurchaseEdit ? "Klik untuk edit Data Pembelian" : undefined}
+                                                >
                                                     {product.purchasePrice ? (() => {
                                                         const paket = product.purchasePackage || 1
                                                         const jumlah = product.purchaseQty || 0
@@ -1937,7 +2058,7 @@ export default function StoreProductList({
                                                                     <span className="text-[10px] text-muted-foreground uppercase">Harga per Pcs</span>
                                                                     <div className="flex flex-col items-end">
                                                                         <span className="text-sm font-semibold text-foreground">
-                                                                            Rp {formatNumber(Math.round(perPcs))}
+                                                                            {isAnalisaHarga ? '' : 'Rp '}{formatNumber(Math.round(perPcs))}
                                                                         </span>
                                                                         {currency !== 'IDR' && (
                                                                             <span className="text-[10px] text-muted-foreground font-normal">
@@ -1951,7 +2072,7 @@ export default function StoreProductList({
                                                                         <span className="text-[10px] text-muted-foreground uppercase">Total Pembelian</span>
                                                                         <div className="flex flex-col items-end">
                                                                             <span className="text-sm font-bold text-primary">
-                                                                                Rp {formatNumber(Math.round(totalHarga))}
+                                                                                {isAnalisaHarga ? '' : 'Rp '}{formatNumber(Math.round(totalHarga))}
                                                                             </span>
                                                                             {currency !== 'IDR' && (
                                                                                 <span className="text-[10px] text-muted-foreground font-normal">
@@ -1965,7 +2086,14 @@ export default function StoreProductList({
                                                             </div>
                                                         )
                                                     })() : (
-                                                        <span className="text-muted-foreground text-xs">-</span>
+                                                        <div className="flex justify-end w-full">
+                                                            <span className={cn(
+                                                                "text-[10px] px-2 py-1 rounded-md transition-colors",
+                                                                !hidePurchaseEdit ? "text-amber-600 bg-amber-50 hover:bg-amber-100 font-bold tracking-tight uppercase" : "text-muted-foreground text-xs"
+                                                            )}>
+                                                                {!hidePurchaseEdit ? '+ Input Harga' : '-'}
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                                 {!hideLabaColumn && (
@@ -2062,7 +2190,7 @@ export default function StoreProductList({
                                                                                         </span>
                                                                                     )}
                                                                                     <span className={`text-xs font-bold ${isProfitShopee ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                                                        {isProfitShopee ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaShopeePerPcs)))}
+                                                                                        {isProfitShopee ? '+' : '-'}{formatNumber(Math.abs(Math.round(labaShopeePerPcs)))}
                                                                                     </span>
                                                                                 </div>
                                                                             </div>
@@ -2083,7 +2211,7 @@ export default function StoreProductList({
                                                                                         </span>
                                                                                     )}
                                                                                     <span className={`text-xs font-bold ${isProfitTokped ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                                                        {isProfitTokped ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaTokpedPerPcs)))}
+                                                                                        {isProfitTokped ? '+' : '-'}{formatNumber(Math.abs(Math.round(labaTokpedPerPcs)))}
                                                                                     </span>
                                                                                 </div>
                                                                             </div>
@@ -2133,74 +2261,182 @@ export default function StoreProductList({
                                                 {isAnalisaHarga && (
                                                     <>
                                                         {!hideSimulasiColumn && (
-                                                            <TableCell align="right" className="px-2">
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    value={simulationData[product.wcId] || ''}
-                                                                    onChange={(e) => handleSimulationChange(product.wcId, parseInt(e.target.value) || 0)}
-                                                                    onFocus={(e) => e.target.select()}
-                                                                    placeholder="0"
-                                                                    className="w-20 px-2 py-1 bg-background border border-border rounded text-right text-sm focus:border-primary outline-none transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                                />
+                                                            <TableCell align="center" className="px-2 bg-blue-50/20 dark:bg-blue-900/5">
+                                                                <div className="flex items-center gap-1.5 justify-center p-1">
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="numeric"
+                                                                        value={simulationData[product.wcId] !== undefined && simulationData[product.wcId] !== 0 ? formatNumber(simulationData[product.wcId]) : ''}
+                                                                        onChange={(e) => {
+                                                                            const rawVal = e.target.value.replace(/\D/g, '')
+                                                                            handleSimulationChange(product.wcId, rawVal ? parseInt(rawVal) : 0)
+                                                                        }}
+                                                                        onFocus={(e) => e.target.select()}
+                                                                        placeholder="0"
+                                                                        className="w-14 px-1 py-1 bg-white/50 border border-blue-200/50 rounded text-center text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all font-bold text-blue-900 placeholder:text-blue-900/30"
+                                                                        title="Simulasi Qty"
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="numeric"
+                                                                        value={simulationPriceData[product.wcId] !== undefined ? formatNumber(simulationPriceData[product.wcId]) : ''}
+                                                                        onChange={(e) => {
+                                                                            const rawVal = e.target.value.replace(/\D/g, '')
+                                                                            handleSimulationPriceChange(product.wcId, rawVal)
+                                                                        }}
+                                                                        onFocus={(e) => e.target.select()}
+                                                                        placeholder={formatNumber(product.price || 0)}
+                                                                        className="w-20 px-1 py-1 bg-emerald-50/50 border border-emerald-200/50 rounded text-center text-sm text-emerald-700 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 outline-none transition-all font-bold placeholder:text-emerald-600/40 placeholder:font-medium"
+                                                                        title="Simulasi Harga"
+                                                                    />
+                                                                </div>
                                                             </TableCell>
                                                         )}
-                                                        <TableCell align="right" className="px-2">
-                                                            {product.purchasePrice && product.price ? (() => {
-                                                                const paket = product.purchasePackage || 1
-                                                                const jumlah = product.purchaseQty || 0
-                                                                const totalPurchasedQty = paket * jumlah
-                                                                // If simulation column is hidden, use actual purchased quantity
-                                                                const simQty = hideSimulasiColumn 
-                                                                    ? totalPurchasedQty 
-                                                                    : (simulationData[product.wcId] || (showPurchaseColumns ? totalPurchasedQty : 0))
-                                                                
-                                                                if (simQty === 0) return <span className="text-muted-foreground/30 font-mono text-xs">-</span>
+                                                        {product.purchasePrice && product.price ? (() => {
+                                                            const paket = product.purchasePackage || 1
+                                                            const jumlah = product.purchaseQty || 0
+                                                            const totalPurchasedQty = paket * jumlah
+                                                            // If simulation column is hidden, use actual purchased quantity
+                                                            const simQty = hideSimulasiColumn
+                                                                ? totalPurchasedQty
+                                                                : (simulationData[product.wcId] !== undefined ? simulationData[product.wcId] : (isAnalisaHarga ? 0 : (showPurchaseColumns ? totalPurchasedQty : 0)))
+
+                                                            if (simQty === 0) return (
+                                                                <>
+                                                                    <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                    <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                    <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                </>
+                                                            )
 
 
-                                                                let priceInputIdr = product.purchasePrice
-                                                                const currency = product.purchaseCurrency || 'IDR'
-                                                                if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
-                                                                else if (currency === 'USD' && kursUsd) priceInputIdr *= kursUsd
+                                                            let priceInputIdr = product.purchasePrice
+                                                            const currency = product.purchaseCurrency || 'IDR'
+                                                            if (currency === 'CNY' && kursYuan) priceInputIdr *= kursYuan
+                                                            else if (currency === 'USD' && kursUsd) priceInputIdr *= kursUsd
 
-                                                                const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
-                                                                const perPcs = totalHarga / (totalPurchasedQty || 1)
+                                                            const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                                                            const perPcs = totalHarga / (totalPurchasedQty || 1)
+                                                            const totalSimModal = perPcs * simQty
 
 
-                                                                const hargaJual = product.price || 0
-                                                                const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
-                                                                const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
-                                                                const labaShpPerPcs = hargaJual - perPcs - shopeeFee
-                                                                const labaTkpPerPcs = hargaJual - perPcs - tokpedFee
-                                                                const totalSimLabaShopee = labaShpPerPcs * simQty
-                                                                const totalSimLabaTokped = labaTkpPerPcs * simQty
+                                                            const simPriceInput = simulationPriceData[product.wcId]
+                                                            const hargaJual = (!useProductPriceOnly && simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : (product.price || 0)
+                                                            const totalSimOmset = hargaJual * simQty
+                                                            const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
+                                                            const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
 
-                                                                return (
-                                                                    <div className="flex flex-col gap-1 items-end w-full min-w-[120px]">
-                                                                        <div className="flex items-center justify-between gap-3 w-full border-b border-border/50 pb-0.5" title="Total Simulasi Shopee">
-                                                                            <span className="text-[9px] font-bold text-[#EE4D2D] uppercase tracking-wider">Shopee</span>
-                                                                            <span className={cn(
-                                                                                "text-xs font-black whitespace-nowrap",
-                                                                                totalSimLabaShopee >= 0 ? "text-emerald-700" : "text-destructive"
-                                                                            )}>
-                                                                                {totalSimLabaShopee >= 0 ? '+' : ''}Rp {formatNumber(Math.round(totalSimLabaShopee))}
-                                                                            </span>
+                                                            const totalSimModalCina = perPcs * simQty
+                                                            const totalSimModalShopee = totalSimModalCina + (shopeeFee * simQty)
+                                                            const totalSimModalTokped = totalSimModalCina + (tokpedFee * simQty)
+                                                            const labaShpPerPcs = hargaJual - perPcs - shopeeFee
+                                                            const labaTkpPerPcs = hargaJual - perPcs - tokpedFee
+                                                            const totalSimLabaShopee = labaShpPerPcs * simQty
+                                                            const totalSimLabaTokped = labaTkpPerPcs * simQty
+
+                                                            const TooltipRow = ({ label, value, isNegative, isBold, isTotal }: { label: string, value: string | React.ReactNode, isNegative?: boolean, isBold?: boolean, isTotal?: boolean }) => (
+                                                                <div className="flex justify-between gap-6 items-center mb-1 last:mb-0">
+                                                                    <span className={cn(
+                                                                        "text-muted-foreground font-medium flex-shrink",
+                                                                        isTotal && "font-bold text-foreground"
+                                                                    )}>{label}</span>
+                                                                    <span className={cn(
+                                                                        "font-mono font-medium whitespace-nowrap flex-shrink-0",
+                                                                        isNegative && "text-destructive",
+                                                                        isBold && "font-bold",
+                                                                        isTotal && "font-black"
+                                                                    )}>{value}</span>
+                                                                </div>
+                                                            )
+
+                                                            const isShopeeFeeLarger = shopeeFee > tokpedFee
+                                                            const modalMpTooltip = (
+                                                                <div className="w-full flex flex-col text-left p-3">
+                                                                    <div className="mb-2">
+                                                                        <TooltipRow label={`Modal Cina (${simQty} pcs):`} value={`Rp ${formatNumber(Math.round(totalSimModalCina))}`} isBold />
+                                                                    </div>
+                                                                    <div className="h-px bg-border/50 my-1 w-full" />
+                                                                    <div className="space-y-1 py-1">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-[10px] font-bold text-[#EE4D2D] uppercase tracking-wider">Shopee</span>
+                                                                            <TooltipRow label="Biaya:" value={`+Rp ${formatNumber(Math.round(shopeeFee * simQty))}`} isNegative />
+                                                                            <TooltipRow label="Total Modal:" value={`Rp ${formatNumber(Math.round(totalSimModalShopee))}`} isTotal />
                                                                         </div>
-                                                                        <div className="flex items-center justify-between gap-3 w-full" title="Total Simulasi Tokped">
-                                                                            <span className="text-[9px] font-bold text-[#00AA5B] uppercase tracking-wider">Tokped</span>
-                                                                            <span className={cn(
-                                                                                "text-xs font-black whitespace-nowrap",
-                                                                                totalSimLabaTokped >= 0 ? "text-emerald-700" : "text-destructive"
-                                                                            )}>
-                                                                                {totalSimLabaTokped >= 0 ? '+' : ''}Rp {formatNumber(Math.round(totalSimLabaTokped))}
-                                                                            </span>
+                                                                        <div className="h-px bg-border/30 my-1 w-full" />
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-[10px] font-bold text-[#00AA5B] uppercase tracking-wider">Tokopedia</span>
+                                                                            <TooltipRow label="Biaya:" value={`+Rp ${formatNumber(Math.round(tokpedFee * simQty))}`} isNegative />
+                                                                            <TooltipRow label="Total Modal:" value={`Rp ${formatNumber(Math.round(totalSimModalTokped))}`} isTotal />
                                                                         </div>
                                                                     </div>
-                                                                )
-                                                            })() : (
-                                                                <span className="text-muted-foreground/30 font-mono text-xs">-</span>
-                                                            )}
-                                                        </TableCell>
+                                                                </div>
+                                                            )
+
+                                                            return (
+                                                                <>
+                                                                    <TableCell align="right" className="px-2 align-middle">
+                                                                        <div className="flex flex-col items-end w-full gap-[3px]">
+                                                                            <span className="text-xs font-bold whitespace-nowrap text-foreground tracking-tight" title="Total Modal Cina">
+                                                                                {formatNumber(Math.round(totalSimModal))}
+                                                                            </span>
+                                                                            <span className="text-[11px] font-black whitespace-nowrap text-emerald-600 tracking-tight bg-emerald-50 px-1 rounded-sm" title="Total Omset">
+                                                                                {formatNumber(Math.round(totalSimOmset))}
+                                                                            </span>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell align="right" className="px-2 align-middle">
+                                                                        <HoverLabaTooltip content={modalMpTooltip}>
+                                                                            <div className="flex flex-col items-end w-full gap-[2px] cursor-help">
+                                                                                <div className="flex items-center gap-1.5" title="Total Modal Shopee">
+                                                                                    <span className="text-[8px] font-black text-[#EE4D2D] uppercase border border-[#EE4D2D]/30 px-1 rounded-sm leading-none py-0.5">SHP</span>
+                                                                                    <span className="text-[10px] font-bold whitespace-nowrap text-foreground tracking-tight">
+                                                                                        {formatNumber(Math.round(totalSimModalShopee))}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1.5" title="Total Modal Tokopedia">
+                                                                                    <span className="text-[8px] font-black text-[#00AA5B] uppercase border border-[#00AA5B]/30 px-1 rounded-sm leading-none py-0.5">TKP</span>
+                                                                                    <span className="text-[10px] font-bold whitespace-nowrap text-foreground tracking-tight">
+                                                                                        {formatNumber(Math.round(totalSimModalTokped))}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="w-8 h-px bg-border/50 my-0.5" />
+                                                                                <span className="text-[10px] font-black whitespace-nowrap text-emerald-600 tracking-tight bg-emerald-50 px-1 rounded-sm" title="Total Omset">
+                                                                                    {formatNumber(Math.round(totalSimOmset))}
+                                                                                </span>
+                                                                            </div>
+                                                                        </HoverLabaTooltip>
+                                                                    </TableCell>
+                                                                    <TableCell align="right" className="px-2">
+                                                                        <div className="flex flex-col gap-1 items-end w-full min-w-[120px]">
+                                                                            <div className="flex items-center justify-between gap-3 w-full border-b border-border/50 pb-0.5" title="Total Simulasi Shopee">
+                                                                                <span className="text-[9px] font-bold text-[#EE4D2D] uppercase tracking-wider">Shopee</span>
+                                                                                <span className={cn(
+                                                                                    "text-xs font-black whitespace-nowrap",
+                                                                                    totalSimLabaShopee >= 0 ? "text-emerald-700" : "text-destructive"
+                                                                                )}>
+                                                                                    {totalSimLabaShopee >= 0 ? '+' : ''}{formatNumber(Math.round(totalSimLabaShopee))}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between gap-3 w-full" title="Total Simulasi Tokped">
+                                                                                <span className="text-[9px] font-bold text-[#00AA5B] uppercase tracking-wider">Tokped</span>
+                                                                                <span className={cn(
+                                                                                    "text-xs font-black whitespace-nowrap",
+                                                                                    totalSimLabaTokped >= 0 ? "text-emerald-700" : "text-destructive"
+                                                                                )}>
+                                                                                    {totalSimLabaTokped >= 0 ? '+' : ''}{formatNumber(Math.round(totalSimLabaTokped))}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </TableCell>
+                                                                </>
+                                                            )
+                                                        })() : (
+                                                            <>
+                                                                <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                            </>
+                                                        )}
                                                     </>
                                                 )}
 
@@ -2210,7 +2446,7 @@ export default function StoreProductList({
                                 ))
                             ) : (
                                 <TableEmpty
-                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? (showQuantityColumn ? 3 : 2) : 0) + (hideSkuColumn ? 0 : 1) + (!showPurchaseColumns ? 1 : 0) + (isAnalisaHarga ? 2 : 0) + (isAnalisaHarga ? 3 : 4)}
+                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? (showQuantityColumn ? 3 : 2) : 0) + (hideSkuColumn ? 0 : 1) + (!showPurchaseColumns ? 1 : 0) + (isAnalisaHarga ? 3 : 0) + (isAnalisaHarga ? 3 : 4)}
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk ditemukan."
                                     description={searchTerm ? (
@@ -2242,7 +2478,7 @@ export default function StoreProductList({
             {/* Simulation Results Highlight - Now Standalone */}
             {/* Simulation Results Highlight - Now Standalone */}
             {isAnalisaHarga && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     {/* Shopee Summary Card */}
                     <div className="bg-white border border-[#EE4D2D]/20 rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="p-4 border-b border-[#EE4D2D]/10 flex items-center justify-between bg-orange-50/30">
@@ -2252,9 +2488,6 @@ export default function StoreProductList({
                                 </div>
                                 <h3 className="text-sm font-black text-[#EE4D2D] uppercase tracking-widest">Ringkasan Shopee</h3>
                             </div>
-                            <span className="text-[10px] bg-white px-2 py-0.5 rounded-full text-[#EE4D2D] font-bold border border-[#EE4D2D]/20 uppercase tracking-wider">
-                                {analysis.count} Produk
-                            </span>
                         </div>
 
                         <div className="p-6 space-y-6">
@@ -2301,14 +2534,6 @@ export default function StoreProductList({
                                 <h3 className="text-sm font-black text-[#00AA5B] uppercase tracking-widest">Ringkasan Tokopedia</h3>
                             </div>
                             <div className="flex items-center gap-2">
-                                {analysis.count > 0 && (
-                                    <button
-                                        onClick={handleClearSimulation}
-                                        className="text-[9px] h-6 px-3 bg-white text-red-600 hover:bg-red-50 font-bold uppercase tracking-tighter rounded-full border border-red-100 transition-all flex items-center gap-1 shadow-sm"
-                                    >
-                                        <X className="w-3 h-3" /> Reset
-                                    </button>
-                                )}
                             </div>
                         </div>
 
@@ -2341,6 +2566,54 @@ export default function StoreProductList({
                                 <div className="p-4 rounded-xl bg-orange-50/30 border border-orange-100/50 hover:bg-orange-50/60 transition-colors">
                                     <p className="text-[10px] font-bold text-orange-600/70 uppercase tracking-wider mb-1">Total Modal</p>
                                     <p className="text-xl font-bold text-orange-800">{formatCurrency(Math.round(analysis.tokped.modal))}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Cina Summary Card */}
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-400">
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
+                                    <span className="text-xl">🇨🇳</span>
+                                </div>
+                                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Ringkasan CINA</h3>
+                            </div>
+                            <span className="text-[10px] bg-white px-2 py-0.5 rounded-full text-slate-500 font-bold border border-slate-200 uppercase tracking-wider">
+                                Tanpa Potongan MP
+                            </span>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 transition-all hover:bg-slate-100/80">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Laba Tanpa Potongan (Cina)</p>
+                                    {analysis.cina.modal > 0 && (
+                                        <span className={cn(
+                                            "px-3 py-1 rounded-full text-xs font-black shadow-sm",
+                                            analysis.cina.laba >= 0 ? "bg-slate-800 text-white" : "bg-red-500 text-white"
+                                        )}>
+                                            {analysis.cina.laba >= 0 ? '+' : ''}{((analysis.cina.laba / (analysis.cina.modal || 1)) * 100).toFixed(1)}%
+                                        </span>
+                                    )}
+                                </div>
+                                <p className={cn(
+                                    "text-4xl font-black tracking-tighter",
+                                    analysis.cina.laba >= 0 ? "text-slate-800" : "text-red-700"
+                                )}>
+                                    {formatCurrency(Math.round(analysis.cina.laba))}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Omset</p>
+                                    <p className="text-xl font-bold text-slate-700">{formatCurrency(Math.round(analysis.cina.omset))}</p>
+                                </div>
+                                <div className="p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Modal</p>
+                                    <p className="text-xl font-bold text-slate-700">{formatCurrency(Math.round(analysis.cina.modal))}</p>
                                 </div>
                             </div>
                         </div>

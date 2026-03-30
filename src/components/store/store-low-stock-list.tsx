@@ -576,6 +576,39 @@ export default function StoreLowStockList({
                                 </div>
 
                                 <div className="space-y-1">
+                                    <p className="text-[10px] text-blue-600 uppercase font-black tracking-wider">Harga Beli Cina</p>
+                                    <div className="flex flex-col">
+                                        {product.purchasePrice ? (() => {
+                                            const originalPrice = product.purchasePrice || 0
+                                            const currency = product.purchaseCurrency || 'IDR'
+                                            let priceIdr = originalPrice
+                                            let symbol = ''
+                                            
+                                            if (currency === 'CNY') {
+                                                if (kursYuan) priceIdr *= kursYuan
+                                                symbol = '¥'
+                                            } else if (currency === 'USD') {
+                                                if (kursUsd) priceIdr *= kursUsd
+                                                symbol = '$'
+                                            }
+
+                                            return (
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-black text-blue-600">{formatCurrency(Math.round(priceIdr))}</span>
+                                                    {currency !== 'IDR' && (
+                                                        <span className="text-[9px] text-muted-foreground font-bold italic uppercase tracking-tighter">
+                                                            {symbol}{formatNumber(originalPrice)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )
+                                        })() : (
+                                            <span className="text-sm font-black text-muted-foreground/30">—</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
                                     <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Supplier</p>
                                     <div className="scale-90 origin-top-left -ml-1">
                                         <SupplierPicker
@@ -680,6 +713,9 @@ export default function StoreLowStockList({
                                 <TableHead align="right" onClick={() => handleSort('price')} className="cursor-pointer hover:bg-muted/80 transition-colors">
                                     Harga Jual <SortIcon columnKey="price" sortConfig={sortConfig} />
                                 </TableHead>
+                                <TableHead align="right">
+                                    Harga Beli Cina
+                                </TableHead>
                                 <TableHead align="right" onClick={() => handleSort('stok')} className="cursor-pointer hover:bg-muted/80 transition-colors">
                                     Stok <SortIcon columnKey="stok" sortConfig={sortConfig} />
                                 </TableHead>
@@ -761,7 +797,7 @@ export default function StoreLowStockList({
                                                         <span className="text-[10px] text-muted-foreground font-mono bg-muted/50 px-1 rounded">
                                                             ID: {product.wcId} {product.weight ? `• ${product.weight} kg` : ''}
                                                         </span>
-                                                        <div className="scale-90 origin-left">
+                                                        <div className="scale-90 origin-left max-w-[200px]">
                                                             <KeteranganEdit
                                                                 wcId={product.wcId}
                                                                 initialValue={product.keterangan}
@@ -858,6 +894,35 @@ export default function StoreLowStockList({
                                                 <div className="text-[10px] text-muted-foreground line-through decoration-destructive/30">
                                                     {formatCurrency(product.regularPrice)}
                                                 </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="right" className="whitespace-nowrap">
+                                            {product.purchasePrice ? (() => {
+                                                const originalPrice = product.purchasePrice || 0
+                                                const currency = product.purchaseCurrency || 'IDR'
+                                                let priceIdr = originalPrice
+                                                let symbol = ''
+                                                
+                                                if (currency === 'CNY') {
+                                                    if (kursYuan) priceIdr *= kursYuan
+                                                    symbol = '¥'
+                                                } else if (currency === 'USD') {
+                                                    if (kursUsd) priceIdr *= kursUsd
+                                                    symbol = '$'
+                                                }
+
+                                                return (
+                                                    <div className="flex flex-col items-end">
+                                                        <div className="text-blue-600 text-sm font-black">{formatCurrency(Math.round(priceIdr))}</div>
+                                                        {currency !== 'IDR' && (
+                                                            <div className="text-[10px] text-muted-foreground font-bold italic uppercase tracking-tighter">
+                                                                {symbol}{formatNumber(originalPrice)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })() : (
+                                                <span className="text-muted-foreground/30 text-[10px] font-bold tracking-widest">—</span>
                                             )}
                                         </TableCell>
                                         <TableCell align="right" className="whitespace-nowrap">

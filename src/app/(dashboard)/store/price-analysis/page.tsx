@@ -51,6 +51,8 @@ async function PriceAnalysisContent() {
             shopeeServiceFee={shopeeServiceFee}
             tokpedAdminFee={tokpedAdminFee}
             tokpedServiceFee={tokpedServiceFee}
+            showExportButton={true}
+            exportFilenamePrefix="ANALISA HARGA"
         />
     );
 }

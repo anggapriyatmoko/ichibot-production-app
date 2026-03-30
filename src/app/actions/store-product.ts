@@ -1697,34 +1697,40 @@ export async function getStoreProductBySku(sku: string) {
  */
 
 /**
- * Update simulation quantity for a store product
+ * Update simulation settings (qty and optional price) for a store product
  */
-export async function updateStoreProductSimulationQty(wcId: number, qty: number) {
+export async function updateStoreProductSimulationSettings(wcId: number, qty: number, price: number | null) {
     try {
         await (prisma.storeProduct as any).update({
             where: { wcId },
-            data: { simulationQty: qty }
+            data: { 
+                simulationQty: qty,
+                simulationPrice: price
+            }
         })
         revalidatePath('/store/price-analysis')
         return { success: true }
     } catch (error: any) {
-        console.error('Error updating simulation qty:', error)
+        console.error('Error updating simulation settings:', error)
         return { success: false, error: error.message }
     }
 }
 
 /**
- * Clear simulation quantity for ALL store products
+ * Clear simulation quantity and price for ALL store products
  */
-export async function clearAllStoreProductSimulationQty() {
+export async function clearAllStoreProductSimulationSettings() {
     try {
         await (prisma.storeProduct as any).updateMany({
-            data: { simulationQty: 0 }
+            data: { 
+                simulationQty: 0,
+                simulationPrice: null
+            }
         })
         revalidatePath('/store/price-analysis')
         return { success: true }
     } catch (error: any) {
-        console.error('Error clearing all simulation qty:', error)
+        console.error('Error clearing all simulation settings:', error)
         return { success: false, error: error.message }
     }
 }

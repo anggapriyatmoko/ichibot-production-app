@@ -169,6 +169,8 @@ export default function OrderHistoryView({
                     hideCategory={true}
                     hideProductEdit={true}
                     hidePurchaseEdit={true}
+                    useProductPriceOnly={true}
+                    hideResetButton={true}
                     showExportButton={true}
                     exportFilenamePrefix="HISTORY"
                 />
