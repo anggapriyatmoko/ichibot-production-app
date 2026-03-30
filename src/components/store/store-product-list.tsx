@@ -2377,8 +2377,9 @@ export default function StoreProductList({
                                                                     <TableCell align="right" className="px-2 align-middle">
                                                                         <div className="flex flex-col items-end w-full gap-[3px]">
                                                                             <span className="text-xs font-bold whitespace-nowrap text-foreground tracking-tight" title="Total Modal Cina">
-                                                                                {formatNumber(Math.round(totalSimModal))}
+                                                                                {formatNumber(Math.round(totalSimModalCina))}
                                                                             </span>
+                                                                            <span className="text-[8px] font-black text-muted-foreground/60 uppercase border border-border/50 px-1 rounded-sm leading-none py-0.5" title="Label Cina">CINA</span>
                                                                             <span className="text-[11px] font-black whitespace-nowrap text-emerald-600 tracking-tight bg-emerald-50 px-1 rounded-sm" title="Total Omset">
                                                                                 {formatNumber(Math.round(totalSimOmset))}
                                                                             </span>
