@@ -532,19 +532,26 @@ export default function StoreLowStockList({
                                             const shopeeFee = sellPrice * (shopeeAdminFee + shopeeServiceFee) / 100
                                             const tokpedFee = sellPrice * (tokpedAdminFee + tokpedServiceFee) / 100
 
+                                            const labaCina = sellPrice - costPerPcs
                                             const labaShopee = sellPrice - costPerPcs - shopeeFee
                                             const labaTokped = sellPrice - costPerPcs - tokpedFee
 
                                             return (
                                                 <>
                                                     <div className="flex items-center justify-between text-[11px]">
-                                                        <span className="font-bold text-[#EE4D2D]">Shopee</span>
+                                                        <span className="text-sm leading-none">🇨🇳</span>
+                                                        <span className={cn("font-black", labaCina >= 0 ? "text-emerald-600" : "text-destructive")}>
+                                                            {labaCina >= 0 ? '+' : ''}{formatCurrency(Math.round(labaCina))}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-[11px]">
+                                                        <img src="/icons8-shopee.svg" alt="Shopee" className="w-3.5 h-3.5" />
                                                         <span className={cn("font-black", labaShopee >= 0 ? "text-emerald-600" : "text-destructive")}>
                                                             {labaShopee >= 0 ? '+' : ''}{formatCurrency(Math.round(labaShopee))}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center justify-between text-[11px]">
-                                                        <span className="font-bold text-[#00AA5B]">Tokped</span>
+                                                        <img src="/icons8-tiktok.svg" alt="TikTok" className="w-3.5 h-3.5" />
                                                         <span className={cn("font-black", labaTokped >= 0 ? "text-emerald-600" : "text-destructive")}>
                                                             {labaTokped >= 0 ? '+' : ''}{formatCurrency(Math.round(labaTokped))}
                                                         </span>
@@ -576,10 +583,11 @@ export default function StoreLowStockList({
                                 </div>
 
                                 <div className="space-y-1">
-                                    <p className="text-[10px] text-blue-600 uppercase font-black tracking-wider">Harga Beli Cina</p>
+                                    <p className="text-[10px] text-blue-600 uppercase font-black tracking-wider">Modal Cina /Pcs</p>
                                     <div className="flex flex-col">
                                         {product.purchasePrice ? (() => {
                                             const originalPrice = product.purchasePrice || 0
+                                            const paket = product.purchasePackage || 1
                                             const currency = product.purchaseCurrency || 'IDR'
                                             let priceIdr = originalPrice
                                             let symbol = ''
@@ -592,9 +600,12 @@ export default function StoreLowStockList({
                                                 symbol = '$'
                                             }
 
+                                            const totalCapital = priceIdr * paket * (1 + (additionalFee || 0) / 100)
+                                            const costPerPcs = totalCapital / ((paket * (product.purchaseQty || 1)) || 1)
+
                                             return (
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-blue-600">{formatCurrency(Math.round(priceIdr))}</span>
+                                                    <span className="text-sm font-black text-blue-600">{formatCurrency(Math.round(costPerPcs))}</span>
                                                     {currency !== 'IDR' && (
                                                         <span className="text-[9px] text-muted-foreground font-bold italic uppercase tracking-tighter">
                                                             {symbol}{formatNumber(originalPrice)}
@@ -714,7 +725,7 @@ export default function StoreLowStockList({
                                     Harga Jual <SortIcon columnKey="price" sortConfig={sortConfig} />
                                 </TableHead>
                                 <TableHead align="right">
-                                    Harga Beli Cina
+                                    Modal Cina /Pcs
                                 </TableHead>
                                 <TableHead align="right" onClick={() => handleSort('stok')} className="cursor-pointer hover:bg-muted/80 transition-colors">
                                     Stok <SortIcon columnKey="stok" sortConfig={sortConfig} />
@@ -899,6 +910,7 @@ export default function StoreLowStockList({
                                         <TableCell align="right" className="whitespace-nowrap">
                                             {product.purchasePrice ? (() => {
                                                 const originalPrice = product.purchasePrice || 0
+                                                const paket = product.purchasePackage || 1
                                                 const currency = product.purchaseCurrency || 'IDR'
                                                 let priceIdr = originalPrice
                                                 let symbol = ''
@@ -911,9 +923,12 @@ export default function StoreLowStockList({
                                                     symbol = '$'
                                                 }
 
+                                                const totalCapital = priceIdr * paket * (1 + (additionalFee || 0) / 100)
+                                                const costPerPcs = totalCapital / ((paket * (product.purchaseQty || 1)) || 1)
+
                                                 return (
                                                     <div className="flex flex-col items-end">
-                                                        <div className="text-blue-600 text-sm font-black">{formatCurrency(Math.round(priceIdr))}</div>
+                                                        <div className="text-blue-600 text-sm font-black">{formatCurrency(Math.round(costPerPcs))}</div>
                                                         {currency !== 'IDR' && (
                                                             <div className="text-[10px] text-muted-foreground font-bold italic uppercase tracking-tighter">
                                                                 {symbol}{formatNumber(originalPrice)}
@@ -952,22 +967,59 @@ export default function StoreLowStockList({
                                                 const shopeeFee = sellPrice * (shopeeAdminFee + shopeeServiceFee) / 100
                                                 const tokpedFee = sellPrice * (tokpedAdminFee + tokpedServiceFee) / 100
 
+                                                const labaCina = sellPrice - costPerPcs
                                                 const labaShopee = sellPrice - costPerPcs - shopeeFee
                                                 const labaTokped = sellPrice - costPerPcs - tokpedFee
 
                                                 return (
-                                                    <div className="flex flex-col items-end gap-0.5 min-w-[100px]">
-                                                        <div className="flex items-center gap-1.5 justify-between w-full">
-                                                            <span className="text-[9px] font-black text-[#EE4D2D] uppercase tracking-tighter">Shopee</span>
-                                                            <span className={cn("text-xs font-black", labaShopee >= 0 ? "text-emerald-600" : "text-destructive")}>
-                                                                {labaShopee >= 0 ? '+' : ''}{formatCurrency(Math.round(labaShopee))}
-                                                            </span>
+                                                    <div className="flex flex-col items-end gap-0.5 min-w-[120px]">
+                                                        <div className="flex items-center gap-1.5 justify-between w-full pb-0.5 border-b border-border/50">
+                                                            <span className="text-sm leading-none">🇨🇳</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                {sellPrice > 0 && (
+                                                                    <span className={cn(
+                                                                        "px-1 py-0.5 rounded text-[9px] font-bold",
+                                                                        labaCina >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                                                    )}>
+                                                                        {((labaCina / sellPrice) * 100).toFixed(1)}%
+                                                                    </span>
+                                                                )}
+                                                                <span className={cn("text-xs font-black", labaCina >= 0 ? "text-emerald-600" : "text-destructive")}>
+                                                                    {labaCina >= 0 ? '+' : ''}{formatCurrency(Math.round(labaCina))}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 justify-between w-full pb-0.5 border-b border-border/50">
+                                                            <img src="/icons8-shopee.svg" alt="Shopee" className="w-3.5 h-3.5" />
+                                                            <div className="flex items-center gap-1.5">
+                                                                {sellPrice > 0 && (
+                                                                    <span className={cn(
+                                                                        "px-1 py-0.5 rounded text-[9px] font-bold",
+                                                                        labaShopee >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                                                    )}>
+                                                                        {((labaShopee / sellPrice) * 100).toFixed(1)}%
+                                                                    </span>
+                                                                )}
+                                                                <span className={cn("text-xs font-black", labaShopee >= 0 ? "text-emerald-600" : "text-destructive")}>
+                                                                    {labaShopee >= 0 ? '+' : ''}{formatCurrency(Math.round(labaShopee))}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                         <div className="flex items-center gap-1.5 justify-between w-full">
-                                                            <span className="text-[9px] font-black text-[#00AA5B] uppercase tracking-tighter">Tokped</span>
-                                                            <span className={cn("text-xs font-black", labaTokped >= 0 ? "text-emerald-600" : "text-destructive")}>
-                                                                {labaTokped >= 0 ? '+' : ''}{formatCurrency(Math.round(labaTokped))}
-                                                            </span>
+                                                            <img src="/icons8-tiktok.svg" alt="TikTok" className="w-3.5 h-3.5" />
+                                                            <div className="flex items-center gap-1.5">
+                                                                {sellPrice > 0 && (
+                                                                    <span className={cn(
+                                                                        "px-1 py-0.5 rounded text-[9px] font-bold",
+                                                                        labaTokped >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                                                    )}>
+                                                                        {((labaTokped / sellPrice) * 100).toFixed(1)}%
+                                                                    </span>
+                                                                )}
+                                                                <span className={cn("text-xs font-black", labaTokped >= 0 ? "text-emerald-600" : "text-destructive")}>
+                                                                    {labaTokped >= 0 ? '+' : ''}{formatCurrency(Math.round(labaTokped))}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )
@@ -1053,6 +1105,7 @@ export default function StoreLowStockList({
                 product={purchaseTarget || { wcId: 0, name: '' }}
                 kursYuan={kursYuan}
                 additionalFee={additionalFee}
+                simulationQty={purchaseTarget?.simulationQty || 0}
             />
         </div>
     )

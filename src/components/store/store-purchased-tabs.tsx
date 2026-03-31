@@ -227,7 +227,6 @@ export default function StorePurchasedTabs({
                 tokpedServiceFee={tokpedServiceFee}
                 isAnalisaHarga={true}
                 hideSkuColumn={true}
-                hideLabaColumn={true}
                 hideSimulasiColumn={true}
                 hideStokColumn={true}
                 hideCategory={true}

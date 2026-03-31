@@ -14,6 +14,8 @@ async function StoreProductContent() {
             initialProducts={products}
             showSupplierColumn={false}
             showPurchasedColumn={false}
+            showExportButton={true}
+            exportFilenamePrefix="PRODUK STORE"
         />
     );
 }

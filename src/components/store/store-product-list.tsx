@@ -35,15 +35,14 @@ import {
     TableMobileCardFooter
 } from '@/components/ui/table'
 
-function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { key: string, direction: 'asc' | 'desc' | null } }) {
+function SortIcon({ columnKey, sortConfig, className }: { columnKey: string, sortConfig: { key: string, direction: 'asc' | 'desc' | null }, className?: string }) {
     if (sortConfig.key !== columnKey || !sortConfig.direction) {
-        return <ArrowUpDown className="w-3 h-3 text-muted-foreground/30" />
+        return <ArrowUpDown className={cn("w-3 h-3 text-muted-foreground/30", className)} />
     }
     return sortConfig.direction === 'asc'
-        ? <ArrowUp className="w-3 h-3 text-primary" />
-        : <ArrowDown className="w-3 h-3 text-primary" />
+        ? <ArrowUp className={cn("w-3 h-3 text-primary", className)} />
+        : <ArrowDown className={cn("w-3 h-3 text-primary", className)} />
 }
-
 function HoverLabaTooltip({ content, children }: { content: React.ReactNode, children: React.ReactNode }) {
     const [isHovered, setIsHovered] = useState(false)
     const [coords, setCoords] = useState({ x: 0, y: 0, isTop: false, alignRight: false })
@@ -160,6 +159,22 @@ export default function StoreProductList({
 
 
 
+
+    const TooltipRow = ({ label, value, isNegative, isBold, isTotal }: { label: string, value: string | React.ReactNode, isNegative?: boolean, isBold?: boolean, isTotal?: boolean }) => (
+        <div className="flex justify-between gap-6 items-center mb-1 last:mb-0">
+            <span className={cn(
+                "text-muted-foreground font-medium flex-shrink text-[11px]",
+                isTotal && "font-bold text-foreground"
+            )}>{label}</span>
+            <span className={cn(
+                "font-mono font-medium whitespace-nowrap flex-shrink-0 text-[11px]",
+                isNegative && "text-destructive",
+                isBold && "font-bold",
+                isTotal && "font-black"
+            )}>{value}</span>
+        </div>
+    )
+
     const [searchTerm, setSearchTerm] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
@@ -247,7 +262,7 @@ export default function StoreProductList({
     const handleSimulationChange = async (wcId: number, qty: number) => {
         const newQty = Math.max(0, qty)
         setSimulationData(prev => ({ ...prev, [wcId]: newQty }))
-        
+
         let price = simulationPriceData[wcId] !== undefined ? simulationPriceData[wcId] : null
         await updateStoreProductSimulationSettings(wcId, newQty, price)
     }
@@ -257,7 +272,7 @@ export default function StoreProductList({
         if (val !== '') {
             newPrice = parseInt(val) || 0
         }
-        
+
         setSimulationPriceData(prev => {
             const next = { ...prev }
             if (newPrice === null) {
@@ -268,7 +283,7 @@ export default function StoreProductList({
             localStorage.setItem('simulationPriceDataStorage', JSON.stringify(next))
             return next
         })
-        
+
         const qty = simulationData[wcId] || 0
         await updateStoreProductSimulationSettings(wcId, qty, newPrice)
     }
@@ -534,13 +549,18 @@ export default function StoreProductList({
                     'Supplier': p.storeName || '',
                     'Stok': formatExcelNum(p.stockQuantity || 0),
                     'Harga Jual': formatExcelNum(hargaJual),
-                    'Harga Beli (Satuan)': formatExcelNum(hargaBeliPerPcs),
-                    'Harga Beli (Total)': formatExcelNum(totalHargaBeli),
-                    'Jumlah Beli': formatExcelNum(totalQty),
-                    'Laba Satuan Shopee': formatExcelNum(labaShp),
-                    'Laba Satuan Tokopedia': formatExcelNum(labaTkp),
-                    'Total Laba Shopee': formatExcelNum(totalLabaShp),
-                    'Total Laba Tokopedia': formatExcelNum(totalLabaTkp),
+                }
+
+                if (showPurchaseColumns) {
+                    baseData['Harga Beli (Satuan)'] = formatExcelNum(hargaBeliPerPcs)
+                    baseData['Harga Beli (Total)'] = formatExcelNum(totalHargaBeli)
+                    baseData['Jumlah Beli'] = formatExcelNum(totalQty)
+                    baseData['Laba Satuan Shopee'] = formatExcelNum(labaShp)
+                    baseData['Laba Satuan Tokopedia'] = formatExcelNum(labaTkp)
+                    baseData['Total Laba Shopee'] = formatExcelNum(totalLabaShp)
+                    baseData['Total Laba Tokopedia'] = formatExcelNum(totalLabaTkp)
+                } else {
+                    baseData['Data Gudang'] = p.backupGudang || ''
                 }
 
                 if (isAnalisaHarga) {
@@ -584,7 +604,7 @@ export default function StoreProductList({
         // Filter out 'variable' type to avoid double counting stock (count only simple and variations)
         const physicalProducts = localProducts.filter(p => p.type !== 'variable')
 
-        const excludedCategories = ['JASA ICHIBOT', 'PART ICHIBOT', 'ROBOT ICHIBOT']
+        const excludedCategories = ['JASA', 'PART', 'ROBOT ICHIBOT', 'PART ICHIBOT']
         const stats = {
             totalProducts: physicalProducts.length,
             outOfStock: physicalProducts.filter(p => (p.stockQuantity || 0) <= 0).length,
@@ -727,7 +747,7 @@ export default function StoreProductList({
                         }
                     }
                 })
-            } else {
+            } else if (hideSimulasiColumn || useProductPriceOnly) {
                 // Priority 2: Use list items (for History or Ordered view where simulation is hidden)
 
                 physicalProducts.forEach(p => {
@@ -937,6 +957,16 @@ export default function StoreProductList({
                     }
                     aValue = getSimLabaValue(a)
                     bValue = getSimLabaValue(b)
+                } else if (sortConfig.key === 'simQty') {
+                    aValue = simulationData[a.wcId] || 0
+                    bValue = simulationData[b.wcId] || 0
+                } else if (sortConfig.key === 'simPrice') {
+                    const getSimPrice = (p: any) => {
+                        const simPriceInput = simulationPriceData[p.wcId]
+                        return (simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : (p.price || 0)
+                    }
+                    aValue = getSimPrice(a)
+                    bValue = getSimPrice(b)
                 }
 
                 // Push empty values to the bottom
@@ -1031,6 +1061,16 @@ export default function StoreProductList({
                         }
                         aValue = getSimLabaValue(a)
                         bValue = getSimLabaValue(b)
+                    } else if (sortConfig.key === 'simQty') {
+                        aValue = simulationData[a.wcId] || 0
+                        bValue = simulationData[b.wcId] || 0
+                    } else if (sortConfig.key === 'simPrice') {
+                        const getSimPrice = (p: any) => {
+                            const simPriceInput = simulationPriceData[p.wcId]
+                            return (simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : (p.price || 0)
+                        }
+                        aValue = getSimPrice(a)
+                        bValue = getSimPrice(b)
                     }
 
                     // Push empty values to the bottom
@@ -1490,9 +1530,12 @@ export default function StoreProductList({
                                                         const labaTkp = (product.labaPerPcs || 0) - tokpedFee
 
                                                         return (
-                                                            <div className="space-y-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[8px] font-black text-[#EE4D2D] uppercase w-8">SHP</span>
+                                                            <div className="space-y-1 bg-muted/30 p-1.5 rounded-md border border-border/40">
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <img src="/icons8-shopee.svg" alt="Shopee" className="w-3.5 h-3.5" />
+                                                                        <span className="text-[8px] font-black text-[#EE4D2D] uppercase leading-none opacity-60">SHP</span>
+                                                                    </div>
                                                                     <span className={cn(
                                                                         "text-xs font-black",
                                                                         labaShp >= 0 ? "text-emerald-600" : "text-destructive"
@@ -1500,8 +1543,12 @@ export default function StoreProductList({
                                                                         {formatCurrency(Math.round(labaShp))}
                                                                     </span>
                                                                 </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[8px] font-black text-[#00AA5B] uppercase w-8">TKP</span>
+                                                                <div className="h-px bg-border/40 w-full" />
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <img src="/icons8-tiktok.svg" alt="TikTok" className="w-3.5 h-3.5" />
+                                                                        <span className="text-[8px] font-black text-[#00AA5B] uppercase leading-none opacity-60">TKP</span>
+                                                                    </div>
                                                                     <span className={cn(
                                                                         "text-xs font-black",
                                                                         labaTkp >= 0 ? "text-emerald-600" : "text-destructive"
@@ -1666,21 +1713,21 @@ export default function StoreProductList({
                                                 <SortIcon columnKey="jumlahBeli" sortConfig={sortConfig} />
                                             </TableHead>
                                         )}
-                                        <TableHead
-                                            align="right"
-                                            className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
-                                            onClick={() => handleSort('hargaBeliIdr')}
-                                        >
-                                            Harga Beli
-                                            <SortIcon columnKey="hargaBeliIdr" sortConfig={sortConfig} />
-                                        </TableHead>
+                                        {isAnalisaHarga && (
+                                            <TableHead
+                                                align="right"
+                                                className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
+                                            >
+                                                HARGA BELI
+                                            </TableHead>
+                                        )}
                                         {!hideLabaColumn && (
                                             <TableHead
                                                 align="right"
                                                 className="cursor-pointer hover:bg-muted/80 transition-colors whitespace-nowrap"
                                                 onClick={() => handleSort('labaPerPcs')}
                                             >
-                                                {isAnalisaHarga ? 'Laba (Marketplace)' : 'Laba'}
+                                                {isAnalisaHarga ? 'Laba/pcs' : 'Laba'}
                                                 <SortIcon columnKey="labaPerPcs" sortConfig={sortConfig} />
                                             </TableHead>
                                         )}
@@ -1691,33 +1738,55 @@ export default function StoreProductList({
                                                         <div className="flex flex-col items-center w-full">
                                                             <div className="text-[10px] font-bold text-white uppercase tracking-widest border-b border-white/20 pb-[3px] w-full text-center mb-1">SIMULASI</div>
                                                             <div className="flex w-full text-[9px] font-semibold text-white/90 uppercase gap-2">
-                                                                <span className="flex-1 text-right">QTY</span>
-                                                                <span className="flex-1 text-left">HARGA</span>
+                                                                <button
+                                                                    onClick={() => handleSort('simQty')}
+                                                                    className="flex-1 flex items-center justify-end gap-1 hover:text-white transition-colors group/sort"
+                                                                >
+                                                                    QTY
+                                                                    <SortIcon
+                                                                        columnKey="simQty"
+                                                                        sortConfig={sortConfig}
+                                                                        className={cn(
+                                                                            sortConfig.key === 'simQty' && sortConfig.direction ? "text-white" : "text-white/30 group-hover/sort:text-white/60"
+                                                                        )}
+                                                                    />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleSort('simPrice')}
+                                                                    className="flex-1 flex items-center justify-start gap-1 hover:text-white transition-colors group/sort"
+                                                                >
+                                                                    HARGA
+                                                                    <SortIcon
+                                                                        columnKey="simPrice"
+                                                                        sortConfig={sortConfig}
+                                                                        className={cn(
+                                                                            sortConfig.key === 'simPrice' && sortConfig.direction ? "text-white" : "text-white/30 group-hover/sort:text-white/60"
+                                                                        )}
+                                                                    />
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </TableHead>
                                                 )}
-                                                <TableHead align="right" className="w-28 px-2 whitespace-nowrap">
-                                                    <div className="flex flex-col items-end gap-[2px]">
-                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">TOTAL MODAL</span>
-                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">CINA</span>
-                                                        <span className="text-[9px] font-bold text-emerald-600/70 uppercase leading-none">OMSET</span>
+                                                <TableHead align="right" className="w-32 px-2 whitespace-nowrap bg-orange-50/30">
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className="text-[9px] font-bold text-orange-600/70 uppercase leading-none">TOTAL MODAL</span>
                                                     </div>
                                                 </TableHead>
-                                                <TableHead align="right" className="w-28 px-2 whitespace-nowrap">
-                                                    <div className="flex flex-col items-end gap-[2px]">
-                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">TOTAL MODAL</span>
-                                                        <span className="text-[9px] font-bold text-muted-foreground uppercase leading-none">MARKETPLACE</span>
-                                                        <span className="text-[9px] font-bold text-emerald-600/70 uppercase leading-none">OMSET</span>
+                                                <TableHead align="right" className="w-24 px-2 whitespace-nowrap bg-emerald-50/30">
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className="text-[9px] font-bold text-emerald-600/70 uppercase leading-none">TOTAL OMSET</span>
                                                     </div>
                                                 </TableHead>
                                                 <TableHead
                                                     align="right"
-                                                    className="w-40 px-2 font-black whitespace-nowrap cursor-pointer hover:bg-muted/80 transition-colors"
+                                                    className="w-36 px-2 font-black whitespace-nowrap cursor-pointer hover:bg-muted/80 transition-colors bg-emerald-50/50"
                                                     onClick={() => handleSort('totalSimLaba')}
                                                 >
-                                                    LABA TOTAL
-                                                    <SortIcon columnKey="totalSimLaba" sortConfig={sortConfig} />
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className="text-[9px] font-bold text-emerald-800 uppercase leading-none">LABA TOTAL</span>
+
+                                                    </div>
                                                 </TableHead>
                                             </>
                                         )}
@@ -2030,72 +2099,155 @@ export default function StoreProductList({
                                                         )}
                                                     </TableCell>
                                                 )}
-                                                <TableCell 
-                                                    align="right" 
-                                                    className={cn(
-                                                        "whitespace-nowrap",
-                                                        !hidePurchaseEdit && "cursor-pointer hover:bg-emerald-50/50 transition-colors"
-                                                    )}
-                                                    onClick={() => !hidePurchaseEdit && setEditPurchaseProduct(product)}
-                                                    title={!hidePurchaseEdit ? "Klik untuk edit Data Pembelian" : undefined}
-                                                >
-                                                    {product.purchasePrice ? (() => {
-                                                        const paket = product.purchasePackage || 1
-                                                        const jumlah = product.purchaseQty || 0
-                                                        let priceInputIdr = product.purchasePrice
-                                                        const currency = product.purchaseCurrency || 'IDR'
-                                                        if (currency === 'CNY' && kursYuan) {
-                                                            priceInputIdr = product.purchasePrice * kursYuan
-                                                        } else if (currency === 'USD' && kursUsd) {
-                                                            priceInputIdr = product.purchasePrice * kursUsd
-                                                        }
-                                                        const totalHargaWithoutFee = priceInputIdr * paket
-                                                        const totalHarga = totalHargaWithoutFee * (1 + (additionalFee || 0) / 100)
-                                                        const perPcs = totalHarga / ((paket * jumlah) || 1)
-                                                        return (
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                <div className="flex flex-col items-end">
-                                                                    <span className="text-[10px] text-muted-foreground uppercase">Harga per Pcs</span>
-                                                                    <div className="flex flex-col items-end">
-                                                                        <span className="text-sm font-semibold text-foreground">
-                                                                            {isAnalisaHarga ? '' : 'Rp '}{formatNumber(Math.round(perPcs))}
-                                                                        </span>
-                                                                        {currency !== 'IDR' && (
-                                                                            <span className="text-[10px] text-muted-foreground font-normal">
-                                                                                {currency === 'CNY' ? '¥' : '$'}{formatNumber(product.purchasePrice)} ({currency === 'CNY' ? 'Yuan' : 'Dollar'})
+                                                {isAnalisaHarga && (
+                                                    <TableCell align="right" className="whitespace-nowrap align-top">
+                                                        {product.purchasePrice && product.price ? (() => {
+                                                            const paket = product.purchasePackage || 1
+                                                            const jumlah = product.purchaseQty || 0
+                                                            let priceInputIdr = product.purchasePrice
+                                                            const currency = product.purchaseCurrency || 'IDR'
+                                                            if (currency === 'CNY' && kursYuan) {
+                                                                priceInputIdr = product.purchasePrice * kursYuan
+                                                            } else if (currency === 'USD' && kursUsd) {
+                                                                priceInputIdr = product.purchasePrice * kursUsd
+                                                            }
+                                                            const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
+                                                            const perPcs = totalHarga / ((paket * jumlah) || 1)
+                                                            const simPriceInput = simulationPriceData[product.wcId]
+                                                            const hargaJual = (simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : (product.price || 0)
+
+                                                            const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
+                                                            const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
+
+                                                            const hppShopee = perPcs + shopeeFee
+                                                            const hppTokped = perPcs + tokpedFee
+
+                                                            const perPcsIDR_noFee = (priceInputIdr * paket) / ((paket * jumlah) || 1)
+                                                            const additionalFeePcs = perPcsIDR_noFee * (additionalFee || 0) / 100
+
+                                                            const cnModalTooltip = (
+                                                                <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100 min-w-[240px]">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                                                                        <span className="text-sm">🇨🇳</span>
+                                                                        <span className="font-black text-slate-700 tracking-tight text-[11px] uppercase">Rincian Modal Satuan Cina</span>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <TooltipRow label="Harga Beli (Satuan)" value={formatCurrency(Math.round(perPcsIDR_noFee))} />
+                                                                        <TooltipRow label={`Additional Fee (${additionalFee}%)`} value={formatCurrency(Math.round(additionalFeePcs))} isNegative />
+                                                                        <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
+                                                                            <TooltipRow label="Modal / pcs" value={formatCurrency(Math.round(perPcs))} isBold isTotal />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )
+
+                                                            const shopeeTooltip = (
+                                                                <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-[#EE4D2D]/10 pb-2">
+                                                                        <img src="/icons8-shopee.svg" alt="SHP" className="w-3.5 h-3.5" />
+                                                                        <span className="font-black text-orange-700 tracking-tight text-[11px] uppercase">Rincian Modal Satuan Shopee</span>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <TooltipRow label="Modal Satuan Cina" value={formatCurrency(Math.round(perPcs))} />
+                                                                        <TooltipRow label={`Shopee Fee (${(shopeeAdminFee || 0) + (shopeeServiceFee || 0)}%)`} value={formatCurrency(shopeeFee)} isNegative />
+                                                                        <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
+                                                                            <TooltipRow label="Total Modal" value={formatCurrency(Math.round(perPcs + shopeeFee))} isTotal />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )
+
+                                                            const tokpedTooltip = (
+                                                                <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-[#00AA5B]/10 pb-2">
+                                                                        <img src="/icons8-tiktok.svg" alt="TKP" className="w-3.5 h-3.5" />
+                                                                        <span className="font-black text-emerald-700 tracking-tight text-[11px] uppercase">Rincian Modal Satuan TikTok</span>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <TooltipRow label="Modal Satuan Cina" value={formatCurrency(Math.round(perPcs))} />
+                                                                        <TooltipRow label={`TikTok Fee (${(tokpedAdminFee || 0) + (tokpedServiceFee || 0)}%)`} value={formatCurrency(tokpedFee)} isNegative />
+                                                                        <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
+                                                                            <TooltipRow label="Total Modal" value={formatCurrency(Math.round(perPcs + tokpedFee))} isTotal />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )
+
+                                                            return (
+                                                                <div className="flex flex-col items-end gap-1.5 w-full">
+                                                                    <div
+                                                                        onClick={(e) => {
+                                                                            if (!hidePurchaseEdit) {
+                                                                                e.stopPropagation();
+                                                                                setEditPurchaseProduct(product);
+                                                                            }
+                                                                        }}
+                                                                        className={cn(
+                                                                            "flex justify-between items-center w-full gap-4 pb-1 border-b border-border/50 transition-colors rounded px-1 min-h-[24px]",
+                                                                            !hidePurchaseEdit ? "cursor-pointer hover:bg-slate-200/50 group" : "cursor-default"
+                                                                        )}
+                                                                    >
+                                                                        {product.purchasePrice ? (
+                                                                            <>
+                                                                                <div className="w-5 flex justify-center">
+                                                                                    <HoverLabaTooltip content={cnModalTooltip}>
+                                                                                        <span className="text-sm leading-none cursor-help hover:scale-110 transition-transform">🇨🇳</span>
+                                                                                    </HoverLabaTooltip>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <span className="text-xs font-bold text-foreground">
+                                                                                        {formatNumber(Math.round(perPcs))}
+                                                                                    </span>
+                                                                                    <HoverLabaTooltip content={cnModalTooltip}>
+                                                                                        <HelpCircle className="w-3 h-3 text-muted-foreground/30 hover:text-foreground transition-colors cursor-help" />
+                                                                                    </HoverLabaTooltip>
+                                                                                </div>
+                                                                            </>
+                                                                        ) : (
+                                                                            <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 hover:bg-amber-100 uppercase text-[10px] font-bold transition-all w-full text-center">
+                                                                                + Input Harga
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                </div>
-                                                                {jumlah > 0 && !hideTotalsInCells && (
-                                                                    <div className="flex flex-col items-end border-t border-border pt-1">
-                                                                        <span className="text-[10px] text-muted-foreground uppercase">Total Pembelian</span>
-                                                                        <div className="flex flex-col items-end">
-                                                                            <span className="text-sm font-bold text-primary">
-                                                                                {isAnalisaHarga ? '' : 'Rp '}{formatNumber(Math.round(totalHarga))}
+
+                                                                    <div className="flex justify-between items-center w-full gap-4 pb-1 border-b border-border/50 cursor-help hover:bg-orange-50 transition-colors rounded px-1 min-h-[24px]">
+                                                                        <div className="w-5 flex justify-center">
+                                                                            <HoverLabaTooltip content={shopeeTooltip}>
+                                                                                <img src="/icons8-shopee.svg" alt="Shopee" className="w-4 h-4 hover:scale-110 transition-transform" />
+                                                                            </HoverLabaTooltip>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-xs font-bold text-foreground">
+                                                                                {formatNumber(Math.round(hppShopee))}
                                                                             </span>
-                                                                            {currency !== 'IDR' && (
-                                                                                <span className="text-[10px] text-muted-foreground font-normal">
-                                                                                    {currency === 'CNY' ? '¥' : '$'}{formatNumber(product.purchasePrice * paket)} ({currency === 'CNY' ? 'Yuan' : 'Dollar'})
-                                                                                </span>
-                                                                            )}
+                                                                            <HoverLabaTooltip content={shopeeTooltip}>
+                                                                                <HelpCircle className="w-3 h-3 text-orange-300/30 hover:text-orange-500 transition-colors cursor-help" />
+                                                                            </HoverLabaTooltip>
                                                                         </div>
                                                                     </div>
-                                                                )}
 
-                                                            </div>
-                                                        )
-                                                    })() : (
-                                                        <div className="flex justify-end w-full">
-                                                            <span className={cn(
-                                                                "text-[10px] px-2 py-1 rounded-md transition-colors",
-                                                                !hidePurchaseEdit ? "text-amber-600 bg-amber-50 hover:bg-amber-100 font-bold tracking-tight uppercase" : "text-muted-foreground text-xs"
-                                                            )}>
-                                                                {!hidePurchaseEdit ? '+ Input Harga' : '-'}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </TableCell>
+                                                                    <div className="flex justify-between items-center w-full gap-4 cursor-help hover:bg-emerald-50 transition-colors rounded px-1 min-h-[24px]">
+                                                                        <div className="w-5 flex justify-center">
+                                                                            <HoverLabaTooltip content={tokpedTooltip}>
+                                                                                <img src="/icons8-tiktok.svg" alt="TikTok" className="w-4 h-4 hover:scale-110 transition-transform" />
+                                                                            </HoverLabaTooltip>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-xs font-bold text-foreground">
+                                                                                {formatNumber(Math.round(hppTokped))}
+                                                                            </span>
+                                                                            <HoverLabaTooltip content={tokpedTooltip}>
+                                                                                <HelpCircle className="w-3 h-3 text-emerald-300/30 hover:text-emerald-500 transition-colors cursor-help" />
+                                                                            </HoverLabaTooltip>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        })() : (
+                                                            <div onClick={(e) => { if (!hidePurchaseEdit) { e.stopPropagation(); setEditPurchaseProduct(product); } }} className="flex items-center justify-end w-full gap-2 cursor-pointer group hover:bg-slate-50 p-1 rounded transition-all"><span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded border border-amber-200 hover:bg-amber-200 uppercase tracking-tight whitespace-nowrap">+ Input Harga</span></div>
+                                                        )}
+                                                    </TableCell>
+                                                )}
                                                 {!hideLabaColumn && (
                                                     <TableCell align="right" className="px-2">
                                                         {product.purchasePrice && product.price ? (() => {
@@ -2111,7 +2263,8 @@ export default function StoreProductList({
                                                             const totalHarga = priceInputIdr * paket * (1 + (additionalFee || 0) / 100)
                                                             const perPcs = totalHarga / ((paket * jumlah) || 1)
                                                             const totalQty = paket * jumlah
-                                                            const hargaJual = product.price || 0
+                                                            const simPriceInput = simulationPriceData[product.wcId]
+                                                            const hargaJual = (simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : (product.price || 0)
 
                                                             const shopeeFee = hargaJual * ((shopeeAdminFee || 0) + (shopeeServiceFee || 0)) / 100
                                                             const tokpedFee = hargaJual * ((tokpedAdminFee || 0) + (tokpedServiceFee || 0)) / 100
@@ -2124,61 +2277,34 @@ export default function StoreProductList({
                                                             const isProfitTokped = labaTokpedPerPcs >= 0
                                                             const totalLabaShopee = labaShopeePerPcs * totalQty
 
-                                                            const TooltipRow = ({ label, value, isNegative, isBold, isTotal }: { label: string, value: string | React.ReactNode, isNegative?: boolean, isBold?: boolean, isTotal?: boolean }) => (
-                                                                <div className="flex justify-between gap-6 items-center mb-1 last:mb-0">
-                                                                    <span className={cn(
-                                                                        "text-muted-foreground font-medium flex-shrink",
-                                                                        isTotal && "font-bold text-foreground"
-                                                                    )}>{label}</span>
-                                                                    <span className={cn(
-                                                                        "font-mono font-medium whitespace-nowrap flex-shrink-0",
-                                                                        isNegative && "text-destructive",
-                                                                        isBold && "font-bold",
-                                                                        isTotal && "font-black"
-                                                                    )}>{value}</span>
-                                                                </div>
-                                                            )
-
-                                                            const shopeeTooltip = (
-                                                                <div className="w-full flex flex-col text-left p-3">
-                                                                    <TooltipRow label="Harga Jual:" value={`Rp ${formatNumber(hargaJual)}`} isBold />
-                                                                    <TooltipRow label={`HPP (include fee ${additionalFee || 0}%):`} value={`Rp ${formatNumber(Math.round(perPcs))}`} isBold />
-                                                                    {(shopeeAdminFee || 0) > 0 && <TooltipRow label={`Admin Shopee (${shopeeAdminFee}%):`} value={`-Rp ${formatNumber(Math.round(hargaJual * (shopeeAdminFee || 0) / 100))}`} isNegative />}
-                                                                    {(shopeeServiceFee || 0) > 0 && <TooltipRow label={`Layanan Shopee (${shopeeServiceFee}%):`} value={`-Rp ${formatNumber(Math.round(hargaJual * (shopeeServiceFee || 0) / 100))}`} isNegative />}
-                                                                    <div className="h-px bg-border/80 my-2 w-full" />
-                                                                    <TooltipRow
-                                                                        label="Laba per Pcs:"
-                                                                        value={<span className={isProfitShopee ? 'text-emerald-600' : 'text-destructive'}>{isProfitShopee ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaShopeePerPcs)))}</span>}
-                                                                        isTotal
-                                                                    />
-                                                                </div>
-                                                            )
-
-                                                            const tokpedTooltip = (
-                                                                <div className="w-full flex flex-col text-left p-3">
-                                                                    <TooltipRow label="Harga Jual:" value={`Rp ${formatNumber(hargaJual)}`} isBold />
-                                                                    <TooltipRow label={`HPP (include fee ${additionalFee || 0}%):`} value={`Rp ${formatNumber(Math.round(perPcs))}`} isBold />
-                                                                    {(tokpedAdminFee || 0) > 0 && <TooltipRow label={`Admin Tokped (${tokpedAdminFee}%):`} value={`-Rp ${formatNumber(Math.round(hargaJual * (tokpedAdminFee || 0) / 100))}`} isNegative />}
-                                                                    {(tokpedServiceFee || 0) > 0 && <TooltipRow label={`Layanan Tokped (${tokpedServiceFee}%):`} value={`-Rp ${formatNumber(Math.round(hargaJual * (tokpedServiceFee || 0) / 100))}`} isNegative />}
-                                                                    <div className="h-px bg-border/80 my-2 w-full" />
-                                                                    <TooltipRow
-                                                                        label="Laba per Pcs:"
-                                                                        value={<span className={isProfitTokped ? 'text-emerald-600' : 'text-destructive'}>{isProfitTokped ? '+' : '-'}Rp {formatNumber(Math.abs(Math.round(labaTokpedPerPcs)))}</span>}
-                                                                        isTotal
-                                                                    />
-                                                                </div>
-                                                            )
 
                                                             return (
                                                                 <div className="flex flex-col items-end gap-1.5 w-full">
                                                                     {isAnalisaHarga ? (
                                                                         <>
                                                                             <div className="flex justify-between items-center w-full gap-4 pb-1 border-b border-border/50">
-                                                                                <div className="flex items-center gap-1.5 text-[#EE4D2D]">
-                                                                                    <span className="text-[10px] font-bold uppercase tracking-wider">Shopee</span>
-                                                                                    <HoverLabaTooltip content={shopeeTooltip}>
-                                                                                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-[#EE4D2D] transition-colors" />
-                                                                                    </HoverLabaTooltip>
+                                                                                <div className="w-5 flex justify-center">
+                                                                                    <span className="text-sm leading-none">🇨🇳</span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    {hargaJual > 0 && (
+                                                                                        <span className={cn(
+                                                                                            "px-1 py-0.5 rounded text-[9px] font-bold shadow-sm",
+                                                                                            labaPerPcs >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                                                                        )}>
+                                                                                            {((labaPerPcs / hargaJual) * 100).toFixed(1)}%
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span className={`text-xs font-bold ${labaPerPcs >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                                        {labaPerPcs >= 0 ? '+' : '-'}{formatNumber(Math.abs(Math.round(labaPerPcs)))}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex justify-between items-center w-full gap-4 pb-1 border-b border-border/50">
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <div className="w-5 flex justify-center">
+                                                                                        <img src="/icons8-shopee.svg" alt="Shopee" className="w-3.5 h-3.5" />
+                                                                                    </div>
                                                                                 </div>
                                                                                 <div className="flex items-center gap-2">
                                                                                     {hargaJual > 0 && (
@@ -2195,11 +2321,10 @@ export default function StoreProductList({
                                                                                 </div>
                                                                             </div>
                                                                             <div className="flex justify-between items-center w-full gap-4">
-                                                                                <div className="flex items-center gap-1.5 text-[#00AA5B]">
-                                                                                    <span className="text-[10px] font-bold uppercase tracking-wider">Tokped</span>
-                                                                                    <HoverLabaTooltip content={tokpedTooltip}>
-                                                                                        <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-[#00AA5B] transition-colors" />
-                                                                                    </HoverLabaTooltip>
+                                                                                <div className="flex items-center gap-1.5">
+                                                                                    <div className="w-5 flex justify-center">
+                                                                                        <img src="/icons8-tiktok.svg" alt="TikTok" className="w-3.5 h-3.5" />
+                                                                                    </div>
                                                                                 </div>
                                                                                 <div className="flex items-center gap-2">
                                                                                     {hargaJual > 0 && (
@@ -2220,9 +2345,6 @@ export default function StoreProductList({
                                                                         <div className="flex flex-col items-end w-full">
                                                                             <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                                                                                 <span className="text-[10px] uppercase leading-none">Laba per Pcs</span>
-                                                                                <HoverLabaTooltip content={shopeeTooltip}>
-                                                                                    <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-foreground transition-colors" />
-                                                                                </HoverLabaTooltip>
                                                                             </div>
                                                                             <div className="flex flex-col items-end gap-1">
                                                                                 <span className={`text-sm font-semibold ${isProfitShopee ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -2303,9 +2425,9 @@ export default function StoreProductList({
 
                                                             if (simQty === 0) return (
                                                                 <>
-                                                                    <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
-                                                                    <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
-                                                                    <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                    <TableCell align="right" className="px-2 bg-orange-50/10"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                    <TableCell align="right" className="px-2 bg-emerald-50/10"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                    <TableCell align="right" className="px-2 bg-emerald-50/10"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
                                                                 </>
                                                             )
 
@@ -2329,44 +2451,53 @@ export default function StoreProductList({
                                                             const totalSimModalCina = perPcs * simQty
                                                             const totalSimModalShopee = totalSimModalCina + (shopeeFee * simQty)
                                                             const totalSimModalTokped = totalSimModalCina + (tokpedFee * simQty)
+                                                            const totalSimLabaCina = (hargaJual - perPcs) * simQty
                                                             const labaShpPerPcs = hargaJual - perPcs - shopeeFee
                                                             const labaTkpPerPcs = hargaJual - perPcs - tokpedFee
                                                             const totalSimLabaShopee = labaShpPerPcs * simQty
                                                             const totalSimLabaTokped = labaTkpPerPcs * simQty
 
-                                                            const TooltipRow = ({ label, value, isNegative, isBold, isTotal }: { label: string, value: string | React.ReactNode, isNegative?: boolean, isBold?: boolean, isTotal?: boolean }) => (
-                                                                <div className="flex justify-between gap-6 items-center mb-1 last:mb-0">
-                                                                    <span className={cn(
-                                                                        "text-muted-foreground font-medium flex-shrink",
-                                                                        isTotal && "font-bold text-foreground"
-                                                                    )}>{label}</span>
-                                                                    <span className={cn(
-                                                                        "font-mono font-medium whitespace-nowrap flex-shrink-0",
-                                                                        isNegative && "text-destructive",
-                                                                        isBold && "font-bold",
-                                                                        isTotal && "font-black"
-                                                                    )}>{value}</span>
+                                                            const cnModalTooltip = (
+                                                                <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100 text-left min-w-[240px]">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                                                                        <span className="text-sm">🇨🇳</span>
+                                                                        <span className="font-black text-slate-700 tracking-tight text-[11px] uppercase">Rincian Modal Satuan Cina</span>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="pt-2 mt-2 italic opacity-70">
+                                                                            <TooltipRow label="Modal / pcs" value={formatCurrency(Math.round(perPcs))} isTotal />
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             )
 
-                                                            const isShopeeFeeLarger = shopeeFee > tokpedFee
-                                                            const modalMpTooltip = (
-                                                                <div className="w-full flex flex-col text-left p-3">
-                                                                    <div className="mb-2">
-                                                                        <TooltipRow label={`Modal Cina (${simQty} pcs):`} value={`Rp ${formatNumber(Math.round(totalSimModalCina))}`} isBold />
+                                                            const shopeeTooltip = (
+                                                                <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100 text-left min-w-[240px]">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-[#EE4D2D]/10 pb-2">
+                                                                        <img src="/icons8-shopee.svg" alt="SHP" className="w-3.5 h-3.5" />
+                                                                        <span className="font-black text-orange-700 tracking-tight text-[11px] uppercase">Rincian Modal Shopee (Total {simQty} unit)</span>
                                                                     </div>
-                                                                    <div className="h-px bg-border/50 my-1 w-full" />
-                                                                    <div className="space-y-1 py-1">
-                                                                        <div className="flex flex-col">
-                                                                            <span className="text-[10px] font-bold text-[#EE4D2D] uppercase tracking-wider">Shopee</span>
-                                                                            <TooltipRow label="Biaya:" value={`+Rp ${formatNumber(Math.round(shopeeFee * simQty))}`} isNegative />
-                                                                            <TooltipRow label="Total Modal:" value={`Rp ${formatNumber(Math.round(totalSimModalShopee))}`} isTotal />
+                                                                    <div className="space-y-1.5">
+                                                                        <TooltipRow label="Total Modal Cina" value={formatCurrency(Math.round(totalSimModalCina))} />
+                                                                        <TooltipRow label={`Shopee Fee Total (${(shopeeAdminFee || 0) + (shopeeServiceFee || 0)}%)`} value={formatCurrency(Math.round(shopeeFee * simQty))} isNegative />
+                                                                        <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
+                                                                            <TooltipRow label="Grand Total Modal" value={formatCurrency(Math.round(totalSimModalShopee))} isTotal />
                                                                         </div>
-                                                                        <div className="h-px bg-border/30 my-1 w-full" />
-                                                                        <div className="flex flex-col">
-                                                                            <span className="text-[10px] font-bold text-[#00AA5B] uppercase tracking-wider">Tokopedia</span>
-                                                                            <TooltipRow label="Biaya:" value={`+Rp ${formatNumber(Math.round(tokpedFee * simQty))}`} isNegative />
-                                                                            <TooltipRow label="Total Modal:" value={`Rp ${formatNumber(Math.round(totalSimModalTokped))}`} isTotal />
+                                                                    </div>
+                                                                </div>
+                                                            )
+
+                                                            const tokpedTooltip = (
+                                                                <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100 text-left min-w-[240px]">
+                                                                    <div className="flex items-center gap-2 mb-3 border-b border-[#00AA5B]/10 pb-2">
+                                                                        <img src="/icons8-tiktok.svg" alt="TKP" className="w-3.5 h-3.5" />
+                                                                        <span className="font-black text-emerald-700 tracking-tight text-[11px] uppercase">Rincian Modal TikTok (Total {simQty} unit)</span>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <TooltipRow label="Total Modal Cina" value={formatCurrency(Math.round(totalSimModalCina))} />
+                                                                        <TooltipRow label={`TikTok Fee Total (${(tokpedAdminFee || 0) + (tokpedServiceFee || 0)}%)`} value={formatCurrency(Math.round(tokpedFee * simQty))} isNegative />
+                                                                        <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
+                                                                            <TooltipRow label="Grand Total Modal" value={formatCurrency(Math.round(totalSimModalTokped))} isTotal />
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2374,43 +2505,56 @@ export default function StoreProductList({
 
                                                             return (
                                                                 <>
-                                                                    <TableCell align="right" className="px-2 align-middle">
-                                                                        <div className="flex flex-col items-end w-full gap-[3px]">
-                                                                            <span className="text-xs font-bold whitespace-nowrap text-foreground tracking-tight" title="Total Modal Cina">
-                                                                                {formatNumber(Math.round(totalSimModalCina))}
-                                                                            </span>
-                                                                            <span className="text-[8px] font-black text-muted-foreground/60 uppercase border border-border/50 px-1 rounded-sm leading-none py-0.5" title="Label Cina">CINA</span>
-                                                                            <span className="text-[11px] font-black whitespace-nowrap text-emerald-600 tracking-tight bg-emerald-50 px-1 rounded-sm" title="Total Omset">
-                                                                                {formatNumber(Math.round(totalSimOmset))}
-                                                                            </span>
-                                                                        </div>
-                                                                    </TableCell>
-                                                                    <TableCell align="right" className="px-2 align-middle">
-                                                                        <HoverLabaTooltip content={modalMpTooltip}>
-                                                                            <div className="flex flex-col items-end w-full gap-[2px] cursor-help">
-                                                                                <div className="flex items-center gap-1.5" title="Total Modal Shopee">
-                                                                                    <span className="text-[8px] font-black text-[#EE4D2D] uppercase border border-[#EE4D2D]/30 px-1 rounded-sm leading-none py-0.5">SHP</span>
-                                                                                    <span className="text-[10px] font-bold whitespace-nowrap text-foreground tracking-tight">
-                                                                                        {formatNumber(Math.round(totalSimModalShopee))}
-                                                                                    </span>
-                                                                                </div>
-                                                                                <div className="flex items-center gap-1.5" title="Total Modal Tokopedia">
-                                                                                    <span className="text-[8px] font-black text-[#00AA5B] uppercase border border-[#00AA5B]/30 px-1 rounded-sm leading-none py-0.5">TKP</span>
-                                                                                    <span className="text-[10px] font-bold whitespace-nowrap text-foreground tracking-tight">
-                                                                                        {formatNumber(Math.round(totalSimModalTokped))}
-                                                                                    </span>
-                                                                                </div>
-                                                                                <div className="w-8 h-px bg-border/50 my-0.5" />
-                                                                                <span className="text-[10px] font-black whitespace-nowrap text-emerald-600 tracking-tight bg-emerald-50 px-1 rounded-sm" title="Total Omset">
-                                                                                    {formatNumber(Math.round(totalSimOmset))}
+                                                                    <TableCell align="right" className="px-2 align-middle bg-orange-50/30">
+                                                                        <div className="flex flex-col items-end w-full gap-1">
+                                                                            <div
+                                                                                className="flex items-center justify-between gap-1.5 border-b border-orange-200/50 pb-0.5 w-full px-1"
+                                                                                title="Total Modal Cina"
+                                                                            >
+                                                                                <span className="text-xs">🇨🇳</span>
+                                                                                <span className={cn(
+                                                                                    "text-[10px] font-bold whitespace-nowrap tracking-tight transition-all",
+                                                                                    !product.purchasePrice ? "text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 hover:bg-amber-100 uppercase" : "text-slate-700"
+                                                                                )}>
+                                                                                    {product.purchasePrice ? (
+                                                                                        <div className="flex items-center gap-1.5">
+                                                                                            {formatNumber(Math.round(totalSimModalCina))}
+                                                                                        </div>
+                                                                                    ) : '+ Input Harga'}
                                                                                 </span>
                                                                             </div>
-                                                                        </HoverLabaTooltip>
+                                                                            <div className="flex items-center justify-between gap-1.5 border-b border-orange-200/50 pb-0.5 w-full hover:bg-[#EE4D2D]/5 transition-colors rounded-sm px-1" title="Total Modal Shopee">
+                                                                                <img src="/icons8-shopee.svg" alt="SHP" className="w-3 h-3" />
+                                                                                <span className="text-[10px] font-bold whitespace-nowrap text-orange-950 tracking-tight">
+                                                                                    {formatNumber(Math.round(totalSimModalShopee))}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between gap-1.5 w-full hover:bg-[#00AA5B]/5 transition-colors rounded-sm px-1" title="Total Modal Tokopedia">
+                                                                                <img src="/icons8-tiktok.svg" alt="TKP" className="w-3 h-3" />
+                                                                                <span className="text-[10px] font-bold whitespace-nowrap text-orange-950 tracking-tight">
+                                                                                    {formatNumber(Math.round(totalSimModalTokped))}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
                                                                     </TableCell>
-                                                                    <TableCell align="right" className="px-2">
-                                                                        <div className="flex flex-col gap-1 items-end w-full min-w-[120px]">
-                                                                            <div className="flex items-center justify-between gap-3 w-full border-b border-border/50 pb-0.5" title="Total Simulasi Shopee">
-                                                                                <span className="text-[9px] font-bold text-[#EE4D2D] uppercase tracking-wider">Shopee</span>
+                                                                    <TableCell align="right" className="px-2 align-middle bg-emerald-50/30">
+                                                                        <span className="text-xs font-black whitespace-nowrap text-emerald-700 tracking-tight px-1.5 py-0.5 bg-emerald-100/50 rounded-md" title="Total Omset">
+                                                                            {formatNumber(Math.round(totalSimOmset))}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                    <TableCell align="right" className="px-2 align-middle bg-emerald-50/50">
+                                                                        <div className="flex flex-col gap-1 items-end w-full min-w-[100px]">
+                                                                            <div className="flex items-center justify-between gap-2 w-full border-b border-emerald-200/50 pb-0.5" title="Total Simulasi Cina">
+                                                                                <span className="text-xs">🇨🇳</span>
+                                                                                <span className={cn(
+                                                                                    "text-xs font-black whitespace-nowrap",
+                                                                                    totalSimLabaCina >= 0 ? "text-emerald-700" : "text-destructive"
+                                                                                )}>
+                                                                                    {totalSimLabaCina >= 0 ? '+' : ''}{formatNumber(Math.round(totalSimLabaCina))}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-between gap-2 w-full" title="Total Simulasi Shopee">
+                                                                                <img src="/icons8-shopee.svg" alt="SHP" className="w-3.5 h-3.5" />
                                                                                 <span className={cn(
                                                                                     "text-xs font-black whitespace-nowrap",
                                                                                     totalSimLabaShopee >= 0 ? "text-emerald-700" : "text-destructive"
@@ -2418,8 +2562,8 @@ export default function StoreProductList({
                                                                                     {totalSimLabaShopee >= 0 ? '+' : ''}{formatNumber(Math.round(totalSimLabaShopee))}
                                                                                 </span>
                                                                             </div>
-                                                                            <div className="flex items-center justify-between gap-3 w-full" title="Total Simulasi Tokped">
-                                                                                <span className="text-[9px] font-bold text-[#00AA5B] uppercase tracking-wider">Tokped</span>
+                                                                            <div className="flex items-center justify-between gap-2 w-full" title="Total Simulasi Tokopedia">
+                                                                                <img src="/icons8-tiktok.svg" alt="TKP" className="w-3.5 h-3.5" />
                                                                                 <span className={cn(
                                                                                     "text-xs font-black whitespace-nowrap",
                                                                                     totalSimLabaTokped >= 0 ? "text-emerald-700" : "text-destructive"
@@ -2433,9 +2577,25 @@ export default function StoreProductList({
                                                             )
                                                         })() : (
                                                             <>
-                                                                <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
-                                                                <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
-                                                                <TableCell align="right" className="px-2"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                <TableCell align="right" className="px-2 bg-orange-50/10">
+                                                                    <div
+                                                                        onClick={(e) => {
+                                                                            if (!hidePurchaseEdit) {
+                                                                                e.stopPropagation();
+                                                                                setEditPurchaseProduct(product);
+                                                                            }
+                                                                        }}
+                                                                        className={cn(
+                                                                            "flex items-center justify-end w-full gap-1.5 transition-all p-1 rounded hover:bg-white/50",
+                                                                            !hidePurchaseEdit ? "cursor-pointer group" : "cursor-default"
+                                                                        )}
+                                                                        title="Klik untuk input harga beli Cina"
+                                                                    >
+                                                                        <span className="text-muted-foreground/30 font-mono text-xs">-</span>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell align="right" className="px-2 bg-emerald-50/10"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
+                                                                <TableCell align="right" className="px-2 bg-emerald-50/10"><span className="text-muted-foreground/30 font-mono text-xs">-</span></TableCell>
                                                             </>
                                                         )}
                                                     </>
@@ -2447,7 +2607,7 @@ export default function StoreProductList({
                                 ))
                             ) : (
                                 <TableEmpty
-                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? (showQuantityColumn ? 3 : 2) : 0) + (hideSkuColumn ? 0 : 1) + (!showPurchaseColumns ? 1 : 0) + (isAnalisaHarga ? 3 : 0) + (isAnalisaHarga ? 3 : 4)}
+                                    colSpan={(showSupplierColumn ? 1 : 0) + (showPurchasedColumn ? 1 : 0) + (showPurchaseColumns ? (showQuantityColumn ? 2 : 1) : 0) + (hideSkuColumn ? 0 : 1) + (!showPurchaseColumns ? 1 : 0) + (isAnalisaHarga ? 2 : 0) + (isAnalisaHarga ? 3 : 4)}
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk ditemukan."
                                     description={searchTerm ? (
@@ -2494,7 +2654,7 @@ export default function StoreProductList({
                         <div className="p-6 space-y-6">
                             <div className="bg-orange-50/50 border border-[#EE4D2D]/10 rounded-2xl p-5 transition-all hover:bg-orange-50/80">
                                 <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#EE4D2D]/70">Estimasi Laba Bersih</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#EE4D2D]/70">Laba Total (Shopee)</p>
                                     {analysis.shopee.modal > 0 && (
                                         <span className={cn(
                                             "px-3 py-1 rounded-full text-xs font-black shadow-sm",
@@ -2530,9 +2690,9 @@ export default function StoreProductList({
                         <div className="p-4 border-b border-[#00AA5B]/10 flex items-center justify-between bg-emerald-50/30">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white rounded-xl border border-[#00AA5B]/20 shadow-sm">
-                                    <img src="/icons8-tiktok.svg" alt="Tokopedia" className="w-6 h-6" />
+                                    <img src="/icons8-tiktok.svg" alt="TikTok" className="w-6 h-6" />
                                 </div>
-                                <h3 className="text-sm font-black text-[#00AA5B] uppercase tracking-widest">Ringkasan Tokopedia</h3>
+                                <h3 className="text-sm font-black text-[#00AA5B] uppercase tracking-widest">Ringkasan TikTok</h3>
                             </div>
                             <div className="flex items-center gap-2">
                             </div>
@@ -2541,7 +2701,7 @@ export default function StoreProductList({
                         <div className="p-6 space-y-6">
                             <div className="bg-emerald-50/50 border border-[#00AA5B]/10 rounded-2xl p-5 transition-all hover:bg-emerald-50/80">
                                 <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#00AA5B]/70">Estimasi Laba Bersih</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#00AA5B]/70">Laba Total (TikTok)</p>
                                     {analysis.tokped.modal > 0 && (
                                         <span className={cn(
                                             "px-3 py-1 rounded-full text-xs font-black shadow-sm",
@@ -2589,7 +2749,7 @@ export default function StoreProductList({
                         <div className="p-6 space-y-6">
                             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 transition-all hover:bg-slate-100/80">
                                 <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Laba Tanpa Potongan (Cina)</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Laba Total (Cina)</p>
                                     {analysis.cina.modal > 0 && (
                                         <span className={cn(
                                             "px-3 py-1 rounded-full text-xs font-black shadow-sm",
@@ -2751,7 +2911,7 @@ export default function StoreProductList({
                                 </p>
                             </div>
                             <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
-                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Estimasi Laba per Pcs</p>
+                                <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Rata-rata Laba per Pcs</p>
                                 <p className="text-2xl font-bold text-emerald-600">Rp {formatNumber(Math.round(analysis.avgLaba))}</p>
                                 <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic">
                                     * Rata-rata laba dari produk teranalisa.

@@ -34,6 +34,8 @@ interface PurchaseInputModalProps {
     editMode?: boolean
     /** When true, hides the supplier selection column */
     hideSupplier?: boolean
+    /** Simulation qty from price-analysis page, shown as suggestion */
+    simulationQty?: number
 }
 
 export default function PurchaseInputModal({
@@ -44,7 +46,8 @@ export default function PurchaseInputModal({
     kursUsd,
     additionalFee = 0,
     editMode = false,
-    hideSupplier = false
+    hideSupplier = false,
+    simulationQty = 0
 }: PurchaseInputModalProps) {
     const [purchasePackage, setPurchasePackage] = useState<number | ''>('')
     const [purchaseQty, setPurchaseQty] = useState<number | ''>(1)
@@ -248,6 +251,19 @@ export default function PurchaseInputModal({
                                     placeholder="Misal: 1"
                                 />
                                 <p className="text-[11px] text-muted-foreground mt-1.5 leading-tight">Jumlah qty yang dibeli</p>
+                                {simulationQty > 0 && Number(purchasePackage) !== simulationQty && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPurchasePackage(simulationQty)}
+                                        className="mt-1.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all text-left w-full group"
+                                    >
+                                        <BarChart3 className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                        <span className="text-[11px] text-blue-700 font-semibold">
+                                            Simulasi: <span className="font-black text-blue-900">{formatNumber(simulationQty)}</span>
+                                        </span>
+                                        <span className="text-[9px] text-blue-400 ml-auto uppercase font-bold group-hover:text-blue-600 transition-colors">Pakai</span>
+                                    </button>
+                                )}
                             </div>
 
                             <div>
