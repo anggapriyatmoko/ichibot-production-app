@@ -24,63 +24,57 @@ export async function POST(request: Request) {
 
     try {
         const rawBody = await request.text();
-        
-        // --- EMERGENCY DIAGNOSTICS ---
-        const allHeaders: Record<string, string> = {};
-        request.headers.forEach((val, key) => { allHeaders[key] = val; });
-        debugLog(`\n[CRITICAL DIAGNOSTICS]`);
-        debugLog(`Method: ${request.method}`);
-        debugLog(`Headers:`, allHeaders);
-        debugLog(`Raw Body: ${rawBody ? rawBody.substring(0,100) + '...' : 'EMPTY'}`);
-        // -----------------------------
-
-        const signature = request.headers.get('x-wc-webhook-signature');
-        const topic = request.headers.get('x-wc-webhook-topic'); // e.g., 'product.updated', 'order.created'
-        const event = request.headers.get('x-wc-webhook-event'); // e.g., 'updated', 'created', 'deleted'
-        const resource = request.headers.get('x-wc-webhook-resource'); // e.g., 'product', 'order'
-        const source = request.headers.get('x-wc-webhook-source');
-
-        debugLog(`--- Incoming Webhook ---`);
-        debugLog(`Resource: ${resource}, Topic: ${topic}, Event: ${event}`);
-        debugLog(`Signature: ${signature}`);
-
-        if (!signature) {
-            debugLog('Missing signature');
-            return new NextResponse('Missing signature', { status: 401 });
-        }
+        const urlObj = new URL(request.url);
+        const querySecret = urlObj.searchParams.get('secret');
+        const queryType = urlObj.searchParams.get('type');
 
         // Allow loop validation over all defined secrets
         const possibleSecrets = [SECRET_PRODUCT, SECRET_ORDER, SECRET_LEGACY].filter(Boolean) as string[];
 
-        debugLog(`Total Possible Secrets Loaded from ENV: ${possibleSecrets.length}`);
-        possibleSecrets.forEach((sec, idx) => {
-             debugLog(`Secret [${idx}]: length=${sec.length}, startsWith=${sec.substring(0,2)}..`);
-        });
+        // Header Validation Defaults
+        let signature = request.headers.get('x-wc-webhook-signature');
+        let topic = request.headers.get('x-wc-webhook-topic'); 
+        let event = request.headers.get('x-wc-webhook-event'); 
+        let resource = request.headers.get('x-wc-webhook-resource'); 
 
-        if (possibleSecrets.length === 0) {
-            debugLog(`Missing all Webhook Secrets in environment variables`);
-            return new NextResponse('Webhook secrets not configured', { status: 500 });
+        // If headers are stripped by the hosting provider, rely on URL bypass parameters
+        let isUrlAuthenticated = false;
+        if (querySecret && possibleSecrets.includes(querySecret)) {
+            isUrlAuthenticated = true;
+            debugLog(`[AUTHENTICATED] Bypassing Headers, Verified via URL parameter secret.`);
         }
-
-        // Validate HMAC-SHA256 signature against any active secret
-        let isValidSignature = false;
         
-        for (const secret of possibleSecrets) {
-            const hash = crypto
-                .createHmac('sha256', secret)
-                .update(rawBody, 'utf8')
-                .digest('base64');
-                
-            debugLog(`Trying Secret: ${secret.substring(0,3)}... Hash result: ${hash}`);
-                
-            if (hash === signature) {
-                isValidSignature = true;
-                break;
-            }
+        // Let's identify the resource from URL if headers are stripped
+        if (!resource && queryType) {
+            resource = queryType;
+            topic = queryType; // acts as a fallback topic
+            debugLog(`[ROUTING] Deduced resource from URL type: ${resource}`);
         }
 
-        if (!isValidSignature) {
-            debugLog(`PENTING: Signature did not match! WooCommerce sent: ${signature}`);
+        // Validate HMAC-SHA256 signature against any active secret (if not already URL authenticated)
+        let isValidSignature = false;
+        if (isUrlAuthenticated) {
+             isValidSignature = true;
+        } else if (signature) {
+             for (const secret of possibleSecrets) {
+                 const hash = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('base64');
+                 if (hash === signature) { isValidSignature = true; break; }
+             }
+        }
+
+        // ===================================
+        // Ping Test Handling (Strips JSON parse error if it's form-url-encoded)
+        // ===================================
+        if (rawBody.includes('webhook_id=')) {
+            debugLog('Ping Webhook payload detected. Validating unconditionally.');
+            if (!isValidSignature && !isUrlAuthenticated) {
+                 return new NextResponse('Invalid signature for Ping', { status: 401 });
+            }
+            return NextResponse.json({ success: true, message: 'Ping successful' });
+        }
+
+        if (!isValidSignature && !isUrlAuthenticated) {
+            debugLog(`PENTING: Signature did not match AND URL secret is wrong/missing`);
             return new NextResponse('Invalid signature', { status: 401 });
         }
 
@@ -88,6 +82,7 @@ export async function POST(request: Request) {
         try {
             payload = JSON.parse(rawBody);
         } catch (e) {
+            // Because ping tests are form-urlencoded, if it's not JSON it might be Ping
             debugLog('Invalid JSON payload');
             return new NextResponse('Invalid JSON payload', { status: 400 });
         }
