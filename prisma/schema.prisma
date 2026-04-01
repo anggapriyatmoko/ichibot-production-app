@@ -888,17 +888,19 @@ model WebAccessUser {
 }
 
 model storeSaleLog {
-  id          String   @id @default(cuid())
-  orderNumber String
-  orderDate   DateTime
-  itemId      Int
-  itemName    String
-  itemSku     String?
-  quantity    Int
-  nominal     Float
-  marketplace String   @default("offline")
-  createdAt   DateTime @default(now())
+  id                  String   @id @default(cuid())
+  orderNumber         String
+  externalOrderNumber String?
+  orderDate           DateTime
+  itemId              Int
+  itemName            String   @db.Text
+  itemSku             String?
+  quantity            Int
+  nominal             Float
+  marketplace         String   @default("offline")
+  createdAt           DateTime @default(now())
 
   @@index([orderNumber])
+  @@index([externalOrderNumber])
   @@map("StoreSaleLog")
 }

@@ -10,6 +10,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import Modal from '@/components/ui/modal'
 import { updateStoreSaleLog, deleteStoreSaleLog } from '@/app/actions/store-sale-log'
 import { SalesAnalytics } from './sales-analytics'
+import { ShopeeImportModal } from './shopee-import-modal'
 
 import {
   TableWrapper,
@@ -38,6 +39,7 @@ export default function SalesRecapClient() {
     const [editLog, setEditLog] = useState<any>(null)
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [actionLoading, setActionLoading] = useState(false)
+    const [showImport, setShowImport] = useState(false)
 
     // Edit form state
     const [editForm, setEditForm] = useState({ nominal: 0, quantity: 1, marketplace: '', itemSku: '', itemName: '' })
@@ -144,6 +146,14 @@ export default function SalesRecapClient() {
                 title="Refresh Data"
             >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-primary' : ''}`} />
+            </button>
+            <button
+                onClick={() => setShowImport(true)}
+                className="h-10 px-3 bg-[#EE4D2D] hover:bg-[#EE4D2D]/90 text-white rounded-lg text-sm font-bold transition-all flex items-center gap-2 shrink-0"
+                title="Import Data Shopee"
+            >
+                <img src="/icons8-shopee.svg" alt="" className="w-4 h-4 brightness-0 invert" />
+                Import
             </button>
         </div>
     )
@@ -380,6 +390,12 @@ export default function SalesRecapClient() {
                     <p className="text-sm text-destructive mt-2 font-medium">Tindakan ini tidak dapat dibatalkan.</p>
                 </div>
             </Modal>
+
+            <ShopeeImportModal
+                isOpen={showImport}
+                onClose={() => setShowImport(false)}
+                onSuccess={() => fetchLogs(debouncedTerm, page)}
+            />
         </div>
     )
 }

@@ -86,14 +86,14 @@ export async function getStoreSaleStats(startDate: Date, endDate: Date) {
                 where,
                 _sum: { quantity: true },
                 orderBy: { _sum: { quantity: 'desc' } },
-                take: 10
+                take: 50
             }),
             prisma.storeSaleLog.groupBy({
                 by: ['itemName', 'itemId'],
                 where,
                 _sum: { nominal: true },
                 orderBy: { _sum: { nominal: 'desc' } },
-                take: 10
+                take: 50
             }),
             prisma.storeSaleLog.groupBy({
                 by: ['marketplace'],
@@ -123,5 +123,58 @@ export async function getStoreSaleStats(startDate: Date, endDate: Date) {
     } catch (error: any) {
         console.error('Error fetching store sale stats:', error.message)
         return { success: false, error: 'Gagal mengambil data statistik' }
+    }
+}
+
+export async function checkExistingOrders(externalOrderNumbers: string[]) {
+    try {
+        const existing = await prisma.storeSaleLog.findMany({
+            where: {
+                externalOrderNumber: { in: externalOrderNumbers }
+            },
+            select: { externalOrderNumber: true }
+        })
+        const existingSet = new Set(existing.map((e: any) => e.externalOrderNumber))
+        return { success: true, existingOrders: Array.from(existingSet) }
+    } catch (error: any) {
+        console.error('Error checking existing orders:', error.message)
+        return { success: false, existingOrders: [] }
+    }
+}
+
+export async function getProductsBySku(skus: string[]) {
+    try {
+        const products = await prisma.storeProduct.findMany({
+            where: {
+                sku: { in: skus }
+            },
+            select: { wcId: true, sku: true, name: true }
+        })
+        return { success: true, products }
+    } catch (error: any) {
+        console.error('Error fetching products by SKU:', error.message)
+        return { success: false, products: [] }
+    }
+}
+
+export async function bulkCreateStoreSaleLogs(data: {
+    orderNumber: string
+    externalOrderNumber: string
+    orderDate: Date
+    itemId: number
+    itemName: string
+    itemSku: string
+    quantity: number
+    nominal: number
+    marketplace: string
+}[]) {
+    try {
+        const result = await prisma.storeSaleLog.createMany({
+            data
+        })
+        return { success: true, count: result.count }
+    } catch (error: any) {
+        console.error('Error bulk creating store sale logs:', error.message)
+        return { success: false, error: 'Gagal menyimpan data import' }
     }
 }

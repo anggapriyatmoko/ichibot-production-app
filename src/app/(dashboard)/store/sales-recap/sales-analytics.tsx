@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { getStoreSaleStats } from '@/app/actions/store-sale-log'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts'
 import { formatCurrency, formatNumber } from '@/utils/format'
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react'
+import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 
 const COLORS = ['#10b981', '#f97316', '#06b6d4', '#6366f1', '#eab308']
@@ -14,6 +14,11 @@ export function SalesAnalytics() {
     const [loading, setLoading] = useState(true)
     const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
     const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+    
+    // Pagination state
+    const [qtyPage, setQtyPage] = useState(1)
+    const [nominalPage, setNominalPage] = useState(1)
+    const itemsPerPage = 8 // Reduced from 10 to fit buttons better in 400px height
 
     useEffect(() => {
         let isMounted = true
@@ -38,6 +43,9 @@ export function SalesAnalytics() {
             }
         }
         fetchStats()
+        // Reset pagination when dates change
+        setQtyPage(1)
+        setNominalPage(1)
         return () => { isMounted = false }
     }, [startDate, endDate])
 
@@ -74,7 +82,7 @@ export function SalesAnalytics() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Market Share Pie Chart */}
-                    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm flex flex-col h-[400px]">
+                    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm flex flex-col h-[450px]">
                         <h3 className="font-bold text-foreground mb-1">Marketplace Share</h3>
                         <p className="text-xs text-muted-foreground mb-4">Total Omset: <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(totalSales)}</span></p>
                         
@@ -109,19 +117,19 @@ export function SalesAnalytics() {
                     </div>
 
                     {/* Top by Quantity */}
-                    <div className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden h-[400px]">
+                    <div className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden h-[450px]">
                         <div className="p-4 border-b border-border bg-muted/30">
-                            <h3 className="font-bold text-foreground">Top 10 Barang (Qty)</h3>
+                            <h3 className="font-bold text-foreground">Top Barang (Qty)</h3>
                             <p className="text-xs text-muted-foreground font-medium">Paling banyak terjual secara kuantitas</p>
                         </div>
                         <div className="flex-1 overflow-auto custom-scrollbar p-2">
                             {stats?.topQuantity?.length > 0 ? (
                                 <div className="space-y-1">
-                                    {stats.topQuantity.map((item: any, i: number) => (
+                                    {stats.topQuantity.slice((qtyPage - 1) * itemsPerPage, qtyPage * itemsPerPage).map((item: any, i: number) => (
                                         <div key={i} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg transition-colors group">
                                             <div className="flex items-center gap-3 overflow-hidden">
                                                 <div className="w-6 h-6 shrink-0 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center border border-primary/20">
-                                                    {i + 1}
+                                                    {(qtyPage - 1) * itemsPerPage + i + 1}
                                                 </div>
                                                 <div className="truncate text-sm font-semibold">{item.itemName}</div>
                                             </div>
@@ -135,22 +143,45 @@ export function SalesAnalytics() {
                                 <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                             )}
                         </div>
+                        {stats?.topQuantity?.length > itemsPerPage && (
+                            <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                                    Hal {qtyPage} / {Math.ceil(stats.topQuantity.length / itemsPerPage)}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button 
+                                        onClick={() => setQtyPage(p => Math.max(1, p - 1))}
+                                        disabled={qtyPage === 1}
+                                        className="p-1 rounded bg-background border border-border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setQtyPage(p => Math.min(Math.ceil(stats.topQuantity.length / itemsPerPage), p + 1))}
+                                        disabled={qtyPage === Math.ceil(stats.topQuantity.length / itemsPerPage)}
+                                        className="p-1 rounded bg-background border border-border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Top by Nominal */}
-                    <div className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden h-[400px]">
+                    <div className="bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden h-[450px]">
                         <div className="p-4 border-b border-border bg-muted/30">
-                            <h3 className="font-bold text-foreground">Top 10 Barang (Omset)</h3>
+                            <h3 className="font-bold text-foreground">Top Barang (Omset)</h3>
                             <p className="text-xs text-muted-foreground font-medium">Penyumbang omset terbesar</p>
                         </div>
                         <div className="flex-1 overflow-auto custom-scrollbar p-2">
                             {stats?.topNominal?.length > 0 ? (
                                 <div className="space-y-1">
-                                    {stats.topNominal.map((item: any, i: number) => (
+                                    {stats.topNominal.slice((nominalPage - 1) * itemsPerPage, nominalPage * itemsPerPage).map((item: any, i: number) => (
                                         <div key={i} className="flex items-center justify-between p-2 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 rounded-lg transition-colors group">
                                             <div className="flex items-center gap-3 overflow-hidden">
-                                                <div className="w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400 font-black text-[10px] flex items-center justify-center border border-emerald-200 dark:border-emerald-800">
-                                                    {i + 1}
+                                                <div className="w-6 h-6 shrink-0 rounded-full bg-primary/10 text-primary font-black text-[10px] flex items-center justify-center border border-primary/20">
+                                                    {(nominalPage - 1) * itemsPerPage + i + 1}
                                                 </div>
                                                 <div className="truncate text-sm font-semibold">{item.itemName}</div>
                                             </div>
@@ -164,6 +195,29 @@ export function SalesAnalytics() {
                                 <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                             )}
                         </div>
+                        {stats?.topNominal?.length > itemsPerPage && (
+                            <div className="p-3 border-t border-border bg-muted/10 flex items-center justify-between">
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                                    Hal {nominalPage} / {Math.ceil(stats.topNominal.length / itemsPerPage)}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button 
+                                        onClick={() => setNominalPage(p => Math.max(1, p - 1))}
+                                        disabled={nominalPage === 1}
+                                        className="p-1 rounded bg-background border border-border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setNominalPage(p => Math.min(Math.ceil(stats.topNominal.length / itemsPerPage), p + 1))}
+                                        disabled={nominalPage === Math.ceil(stats.topNominal.length / itemsPerPage)}
+                                        className="p-1 rounded bg-background border border-border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
