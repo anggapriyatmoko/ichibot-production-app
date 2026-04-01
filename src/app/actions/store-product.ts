@@ -521,32 +521,48 @@ export async function getStoreProducts() {
 }
 
 export async function searchStoreProducts(query: string, page: number = 1, perPage: number = 50) {
-    if (!query || query.trim().length === 0) return { products: [], totalPages: 0, totalItems: 0 }
-
-    const trimmed = query.trim()
+    const trimmed = query ? query.trim() : ''
 
     try {
-        const where = {
-            AND: [
-                { type: { not: 'variation' } },
-                { status: 'publish' },
-                {
-                    OR: [
-                        { name: { contains: trimmed } },
-                        { sku: { contains: trimmed } },
-                        { backupGudang: { contains: trimmed } },
-                    ]
-                }
-            ]
-        }
+        let rawProducts;
+        let totalItems = 0;
 
-        const [totalItems, rawProducts] = await Promise.all([
-            prisma.storeProduct.count({ where }),
-            prisma.storeProduct.findMany({
-                where,
-                orderBy: { name: 'asc' },
-            })
-        ])
+        if (!trimmed) {
+            // Idle State: Fetch 50 recent products, randomly shuffle, return 20
+            const recentProducts = await prisma.storeProduct.findMany({
+                where: { type: { not: 'variation' }, status: 'publish' },
+                orderBy: { updatedAt: 'desc' },
+                take: 50
+            });
+            const shuffled = recentProducts.sort(() => 0.5 - Math.random());
+            rawProducts = shuffled.slice(0, 20);
+            totalItems = 20; // Fake total for idle state
+        } else {
+            // Normal Search
+            const where = {
+                AND: [
+                    { type: { not: 'variation' } },
+                    { status: 'publish' },
+                    {
+                        OR: [
+                            { name: { contains: trimmed } },
+                            { sku: { contains: trimmed } },
+                            { backupGudang: { contains: trimmed } },
+                        ]
+                    }
+                ]
+            }
+
+            const [count, products] = await Promise.all([
+                prisma.storeProduct.count({ where }),
+                prisma.storeProduct.findMany({
+                    where,
+                    orderBy: { name: 'asc' },
+                })
+            ])
+            totalItems = count;
+            rawProducts = products;
+        }
 
         const lowerQuery = trimmed.toLowerCase()
 
@@ -576,8 +592,9 @@ export async function searchStoreProducts(query: string, page: number = 1, perPa
             }
         })
 
-        // Smart sort: SKU prefix > name prefix > contains > alphabetical
-        mapped.sort((a: any, b: any) => {
+        // Smart sort only if there's an actual search query
+        if (trimmed) {
+            mapped.sort((a: any, b: any) => {
             const aName = a.name.toLowerCase()
             const bName = b.name.toLowerCase()
             const aSku = (a.sku || '').toLowerCase()
@@ -600,6 +617,7 @@ export async function searchStoreProducts(query: string, page: number = 1, perPa
 
             return aName.localeCompare(bName)
         })
+        }
 
         // Paginate after sorting
         const start = (page - 1) * perPage

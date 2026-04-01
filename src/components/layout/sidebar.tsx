@@ -100,6 +100,8 @@ export const navigationGroups = [
           },
           { name: "Purchased", href: "/store/purchased", icon: CheckCircle2 },
           { name: "Rak Management", href: "/store/rack-management", icon: Warehouse },
+          { name: "Rekap Penjualan", href: "/store/sales-recap", icon: TrendingUp },
+          { name: "Rekap Keuangan MP", href: "/store/marketplace-finance", icon: Banknote },
         ],
       },
       {

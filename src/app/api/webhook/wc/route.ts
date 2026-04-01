@@ -86,8 +86,36 @@ export async function POST(request: Request) {
         // Handle Orders (Triggers stock re-sync)
         // ============================================
         if (resource === 'order' || topic?.startsWith('order.')) {
-            if (payload.line_items && Array.isArray(payload.line_items)) {
+            if (payload.id && payload.line_items && Array.isArray(payload.line_items)) {
                 
+                // Track sales log
+                try {
+                    const orderNumber = payload.id.toString();
+                    const existingLog = await prisma.storeSaleLog.findFirst({ where: { orderNumber } });
+                    
+                    if (!existingLog) {
+                        const orderDateStr = payload.date_created || payload.date_modified || new Date().toISOString();
+                        const orderDate = new Date(orderDateStr);
+                        const logsToInsert = payload.line_items.map((item: any) => ({
+                            orderNumber,
+                            orderDate,
+                            itemId: item.variation_id || item.product_id || 0,
+                            itemName: item.name || 'Unknown Item',
+                            itemSku: item.sku || null,
+                            quantity: parseInt(item.quantity) || 1,
+                            nominal: item.subtotal ? parseFloat(item.subtotal) : ((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1)),
+                            marketplace: "offline"
+                        }));
+
+                        if (logsToInsert.length > 0) {
+                            await prisma.storeSaleLog.createMany({ data: logsToInsert });
+                            debugLog(`Logged ${logsToInsert.length} sale items for Order ${orderNumber}`);
+                        }
+                    }
+                } catch (logErr: any) {
+                    debugLog(`Failed to insert sale log: ${logErr.message}`);
+                }
+
                 for (const item of payload.line_items) {
                     const productId = item.variation_id || item.product_id;
                     const parentId = item.variation_id ? item.product_id : undefined;

@@ -71,7 +71,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const [syncStatusMap, setSyncStatusMap] = useState<Record<number, 'loading' | 'success' | 'error'>>({})
     const [syncProductName, setSyncProductName] = useState('')
 
-    const lastSearchedRef = useRef('')
+    const lastSearchedRef = useRef<string | null>(null)
     const lastPageRef = useRef(1)
     const isInitialMount = useRef(true)
 
@@ -108,22 +108,14 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
 
     const handleSearch = useCallback(async (query: string, pageNum: number = 1) => {
         const trimmedQuery = query.trim()
-        if (!trimmedQuery) {
-            setProducts([])
-            setHasSearched(false)
-            setPage(1)
-            setTotalPages(0)
-            setTotalItems(0)
-            return
-        }
-
+        
         setLoading(true)
         try {
             const { products: results, totalPages: total, totalItems: items } = await searchStoreProducts(trimmedQuery, pageNum)
             setProducts(results || [])
             setTotalPages(total)
             setTotalItems(items)
-            setHasSearched(true)
+            setHasSearched(!!trimmedQuery)
         } catch (error) {
             showError('Gagal mencari produk.')
         } finally {
@@ -496,12 +488,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                 )}
 
                 <div className="flex-1 overflow-y-auto min-h-0 flex flex-col relative scrollbar-gutter-stable">
-                    {!hasSearched && !loading ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in duration-300">
-                            <Package className="w-20 h-20 mb-4 opacity-20" />
-                            <p className="text-xl font-semibold text-center px-4">Silahkan cari barang yang diinginkan</p>
-                        </div>
-                    ) : loading ? (
+                    {loading ? (
                         <div className="flex-1">
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-1 h-fit">
                                 {[...Array(10)].map((_, i) => (

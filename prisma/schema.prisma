@@ -886,3 +886,19 @@ model WebAccessUser {
 
   @@map("web_access_users")
 }
+
+model storeSaleLog {
+  id          String   @id @default(cuid())
+  orderNumber String
+  orderDate   DateTime
+  itemId      Int
+  itemName    String
+  itemSku     String?
+  quantity    Int
+  nominal     Float
+  marketplace String   @default("offline")
+  createdAt   DateTime @default(now())
+
+  @@index([orderNumber])
+  @@map("StoreSaleLog")
+}
