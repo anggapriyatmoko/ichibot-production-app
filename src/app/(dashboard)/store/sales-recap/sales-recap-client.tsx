@@ -235,9 +235,19 @@ export default function SalesRecapClient() {
                                             {formatCurrency(log.nominal)}
                                         </TableCell>
                                         <TableCell align="center">
-                                            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border bg-amber-50 text-amber-600 border-amber-200">
-                                                {log.marketplace}
-                                            </span>
+                                            {(() => {
+                                                const mp = (log.marketplace || '').toLowerCase()
+                                                const colors = mp.includes('shopee')
+                                                    ? 'bg-orange-50 text-[#EE4D2D] border-orange-200'
+                                                    : mp.includes('tokopedia') || mp.includes('tokped')
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                                                return (
+                                                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${colors}`}>
+                                                        {log.marketplace}
+                                                    </span>
+                                                )
+                                            })()}
                                         </TableCell>
                                         <TableCell align="center">
                                             <div className="flex items-center justify-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">

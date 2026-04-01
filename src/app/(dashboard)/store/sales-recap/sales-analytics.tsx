@@ -7,7 +7,17 @@ import { formatCurrency, formatNumber } from '@/utils/format'
 import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, subDays } from 'date-fns'
 
-const COLORS = ['#10b981', '#f97316', '#06b6d4', '#6366f1', '#eab308']
+const MARKETPLACE_COLORS: Record<string, string> = {
+    'OFFLINE': '#3b82f6',
+    'SHOPEE': '#EE4D2D',
+    'TOKOPEDIA': '#00AA5B',
+    'TOKPED': '#00AA5B',
+}
+const DEFAULT_COLOR = '#6366f1'
+
+function getMarketplaceColor(name: string): string {
+    return MARKETPLACE_COLORS[name.toUpperCase()] || DEFAULT_COLOR
+}
 
 export function SalesAnalytics() {
     const [stats, setStats] = useState<any>(null)
@@ -100,7 +110,7 @@ export function SalesAnalytics() {
                                             dataKey="value"
                                         >
                                             {stats.marketShare.map((entry: any, index: number) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                <Cell key={`cell-${index}`} fill={getMarketplaceColor(entry.name)} />
                                             ))}
                                         </Pie>
                                         <RechartsTooltip 
