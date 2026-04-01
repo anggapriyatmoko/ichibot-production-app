@@ -4,10 +4,9 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import fs from 'fs';
 
-const SECRET_PRODUCT = process.env.WC_WEBHOOK_SECRET_PRODUCT_UPDATE;
-const SECRET_ORDER = process.env.WC_WEBHOOK_SECRET_ORDER_CREATED;
 // Fallback to legacy secret if specific ones aren't defined
-const SECRET_LEGACY = process.env.WC_WEBHOOK_SECRET;
+
+export const dynamic = 'force-dynamic';
 
 function debugLog(message: string, data?: any) {
     const time = new Date().toISOString();
@@ -19,6 +18,10 @@ function debugLog(message: string, data?: any) {
 }
 
 export async function POST(request: Request) {
+    const SECRET_PRODUCT = process.env.WC_WEBHOOK_SECRET_PRODUCT_UPDATE;
+    const SECRET_ORDER = process.env.WC_WEBHOOK_SECRET_ORDER_CREATED;
+    const SECRET_LEGACY = process.env.WC_WEBHOOK_SECRET;
+
     try {
         const rawBody = await request.text();
         const signature = request.headers.get('x-wc-webhook-signature');
