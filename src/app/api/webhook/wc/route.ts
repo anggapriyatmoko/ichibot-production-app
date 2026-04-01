@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
 import fs from 'fs';
+import { syncSingleStoreProduct } from '@/lib/wc-sync';
+import { revalidatePath } from 'next/cache';
 
 // Fallback to legacy secret if specific ones aren't defined
 
@@ -41,14 +42,12 @@ export async function POST(request: Request) {
         let isUrlAuthenticated = false;
         if (querySecret && possibleSecrets.includes(querySecret)) {
             isUrlAuthenticated = true;
-            debugLog(`[AUTHENTICATED] Bypassing Headers, Verified via URL parameter secret.`);
         }
         
         // Let's identify the resource from URL if headers are stripped
         if (!resource && queryType) {
             resource = queryType;
             topic = queryType; // acts as a fallback topic
-            debugLog(`[ROUTING] Deduced resource from URL type: ${resource}`);
         }
 
         // Validate HMAC-SHA256 signature against any active secret (if not already URL authenticated)
@@ -66,7 +65,6 @@ export async function POST(request: Request) {
         // Ping Test Handling (Strips JSON parse error if it's form-url-encoded)
         // ===================================
         if (rawBody.includes('webhook_id=')) {
-            debugLog('Ping Webhook payload detected. Validating unconditionally.');
             if (!isValidSignature && !isUrlAuthenticated) {
                  return new NextResponse('Invalid signature for Ping', { status: 401 });
             }
@@ -74,7 +72,6 @@ export async function POST(request: Request) {
         }
 
         if (!isValidSignature && !isUrlAuthenticated) {
-            debugLog(`PENTING: Signature did not match AND URL secret is wrong/missing`);
             return new NextResponse('Invalid signature', { status: 401 });
         }
 
@@ -82,8 +79,6 @@ export async function POST(request: Request) {
         try {
             payload = JSON.parse(rawBody);
         } catch (e) {
-            // Because ping tests are form-urlencoded, if it's not JSON it might be Ping
-            debugLog('Invalid JSON payload');
             return new NextResponse('Invalid JSON payload', { status: 400 });
         }
 
@@ -91,10 +86,7 @@ export async function POST(request: Request) {
         // Handle Orders (Triggers stock re-sync)
         // ============================================
         if (resource === 'order' || topic?.startsWith('order.')) {
-            debugLog(`Received Order Webhook for Order ID: ${payload.id}`);
             if (payload.line_items && Array.isArray(payload.line_items)) {
-                // Dynamically import to avoid circular dependencies if any
-                const { syncSingleStoreProduct } = await import('@/app/actions/store-product');
                 
                 for (const item of payload.line_items) {
                     const productId = item.variation_id || item.product_id;
