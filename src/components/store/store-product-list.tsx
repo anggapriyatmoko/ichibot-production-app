@@ -647,7 +647,9 @@ export default function StoreProductList({
                     return acc + (total * (1 + (additionalFee || 0) / 100))
                 }, 0),
             published: physicalProducts.filter(p => p.status === 'publish').length,
+            publishedStock: physicalProducts.filter(p => p.status === 'publish').reduce((acc, p) => acc + (p.stockQuantity || 0), 0),
             draft: physicalProducts.filter(p => p.status === 'draft').length,
+            draftStock: physicalProducts.filter(p => p.status === 'draft').reduce((acc, p) => acc + (p.stockQuantity || 0), 0),
             variationProducts: localProducts.filter(p => p.type === 'variable').length,
             multiPaket: physicalProducts.filter(p => (p.purchasePackage || 0) > 1).length,
             priorityProducts: physicalProducts.filter(p => p.priority).length,
@@ -1912,6 +1914,12 @@ export default function StoreProductList({
                                                             )}>
                                                                 {product.status}
                                                             </span>
+                                                            <span className={cn(
+                                                                "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
+                                                                (product.stockQuantity || 0) <= 0 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                            )}>
+                                                                Stok: {formatNumber(product.stockQuantity || 0)}
+                                                            </span>
                                                             {hideSkuColumn && product.sku && (
                                                                 <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-mono font-bold bg-muted text-muted-foreground uppercase">
                                                                     {product.sku}
@@ -1940,6 +1948,12 @@ export default function StoreProductList({
                                                             product.status === 'publish' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
                                                         )}>
                                                             {product.status}
+                                                        </span>
+                                                        <span className={cn(
+                                                            "px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase",
+                                                            (product.stockQuantity || 0) <= 0 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                        )}>
+                                                            Stok: {formatNumber(product.stockQuantity || 0)}
                                                         </span>
                                                         {product.purchased && (
                                                             <span className="px-1.5 py-0.5 rounded-[4px] text-[10px] font-bold uppercase bg-primary/10 text-primary border border-primary/20">
@@ -2839,14 +2853,30 @@ export default function StoreProductList({
                         ) : (
                             <>
                                 <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Publish</p>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Publish</p>
+                                        <span className={cn(
+                                            "text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
+                                            (analysis.publishedStock || 0) <= 0 ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                                        )}>
+                                            Stok: {formatNumber(analysis.publishedStock)}
+                                        </span>
+                                    </div>
                                     <div className="flex items-baseline gap-2">
                                         <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.published)}</p>
                                         <span className="text-[10px] font-medium text-muted-foreground">Produk</span>
                                     </div>
                                 </div>
                                 <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Status Draft</p>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Draft</p>
+                                        <span className={cn(
+                                            "text-[10px] px-1.5 py-0.5 rounded font-bold uppercase",
+                                            (analysis.draftStock || 0) <= 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"
+                                        )}>
+                                            Stok: {formatNumber(analysis.draftStock)}
+                                        </span>
+                                    </div>
                                     <div className="flex items-baseline gap-2">
                                         <p className="text-2xl font-bold text-foreground">{formatNumber(analysis.draft)}</p>
                                         <span className="text-[10px] font-medium text-muted-foreground">Produk</span>

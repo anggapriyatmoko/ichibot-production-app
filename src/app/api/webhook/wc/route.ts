@@ -103,7 +103,7 @@ export async function POST(request: Request) {
                             itemName: item.name || 'Unknown Item',
                             itemSku: item.sku || null,
                             quantity: parseInt(item.quantity) || 1,
-                            nominal: item.subtotal ? parseFloat(item.subtotal) : ((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1)),
+                            nominal: item.total !== undefined ? parseFloat(item.total) : (item.subtotal ? parseFloat(item.subtotal) : ((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1))),
                             marketplace: "offline"
                         }));
 
