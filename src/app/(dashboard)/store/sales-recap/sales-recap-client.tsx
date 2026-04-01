@@ -36,7 +36,7 @@ export default function SalesRecapClient() {
 
     // Modals state
     const [editLog, setEditLog] = useState<any>(null)
-    const [deleteId, setDeleteId] = useState<number | null>(null)
+    const [deleteId, setDeleteId] = useState<string | null>(null)
     const [actionLoading, setActionLoading] = useState(false)
 
     // Edit form state

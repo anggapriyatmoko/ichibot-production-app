@@ -46,7 +46,7 @@ export async function getStoreSaleLogs(page: number = 1, search: string = '') {
     }
 }
 
-export async function updateStoreSaleLog(id: number, data: { nominal?: number, quantity?: number, marketplace?: string, itemName?: string, itemSku?: string, orderDate?: Date }) {
+export async function updateStoreSaleLog(id: string, data: { nominal?: number, quantity?: number, marketplace?: string, itemName?: string, itemSku?: string, orderDate?: Date }) {
     try {
         await prisma.storeSaleLog.update({
             where: { id },
@@ -59,7 +59,7 @@ export async function updateStoreSaleLog(id: number, data: { nominal?: number, q
     }
 }
 
-export async function deleteStoreSaleLog(id: number) {
+export async function deleteStoreSaleLog(id: string) {
     try {
         await prisma.storeSaleLog.delete({
             where: { id }
