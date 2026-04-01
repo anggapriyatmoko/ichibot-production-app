@@ -36,27 +36,31 @@ export async function POST(request: Request) {
             return new NextResponse('Missing signature', { status: 401 });
         }
 
-        // Determine which secret to use based on the webhook resource
-        let activeSecret = SECRET_LEGACY;
-        if (resource === 'product' || topic?.startsWith('product.')) {
-            activeSecret = SECRET_PRODUCT || SECRET_LEGACY;
-        } else if (resource === 'order' || topic?.startsWith('order.')) {
-            activeSecret = SECRET_ORDER || SECRET_LEGACY;
+        // Allow loop validation over all defined secrets
+        const possibleSecrets = [SECRET_PRODUCT, SECRET_ORDER, SECRET_LEGACY].filter(Boolean) as string[];
+
+        if (possibleSecrets.length === 0) {
+            debugLog(`Missing all Webhook Secrets in environment variables`);
+            return new NextResponse('Webhook secrets not configured', { status: 500 });
         }
 
-        if (!activeSecret) {
-            debugLog(`Missing Secret string in environment variables for resource: ${resource}`);
-            return new NextResponse('Webhook secret not configured for this resource', { status: 500 });
+        // Validate HMAC-SHA256 signature against any active secret
+        let isValidSignature = false;
+        
+        for (const secret of possibleSecrets) {
+            const hash = crypto
+                .createHmac('sha256', secret)
+                .update(rawBody, 'utf8')
+                .digest('base64');
+                
+            if (hash === signature) {
+                isValidSignature = true;
+                break;
+            }
         }
 
-        // Validate HMAC-SHA256 signature
-        const hash = crypto
-            .createHmac('sha256', activeSecret)
-            .update(rawBody, 'utf8')
-            .digest('base64');
-
-        if (hash !== signature) {
-            debugLog(`Invalid signature. Expected: ${hash}, Got: ${signature}`);
+        if (!isValidSignature) {
+            debugLog(`Invalid signature. Signature did not match any of the configured secrets.`);
             return new NextResponse('Invalid signature', { status: 401 });
         }
 
