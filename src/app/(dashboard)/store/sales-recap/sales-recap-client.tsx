@@ -34,6 +34,7 @@ export default function SalesRecapClient() {
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
+    const [itemsPerPage, setItemsPerPage] = useState(20)
 
     // Modals state
     const [editLog, setEditLog] = useState<any>(null)
@@ -49,7 +50,7 @@ export default function SalesRecapClient() {
     const fetchLogs = useCallback(async (query: string, pageNum: number) => {
         setLoading(true)
         try {
-            const res = await getStoreSaleLogs(pageNum, query)
+            const res = await getStoreSaleLogs(pageNum, query, itemsPerPage)
             if (res.success) {
                 setLogs(res.logs)
                 setTotalPages(res.totalPages)
@@ -60,7 +61,7 @@ export default function SalesRecapClient() {
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [itemsPerPage])
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -285,7 +286,11 @@ export default function SalesRecapClient() {
                     totalPages={totalPages}
                     onPageChange={setPage}
                     totalCount={totalItems}
-                    itemsPerPage={50}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={(count) => {
+                        setItemsPerPage(count)
+                        setPage(1)
+                    }}
                 />
             </TableWrapper>
 

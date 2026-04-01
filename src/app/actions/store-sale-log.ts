@@ -2,8 +2,7 @@
 
 import prisma from '@/lib/prisma'
 
-export async function getStoreSaleLogs(page: number = 1, search: string = '') {
-    const perPage = 50
+export async function getStoreSaleLogs(page: number = 1, search: string = '', perPage: number = 20) {
     const start = (page - 1) * perPage
     const trimmed = search.trim()
 

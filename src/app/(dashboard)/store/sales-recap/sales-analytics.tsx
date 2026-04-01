@@ -92,11 +92,11 @@ export function SalesAnalytics() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Market Share Pie Chart */}
-                    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm flex flex-col h-[450px]">
+                    <div className="bg-card rounded-2xl border border-border p-6 shadow-sm flex flex-col">
                         <h3 className="font-bold text-foreground mb-1">Marketplace Share</h3>
                         <p className="text-xs text-muted-foreground mb-4">Total Omset: <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(totalSales)}</span></p>
                         
-                        <div className="flex-1 w-full min-h-0">
+                        <div className="w-full" style={{ height: 250 }}>
                             {stats?.marketShare?.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
@@ -117,13 +117,35 @@ export function SalesAnalytics() {
                                             formatter={(value: any) => formatCurrency(value)}
                                             contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                         />
-                                        <Legend />
                                     </PieChart>
                                 </ResponsiveContainer>
                             ) : (
                                 <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Tidak ada data</div>
                             )}
                         </div>
+
+                        {/* Detail Nominal per Marketplace */}
+                        {stats?.marketShare?.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-border space-y-2.5">
+                                {stats.marketShare.map((entry: any, index: number) => {
+                                    const pct = totalSales > 0 ? ((entry.value / totalSales) * 100).toFixed(1) : '0'
+                                    const color = getMarketplaceColor(entry.name)
+                                    return (
+                                        <div key={index} className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                                <span className="text-sm font-bold truncate">{entry.name}</span>
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{pct}%</span>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-sm font-black" style={{ color }}>{formatCurrency(entry.value)}</span>
+                                                <span className="block text-[10px] text-muted-foreground">{formatNumber(entry.quantity)} pcs</span>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Top by Quantity */}
