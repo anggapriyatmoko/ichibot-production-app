@@ -15,6 +15,32 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Prevent "Failed to find Server Action" errors after redeployment
+  // by ensuring browsers don't serve stale JS bundles
+  async headers() {
+    return [
+      {
+        // Force revalidation on all pages (HTML) so browser fetches fresh JS references
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
+          },
+        ],
+      },
+      {
+        // Static assets (hashed filenames) can be cached long-term
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
   /* config options here */
 };
 
