@@ -42,6 +42,11 @@ export async function POST(request: Request) {
         // Allow loop validation over all defined secrets
         const possibleSecrets = [SECRET_PRODUCT, SECRET_ORDER, SECRET_LEGACY].filter(Boolean) as string[];
 
+        debugLog(`Total Possible Secrets Loaded from ENV: ${possibleSecrets.length}`);
+        possibleSecrets.forEach((sec, idx) => {
+             debugLog(`Secret [${idx}]: length=${sec.length}, startsWith=${sec.substring(0,2)}..`);
+        });
+
         if (possibleSecrets.length === 0) {
             debugLog(`Missing all Webhook Secrets in environment variables`);
             return new NextResponse('Webhook secrets not configured', { status: 500 });
@@ -56,6 +61,8 @@ export async function POST(request: Request) {
                 .update(rawBody, 'utf8')
                 .digest('base64');
                 
+            debugLog(`Trying Secret: ${secret.substring(0,3)}... Hash result: ${hash}`);
+                
             if (hash === signature) {
                 isValidSignature = true;
                 break;
@@ -63,7 +70,7 @@ export async function POST(request: Request) {
         }
 
         if (!isValidSignature) {
-            debugLog(`Invalid signature. Signature did not match any of the configured secrets.`);
+            debugLog(`PENTING: Signature did not match! WooCommerce sent: ${signature}`);
             return new NextResponse('Invalid signature', { status: 401 });
         }
 
