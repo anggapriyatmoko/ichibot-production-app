@@ -24,6 +24,16 @@ export async function POST(request: Request) {
 
     try {
         const rawBody = await request.text();
+        
+        // --- EMERGENCY DIAGNOSTICS ---
+        const allHeaders: Record<string, string> = {};
+        request.headers.forEach((val, key) => { allHeaders[key] = val; });
+        debugLog(`\n[CRITICAL DIAGNOSTICS]`);
+        debugLog(`Method: ${request.method}`);
+        debugLog(`Headers:`, allHeaders);
+        debugLog(`Raw Body: ${rawBody ? rawBody.substring(0,100) + '...' : 'EMPTY'}`);
+        // -----------------------------
+
         const signature = request.headers.get('x-wc-webhook-signature');
         const topic = request.headers.get('x-wc-webhook-topic'); // e.g., 'product.updated', 'order.created'
         const event = request.headers.get('x-wc-webhook-event'); // e.g., 'updated', 'created', 'deleted'
