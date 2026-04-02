@@ -6,10 +6,20 @@ import { cn } from '@/lib/utils'
 import { CalendarDays, Smile, Loader2, Users, Sun, Moon } from 'lucide-react'
 
 const MOOD_CONFIG: Record<string, { emoji: string; label: string; color: string; bg: string; gradient: string }> = {
-    JOYFUL: { emoji: '🤩', label: 'Joyful', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-500/10', gradient: 'from-yellow-400/20 to-orange-400/20' },
+    JOYFUL: { emoji: '🤩', label: 'Joyful', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', gradient: 'from-amber-400/20 to-orange-400/20' },
     HAPPY: { emoji: '😃', label: 'Happy', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/10', gradient: 'from-green-400/20 to-emerald-400/20' },
-    RELAXED: { emoji: '😊', label: 'Relaxed', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', gradient: 'from-blue-400/20 to-cyan-400/20' },
-    SAD: { emoji: '😞', label: 'Sad', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10', gradient: 'from-indigo-400/20 to-purple-400/20' },
+    RELAXED: { emoji: '😊', label: 'Relaxed', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/10', gradient: 'from-sky-400/20 to-blue-400/20' },
+    EXCITED: { emoji: '🥳', label: 'Excited', color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-500/10', gradient: 'from-pink-400/20 to-rose-400/20' },
+    CALM: { emoji: '😌', label: 'Calm', color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-500/10', gradient: 'from-teal-400/20 to-emerald-400/20' },
+    FOCUSED: { emoji: '🎯', label: 'Focused', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10', gradient: 'from-red-400/20 to-orange-400/20' },
+    COOL: { emoji: '😎', label: 'Cool', color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-500/10', gradient: 'from-cyan-400/20 to-blue-400/20' },
+    HUNGRY: { emoji: '🤤', label: 'Lapar', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-500/10', gradient: 'from-orange-400/20 to-amber-400/20' },
+    CONFUSED: { emoji: '😕', label: 'Confused', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-500/10', gradient: 'from-orange-400/20 to-amber-400/20' },
+    WORRIED: { emoji: '😟', label: 'Worried', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', gradient: 'from-blue-400/20 to-indigo-400/20' },
+    TIRED: { emoji: '😫', label: 'Tired', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10', gradient: 'from-indigo-400/20 to-purple-400/20' },
+    SICK: { emoji: '🤒', label: 'Sick', color: 'text-lime-600 dark:text-lime-400', bg: 'bg-lime-500/10', gradient: 'from-lime-400/20 to-green-400/20' },
+    BORED: { emoji: '😐', label: 'Bored', color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-500/10', gradient: 'from-slate-400/20 to-gray-400/20' },
+    SAD: { emoji: '😞', label: 'Sad', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', gradient: 'from-blue-400/20 to-indigo-400/20' },
     ANGRY: { emoji: '😡', label: 'Angry', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10', gradient: 'from-red-400/20 to-rose-400/20' },
 }
 

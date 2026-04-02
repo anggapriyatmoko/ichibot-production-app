@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getStoreSaleStats } from '@/app/actions/store-sale-log'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { formatCurrency, formatNumber } from '@/utils/format'
 import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, subDays } from 'date-fns'

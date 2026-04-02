@@ -141,17 +141,20 @@ export async function checkExistingOrders(externalOrderNumbers: string[]) {
     }
 }
 
-export async function getProductsBySku(skus: string[]) {
+export async function getProductsBySkuOrName(skus: string[], names: string[]) {
     try {
         const products = await prisma.storeProduct.findMany({
             where: {
-                sku: { in: skus }
+                OR: [
+                    { sku: { in: skus } },
+                    { name: { in: names } }
+                ]
             },
             select: { wcId: true, sku: true, name: true }
         })
         return { success: true, products }
     } catch (error: any) {
-        console.error('Error fetching products by SKU:', error.message)
+        console.error('Error fetching products by SKU or Name:', error.message)
         return { success: false, products: [] }
     }
 }
@@ -168,12 +171,20 @@ export async function bulkCreateStoreSaleLogs(data: {
     marketplace: string
 }[]) {
     try {
-        const result = await prisma.storeSaleLog.createMany({
-            data
-        })
-        return { success: true, count: result.count }
+        const CHUNK_SIZE = 500
+        let totalCount = 0
+        
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+            const chunk = data.slice(i, i + CHUNK_SIZE)
+            const result = await prisma.storeSaleLog.createMany({
+                data: chunk
+            })
+            totalCount += result.count
+        }
+
+        return { success: true, count: totalCount }
     } catch (error: any) {
         console.error('Error bulk creating store sale logs:', error.message)
-        return { success: false, error: 'Gagal menyimpan data import' }
+        return { success: false, error: 'Gagal menyimpan data import: ' + error.message }
     }
 }

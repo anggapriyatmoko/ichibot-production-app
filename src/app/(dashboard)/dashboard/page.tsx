@@ -447,9 +447,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <div className="divide-y divide-border">
                         {Object.entries(readyStockGrouped).map(([recipeName, units]: [string, any]) => (
                             <div key={recipeName} className="px-5 py-3">
-                                <div className="flex items-center gap-2 mb-2.5">
+                                <div className="flex items-center justify-between mb-2.5">
                                     <span className="text-sm font-semibold text-foreground">{recipeName}</span>
-                                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded">{units.length} Pcs</span>
+                                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded">{units.length} Pcs</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                     {units.map((unit: any) => {
@@ -459,12 +459,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                                                 key={unit.id}
                                                 href={`/production-plan/${unit.productionPlan.id}`}
                                                 className={`inline-flex items-center gap-1.5 font-mono text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-all hover:shadow-sm ${unit.isPacked
-                                                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-400 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 dark:hover:border-blue-400'
-                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 dark:hover:border-emerald-400'
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-400 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 dark:hover:border-emerald-400'
+                                                    : 'bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-400 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 dark:hover:border-blue-400'
                                                     }`}
                                             >
                                                 {unit.productIdentifier || computedSerial}
-                                                {unit.isPacked && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                                {unit.isPacked && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
                                             </Link>
                                         )
                                     })}
@@ -474,8 +474,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     </div>
                 )}
                 <div className="px-5 py-2.5 border-t border-border bg-muted/20 flex gap-4 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Assembled</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Packed</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Assembled</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Packed</span>
                 </div>
             </div>
 

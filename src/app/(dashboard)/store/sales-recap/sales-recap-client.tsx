@@ -11,6 +11,7 @@ import Modal from '@/components/ui/modal'
 import { updateStoreSaleLog, deleteStoreSaleLog } from '@/app/actions/store-sale-log'
 import { SalesAnalytics } from './sales-analytics'
 import { ShopeeImportModal } from './shopee-import-modal'
+import { TokopediaImportModal } from './tokopedia-import-modal'
 
 import {
   TableWrapper,
@@ -41,6 +42,7 @@ export default function SalesRecapClient() {
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [actionLoading, setActionLoading] = useState(false)
     const [showImport, setShowImport] = useState(false)
+    const [showTokopediaImport, setShowTokopediaImport] = useState(false)
 
     // Edit form state
     const [editForm, setEditForm] = useState({ nominal: 0, quantity: 1, marketplace: '', itemSku: '', itemName: '' })
@@ -147,6 +149,14 @@ export default function SalesRecapClient() {
                 title="Refresh Data"
             >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-primary' : ''}`} />
+            </button>
+            <button
+                onClick={() => setShowTokopediaImport(true)}
+                className="h-10 px-3 bg-[#00AA5B] hover:bg-[#00AA5B]/90 text-white rounded-lg text-sm font-bold transition-all flex items-center gap-2 shrink-0"
+                title="Import Data Tokopedia"
+            >
+                <img src="/icons8-tiktok.svg" alt="" className="w-5 h-5 brightness-0 invert object-contain" />
+                Import
             </button>
             <button
                 onClick={() => setShowImport(true)}
@@ -409,6 +419,12 @@ export default function SalesRecapClient() {
             <ShopeeImportModal
                 isOpen={showImport}
                 onClose={() => setShowImport(false)}
+                onSuccess={() => fetchLogs(debouncedTerm, page)}
+            />
+
+            <TokopediaImportModal
+                isOpen={showTokopediaImport}
+                onClose={() => setShowTokopediaImport(false)}
                 onSuccess={() => fetchLogs(debouncedTerm, page)}
             />
         </div>

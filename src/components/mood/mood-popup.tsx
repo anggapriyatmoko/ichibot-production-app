@@ -7,11 +7,21 @@ import { cn } from '@/lib/utils'
 import { X, Send, Loader2, Quote } from 'lucide-react'
 
 const MOODS = [
-    { value: 'JOYFUL', emoji: '🤩', label: 'Joyful', color: 'from-yellow-400 to-orange-400', bg: 'bg-yellow-500/10', ring: 'ring-yellow-400' },
-    { value: 'HAPPY', emoji: '😃', label: 'Happy', color: 'from-green-400 to-emerald-400', bg: 'bg-green-500/10', ring: 'ring-green-400' },
-    { value: 'RELAXED', emoji: '😊', label: 'Relaxed', color: 'from-blue-400 to-cyan-400', bg: 'bg-blue-500/10', ring: 'ring-blue-400' },
-    { value: 'SAD', emoji: '😞', label: 'Sad', color: 'from-indigo-400 to-purple-400', bg: 'bg-indigo-500/10', ring: 'ring-indigo-400' },
-    { value: 'ANGRY', emoji: '😡', label: 'Angry', color: 'from-red-400 to-rose-400', bg: 'bg-red-500/10', ring: 'ring-red-400' },
+    { value: 'JOYFUL', emoji: '🤩', label: 'Joyful', color: 'from-amber-400 to-orange-500', bg: 'bg-amber-500/10', ring: 'ring-amber-400' },
+    { value: 'HAPPY', emoji: '😃', label: 'Happy', color: 'from-green-400 to-emerald-500', bg: 'bg-green-500/10', ring: 'ring-green-400' },
+    { value: 'RELAXED', emoji: '😊', label: 'Relaxed', color: 'from-sky-400 to-blue-500', bg: 'bg-sky-500/10', ring: 'ring-sky-400' },
+    { value: 'EXCITED', emoji: '🥳', label: 'Excited', color: 'from-pink-400 to-rose-500', bg: 'bg-pink-500/10', ring: 'ring-pink-400' },
+    { value: 'CALM', emoji: '😌', label: 'Calm', color: 'from-teal-400 to-emerald-500', bg: 'bg-teal-500/10', ring: 'ring-teal-400' },
+    { value: 'FOCUSED', emoji: '🎯', label: 'Focused', color: 'from-red-400 to-orange-500', bg: 'bg-red-500/10', ring: 'ring-red-400' },
+    { value: 'COOL', emoji: '😎', label: 'Cool', color: 'from-cyan-400 to-blue-500', bg: 'bg-cyan-500/10', ring: 'ring-cyan-400' },
+    { value: 'HUNGRY', emoji: '🤤', label: 'Lapar', color: 'from-orange-400 to-amber-600', bg: 'bg-orange-500/10', ring: 'ring-orange-400' },
+    { value: 'CONFUSED', emoji: '😕', label: 'Confused', color: 'from-orange-400 to-amber-500', bg: 'bg-orange-500/10', ring: 'ring-orange-400' },
+    { value: 'WORRIED', emoji: '😟', label: 'Worried', color: 'from-blue-400 to-indigo-500', bg: 'bg-blue-500/10', ring: 'ring-blue-400' },
+    { value: 'TIRED', emoji: '😫', label: 'Tired', color: 'from-indigo-400 to-purple-500', bg: 'bg-indigo-500/10', ring: 'ring-indigo-400' },
+    { value: 'SICK', emoji: '🤒', label: 'Sick', color: 'from-lime-400 to-green-500', bg: 'bg-lime-500/10', ring: 'ring-lime-400' },
+    { value: 'BORED', emoji: '😐', label: 'Bored', color: 'from-slate-400 to-gray-500', bg: 'bg-slate-500/10', ring: 'ring-slate-400' },
+    { value: 'SAD', emoji: '😞', label: 'Sad', color: 'from-blue-600 to-indigo-700', bg: 'bg-blue-600/10', ring: 'ring-blue-600' },
+    { value: 'ANGRY', emoji: '😡', label: 'Angry', color: 'from-red-500 to-rose-700', bg: 'bg-red-500/10', ring: 'ring-red-500' },
 ]
 
 const MOTIVATIONAL_QUOTES = [
@@ -357,28 +367,28 @@ export default function MoodPopup() {
                         )}
 
                         {/* Mood Selection */}
-                        <div className="px-6 py-6">
-                            <div className="flex items-center justify-center gap-3">
+                        <div className="px-6 py-6 pb-2">
+                            <div className="grid grid-cols-5 gap-y-4 gap-x-2">
                                 {MOODS.map((mood) => (
                                     <button
                                         key={mood.value}
                                         onClick={() => setSelectedMood(mood.value)}
                                         className={cn(
-                                            "flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-200",
+                                            "flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-200",
                                             "hover:scale-110 active:scale-95",
                                             selectedMood === mood.value
-                                                ? `${mood.bg} ring-2 ${mood.ring} scale-110 shadow-lg`
+                                                ? `${mood.bg} ring-2 ${mood.ring} scale-105 shadow-md`
                                                 : "hover:bg-muted/50"
                                         )}
                                     >
                                         <span className={cn(
-                                            "text-4xl transition-all duration-200",
+                                            "text-3xl transition-all duration-200",
                                             selectedMood === mood.value ? "scale-110" : "grayscale-[30%]"
                                         )}>
                                             {mood.emoji}
                                         </span>
                                         <span className={cn(
-                                            "text-xs font-medium transition-colors",
+                                            "text-[10px] font-medium leading-none text-center transition-colors truncate w-full",
                                             selectedMood === mood.value
                                                 ? "text-foreground"
                                                 : "text-muted-foreground"

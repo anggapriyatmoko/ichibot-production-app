@@ -13,7 +13,6 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-    TableScrollArea,
 } from "@/components/ui/table"
 
 interface ImportRow {
@@ -29,23 +28,47 @@ interface ImportRow {
     status: 'new' | 'duplicate' | 'no-sku'
 }
 
-interface ShopeeImportModalProps {
+interface TokopediaImportModalProps {
     isOpen: boolean
     onClose: () => void
     onSuccess: () => void
 }
 
-function parseShopeeNominal(value: any): number {
+function parseNominal(value: any): number {
     if (typeof value === 'number') return value
     if (typeof value === 'string') {
-        // Remove dots (thousand separators) and replace comma with dot for decimal
         const cleaned = value.replace(/\./g, '').replace(',', '.')
         return parseFloat(cleaned) || 0
     }
     return 0
 }
 
-export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportModalProps) {
+function parseTokopediaDate(dateStr: string): Date {
+    // Tokopedia format typically "DD/MM/YYYY HH:mm:ss"
+    if (!dateStr) return new Date()
+    try {
+        const parts = dateStr.trim().split(' ')
+        if (parts.length >= 2) {
+            const dmy = parts[0].split('/')
+            if (dmy.length === 3) {
+                // Ensure proper formatting for ISO standard (YYYY-MM-DDTHH:mm:ss)
+                const dd = dmy[0].padStart(2, '0')
+                const mm = dmy[1].padStart(2, '0')
+                const yyyy = dmy[2]
+                const isoStr = `${yyyy}-${mm}-${dd}T${parts[1]}Z`
+                const d = new Date(isoStr)
+                if (!isNaN(d.getTime())) return d
+            }
+        }
+        const fallback = new Date(dateStr)
+        if (!isNaN(fallback.getTime())) return fallback
+    } catch (e) {
+        console.error("Date parse error", dateStr)
+    }
+    return new Date()
+}
+
+export function TokopediaImportModal({ isOpen, onClose, onSuccess }: TokopediaImportModalProps) {
     const [step, setStep] = useState<'upload' | 'preview' | 'saving' | 'done'>('upload')
     const [parsedRows, setParsedRows] = useState<ImportRow[]>([])
     const [parseError, setParseError] = useState<string | null>(null)
@@ -82,7 +105,7 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
             const data = await file.arrayBuffer()
             const workbook = XLSX.read(data)
             const sheet = workbook.Sheets[workbook.SheetNames[0]]
-            const json: any[] = XLSX.utils.sheet_to_json(sheet)
+            let json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" })
 
             if (json.length === 0) {
                 setParseError('File Excel kosong atau format tidak sesuai.')
@@ -90,9 +113,16 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
                 return
             }
 
+            // Tokopedia excel usually puts descriptions in row index 1 (second row). 
+            // We can just filter out rows that don't have a valid Order ID that looks like a number
+            const validRows = json.filter((row: any) => {
+                const orderId = (row['Order ID'] || '').toString().trim()
+                return orderId && orderId !== 'Platform unique order ID.'
+            })
+
             // Filter only "Selesai" status
-            const completedOrders = json.filter((row: any) => {
-                const status = (row['Status Pesanan'] || '').toString().trim()
+            const completedOrders = validRows.filter((row: any) => {
+                const status = (row['Order Status'] || '').toString().trim()
                 return status === 'Selesai'
             })
 
@@ -106,9 +136,9 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
             const orderItemCount: Record<string, number> = {}
 
             // Collect unique external order numbers, SKUs, and Product Names
-            const externalOrderNumbers = [...new Set(completedOrders.map((r: any) => String(r['No. Pesanan'] || '').trim()))]
-            const skus = [...new Set(completedOrders.map((r: any) => String(r['SKU Induk'] || '').trim()).filter(Boolean))]
-            const productNames = [...new Set(completedOrders.map((r: any) => String(r['Nama Produk'] || '').trim()).filter(Boolean))]
+            const externalOrderNumbers = [...new Set(completedOrders.map((r: any) => String(r['Order ID'] || '').trim()))]
+            const skus = [...new Set(completedOrders.map((r: any) => String(r['Seller SKU'] || '').trim()).filter(Boolean))]
+            const productNames = [...new Set(completedOrders.map((r: any) => String(r['Product Name'] || '').trim()).filter(Boolean))]
 
             // Check existing orders and get product mappings in parallel
             const [existingRes, productRes] = await Promise.all([
@@ -129,21 +159,14 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
 
             // Build rows
             const rows: ImportRow[] = completedOrders.map((row: any) => {
-                const extOrderNum = String(row['No. Pesanan'] || '').trim()
-                const sku = String(row['SKU Induk'] || '').trim()
-                const itemName = String(row['Nama Produk'] || '').trim()
-                const quantity = parseInt(String(row['Jumlah'] || '0')) || 0
-                const nominal = parseShopeeNominal(row['Dibayar Pembeli'])
+                const extOrderNum = String(row['Order ID'] || '').trim()
+                const sku = String(row['Seller SKU'] || '').trim()
+                const itemName = String(row['Product Name'] || '').trim()
+                const quantity = parseInt(String(row['Quantity'] || '0')) || 0
+                const nominal = parseNominal(row['SKU Subtotal After Discount'])
                 
-                // Parse order date from "Waktu Pesanan Selesai" or "Waktu Pesanan Dibuat"
-                const dateStr = String(row['Waktu Pesanan Selesai'] || row['Waktu Pesanan Dibuat'] || '').trim()
-                let orderDate = new Date()
-                if (dateStr) {
-                    const parsed = new Date(dateStr)
-                    if (!isNaN(parsed.getTime())) {
-                        orderDate = parsed
-                    }
-                }
+                const dateStr = String(row['Paid Time'] || '').trim()
+                const orderDate = parseTokopediaDate(dateStr)
 
                 // Track item index within same order
                 if (!orderItemCount[extOrderNum]) orderItemCount[extOrderNum] = 0
@@ -151,7 +174,7 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
                 const itemIndex = orderItemCount[extOrderNum]
 
                 // Generate internal orderNumber with suffix
-                const orderNumber = `SHP-${extOrderNum}(${itemIndex})`
+                const orderNumber = `TKP-${extOrderNum}(${itemIndex})`
 
                 // Check SKU match first, then fallback to Name match
                 const matchedBySku = sku ? skuMap[sku.toLowerCase()] : null
@@ -175,12 +198,15 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
                     nominal,
                     orderDate,
                     itemId,
-                    marketplace: 'shopee',
+                    marketplace: 'tokopedia',
                     status
                 }
             })
 
-            setParsedRows(rows)
+            // Remove any order that might be completely empty/invalid
+            const finalRows = rows.filter(r => r.externalOrderNumber && r.itemName)
+
+            setParsedRows(finalRows)
             setStep('preview')
         } catch (err: any) {
             console.error(err)
@@ -246,8 +272,8 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
             onClose={handleClose}
             title={
                 <div className="flex items-center gap-2">
-                    <img src="/icons8-shopee.svg" alt="Shopee" className="w-5 h-5" />
-                    Import Data Shopee
+                    <img src="/icons8-tiktok.svg" alt="Tokopedia" className="w-5 h-5 object-contain" />
+                    Import Data Tokopedia
                 </div>
             }
             maxWidth="4xl"
@@ -272,7 +298,7 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
                             <button
                                 onClick={handleSave}
                                 disabled={newRowsFiltered.length === 0}
-                                className="px-6 py-2 bg-[#EE4D2D] text-white font-black rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                                className="px-6 py-2 bg-[#00AA5B] text-white font-black rounded-xl hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
                             >
                                 <ShoppingBag className="w-4 h-4" />
                                 Simpan {newRowsFiltered.length} Data
@@ -292,17 +318,17 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
                 <div className="py-8">
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-border hover:border-[#EE4D2D]/50 rounded-2xl p-12 flex flex-col items-center gap-4 cursor-pointer hover:bg-[#EE4D2D]/5 transition-all group"
+                        className="border-2 border-dashed border-border hover:border-[#00AA5B]/50 rounded-2xl p-12 flex flex-col items-center gap-4 cursor-pointer hover:bg-[#00AA5B]/5 transition-all group"
                     >
-                        <div className="p-4 bg-[#EE4D2D]/10 rounded-2xl group-hover:scale-110 transition-transform">
-                            <Upload className="w-8 h-8 text-[#EE4D2D]" />
+                        <div className="p-4 bg-[#00AA5B]/10 rounded-2xl group-hover:scale-110 transition-transform">
+                            <Upload className="w-8 h-8 text-[#00AA5B]" />
                         </div>
                         <div className="text-center">
-                            <p className="font-bold text-foreground">Klik untuk upload file Excel Shopee</p>
-                            <p className="text-sm text-muted-foreground mt-1">Format: .xlsx / .xls • Dari menu "Pesanan Saya" → Export</p>
+                            <p className="font-bold text-foreground">Klik untuk upload file Excel Tokopedia</p>
+                            <p className="text-sm text-muted-foreground mt-1">Format: .xlsx / .xls • Export pesanan "Selesai"</p>
                         </div>
                         {loading && (
-                            <div className="flex items-center gap-2 text-[#EE4D2D]">
+                            <div className="flex items-center gap-2 text-[#00AA5B]">
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 <span className="text-sm font-medium">Memproses file...</span>
                             </div>
@@ -388,17 +414,17 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-muted-foreground">{row.itemSku || '-'}</TableCell>
                                         <TableCell align="right" className="font-semibold">{formatNumber(row.quantity)}</TableCell>
-                                        <TableCell align="right" className="font-bold text-emerald-600">{formatCurrency(row.nominal)}</TableCell>
+                                        <TableCell align="right" className="font-bold text-[#00AA5B]">{formatCurrency(row.nominal)}</TableCell>
                                         <TableCell align="center">
                                             {row.itemId > 0 ? (
-                                                <span className="text-xs font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">{row.itemId}</span>
+                                                <span className="text-xs font-mono bg-[#00AA5B]/10 text-[#00AA5B] px-1.5 py-0.5 rounded border border-[#00AA5B]/20">{row.itemId}</span>
                                             ) : (
                                                 <span className="text-xs font-mono bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-200">?</span>
                                             )}
                                         </TableCell>
                                         <TableCell align="center">
                                             {row.status === 'new' ? (
-                                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">Baru</span>
+                                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#00AA5B]/10 text-[#00AA5B] border border-[#00AA5B]/20">Baru</span>
                                             ) : row.status === 'duplicate' ? (
                                                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">Duplikat</span>
                                             ) : (
@@ -415,7 +441,7 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
 
             {step === 'saving' && (
                 <div className="py-16 flex flex-col items-center gap-4">
-                    <Loader2 className="w-10 h-10 animate-spin text-[#EE4D2D]" />
+                    <Loader2 className="w-10 h-10 animate-spin text-[#00AA5B]" />
                     <p className="font-bold text-foreground">Menyimpan {newRowsFiltered.length} data...</p>
                     <p className="text-sm text-muted-foreground">Mohon tunggu, jangan tutup halaman ini.</p>
                 </div>
@@ -423,12 +449,12 @@ export function ShopeeImportModal({ isOpen, onClose, onSuccess }: ShopeeImportMo
 
             {step === 'done' && saveResult && (
                 <div className="py-16 flex flex-col items-center gap-4">
-                    <div className="p-4 bg-emerald-100 rounded-full">
-                        <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                    <div className="p-4 bg-[#00AA5B]/10 rounded-full">
+                        <CheckCircle2 className="w-10 h-10 text-[#00AA5B]" />
                     </div>
                     <p className="text-xl font-black text-foreground">Import Berhasil!</p>
                     <p className="text-sm text-muted-foreground">
-                        <span className="font-bold text-emerald-600">{newRowsFiltered.length}</span> data penjualan Shopee berhasil disimpan ke database.
+                        <span className="font-bold text-[#00AA5B]">{newRowsFiltered.length}</span> data penjualan Tokopedia berhasil disimpan ke database.
                     </p>
                 </div>
             )}

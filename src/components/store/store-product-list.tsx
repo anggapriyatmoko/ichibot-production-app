@@ -2146,7 +2146,10 @@ export default function StoreProductList({
                                                                         <span className="font-black text-slate-700 tracking-tight text-[11px] uppercase">Rincian Modal Satuan Cina</span>
                                                                     </div>
                                                                     <div className="space-y-1.5">
-                                                                        <TooltipRow label="Harga Beli (Satuan)" value={formatCurrency(Math.round(perPcsIDR_noFee))} />
+                                                                        {currency === 'CNY' && (
+                                                                            <TooltipRow label="Harga Beli (CNY)" value={`¥${(product.purchasePrice / (jumlah || 1)).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                                                                        )}
+                                                                        <TooltipRow label="Harga Beli (IDR)" value={formatCurrency(Math.round(perPcsIDR_noFee))} />
                                                                         <TooltipRow label={`Additional Fee (${additionalFee}%)`} value={formatCurrency(Math.round(additionalFeePcs))} isNegative />
                                                                         <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
                                                                             <TooltipRow label="Modal / pcs" value={formatCurrency(Math.round(perPcs))} isBold isTotal />
@@ -2455,6 +2458,9 @@ export default function StoreProductList({
                                                             const perPcs = totalHarga / (totalPurchasedQty || 1)
                                                             const totalSimModal = perPcs * simQty
 
+                                                            const perPcsIDR_noFee = (priceInputIdr * paket) / (totalPurchasedQty || 1)
+                                                            const additionalFeePcs = perPcsIDR_noFee * (additionalFee || 0) / 100
+
 
                                                             const simPriceInput = simulationPriceData[product.wcId]
                                                             const hargaJual = (!useProductPriceOnly && simPriceInput !== undefined && simPriceInput !== 0) ? simPriceInput : (product.price || 0)
@@ -2478,8 +2484,13 @@ export default function StoreProductList({
                                                                         <span className="font-black text-slate-700 tracking-tight text-[11px] uppercase">Rincian Modal Satuan Cina</span>
                                                                     </div>
                                                                     <div className="space-y-1.5">
-                                                                        <div className="pt-2 mt-2 italic opacity-70">
-                                                                            <TooltipRow label="Modal / pcs" value={formatCurrency(Math.round(perPcs))} isTotal />
+                                                                        {currency === 'CNY' && (
+                                                                            <TooltipRow label="Harga Beli (CNY)" value={`¥${(product.purchasePrice / (jumlah || 1)).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                                                                        )}
+                                                                        <TooltipRow label="Harga Beli (IDR)" value={formatCurrency(Math.round(perPcsIDR_noFee))} />
+                                                                        <TooltipRow label={`Additional Fee (${additionalFee}%)`} value={formatCurrency(Math.round(additionalFeePcs))} isNegative />
+                                                                        <div className="pt-2 mt-2 border-t border-slate-100 italic opacity-70">
+                                                                            <TooltipRow label="Modal / pcs" value={formatCurrency(Math.round(perPcs))} isBold isTotal />
                                                                         </div>
                                                                     </div>
                                                                 </div>
