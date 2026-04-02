@@ -604,7 +604,7 @@ export default function StoreProductList({
         // Filter out 'variable' type to avoid double counting stock (count only simple and variations)
         const physicalProducts = localProducts.filter(p => p.type !== 'variable')
 
-        const excludedCategories = ['JASA', 'PART', 'ROBOT ICHIBOT', 'PART ICHIBOT']
+        const excludedCategories = ['JASA ICHIBOT', 'ROBOT ICHIBOT', 'PART ICHIBOT']
 
         // Build a set of parent wcIds whose categories are excluded
         const excludedParentIds = new Set(
@@ -2858,7 +2858,7 @@ export default function StoreProductList({
                                 <div className="flex flex-col">
                                     <p className="text-2xl font-bold text-emerald-600">{formatCurrency(analysis.totalAssetValue)}</p>
                                     <p className="text-[10px] text-emerald-600/60 font-medium mt-1 italic leading-relaxed">
-                                        * Hanya produk status <span className="font-bold underline">Publish</span> dengan stok positif yang dihitung. Stok minus dihitung sebagai 0. Kategori JASA, PART, dan ROBOT ICHIBOT dikecualikan.
+                                        * Hanya produk status <span className="font-bold underline">Publish</span> dengan stok positif yang dihitung. Stok minus dihitung sebagai 0. Kategori JASA ICHIBOT, ROBOT ICHIBOT, dan PART ICHIBOT dikecualikan.
                                     </p>
                                 </div>
                             </div>
