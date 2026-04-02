@@ -605,12 +605,27 @@ export default function StoreProductList({
         const physicalProducts = localProducts.filter(p => p.type !== 'variable')
 
         const excludedCategories = ['JASA', 'PART', 'ROBOT ICHIBOT', 'PART ICHIBOT']
+
+        // Build a set of parent wcIds whose categories are excluded
+        const excludedParentIds = new Set(
+            localProducts
+                .filter(p => p.type === 'variable')
+                .filter(p => {
+                    const cats = (p.categories || []).map((c: any) => (c.name || '').toUpperCase())
+                    return cats.some((c: string) => excludedCategories.some(ex => c.includes(ex.toUpperCase())))
+                })
+                .map(p => p.wcId)
+        )
+
         const stats = {
             totalProducts: physicalProducts.length,
             outOfStock: physicalProducts.filter(p => (p.stockQuantity || 0) <= 0).length,
             totalAssetValue: physicalProducts
                 .filter(p => p.status === 'publish')
                 .filter(p => {
+                    // Exclude variation children whose parent category is excluded
+                    if (p.parentId && excludedParentIds.has(p.parentId)) return false
+                    // Exclude products whose own category is excluded
                     const cats = (p.categories || []).map((c: any) => (c.name || '').toUpperCase())
                     return !cats.some((c: string) => excludedCategories.some(ex => c.includes(ex.toUpperCase())))
                 })

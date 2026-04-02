@@ -46,6 +46,23 @@ export default function AccountSummaryList({
 
     const totalBalance = initialData.reduce((acc, curr) => acc + getBalanceInIdr(curr), 0)
 
+    // Currency breakdowns
+    const currencyBreakdown = (() => {
+        const idrAccounts = initialData.filter(a => a.currency === 'IDR')
+        const usdAccounts = initialData.filter(a => a.currency === 'USD')
+        const cnyAccounts = initialData.filter(a => a.currency === 'CNY')
+
+        const idrTotal = idrAccounts.reduce((acc, curr) => acc + curr.balance, 0)
+        const usdTotal = usdAccounts.reduce((acc, curr) => acc + curr.balance, 0)
+        const cnyTotal = cnyAccounts.reduce((acc, curr) => acc + curr.balance, 0)
+
+        return {
+            idr: { total: idrTotal, totalIdr: idrTotal, count: idrAccounts.length },
+            usd: { total: usdTotal, totalIdr: usdTotal * kursUsd, count: usdAccounts.length },
+            cny: { total: cnyTotal, totalIdr: cnyTotal * kursYuan, count: cnyAccounts.length },
+        }
+    })()
+
     const handleDelete = (account: BankAccountData) => {
         showConfirmation({
             title: 'Hapus Akun',
@@ -274,6 +291,63 @@ export default function AccountSummaryList({
                             <span className="text-3xl font-black text-primary break-words">
                                 {formatCurrency(totalBalance)}
                             </span>
+
+                            {/* Currency Breakdown */}
+                            <div className="mt-4 space-y-2">
+                                {currencyBreakdown.idr.count > 0 && (
+                                    <div className="flex items-center justify-between p-2.5 bg-blue-500/5 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base" title="Rupiah">🇮🇩</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-semibold text-foreground">Rupiah</span>
+                                                <span className="text-[10px] text-muted-foreground">{currencyBreakdown.idr.count} akun</span>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-foreground">
+                                            Rp {formatNumber(currencyBreakdown.idr.total)}
+                                        </span>
+                                    </div>
+                                )}
+                                {currencyBreakdown.usd.count > 0 && (
+                                    <div className="flex items-center justify-between p-2.5 bg-emerald-500/5 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base" title="US Dollar">🇺🇸</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-semibold text-foreground">Dollar</span>
+                                                <span className="text-[10px] text-muted-foreground">{currencyBreakdown.usd.count} akun</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-bold text-foreground">
+                                                Rp {formatNumber(currencyBreakdown.usd.totalIdr)}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                $ {formatNumber(currencyBreakdown.usd.total)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                                {currencyBreakdown.cny.count > 0 && (
+                                    <div className="flex items-center justify-between p-2.5 bg-red-500/5 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base" title="Yuan">🇨🇳</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-semibold text-foreground">Yuan</span>
+                                                <span className="text-[10px] text-muted-foreground">{currencyBreakdown.cny.count} akun</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-bold text-foreground">
+                                                ¥ {formatNumber(currencyBreakdown.cny.total)}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                ≈ Rp {formatNumber(currencyBreakdown.cny.totalIdr)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="mt-3 flex gap-2 p-2 bg-muted/50 rounded text-xs items-center">
                                 <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                 <span className="text-muted-foreground leading-tight">Total dari {initialData.length} akun bank aktif.</span>
