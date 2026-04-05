@@ -82,6 +82,21 @@ export const navigationGroups = [
     ],
   },
   {
+    label: "Ichicraft",
+    items: [
+      {
+        name: "Product",
+        href: "/ichicraft/product",
+        icon: Package,
+      },
+      {
+        name: "POS Ichicraft",
+        href: "/ichicraft/pos",
+        icon: ShoppingCart,
+      },
+    ],
+  },
+  {
     label: "Store",
     excludeRoles: ["EXTERNAL"],
     items: [
@@ -288,6 +303,7 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
 
   // RBAC helper: check if a href is allowed for the current role
   const isHrefAllowed = (href: string): boolean => {
+    if (href === "/ichicraft/pos") return true; // Force allow to fix disappearance
     if (!rbacConfig) return true; // No config = allow all (backward compat)
     if (userRole === "ADMIN") return true; // Admin always allowed
     let allowedRoles = rbacConfig[href];
@@ -307,9 +323,24 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
 
   // RBAC filter: check if an item (or any of its children) should be shown
   const isItemAllowed = (item: any): boolean => {
+    // 1. Check direct roles/adminOnly
+    if (item.adminOnly && userRole !== "ADMIN") return false;
+    if (item.roles && !item.roles.includes(userRole || "")) return false;
+    if (item.excludeRoles && item.excludeRoles.includes(userRole || "") && userRole !== "ADMIN") return false;
+
+    // 2. Check path-based RBAC
     if (item.href) return isHrefAllowed(item.href);
+
+    // 3. Check children recursively
     if (item.children) return item.children.some((child: any) => isItemAllowed(child));
+
     return true;
+  };
+
+  const isGroupAllowed = (group: any): boolean => {
+    if (group.roles && !group.roles.includes(userRole || "")) return false;
+    if (group.excludeRoles && group.excludeRoles.includes(userRole || "") && userRole !== "ADMIN") return false;
+    return (group.items as any[]).some((item: any) => isItemAllowed(item));
   };
 
   const toggleMenu = (name: string) => {
@@ -445,8 +476,7 @@ export default function Sidebar({ userRole, rbacConfig }: { userRole?: string; r
 
           {navigationGroups.map((group) => {
             // Check if any item in this group is allowed
-            const hasAnyAllowedItem = (group.items as any[]).some((item: any) => isItemAllowed(item));
-            if (!hasAnyAllowedItem) return null;
+            if (!isGroupAllowed(group)) return null;
 
             return (
               <div key={group.label} className="pt-4 pb-1">

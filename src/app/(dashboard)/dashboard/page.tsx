@@ -6,6 +6,9 @@ import ProductionOverviewTable from './components/production-overview-table'
 import MonthYearSelector from './components/month-year-selector'
 import PendingItemsCard from './components/pending-items-card'
 import Link from 'next/link'
+import { ShoppingCart, TrendingDown, Users } from 'lucide-react'
+import { getSession } from '@/lib/auth'
+import { getRbacConfig } from '@/app/actions/rbac'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +21,37 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const defaultLastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
     const selectedLastMonth = Number(params?.lastMonth) || (defaultLastMonthDate.getMonth() + 1)
     const selectedLastYear = Number(params?.lastYear) || defaultLastMonthDate.getFullYear()
+
+    // RBAC User Logic
+    const session: any = await getSession()
+    const userRole = session?.user?.role || ''
+    const rbacConfig = await getRbacConfig()
+    
+    // Helper functionality
+    const isHrefAllowed = (href: string): boolean => {
+        if (href === "/ichicraft/pos") return true; 
+        if (!rbacConfig) return true;
+        if (userRole === "ADMIN") return true;
+        let allowedRoles = rbacConfig[href];
+
+        if (!allowedRoles) {
+            const pathSegments = href.split('/').filter(Boolean)
+            if (pathSegments.length > 0) {
+                const basePath = `/${pathSegments[0]}`
+                allowedRoles = rbacConfig[basePath]
+            }
+        }
+
+        if (!allowedRoles) return true;
+        return allowedRoles.includes(userRole);
+    }
+    
+    const shortcuts = [
+        { name: 'POS STORE', href: '/ichicraft/pos', icon: ShoppingCart, bg: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/50 hover:bg-orange-500/20' },
+        { name: 'POS BARANG', href: '/pos-barang', icon: Package, bg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50 hover:bg-blue-500/20' },
+        { name: 'PENGELUARAN', href: '/keuangan/pengeluaran', icon: TrendingDown, bg: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-500/20' },
+        { name: 'HR PORTAL', href: '/hrd-dashboard', icon: Users, bg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/50 hover:bg-purple-500/20' }
+    ].filter(s => isHrefAllowed(s.href))
 
     // 1. Fetch Stats
     const totalProducts = await prisma.product.count()
@@ -213,6 +247,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <p className="text-muted-foreground text-left">Overview of your inventory and production status.</p>
                 </div>
             </div>
+
+            {/* Quick Shortcuts */}
+            {shortcuts.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                    {shortcuts.map(s => (
+                        <Link 
+                            key={s.name} 
+                            href={s.href}
+                            className={cn("flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md", s.bg)}
+                        >
+                            <s.icon className="w-8 h-8 mb-2" strokeWidth={1.5} />
+                            <span className="text-sm font-bold tracking-tight">{s.name}</span>
+                        </Link>
+                    ))}
+                </div>
+            )}
 
             {/* Annual Production Analysis Table (Top) */}
             <ProductionOverviewTable data={overviewData} year={selectedYear} />

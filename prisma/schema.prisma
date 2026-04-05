@@ -611,6 +611,7 @@ model user {
   serviceOrders         serviceOrder[]
   targetedDocuments     hRDocument[]      @relation("HRDocumentTargetUsers")
   targetedAnnouncements announcement[]    @relation("targetedusers")
+  ichicraftOrders       IchicraftOrder[]
 
   @@map("User")
 }
@@ -903,4 +904,60 @@ model storeSaleLog {
   @@index([orderNumber])
   @@index([externalOrderNumber])
   @@map("StoreSaleLog")
+}
+
+model IchicraftCategory {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  products  IchicraftProduct[]
+
+  @@map("IchicraftCategory")
+}
+
+model IchicraftProduct {
+  id         String            @id @default(cuid())
+  categoryId String
+  name       String
+  keterangan String?           @db.Text
+  satuan     String
+  harga      Float             @default(0)
+  image      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  category   IchicraftCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@map("IchicraftProduct")
+}
+
+model IchicraftOrder {
+  id               String               @id @default(cuid())
+  orderNumber      String               @unique
+  userId           String?
+  shippingCost     Float                @default(0)
+  discountNominal  Float                @default(0)
+  createdAt        DateTime             @default(now())
+  user             user?                @relation(fields: [userId], references: [id])
+  items            IchicraftOrderItem[]
+
+  @@index([userId])
+  @@map("IchicraftOrder")
+}
+
+model IchicraftOrderItem {
+  id           String         @id @default(cuid())
+  orderId      String
+  productId    String
+  productName  String
+  productPrice Float
+  quantity     Float
+  satuan       String         @default("-")
+  originalPrice Float?
+  createdAt    DateTime       @default(now())
+  order        IchicraftOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("IchicraftOrderItem")
 }
