@@ -97,11 +97,23 @@ export async function deleteIchicraftCategory(id: string) {
 async function safeUnlink(publicPath: string | null | undefined) {
     if (!publicPath) return
     try {
-        // Convert '/uploads/ichicraft/foo.jpg' -> 'public/uploads/ichicraft/foo.jpg'
-        if (publicPath.startsWith('/uploads/')) {
-            const filePath = path.join(process.cwd(), 'public', ...publicPath.split('/').filter(Boolean))
-            await unlink(filePath)
+        // Support both old path format (/uploads/...) and new API path (/api/uploads/...)
+        let relativePath = publicPath
+        if (relativePath.startsWith('/api/uploads/')) {
+            relativePath = relativePath.replace('/api/uploads/', '')
+        } else if (relativePath.startsWith('/uploads/')) {
+            relativePath = relativePath.replace('/uploads/', '')
+        } else {
+            return
         }
+
+        // Try uploads/ dir first (production), then public/uploads/ (legacy)
+        const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads')
+        const primaryPath = path.join(uploadDir, relativePath)
+        const legacyPath = path.join(process.cwd(), 'public', 'uploads', relativePath)
+
+        try { await unlink(primaryPath) } catch { /* ignore */ }
+        try { await unlink(legacyPath) } catch { /* ignore */ }
     } catch (e) {
         // ignore error if file not found
     }
@@ -109,7 +121,10 @@ async function safeUnlink(publicPath: string | null | undefined) {
 
 async function uploadImage(file: File | null): Promise<string | null> {
     if (!file || file.size === 0) return null
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'ichicraft')
+
+    // Use uploads/ dir (outside public/) so it works with standalone + Docker volumes
+    const uploadBase = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads')
+    const uploadDir = path.join(uploadBase, 'ichicraft')
     await mkdir(uploadDir, { recursive: true })
 
     const bytes = await file.arrayBuffer()
@@ -123,7 +138,8 @@ async function uploadImage(file: File | null): Promise<string | null> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('fs').writeFileSync(filePath, buffer)
     
-    return `/uploads/ichicraft/${filename}`
+    // Return API route path for serving
+    return `/api/uploads/ichicraft/${filename}`
 }
 
 // ============================================================================

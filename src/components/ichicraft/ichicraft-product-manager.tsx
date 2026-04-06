@@ -54,6 +54,16 @@ type Category = {
     products: Product[]
 }
 
+// Normalize old /uploads/... paths to /api/uploads/... for production compatibility
+function normalizeImageUrl(url: string | null): string | null {
+    if (!url) return null
+    // Already using API route
+    if (url.startsWith('/api/uploads/')) return url
+    // Old format: /uploads/ichicraft/xxx.jpg -> /api/uploads/ichicraft/xxx.jpg
+    if (url.startsWith('/uploads/')) return `/api${url}`
+    return url
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -402,7 +412,7 @@ export default function IchicraftProductManager({
                             <div className="relative w-16 h-16 rounded-md border border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden shrink-0">
                                 {productForm.imagePreview && !productForm.removeImage ? (
                                     <>
-                                        <Image src={productForm.imagePreview} alt="Preview" fill className="object-cover" />
+                                        <Image src={normalizeImageUrl(productForm.imagePreview) || productForm.imagePreview} alt="Preview" fill className="object-cover" />
                                         <button
                                             onClick={() => setProductForm(p => ({ ...p, image: null, imagePreview: null, removeImage: true }))}
                                             className="absolute top-1 right-1 bg-background/80 hover:bg-background rounded-full p-0.5 text-muted-foreground hover:text-destructive transition-colors shadow-sm"
@@ -479,7 +489,7 @@ export default function IchicraftProductManager({
                         {/* Image Section */}
                         <div className="flex flex-col items-center justify-center bg-background border border-border rounded-xl relative aspect-square md:aspect-auto overflow-hidden shadow-sm">
                             {viewingProduct.image ? (
-                                <Image src={viewingProduct.image} alt={viewingProduct.name} fill className="object-contain p-4 group-hover:scale-105 transition-transform duration-500" />
+                                <Image src={normalizeImageUrl(viewingProduct.image)!} alt={viewingProduct.name} fill className="object-contain p-4 group-hover:scale-105 transition-transform duration-500" />
                             ) : (
                                 <Package className="w-24 h-24 text-muted-foreground/30" />
                             )}
@@ -617,7 +627,7 @@ function CategorySection({
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-8 h-8 rounded shrink-0 bg-muted/50 border border-border flex items-center justify-center overflow-hidden">
                                                 {product.image ? (
-                                                    <Image src={product.image} alt={product.name} fill className="object-cover" />
+                                                    <Image src={normalizeImageUrl(product.image)!} alt={product.name} fill className="object-cover" />
                                                 ) : (
                                                     <ImageIcon className="w-3.5 h-3.5 text-muted-foreground/50" />
                                                 )}

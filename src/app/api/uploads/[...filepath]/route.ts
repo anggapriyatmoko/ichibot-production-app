@@ -5,9 +5,10 @@ import mime from 'mime'
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ filename: string }> }
+    { params }: { params: Promise<{ filepath: string[] }> }
 ) {
-    const filename = (await params).filename
+    const filepath = (await params).filepath
+    const filename = filepath.join('/')
 
     // Determine upload directory
     // In production (Docker), we expect a volume mount at /app/uploads

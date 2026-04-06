@@ -6,6 +6,14 @@ import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, History
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
+
+// Normalize old /uploads/... paths to /api/uploads/... for production compatibility
+function normalizeImageUrl(url: string | null): string | null {
+    if (!url) return null
+    if (url.startsWith('/api/uploads/')) return url
+    if (url.startsWith('/uploads/')) return `/api${url}`
+    return url
+}
 import { useConfirmation } from '@/components/providers/modal-provider'
 import { QuantityInput } from '@/components/ui/quantity-input'
 import { useAlert } from '@/hooks/use-alert'
@@ -651,7 +659,7 @@ export default function POSIchicraftSystem({
                                         <Eye className="w-4 h-4" />
                                     </button>
                                     {product.image ? (
-                                        <Image src={product.image} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 50vw, 25vw" />
+                                        <Image src={normalizeImageUrl(product.image)!} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 50vw, 25vw" />
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center opacity-20">
                                             <Package className="w-16 h-16" />
@@ -1048,7 +1056,7 @@ export default function POSIchicraftSystem({
                         {/* Image Section */}
                         <div className="flex flex-col items-center justify-center bg-background border border-border rounded-xl relative aspect-square md:aspect-auto overflow-hidden shadow-sm">
                             {viewingProduct.image ? (
-                                <Image src={viewingProduct.image} alt={viewingProduct.name} fill className="object-contain p-4 transition-transform duration-500" />
+                                <Image src={normalizeImageUrl(viewingProduct.image)!} alt={viewingProduct.name} fill className="object-contain p-4 transition-transform duration-500" />
                             ) : (
                                 <Package className="w-24 h-24 text-muted-foreground/30" />
                             )}
