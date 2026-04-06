@@ -223,24 +223,36 @@ export default function SuratTugasManager({
     let externalUrl = "";
     const pdfUrls = selectedSTForPdf.pdf_urls;
 
+    // Build base URL for constructing GAS URLs
+    const baseSecureUrl = (pdfUrls.secure_download || pdfUrls.secure_download_ichibot || "").split("?")[0];
+    const instansi = selectedSTForPdf.instansi;
+
     if (signatureType === "none") {
-      externalUrl =
-        selectedSTForPdf.instansi === "GAN"
-          ? pdfUrls.secure_download
-          : pdfUrls.secure_download_ichibot;
-      // In CI-Generate, plain might need a query param, but let's use the standard one for now
+      if (instansi === "GAS") {
+        externalUrl = pdfUrls.secure_download_gas || `${baseSecureUrl}?logo=gas&qr_code=0`;
+      } else if (instansi === "GAN") {
+        externalUrl = pdfUrls.secure_download;
+      } else {
+        externalUrl = pdfUrls.secure_download_ichibot;
+      }
       externalUrl += (externalUrl.includes("?") ? "&" : "?") + "signature=none";
     } else if (signatureType === "qr") {
-      externalUrl =
-        selectedSTForPdf.instansi === "GAN"
-          ? pdfUrls.secure_qr_download
-          : pdfUrls.secure_qr_download_ichibot;
+      if (instansi === "GAS") {
+        externalUrl = pdfUrls.secure_qr_download_gas || `${baseSecureUrl}?logo=gas&qr_code=1`;
+      } else if (instansi === "GAN") {
+        externalUrl = pdfUrls.secure_qr_download;
+      } else {
+        externalUrl = pdfUrls.secure_qr_download_ichibot;
+      }
     } else {
       // Default / Signature
-      externalUrl =
-        selectedSTForPdf.instansi === "GAN"
-          ? pdfUrls.secure_download
-          : pdfUrls.secure_download_ichibot;
+      if (instansi === "GAS") {
+        externalUrl = pdfUrls.secure_download_gas || `${baseSecureUrl}?logo=gas&qr_code=0`;
+      } else if (instansi === "GAN") {
+        externalUrl = pdfUrls.secure_download;
+      } else {
+        externalUrl = pdfUrls.secure_download_ichibot;
+      }
     }
 
     const proxyUrl = `/api/download-pdf?url=${encodeURIComponent(externalUrl)}`;
@@ -568,8 +580,8 @@ export default function SuratTugasManager({
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
                         Instansi
                       </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(["ICHI", "GAN"] as const).map((inst) => (
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["ICHI", "GAN", "GAS"] as const).map((inst) => (
                           <button
                             key={inst}
                             type="button"
@@ -581,7 +593,7 @@ export default function SuratTugasManager({
                               : "bg-white border-gray-200 text-gray-500 hover:border-blue-200 hover:bg-blue-50/50"
                               }`}
                           >
-                            {inst === "ICHI" ? "ICHIBOT" : "PT. GAN"}
+                            {inst === "ICHI" ? "ICHIBOT" : inst === "GAN" ? "PT. GAN" : "PT. GAS"}
                           </button>
                         ))}
                       </div>
@@ -765,7 +777,7 @@ export default function SuratTugasManager({
             onClose={() => setIsPdfModalOpen(false)}
             onDownload={handlePdfDownload}
             title="Unduh Surat Tugas"
-            variant={selectedSTForPdf.instansi === "GAN" ? "gan" : "ichibot"}
+            variant={selectedSTForPdf.instansi === "GAN" ? "gan" : selectedSTForPdf.instansi === "GAS" ? "gas" : "ichibot"}
           />
         )
       }
