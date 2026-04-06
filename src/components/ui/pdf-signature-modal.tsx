@@ -14,14 +14,17 @@ import {
 export type SignatureType =
   | "signature_ichibot"
   | "signature_pt_gan"
+  | "SignatureGAS"
   | "none"
   | "qr"
   | "cert_ichibot"
   | "cert_gan"
+  | "cert_gas"
   | "cert_qr_ichibot"
-  | "cert_qr_gan";
+  | "cert_qr_gan"
+  | "cert_qr_gas";
 
-export type ModalVariant = "ichibot" | "gan" | "certificate";
+export type ModalVariant = "ichibot" | "gan" | "gas" | "certificate" | "surat_jalan";
 
 interface SignatureOption {
   value: SignatureType;
@@ -46,6 +49,12 @@ const getSignatureOptions = (variant: ModalVariant): SignatureOption[] => {
         icon: <Stamp className="w-5 h-5" />,
       },
       {
+        value: "cert_gas",
+        label: "Sertifikat GAS",
+        description: "Versi PT. Gagas Anagata Semesta",
+        icon: <Stamp className="w-5 h-5" />,
+      },
+      {
         value: "cert_qr_ichibot",
         label: "QR Code (ICHIBOT)",
         description: "Mode verifikasi digital logo ICHIBOT",
@@ -57,23 +66,66 @@ const getSignatureOptions = (variant: ModalVariant): SignatureOption[] => {
         description: "Mode verifikasi digital logo GAN",
         icon: <QrCode className="w-5 h-5" />,
       },
+      {
+        value: "cert_qr_gas",
+        label: "QR Code (GAS)",
+        description: "Mode verifikasi digital logo GAS",
+        icon: <QrCode className="w-5 h-5" />,
+      },
+    ];
+  }
+
+  if (variant === "surat_jalan") {
+    return [
+      {
+        value: "signature_ichibot",
+        label: "Logo ICHIBOT",
+        description: "Surat jalan dengan logo ICHIBOT",
+        icon: <Stamp className="w-5 h-5" />,
+      },
+      {
+        value: "signature_pt_gan",
+        label: "Logo GAN",
+        description: "Surat jalan dengan logo PT Gagas Anagata Nusantara",
+        icon: <Stamp className="w-5 h-5" />,
+      },
+      {
+        value: "SignatureGAS",
+        label: "Logo GAS",
+        description: "Surat jalan dengan logo PT Gagas Anagata Semesta",
+        icon: <Stamp className="w-5 h-5" />,
+      },
+      {
+        value: "none",
+        label: "Tanpa Logo (Polos)",
+        description: "Surat jalan tanpa logo, tampilan bersih",
+        icon: <FileCheck className="w-5 h-5" />,
+      },
+      {
+        value: "qr",
+        label: "Mode QR Code",
+        description: "Dengan QR Code untuk verifikasi digital",
+        icon: <QrCode className="w-5 h-5" />,
+      },
     ];
   }
 
   return [
     {
-      value: variant === "gan" ? "signature_pt_gan" : "signature_ichibot",
-      label: variant === "gan" ? "Dengan Cap GAN" : "Dengan Cap",
+      value: variant === "gan" ? "signature_pt_gan" : variant === "gas" ? "SignatureGAS" : "signature_ichibot",
+      label: variant === "gan" ? "Dengan Cap GAN" : variant === "gas" ? "Dengan Cap GAS" : "Dengan Cap",
       description:
         variant === "gan"
           ? "Invoice dengan stempel PT Gagas Anagata Nusantara"
-          : "Invoice dengan stempel dan tanda tangan",
+          : variant === "gas"
+            ? "Invoice dengan stempel PT Gagas Anagata Semesta"
+            : "Invoice dengan stempel dan tanda tangan",
       icon: <Stamp className="w-5 h-5" />,
     },
     {
       value: "none",
       label: "Tanpa Cap (Polos)",
-      description: "Invoice tanpa stempel, tampilan bersih",
+      description: "Dokumen tanpa stempel, tampilan bersih",
       icon: <FileCheck className="w-5 h-5" />,
     },
     {
@@ -103,7 +155,10 @@ export default function PdfSignatureModal({
   const options = getSignatureOptions(variant);
   const getDefaultValue = () => {
     if (variant === "certificate") return "cert_gan";
-    return variant === "gan" ? "signature_pt_gan" : "signature_ichibot";
+    if (variant === "gan") return "signature_pt_gan";
+    if (variant === "gas") return "SignatureGAS";
+    if (variant === "surat_jalan") return "signature_pt_gan";
+    return "signature_ichibot";
   };
 
   const [selectedSignature, setSelectedSignature] =
@@ -120,9 +175,13 @@ export default function PdfSignatureModal({
   const colorClass =
     variant === "gan"
       ? "orange"
-      : variant === "certificate"
-        ? "emerald"
-        : "blue";
+      : variant === "gas"
+        ? "purple"
+        : variant === "certificate"
+          ? "emerald"
+          : variant === "surat_jalan"
+            ? "blue"
+            : "blue";
 
   const themeColors = {
     blue: {
@@ -146,6 +205,17 @@ export default function PdfSignatureModal({
       borderLight: "border-orange-100",
       ring: "focus:ring-orange-500",
       button: "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20",
+    },
+    purple: {
+      bg: "bg-purple-50",
+      bgLight: "bg-purple-50/50",
+      bgIcon: "bg-purple-100",
+      text: "text-purple-600",
+      textDark: "text-purple-700",
+      border: "border-purple-500",
+      borderLight: "border-purple-100",
+      ring: "focus:ring-purple-500",
+      button: "bg-purple-500 hover:bg-purple-600 shadow-purple-500/20",
     },
     emerald: {
       bg: "bg-emerald-50",
