@@ -20,12 +20,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Force revalidation on all pages (HTML) so browser fetches fresh JS references
+        // Prevent stale JS bundles: HTML pages must always revalidate
+        // This fixes "Failed to find Server Action" after redeployment
         source: '/:path*',
         headers: [
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
           },
         ],
       },
