@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
-import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, History, ExternalLink, Archive, Eye, BadgePercent } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, History, ExternalLink, Archive, Eye, BadgePercent, FileDown, Download } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
@@ -10,6 +10,7 @@ import { useConfirmation } from '@/components/providers/modal-provider'
 import { QuantityInput } from '@/components/ui/quantity-input'
 import { useAlert } from '@/hooks/use-alert'
 import Modal from '@/components/ui/modal'
+import { createPortal } from 'react-dom'
 import { checkoutIchicraftOrder, getIchicraftOrderHistory } from '@/app/actions/ichicraft-order'
 
 type IchicraftProduct = {
@@ -99,6 +100,11 @@ export default function POSIchicraftSystem({
     const [historyLoading, setHistoryLoading] = useState(false)
     const [historySearchTerm, setHistorySearchTerm] = useState('')
 
+    // PDF Preview State
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
+    const [showPdfPreview, setShowPdfPreview] = useState(false)
+    const [pdfFilename, setPdfFilename] = useState('')
+
     const router = useRouter()
     const [totalPages, setTotalPages] = useState(1)
     const [historyPage, setHistoryPage] = useState(1)
@@ -160,7 +166,7 @@ export default function POSIchicraftSystem({
                 <div class="container">
                     <div class="header">
                         <h1>ICHICRAFT INVOICE</h1>
-                        <p>Struk Pembelian Ichicraft</p>
+                        <p>A Creative Service by Ichibot - Fokus pada Layanan Jasa Kreatif</p>
                     </div>
                     <div class="meta">
                         <div>
@@ -226,6 +232,170 @@ export default function POSIchicraftSystem({
 
         printWindow.document.write(receiptHTML)
         printWindow.document.close()
+    }
+
+    const handleGeneratePdf = async (overrideData?: any) => {
+        const dataToPrint = overrideData || receiptData
+        if (!dataToPrint) return
+
+        const { default: jsPDF } = await import('jspdf')
+        const { default: autoTable } = await import('jspdf-autotable')
+
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' })
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 12
+
+        // Header
+        doc.setFontSize(16)
+        doc.setFont('helvetica', 'bold')
+        doc.text('ICHICRAFT INVOICE', pageWidth / 2, margin + 4, { align: 'center' })
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.text('A Creative Service by Ichibot - Fokus pada Layanan Jasa Kreatif', pageWidth / 2, margin + 10, { align: 'center' })
+
+        // Dashed line
+        doc.setLineDashPattern([2, 1], 0)
+        doc.setLineWidth(0.3)
+        doc.line(margin, margin + 14, pageWidth - margin, margin + 14)
+        doc.setLineDashPattern([], 0)
+
+        // Meta info
+        const metaY = margin + 20
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.text('No. Order:', margin, metaY)
+        doc.setFont('helvetica', 'normal')
+        doc.text(dataToPrint.orderNumber || '-', margin + 22, metaY)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Tanggal:', margin, metaY + 5)
+        doc.setFont('helvetica', 'normal')
+        doc.text(new Date(dataToPrint.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }), margin + 22, metaY + 5)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`Kasir: ${userName}`, pageWidth - margin, metaY, { align: 'right' })
+
+        // Table - for discount items, store info for custom drawing
+        const discountInfo: Record<number, { origPrice: string; discPrice: string; origSub: string; discSub: string }> = {}
+        const tableBody = dataToPrint.items.map((item: any, idx: number) => {
+            const qtyStr = `${item.quantity}${item.satuan && item.satuan !== '-' ? ' ' + item.satuan : ''}`
+            if (item.originalPrice) {
+                discountInfo[idx] = {
+                    origPrice: `Rp ${formatNumber(item.originalPrice)}`,
+                    discPrice: `Rp ${formatNumber(item.productPrice)}`,
+                    origSub: `Rp ${formatNumber(item.originalPrice * item.quantity)}`,
+                    discSub: `Rp ${formatNumber(item.productPrice * item.quantity)}`,
+                }
+                // Empty string - we draw custom text in didDrawCell
+                return [item.productName, qtyStr, ' ', ' ']
+            }
+            return [item.productName, qtyStr, `Rp ${formatNumber(item.productPrice)}`, `Rp ${formatNumber(item.productPrice * item.quantity)}`]
+        })
+
+        autoTable(doc, {
+            startY: metaY + 10,
+            head: [['Deskripsi Produk', 'Qty', 'Harga Satuan', 'Subtotal']],
+            body: tableBody,
+            theme: 'plain',
+            styles: { fontSize: 9, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.2 },
+            headStyles: { fontStyle: 'bold', fillColor: false, textColor: [0, 0, 0], lineWidth: { bottom: 0.5 }, lineColor: [0, 0, 0] },
+            columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { halign: 'center', cellWidth: 22 },
+                2: { halign: 'right', cellWidth: 50 },
+                3: { halign: 'right', cellWidth: 50 },
+            },
+            margin: { left: margin, right: margin },
+            didDrawCell: (data: any) => {
+                if (data.section !== 'body') return
+                const info = discountInfo[data.row.index]
+                if (!info) return
+                if (data.column.index !== 2 && data.column.index !== 3) return
+
+                const origText = data.column.index === 2 ? info.origPrice : info.origSub
+                const discText = data.column.index === 2 ? info.discPrice : info.discSub
+                const rightX = data.cell.x + data.cell.width - data.cell.padding('right')
+                const cellMidY = data.cell.y + data.cell.height / 2 + 1
+
+                doc.setFontSize(9)
+                doc.setFont('helvetica', 'normal')
+
+                // Draw discounted price (right-most)
+                const discW = doc.getTextWidth(discText)
+                doc.setTextColor(0, 0, 0)
+                doc.text(discText, rightX, cellMidY, { align: 'right' })
+
+                // Draw original price with strikethrough (left of discounted price)
+                const gap = 3
+                const origX = rightX - discW - gap
+                doc.setTextColor(140, 140, 140)
+                doc.setFontSize(8)
+                const origW = doc.getTextWidth(origText)
+                doc.text(origText, origX, cellMidY, { align: 'right' })
+
+                // Strikethrough line
+                doc.setDrawColor(140, 140, 140)
+                doc.setLineWidth(0.3)
+                doc.line(origX - origW, cellMidY - 1, origX, cellMidY - 1)
+
+                // Reset
+                doc.setTextColor(0, 0, 0)
+                doc.setFontSize(9)
+            },
+        })
+
+        const afterTableY = (doc as any).lastAutoTable.finalY + 5
+
+        // Summary - right aligned
+        const summaryX = pageWidth - margin
+        const labelX = summaryX - 60
+        let sY = afterTableY
+        const itemsTotal = dataToPrint.items.reduce((acc: number, i: any) => acc + (i.productPrice * i.quantity), 0)
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Total Produk:', labelX, sY, { align: 'right' })
+        doc.text(`Rp ${formatNumber(itemsTotal)}`, summaryX, sY, { align: 'right' })
+        sY += 5
+
+        if (dataToPrint.discountNominal > 0) {
+            doc.setTextColor(211, 47, 47)
+            doc.text('Diskon:', labelX, sY, { align: 'right' })
+            doc.text(`- Rp ${formatNumber(dataToPrint.discountNominal)}`, summaryX, sY, { align: 'right' })
+            doc.setTextColor(0, 0, 0)
+            sY += 5
+        }
+        if (dataToPrint.shippingCost > 0) {
+            doc.text('Biaya Pengiriman:', labelX, sY, { align: 'right' })
+            doc.text(`Rp ${formatNumber(dataToPrint.shippingCost)}`, summaryX, sY, { align: 'right' })
+            sY += 5
+        }
+
+        // Total
+        doc.setLineWidth(0.4)
+        doc.line(labelX - 5, sY - 1, summaryX, sY - 1)
+        sY += 3
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.text('TOTAL:', labelX, sY, { align: 'right' })
+        const grandTotal = itemsTotal - (dataToPrint.discountNominal || 0) + (dataToPrint.shippingCost || 0)
+        doc.text(`Rp ${formatNumber(grandTotal)}`, summaryX, sY, { align: 'right' })
+
+        // Footer
+        doc.setLineDashPattern([2, 1], 0)
+        doc.setLineWidth(0.2)
+        doc.line(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18)
+        doc.setLineDashPattern([], 0)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Terima kasih atas pesanan Anda!', pageWidth / 2, pageHeight - 13, { align: 'center' })
+        doc.text('Ig: @team.ichibot', pageWidth / 2, pageHeight - 9, { align: 'center' })
+
+        // Show preview
+        const blob = doc.output('blob')
+        const url = URL.createObjectURL(blob)
+        setPdfBlobUrl(url)
+        setPdfFilename(`Invoice-${dataToPrint.orderNumber || 'ICHICRAFT'}.pdf`)
+        setShowPdfPreview(true)
     }
 
     const filteredProducts = useMemo(() => {
@@ -716,6 +886,13 @@ export default function POSIchicraftSystem({
                             Cetak Struk (A5 Landscape)
                         </button>
                         <button
+                            onClick={() => handleGeneratePdf()}
+                            className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"
+                        >
+                            <FileDown className="w-5 h-5" />
+                            Generate PDF
+                        </button>
+                        <button
                             onClick={() => setShowReceipt(false)}
                             className="w-full py-3 bg-muted text-foreground rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-muted/80 transition-colors"
                         >
@@ -784,13 +961,22 @@ export default function POSIchicraftSystem({
                                                 <p className="font-bold text-primary text-lg">
                                                     Rp {formatNumber(order.items.reduce((acc, i) => acc + (i.productPrice * i.quantity), 0) - order.discountNominal + order.shippingCost)}
                                                 </p>
-                                                <button
-                                                    onClick={() => handlePrintReceipt(order)}
-                                                    className="inline-flex items-center gap-1.5 text-xs font-medium bg-muted hover:bg-border transition-colors px-3 py-1.5 rounded-lg"
-                                                >
-                                                    <Printer className="w-3.5 h-3.5" />
-                                                    Cetak Struk
-                                                </button>
+                                                <div className="flex items-center gap-1.5">
+                                                    <button
+                                                        onClick={() => handlePrintReceipt(order)}
+                                                        className="inline-flex items-center gap-1.5 text-xs font-medium bg-muted hover:bg-border transition-colors px-3 py-1.5 rounded-lg"
+                                                    >
+                                                        <Printer className="w-3.5 h-3.5" />
+                                                        Struk
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleGeneratePdf(order)}
+                                                        className="inline-flex items-center gap-1.5 text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 transition-colors px-3 py-1.5 rounded-lg"
+                                                    >
+                                                        <FileDown className="w-3.5 h-3.5" />
+                                                        PDF
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
@@ -970,6 +1156,91 @@ export default function POSIchicraftSystem({
                     </div>
                 </div>
             </Modal>
+            {/* PDF Preview Modal */}
+            {showPdfPreview && pdfBlobUrl && createPortal(
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/60 z-[999] backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => { setShowPdfPreview(false); URL.revokeObjectURL(pdfBlobUrl); setPdfBlobUrl(null) }}
+                    />
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-8">
+                        <div
+                            className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col animate-in zoom-in-95 fade-in duration-200 relative overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-border shrink-0 bg-white dark:bg-card z-20">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                        <FileDown className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900 dark:text-foreground">Preview Invoice PDF</h2>
+                                        <p className="text-xs text-gray-500 dark:text-muted-foreground">{pdfFilename}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a')
+                                            link.href = pdfBlobUrl
+                                            link.download = pdfFilename
+                                            document.body.appendChild(link)
+                                            link.click()
+                                            document.body.removeChild(link)
+                                        }}
+                                        className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-colors text-blue-600"
+                                        title="Download PDF"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowPdfPreview(false); URL.revokeObjectURL(pdfBlobUrl); setPdfBlobUrl(null) }}
+                                        className="p-2 hover:bg-gray-100 dark:hover:bg-muted rounded-xl transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-gray-500 dark:text-muted-foreground" />
+                                    </button>
+                                </div>
+                            </div>
+                            {/* PDF iframe */}
+                            <div className="flex-1 relative bg-gray-100 dark:bg-muted/30 overflow-hidden">
+                                <iframe
+                                    src={`${pdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                                    className="w-full h-full border-0"
+                                    title="PDF Preview"
+                                />
+                            </div>
+                            {/* Footer */}
+                            <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-200 dark:border-border bg-gray-50 dark:bg-muted/30 rounded-b-2xl shrink-0 z-20">
+                                <p className="text-xs text-gray-500 dark:text-muted-foreground font-mono truncate">{pdfFilename}</p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setShowPdfPreview(false); URL.revokeObjectURL(pdfBlobUrl); setPdfBlobUrl(null) }}
+                                        className="px-5 py-2 text-gray-700 dark:text-foreground font-semibold rounded-xl border border-gray-200 dark:border-border hover:bg-gray-100 dark:hover:bg-muted transition-colors"
+                                    >
+                                        Tutup
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a')
+                                            link.href = pdfBlobUrl
+                                            link.download = pdfFilename
+                                            document.body.appendChild(link)
+                                            link.click()
+                                            document.body.removeChild(link)
+                                        }}
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20 active:scale-95"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>,
+                document.body
+            )}
         </div>
     )
 }

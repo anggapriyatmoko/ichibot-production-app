@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, History, Edit2, Save, PlusCircle, Loader2, Download, ChevronRight, ChevronLeft, User, Camera, Upload, Image as ImageIcon, Archive } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, History, Edit2, Save, PlusCircle, Loader2, Download, ChevronRight, ChevronLeft, User, Camera, Upload, Image as ImageIcon, Archive, FileDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toPng } from 'html-to-image'
 import jsPDF from 'jspdf'
@@ -16,6 +16,7 @@ import { useAlert } from '@/hooks/use-alert'
 import { createServiceProduct, updateServiceProduct, deleteServiceProduct, exportServiceProducts, importServiceProducts } from '@/app/actions/service-product'
 import { checkoutServiceOrder, getServiceOrderHistory, exportServiceOrders, importServiceOrders } from '@/app/actions/service-order'
 import Modal from '@/components/ui/modal'
+import { createPortal } from 'react-dom'
 
 type ServiceProduct = {
     id: string
@@ -90,6 +91,9 @@ export default function POSServiceSystem({
     const [shippingCost, setShippingCost] = useState(0)
     const [loading, setLoading] = useState(false)
     const [showReceipt, setShowReceipt] = useState(false)
+    const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
+    const [showPdfPreview, setShowPdfPreview] = useState(false)
+    const [pdfFilename, setPdfFilename] = useState('')
     const [receiptData, setReceiptData] = useState<any>(null)
     const [mobileTab, setMobileTab] = useState<'products' | 'cart'>('products')
     const [showHistory, setShowHistory] = useState(false)
@@ -154,38 +158,44 @@ export default function POSServiceSystem({
         if (!receiptElement) return
 
         try {
-            // Using toPng from html-to-image instead of html2canvas for better reliability
             const dataUrl = await toPng(receiptElement, {
                 pixelRatio: 3,
                 backgroundColor: '#ffffff',
                 cacheBust: true,
-                skipFonts: false
+                skipFonts: false,
+                width: receiptElement.scrollWidth,
+                height: receiptElement.scrollHeight,
             })
 
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [70, 297]
+                format: [80, 297]
             })
 
             const imgProps = pdf.getImageProperties(dataUrl)
-            const pdfWidth = 70
+            const pdfWidth = 76
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
 
             const finalPdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [pdfWidth, pdfHeight]
+                format: [80, pdfHeight + 4]
             })
 
-            finalPdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight)
+            finalPdf.addImage(dataUrl, 'PNG', 2, 2, pdfWidth, pdfHeight)
 
             const now = new Date()
             const dateStr = now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }).split('/').reverse().join('-')
             const timeStr = now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false }).replace(/:/g, '-')
             const filename = `Service_${userName}_${dateStr}_${timeStr}.pdf`
 
-            finalPdf.save(filename)
+            // Show preview instead of direct download
+            const blob = finalPdf.output('blob')
+            const url = URL.createObjectURL(blob)
+            setPdfBlobUrl(url)
+            setPdfFilename(filename)
+            setShowPdfPreview(true)
         } catch (error: any) {
             console.error('Error generating PDF:', error)
             showAlert(`Gagal membuat PDF: ${error.message || 'Error tidak diketahui'}`, 'error')
@@ -1426,7 +1436,7 @@ export default function POSServiceSystem({
                         </div>
                     }
                 >
-                    <div id="service-receipt" className="p-6 bg-white overflow-y-auto w-[70mm] mx-auto min-h-[100mm]">
+                    <div id="service-receipt" className="p-6 bg-white overflow-hidden w-[76mm] mx-auto min-h-[100mm]">
                         <div className="text-center space-y-1 pb-4 border-b-2 border-dashed border-gray-300">
                             <h2 className="text-2xl font-black text-black">ICHIBOT SERVICE</h2>
                             <p className="text-[12px] text-black uppercase tracking-widest">Bukti pembayaran service robot ichibot</p>
@@ -1497,6 +1507,92 @@ export default function POSServiceSystem({
                         </div>
                     </div>
                 </Modal>
+            )}
+
+            {/* PDF Preview Modal */}
+            {showPdfPreview && pdfBlobUrl && createPortal(
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/60 z-[999] backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => { setShowPdfPreview(false); URL.revokeObjectURL(pdfBlobUrl); setPdfBlobUrl(null) }}
+                    />
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 md:p-8">
+                        <div
+                            className="bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col animate-in zoom-in-95 fade-in duration-200 relative overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-border shrink-0 bg-white dark:bg-card z-20">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                                        <FileDown className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900 dark:text-foreground">Preview Receipt PDF</h2>
+                                        <p className="text-xs text-gray-500 dark:text-muted-foreground">{pdfFilename}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a')
+                                            link.href = pdfBlobUrl
+                                            link.download = pdfFilename
+                                            document.body.appendChild(link)
+                                            link.click()
+                                            document.body.removeChild(link)
+                                        }}
+                                        className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-colors text-blue-600"
+                                        title="Download PDF"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowPdfPreview(false); URL.revokeObjectURL(pdfBlobUrl); setPdfBlobUrl(null) }}
+                                        className="p-2 hover:bg-gray-100 dark:hover:bg-muted rounded-xl transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-gray-500 dark:text-muted-foreground" />
+                                    </button>
+                                </div>
+                            </div>
+                            {/* PDF iframe */}
+                            <div className="flex-1 relative bg-gray-100 dark:bg-muted/30 overflow-hidden">
+                                <iframe
+                                    src={`${pdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                                    className="w-full h-full border-0"
+                                    title="PDF Preview"
+                                />
+                            </div>
+                            {/* Footer */}
+                            <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-200 dark:border-border bg-gray-50 dark:bg-muted/30 rounded-b-2xl shrink-0 z-20">
+                                <p className="text-xs text-gray-500 dark:text-muted-foreground font-mono truncate">{pdfFilename}</p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => { setShowPdfPreview(false); URL.revokeObjectURL(pdfBlobUrl); setPdfBlobUrl(null) }}
+                                        className="px-5 py-2 text-gray-700 dark:text-foreground font-semibold rounded-xl border border-gray-200 dark:border-border hover:bg-gray-100 dark:hover:bg-muted transition-colors"
+                                    >
+                                        Tutup
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a')
+                                            link.href = pdfBlobUrl
+                                            link.download = pdfFilename
+                                            document.body.appendChild(link)
+                                            link.click()
+                                            document.body.removeChild(link)
+                                        }}
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20 active:scale-95"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>,
+                document.body
             )}
 
             {/* Camera Capture Modal Overlay */}
