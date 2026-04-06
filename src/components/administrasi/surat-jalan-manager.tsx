@@ -224,12 +224,21 @@ export default function SuratJalanManager({
   const handlePdfDownload = async (signatureType: SignatureType) => {
     if (!selectedSJForPdf || !selectedSJForPdf.pdf_urls) return;
 
-    let externalUrl = selectedSJForPdf.pdf_urls.secure_download;
+    // Build URL with correct logo parameter based on signature type
+    const baseUrl = selectedSJForPdf.pdf_urls.secure_download.split("?")[0];
+
+    // Map signature type to logo parameter
+    let logoParam = "gan"; // default
+    if (signatureType === "signature_ichibot") logoParam = "ichibot";
+    else if (signatureType === "signature_pt_gan") logoParam = "gan";
+    else if (signatureType === "SignatureGAS") logoParam = "gas";
+
+    let externalUrl = `${baseUrl}?logo=${logoParam}`;
 
     if (signatureType === "none") {
-      externalUrl += (externalUrl.includes("?") ? "&" : "?") + "signature=none";
+      externalUrl += "&signature=none";
     } else if (signatureType === "qr") {
-      externalUrl += (externalUrl.includes("?") ? "&" : "?") + "qr_code=1";
+      externalUrl += "&qr_code=1";
     }
 
     const proxyUrl = `/api/download-pdf?url=${encodeURIComponent(externalUrl)}`;
@@ -770,7 +779,7 @@ export default function SuratJalanManager({
             onClose={() => setIsPdfModalOpen(false)}
             onDownload={handlePdfDownload}
             title="Unduh Surat Jalan"
-            variant="ichibot"
+            variant="surat_jalan"
           />
         )
       }
