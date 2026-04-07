@@ -928,6 +928,7 @@ export default function InvoiceGANManager({
         onDownload={handlePdfDownload}
         title="Unduh PDF Invoice GAN"
         variant="gan"
+        pdfUrl={selectedInvoiceForPdf?.pdf_urls?.secure_download?.split("?")[0]}
       />
     </div>
   );

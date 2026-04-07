@@ -916,7 +916,8 @@ export default function InvoiceEnglishManager({
           setSelectedInvoiceForPdf(null);
         }}
         onDownload={handlePdfDownload}
-        title="Download PDF Invoice"
+        title="Choose Invoice Format"
+        pdfUrl={selectedInvoiceForPdf?.pdf_urls?.secure_download?.split("?")[0]}
       />
     </div>
   );

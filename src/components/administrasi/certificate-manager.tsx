@@ -166,42 +166,38 @@ export default function CertificateManager({
   );
 
   // Handle PDF download with format selection
-  const handlePdfDownload = async (signatureType: SignatureType) => {
-    if (!selectedCertificateForPdf) return;
-
-    // Map signatureType to actual parameters for Certificate API
-    let externalUrl = "";
+  const getCertificateUrl = (signatureType: SignatureType) => {
+    if (!selectedCertificateForPdf) return "";
     const pdfUrls = selectedCertificateForPdf.pdf_urls;
+    if (!pdfUrls) return "";
 
-    if (!pdfUrls) {
-      alert("URL PDF tidak ditemukan.");
-      return;
-    }
-
-    // Build base URL from any existing secure_download URL
     const baseSecureUrl = (pdfUrls.secure_download_ichibot || pdfUrls.secure_download_gan || "").split("?")[0];
 
     switch (signatureType) {
       case "cert_ichibot":
-        externalUrl = pdfUrls.secure_download_ichibot;
-        break;
+        return pdfUrls.secure_download_ichibot || "";
       case "cert_gan":
-        externalUrl = pdfUrls.secure_download_gan;
-        break;
+        return pdfUrls.secure_download_gan || "";
       case "cert_gas":
-        externalUrl = pdfUrls.secure_download_gas || `${baseSecureUrl}?logo=gas`;
-        break;
+        return pdfUrls.secure_download_gas || `${baseSecureUrl}?logo=gas`;
       case "cert_qr_ichibot":
-        externalUrl = `${baseSecureUrl}?logo=ichibot&qr_code=1`;
-        break;
+        return `${baseSecureUrl}?logo=ichibot&qr_code=1`;
       case "cert_qr_gan":
-        externalUrl = `${baseSecureUrl}?logo=gan&qr_code=1`;
-        break;
+        return `${baseSecureUrl}?logo=gan&qr_code=1`;
       case "cert_qr_gas":
-        externalUrl = `${baseSecureUrl}?logo=gas&qr_code=1`;
-        break;
+        return `${baseSecureUrl}?logo=gas&qr_code=1`;
       default:
-        externalUrl = pdfUrls.secure_download_ichibot;
+        return pdfUrls.secure_download_ichibot || "";
+    }
+  };
+
+  const handlePdfDownload = async (signatureType: SignatureType) => {
+    if (!selectedCertificateForPdf) return;
+
+    const externalUrl = getCertificateUrl(signatureType);
+    if (!externalUrl) {
+      alert("URL PDF tidak ditemukan.");
+      return;
     }
 
     // Use local API proxy to avoid CORS
@@ -1469,6 +1465,7 @@ export default function CertificateManager({
         onDownload={handlePdfDownload}
         title="Pilih Format Sertifikat"
         variant="certificate"
+        buildPreviewUrl={getCertificateUrl}
       />
     </div>
   );

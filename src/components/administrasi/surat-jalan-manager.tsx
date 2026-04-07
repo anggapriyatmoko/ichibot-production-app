@@ -221,8 +221,8 @@ export default function SuratJalanManager({
     }
   };
 
-  const handlePdfDownload = async (signatureType: SignatureType) => {
-    if (!selectedSJForPdf || !selectedSJForPdf.pdf_urls) return;
+  const getSuratJalanUrl = (signatureType: SignatureType) => {
+    if (!selectedSJForPdf || !selectedSJForPdf.pdf_urls) return "";
 
     // Build URL with correct logo parameter based on signature type
     const baseUrl = selectedSJForPdf.pdf_urls.secure_download.split("?")[0];
@@ -240,6 +240,15 @@ export default function SuratJalanManager({
     } else if (signatureType === "qr") {
       externalUrl += "&qr_code=1";
     }
+
+    return externalUrl;
+  };
+
+  const handlePdfDownload = async (signatureType: SignatureType) => {
+    if (!selectedSJForPdf || !selectedSJForPdf.pdf_urls) return;
+
+    const externalUrl = getSuratJalanUrl(signatureType);
+    if (!externalUrl) return;
 
     const proxyUrl = `/api/download-pdf?url=${encodeURIComponent(externalUrl)}`;
 
@@ -772,17 +781,16 @@ export default function SuratJalanManager({
       )}
 
       {/* PDF Modal */}
-      {
-        isPdfModalOpen && selectedSJForPdf && (
-          <PdfSignatureModal
-            isOpen={isPdfModalOpen}
-            onClose={() => setIsPdfModalOpen(false)}
-            onDownload={handlePdfDownload}
-            title="Unduh Surat Jalan"
-            variant="surat_jalan"
-          />
-        )
-      }
+      {isPdfModalOpen && selectedSJForPdf && (
+        <PdfSignatureModal
+          isOpen={isPdfModalOpen}
+          onClose={() => setIsPdfModalOpen(false)}
+          onDownload={handlePdfDownload}
+          title="Pilih Format Surat Jalan"
+          variant="surat_jalan"
+          buildPreviewUrl={getSuratJalanUrl}
+        />
+      )}
     </div>
   );
 }

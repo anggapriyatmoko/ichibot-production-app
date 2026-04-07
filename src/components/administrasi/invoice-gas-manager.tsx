@@ -925,6 +925,7 @@ export default function InvoiceGASManager({
         onDownload={handlePdfDownload}
         title="Unduh PDF Invoice GAS"
         variant="gas"
+        pdfUrl={selectedInvoiceForPdf?.pdf_urls?.secure_download?.split("?")[0]}
       />
     </div>
   );
