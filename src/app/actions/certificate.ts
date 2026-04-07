@@ -28,14 +28,19 @@ export interface Certificate {
     pdf_urls?: {
         download_gan: string
         download_ichibot: string
+        download_gas?: string
         secure_download_gan: string
         secure_download_ichibot: string
+        secure_download_gas?: string
         preview_gan: string
         preview_ichibot: string
+        preview_gas?: string
         secure_preview_gan: string
         secure_preview_ichibot: string
+        secure_preview_gas?: string
         qr_download_gan?: string
         qr_download_ichibot?: string
+        qr_download_gas?: string
     }
     created_at: string
     updated_at: string

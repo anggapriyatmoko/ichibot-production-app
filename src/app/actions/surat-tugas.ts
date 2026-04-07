@@ -27,10 +27,13 @@ export interface SuratTugas {
     pdf_urls?: {
         download: string;
         download_ichibot: string;
+        download_gas?: string;
         secure_download: string;
         secure_download_ichibot: string;
+        secure_download_gas?: string;
         secure_qr_download: string;
         secure_qr_download_ichibot: string;
+        secure_qr_download_gas?: string;
         preview: string;
         secure_preview: string;
     };

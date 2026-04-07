@@ -169,6 +169,11 @@ export const navigationGroups = [
             icon: Receipt,
           },
           {
+            name: "Invoice GAS",
+            href: "/administrasi/invoice-gas",
+            icon: Receipt,
+          },
+          {
             name: "Penugasan",
             href: "/administrasi/penugasan",
             icon: FileSignature,
