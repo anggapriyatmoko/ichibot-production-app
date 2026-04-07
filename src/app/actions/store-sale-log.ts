@@ -79,7 +79,15 @@ export async function getStoreSaleStats(startDate: Date, endDate: Date) {
             }
         }
 
-        const [topQty, topNominal, marketShare] = await Promise.all([
+        const offlineWhere = {
+            orderDate: {
+                gte: startDate,
+                lte: endDate
+            },
+            marketplace: 'offline'
+        }
+
+        const [topQty, topNominal, marketShare, offlineDailyRaw] = await Promise.all([
             prisma.storeSaleLog.groupBy({
                 by: ['itemName', 'itemId'],
                 where,
@@ -98,8 +106,39 @@ export async function getStoreSaleStats(startDate: Date, endDate: Date) {
                 by: ['marketplace'],
                 where,
                 _sum: { nominal: true, quantity: true }
+            }),
+            // Daily offline sales
+            prisma.storeSaleLog.findMany({
+                where: offlineWhere,
+                select: {
+                    orderDate: true,
+                    nominal: true,
+                    quantity: true,
+                },
+                orderBy: { orderDate: 'asc' }
             })
         ])
+
+        // Group offline sales by day
+        const dailyMap = new Map<string, { nominal: number; quantity: number }>()
+        for (const sale of offlineDailyRaw) {
+            const day = new Date(sale.orderDate).toISOString().slice(0, 10) // YYYY-MM-DD
+            const existing = dailyMap.get(day) || { nominal: 0, quantity: 0 }
+            existing.nominal += sale.nominal || 0
+            existing.quantity += sale.quantity || 0
+            dailyMap.set(day, existing)
+        }
+
+        // Fill in missing days with 0
+        const dailyOffline: { date: string; nominal: number; quantity: number }[] = []
+        const currentDate = new Date(startDate)
+        const end = new Date(endDate)
+        while (currentDate <= end) {
+            const dayStr = currentDate.toISOString().slice(0, 10)
+            const data = dailyMap.get(dayStr) || { nominal: 0, quantity: 0 }
+            dailyOffline.push({ date: dayStr, ...data })
+            currentDate.setDate(currentDate.getDate() + 1)
+        }
 
         return {
             success: true,
@@ -117,7 +156,8 @@ export async function getStoreSaleStats(startDate: Date, endDate: Date) {
                 name: m.marketplace.toUpperCase(),
                 value: m._sum.nominal || 0,
                 quantity: m._sum.quantity || 0
-            }))
+            })),
+            dailyOffline
         }
     } catch (error: any) {
         console.error('Error fetching store sale stats:', error.message)
