@@ -890,7 +890,8 @@ export default function InvoiceManager({
           setSelectedInvoiceForPdf(null);
         }}
         onDownload={handlePdfDownload}
-        title="Unduh PDF Invoice"
+        title="Pilih Format Invoice"
+        pdfUrl={selectedInvoiceForPdf?.pdf_urls?.secure_download?.split("?")[0]}
       />
     </div>
   );

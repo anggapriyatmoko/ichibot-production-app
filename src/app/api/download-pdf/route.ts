@@ -29,11 +29,18 @@ export async function GET(request: NextRequest) {
         const contentType = response.headers.get("content-type");
         const pdfBuffer = await response.arrayBuffer();
 
+        const isInline = searchParams.get("inline") === "true";
+
         return new NextResponse(pdfBuffer, {
             headers: {
                 "Content-Type": contentType || "application/pdf",
-                "Content-Disposition": `attachment; filename="invoice.pdf"`,
+                "Content-Disposition": `${isInline ? "inline" : "attachment"}; filename="invoice.pdf"`,
                 "Cache-Control": "no-store, max-age=0",
+                // Allow iframe embedding if it's inline
+                ...(isInline && {
+                    "X-Frame-Options": "SAMEORIGIN",
+                    "Content-Security-Policy": "frame-ancestors 'self'"
+                })
             },
         });
     } catch (error: unknown) {

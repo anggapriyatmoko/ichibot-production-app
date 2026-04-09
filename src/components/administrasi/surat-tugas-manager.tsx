@@ -217,8 +217,8 @@ export default function SuratTugasManager({
     }
   };
 
-  const handlePdfDownload = async (signatureType: SignatureType) => {
-    if (!selectedSTForPdf || !selectedSTForPdf.pdf_urls) return;
+  const getSuratTugasUrl = (signatureType: SignatureType) => {
+    if (!selectedSTForPdf || !selectedSTForPdf.pdf_urls) return "";
 
     let externalUrl = "";
     const pdfUrls = selectedSTForPdf.pdf_urls;
@@ -254,6 +254,15 @@ export default function SuratTugasManager({
         externalUrl = pdfUrls.secure_download_ichibot;
       }
     }
+    
+    return externalUrl;
+  };
+
+  const handlePdfDownload = async (signatureType: SignatureType) => {
+    if (!selectedSTForPdf || !selectedSTForPdf.pdf_urls) return;
+
+    const externalUrl = getSuratTugasUrl(signatureType);
+    if (!externalUrl) return;
 
     const proxyUrl = `/api/download-pdf?url=${encodeURIComponent(externalUrl)}`;
 
@@ -776,8 +785,9 @@ export default function SuratTugasManager({
             isOpen={isPdfModalOpen}
             onClose={() => setIsPdfModalOpen(false)}
             onDownload={handlePdfDownload}
-            title="Unduh Surat Tugas"
+            title="Pilih Format Surat Tugas"
             variant={selectedSTForPdf.instansi === "GAN" ? "gan" : selectedSTForPdf.instansi === "GAS" ? "gas" : "ichibot"}
+            buildPreviewUrl={getSuratTugasUrl}
           />
         )
       }
