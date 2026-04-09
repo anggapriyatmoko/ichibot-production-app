@@ -227,6 +227,83 @@ export async function deleteExpense(id: string) {
     }
 }
 
+export async function createExpenseDraft(data: { categoryId: string; date: Date; image: string }) {
+    try {
+        const session: any = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        const nameEnc = encrypt('Sedang memproses...')
+        const amountEnc = encrypt('0')
+
+        if (!nameEnc || !amountEnc) {
+            return { success: false, error: 'Encryption failed' }
+        }
+
+        const expense = await (prisma as any).expense.create({
+            data: {
+                userId: session.user.id,
+                categoryId: data.categoryId,
+                date: data.date,
+                nameEnc,
+                amountEnc,
+                image: data.image,
+                status: 'scanning',
+            }
+        })
+
+        revalidatePath('/keuangan/pengeluaran')
+        return { success: true, data: expense }
+    } catch (error) {
+        console.error('Error creating expense draft:', error)
+        return { success: false, error: 'Failed to create draft: ' + (error instanceof Error ? error.message : String(error)) }
+    }
+}
+
+export async function updateExpenseFromScan(id: string, name: string, amount: string) {
+    try {
+        const nameEnc = encrypt(name)
+        const amountEnc = encrypt(amount)
+
+        if (!nameEnc || !amountEnc) {
+            return { success: false, error: 'Encryption failed' }
+        }
+
+        await (prisma as any).expense.update({
+            where: { id },
+            data: { nameEnc, amountEnc, status: 'draft' }
+        })
+
+        revalidatePath('/keuangan/pengeluaran')
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating from scan:', error)
+        return { success: false, error: 'Failed to update from scan' }
+    }
+}
+
+export async function approveExpense(id: string) {
+    try {
+        const session: any = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        await (prisma as any).expense.update({
+            where: { id, userId: session.user.id },
+            data: { status: 'approved' }
+        })
+
+        revalidatePath('/keuangan/pengeluaran')
+        revalidatePath('/keuangan/dashboard')
+        return { success: true }
+    } catch (error) {
+        console.error('Error approving expense:', error)
+        return { success: false, error: 'Failed to approve expense' }
+    }
+}
+
 export async function getAllExpensesForYear(year: number, categoryIds?: string[]) {
     try {
         await requirePageAccess('/keuangan/dashboard')

@@ -869,6 +869,7 @@ model expense {
   amountEnc  String          @db.Text
   nameEnc    String          @db.Text
   image      String?         @db.LongText
+  status     String          @default("approved") // 'scanning' | 'draft' | 'approved'
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   category   expenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
