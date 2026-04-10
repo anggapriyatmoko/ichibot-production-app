@@ -20,7 +20,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // HTML pages: revalidate but allow browser cache for faster navigation
+        // Prevent stale JS bundles: HTML pages must always revalidate
+        // This fixes "Failed to find Server Action" after redeployment
         source: '/:path*',
         headers: [
           {
@@ -29,7 +30,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Cache-Control',
-            value: 'private, no-cache',
+            value: 'no-store, must-revalidate',
           },
         ],
       },
