@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    console.log("Proxying PDF request for URL:", url);
 
     try {
         const response = await fetch(url, {
