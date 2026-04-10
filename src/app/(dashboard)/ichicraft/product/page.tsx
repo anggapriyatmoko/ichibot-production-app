@@ -6,7 +6,6 @@ export const metadata = {
     description: 'Kelola produk Ichicraft'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function IchicraftProductPage() {
     const result = await getIchicraftCategories()

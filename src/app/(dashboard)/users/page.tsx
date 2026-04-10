@@ -2,7 +2,6 @@ import { getUsers } from '@/app/actions/user'
 import UserTable from '@/components/users/user-table'
 import { Users } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
 
 export default async function UsersPage() {
     const users = await getUsers()

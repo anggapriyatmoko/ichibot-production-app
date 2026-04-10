@@ -7,7 +7,6 @@ export const metadata = {
   description: "Manage invoices in English language",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function InvoiceENPage() {
   await requireAuth();

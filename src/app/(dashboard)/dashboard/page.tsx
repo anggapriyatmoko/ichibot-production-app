@@ -10,7 +10,6 @@ import { ShoppingCart, TrendingDown, Users } from 'lucide-react'
 import { getSession } from '@/lib/auth'
 import { getRbacConfig } from '@/app/actions/rbac'
 
-export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ year?: string, lastMonth?: string, lastYear?: string }> }) {
     const params = await searchParams

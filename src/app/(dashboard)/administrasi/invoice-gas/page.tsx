@@ -7,7 +7,6 @@ export const metadata = {
   description: "Kelola invoice GAS",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function InvoiceGASPage() {
   await requireAuth();

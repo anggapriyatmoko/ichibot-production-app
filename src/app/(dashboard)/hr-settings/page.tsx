@@ -12,7 +12,6 @@ export const metadata = {
     description: 'Pengaturan jam kerja'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function HRSettingsPage() {
     await requireAuth()

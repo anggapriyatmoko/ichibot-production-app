@@ -7,7 +7,6 @@ import StoreMarketplaceFeeManager from '@/components/store/store-marketplace-fee
 import { redirect } from 'next/navigation'
 import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 
 export default async function StoreSettingsPage() {
     const session = await requireAuth()

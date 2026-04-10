@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import StoreSkeleton from '@/components/store/store-skeleton';
 
-export const dynamic = 'force-dynamic'
 
 async function StorePurchasedContent({ userRole }: { userRole: string }) {
     const [products, kursYuanStr, kursUsdStr, additionalFeeStr, shopeeAdminFeeStr, shopeeServiceFeeStr, tokpedAdminFeeStr, tokpedServiceFeeStr] = await Promise.all([

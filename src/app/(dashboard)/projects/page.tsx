@@ -3,7 +3,6 @@ import { getUsers } from '@/app/actions/user'
 import ProjectManager from '@/components/projects/project-manager'
 import { requireAuth } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 
 export default async function ProjectsPage() {
     const user = await requireAuth()

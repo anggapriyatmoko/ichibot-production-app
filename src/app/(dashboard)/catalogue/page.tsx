@@ -1,7 +1,6 @@
 import prisma from '@/lib/prisma'
 import RecipeList from '@/components/catalogue/recipe-list'
 
-export const dynamic = 'force-dynamic'
 
 import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
