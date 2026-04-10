@@ -57,7 +57,6 @@ async function fetchWooCommerceProducts(onLog?: (msg: string) => void) {
     const WC_SECRET = process.env.WC_CONSUMER_SECRET
 
     const log = (msg: string) => {
-        console.log(msg);
         if (onLog) onLog(msg);
     };
 
@@ -142,7 +141,6 @@ export async function getWooCommerceCategories() {
 
         while (true) {
             const url = `${baseUrl}/wp-json/wc/v3/products/categories?per_page=${perPage}&page=${page}`
-            console.log(`Fetching categories page ${page}...`)
 
             const response = await fetch(url, {
                 headers: {
@@ -179,7 +177,6 @@ export async function syncStoreProducts() {
  */
 export async function performStoreSync(onLog?: (msg: string) => void) {
     const log = (msg: string) => {
-        console.log(msg);
         if (onLog) onLog(msg);
     };
 
@@ -998,7 +995,6 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
     const searchUrl = `${baseUrl}/wp-json/wc/v3/products?search=${encodeURIComponent(query)}&per_page=100&page=${page}&status=publish`
     const skuUrl = `${baseUrl}/wp-json/wc/v3/products?sku=${encodeURIComponent(query)}&per_page=100&page=1&status=publish`
 
-    console.log(`Searching WooCommerce API: ${searchUrl}`);
 
     try {
         const fetchOptions = {
@@ -1015,7 +1011,6 @@ export async function searchWooCommerceProducts(query: string, page: number = 1)
         const fetchPromises = [fetch(searchUrl, fetchOptions)]
         const shouldSearchSku = page === 1 && query.trim().length > 0
         if (shouldSearchSku) {
-            console.log(`Searching WooCommerce API by SKU: ${skuUrl}`);
             fetchPromises.push(fetch(skuUrl, fetchOptions))
         }
 
@@ -1225,7 +1220,6 @@ export async function updateWooCommerceProduct(wcId: number, data: {
             ]
         }
 
-        console.log(`Updating WooCommerce product ${wcId}...`, wcPayload)
 
         const response = await fetch(url, {
             method: 'PUT',
@@ -1291,7 +1285,6 @@ export async function deleteWooCommerceProduct(wcId: number, parentId?: number) 
             url = `${baseUrl}/wp-json/wc/v3/products/${parentId}/variations/${wcId}?force=true`
         }
 
-        console.log(`Deleting WooCommerce product ${wcId}...`)
 
         const response = await fetch(url, {
             method: 'DELETE',
@@ -1388,7 +1381,6 @@ export async function createWooCommerceProduct(data: {
             wcPayload.images = data.imageUrls.map(url => ({ src: url }))
         }
 
-        console.log('Creating product in WooCommerce...', wcPayload)
 
         const response = await fetch(url, {
             method: 'POST',
@@ -1442,7 +1434,6 @@ export async function createWooCommerceProduct(data: {
                     if (filename) {
                         const filePath = path.join(uploadDir, filename)
                         await unlink(filePath)
-                        console.log('Deleted temporary image after sync:', filePath)
                     }
                 } catch (cleanupError) {
                     console.error('Failed to cleanup temporary image:', url, cleanupError)
