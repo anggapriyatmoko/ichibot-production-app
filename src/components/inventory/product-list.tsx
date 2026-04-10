@@ -161,7 +161,6 @@ export default function ProductList({
                 const allDrawers = racks.flatMap(r => r.unusedDrawersList || [])
                 setAllUnusedDrawers(allDrawers)
             } catch (error) {
-                console.log('Could not fetch unused drawers', error)
             }
         }
         fetchUnusedDrawers()
