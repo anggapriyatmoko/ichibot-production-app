@@ -4,7 +4,6 @@ export async function syncToCiGenerate(method: string, data: Record<string, unkn
     try {
         const endpoint = await getSystemSetting('API_ENDPOINT');
         if (!endpoint) {
-            console.warn('Sync skipped: API Endpoint not configured');
             return;
         }
         const ciGenerateUrl = `${endpoint.replace(/\/$/, '')}/web-access-users`;
@@ -30,7 +29,6 @@ export async function syncToCiGenerate(method: string, data: Record<string, unkn
         });
 
         if (!response.ok) {
-            console.warn('Sync to CI-Generate failed:', await response.text());
         }
     } catch (error) {
         console.error('Error syncing to CI-Generate:', error);
