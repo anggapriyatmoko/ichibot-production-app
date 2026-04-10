@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
-
-const MASTER_VERIFY_URL = "http://localhost:8000/api/web-access-users/verify";
+import { getSystemSetting } from '@/app/actions/system-settings';
 
 export async function POST(request: Request) {
     try {
+        const endpoint = await getSystemSetting('API_ENDPOINT');
+        if (!endpoint) {
+            return NextResponse.json({ error: 'API Endpoint belum dikonfigurasi di Settings' }, { status: 500 });
+        }
+        const MASTER_VERIFY_URL = `${endpoint.replace(/\/$/, '')}/web-access-users/verify`;
+
         const body = await request.json();
 
         // Proxy the request to CI-Generate
