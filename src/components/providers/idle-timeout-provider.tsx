@@ -27,13 +27,11 @@ export function IdleTimeoutProvider({ children }: IdleTimeoutProviderProps) {
         warningDuration: WARNING_DURATION,
         onWarning: () => {
             // Optional: Could log or track warning shown
-            console.log('Session timeout warning shown')
         },
         onTimeout: () => {
             handleLogout()
         },
         onExtend: () => {
-            console.log('Session extended by user')
         }
     })
 

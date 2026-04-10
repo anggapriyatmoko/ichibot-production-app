@@ -15,7 +15,6 @@ function debugLog(message: string, data?: any) {
     try {
         fs.appendFileSync('webhook-debug.log', logMsg);
     } catch (e) {}
-    console.log(`[WC Webhook] ${message}`, data || '');
 }
 
 export async function POST(request: Request) {
@@ -154,7 +153,6 @@ export async function POST(request: Request) {
                 await prisma.storeProduct.deleteMany({
                     where: { wcId }
                 });
-                console.log(`[WC Webhook] Successfully deleted product ID: ${wcId} from local DB based on WooCommerce webhook`);
                 
                 // Revalidate related store paths
                 revalidatePath('/store/product');
@@ -223,7 +221,6 @@ export async function POST(request: Request) {
 
                 if (isIdentical) {
                     shouldUpdate = false;
-                    console.log(`[WC Webhook] Product ID: ${wcId} is identical. Skipping database update to prevent redundant writes.`);
                 }
             }
 
@@ -240,7 +237,6 @@ export async function POST(request: Request) {
                         purchased: purchasedStatus
                     }
                 });
-                console.log(`[WC Webhook] Upserted product ID: ${wcId} successfully`);
                 
                 revalidatePath('/store/product');
                 revalidatePath('/store/low-stock');

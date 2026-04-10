@@ -59,7 +59,6 @@ export async function compressImage(file: File, maxSizeKB: number = 700, maxDime
                                     type: 'image/jpeg',
                                     lastModified: Date.now()
                                 })
-                                console.log(`Compressed from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB (dim: ${width}x${height}, quality: ${quality.toFixed(1)})`)
                                 resolve(compressedFile)
                             }
                         },

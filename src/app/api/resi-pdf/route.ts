@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
     const webBase = baseApi.replace(/\/api$/, '');
     const webPdfUrl = `${webBase}/resi/${resiId}/generate/download`;
 
-    console.log("Proxying PDF request. API URL:", apiPdfUrl, "Web Fallback:", webPdfUrl);
 
     try {
         // Try API route first
@@ -58,7 +57,6 @@ export async function GET(request: NextRequest) {
 
         // If API route fails, try the web route (may need session auth)
         if (!response.ok) {
-            console.log("API route failed, trying web route...");
             response = await fetch(webPdfUrl, {
                 headers: {
                     "Accept": "application/pdf",

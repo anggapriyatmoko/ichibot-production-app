@@ -110,7 +110,6 @@ export default function SparepartProjectList({
                 const allDrawers = racks.flatMap(r => r.unusedDrawersList || [])
                 setAllUnusedDrawers(allDrawers)
             } catch (error) {
-                console.log('Could not fetch unused drawers', error)
             }
         }
         fetchUnusedDrawers()
@@ -184,7 +183,6 @@ export default function SparepartProjectList({
                                         type: 'image/jpeg',
                                         lastModified: Date.now()
                                     })
-                                    console.log(`Compressed from ${(file.size / 1024).toFixed(1)}KB to ${(compressedFile.size / 1024).toFixed(1)}KB (quality: ${quality.toFixed(1)})`)
                                     resolve(compressedFile)
                                 }
                             },

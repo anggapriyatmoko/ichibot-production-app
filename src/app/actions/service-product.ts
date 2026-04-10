@@ -32,7 +32,6 @@ async function deleteOldImage(imagePath: string | null) {
         const filePath = path.join(uploadDir, filename)
         if (fs.existsSync(filePath)) {
             await unlink(filePath)
-            console.log('Deleted old service product image:', filePath)
         }
     } catch (error) {
         console.error('Could not delete old service product image:', error)

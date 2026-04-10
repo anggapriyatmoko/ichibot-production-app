@@ -38,7 +38,6 @@ async function deleteOldImage(imagePath: string | null) {
         const fullPath = path.join(process.cwd(), 'public', imagePath)
         await unlink(fullPath)
     } catch (error) {
-        console.log('Could not delete old image:', error)
     }
 }
 
