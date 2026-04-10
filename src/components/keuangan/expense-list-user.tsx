@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
-import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info, Calendar } from 'lucide-react'
-import { getExpenses, createExpense, updateExpense, deleteExpense, ExpenseData } from '@/app/actions/expense'
+import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info, Calendar, Check, ScanLine, FileText } from 'lucide-react'
+import { getExpenses, createExpense, updateExpense, deleteExpense, approveExpense, createExpenseDraft, ExpenseData } from '@/app/actions/expense'
 import { useAlert } from '@/hooks/use-alert'
 import {
     Table,
@@ -37,6 +37,7 @@ interface Expense {
     amount: string
     categoryId: string
     image: string | null
+    status?: string
     createdAt?: string | Date
     category?: Category
 }
@@ -81,6 +82,15 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
     // Preview Image State
     const [previewImage, setPreviewImage] = useState<string | null>(null)
     const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
+    // Modal tab state
+    const [modalTab, setModalTab] = useState<'manual' | 'scan'>('manual')
+    const [scanCategoryId, setScanCategoryId] = useState('')
+    const [scanPreviewImage, setScanPreviewImage] = useState<string | null>(null)
+    const [isScanUploading, setIsScanUploading] = useState(false)
+    const [isScanCategoryDropdownOpen, setIsScanCategoryDropdownOpen] = useState(false)
+    const [scanCategorySearchQuery, setScanCategorySearchQuery] = useState('')
+    const scanCategoryDropdownRef = useRef<HTMLDivElement>(null)
 
     // Category Dropdown State
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
@@ -136,8 +146,8 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startDate, endDate])
 
-    const fetchExpenses = async () => {
-        setIsLoadingData(true)
+    const fetchExpenses = async (silent = false) => {
+        if (!silent) setIsLoadingData(true)
         try {
             const start = startDate ? new Date(startDate) : undefined
             if (start) start.setHours(0, 0, 0, 0)
@@ -165,10 +175,22 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
             if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
                 setIsCategoryDropdownOpen(false)
             }
+            if (scanCategoryDropdownRef.current && !scanCategoryDropdownRef.current.contains(event.target as Node)) {
+                setIsScanCategoryDropdownOpen(false)
+            }
         }
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    // Auto-refresh when scanning items exist (silent = no table loading flash)
+    useEffect(() => {
+        const hasScanning = expenses.some(e => e.status === 'scanning')
+        if (!hasScanning) return
+        const interval = setInterval(() => { fetchExpenses(true) }, 5000)
+        return () => clearInterval(interval)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [expenses])
 
     const filteredCategories = categories.filter(cat =>
         cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
@@ -217,6 +239,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         setIsModalOpen(false)
         setEditingId(null)
         setFormData({ ...defaultFormData })
+        setScanPreviewImage(null)
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,12 +330,83 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         }
     }
 
-    const totalAmount = expenses.reduce((acc, current) => {
+    const handleScanFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setScanPreviewImage(reader.result as string)
+        }
+        reader.readAsDataURL(file)
+        e.target.value = ''
+    }
+
+    const handleScanConfirm = async () => {
+        if (!scanPreviewImage || !scanCategoryId) return
+
+        setIsScanUploading(true)
+        try {
+            const res = await createExpenseDraft({
+                categoryId: scanCategoryId,
+                date: new Date(),
+                image: scanPreviewImage,
+            })
+
+            if (res.success && res.data) {
+                const addedCat = categories.find(c => c.id === scanCategoryId)
+                setExpenses(prev => [{
+                    ...(res.data as any),
+                    name: 'Sedang memproses...',
+                    amount: '0',
+                    status: 'scanning',
+                    category: addedCat,
+                } as Expense, ...prev])
+
+                setIsModalOpen(false)
+                setScanPreviewImage(null)
+                showAlert('Foto diunggah, sedang diproses AI...')
+
+                fetch('/api/scan-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ expenseId: res.data.id, imageBase64: scanPreviewImage }),
+                }).then(() => {
+                    fetchExpenses(true)
+                }).catch(console.error)
+            } else {
+                showError(res.error || 'Gagal menyimpan draft')
+            }
+        } catch (error) {
+            console.error(error)
+            showError('Terjadi kesalahan saat upload')
+        } finally {
+            setIsScanUploading(false)
+        }
+    }
+
+    const handleApprove = async (id: string) => {
+        try {
+            const res = await approveExpense(id)
+            if (res.success) {
+                showAlert('Pengeluaran berhasil diapprove')
+                setExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, status: 'approved' } : exp))
+            } else {
+                showError(res.error || 'Gagal approve')
+            }
+        } catch (error) {
+            console.error(error)
+            showError('Terjadi kesalahan')
+        }
+    }
+
+    const approvedExpenses = expenses.filter(e => e.status === 'approved' || !e.status)
+
+    const totalAmount = approvedExpenses.reduce((acc, current) => {
         const val = parseFloat(current.amount)
         return acc + (isNaN(val) ? 0 : val)
     }, 0)
 
-    const categoryDistribution = expenses.reduce((acc, exp) => {
+    const categoryDistribution = approvedExpenses.reduce((acc, exp) => {
         const catName = exp.category?.name || 'Lainnya'
         const val = parseFloat(exp.amount)
         if (!isNaN(val)) {
@@ -491,8 +585,12 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                         {expenses.length === 0 ? (
                             <TableEmpty colSpan={7} message="Belum ada riwayat pengeluaran" />
                         ) : (
-                            expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
-                                <TableRow key={item.id}>
+                            expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => {
+                                const isScanning = item.status === 'scanning'
+                                const isDraft = item.status === 'draft'
+
+                                return (
+                                <TableRow key={item.id} className={isDraft ? 'bg-amber-50/50 dark:bg-amber-950/10' : isScanning ? 'bg-blue-50/30 dark:bg-blue-950/10' : ''}>
                                     <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                                     <TableCell className="font-medium whitespace-nowrap">
                                         {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
@@ -501,13 +599,31 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
-                                            {item.category?.name || '-'}
-                                        </span>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
+                                                {item.category?.name || '-'}
+                                            </span>
+                                            {isDraft && (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded border border-amber-200">
+                                                    Draft
+                                                </span>
+                                            )}
+                                            {isScanning && (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded border border-blue-200 animate-pulse">
+                                                    Scanning
+                                                </span>
+                                            )}
+                                        </div>
                                     </TableCell>
-                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell>
+                                        {isScanning ? (
+                                            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                                        ) : item.name}
+                                    </TableCell>
                                     <TableCell align="right" className="font-semibold text-foreground">
-                                        {formatCurrency(item.amount)}
+                                        {isScanning ? (
+                                            <div className="h-4 w-20 bg-muted rounded animate-pulse ml-auto" />
+                                        ) : formatCurrency(item.amount)}
                                     </TableCell>
                                     <TableCell align="center">
                                         {item.image ? (
@@ -526,14 +642,25 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                                         )}
                                     </TableCell>
                                     <TableCell align="center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button
-                                                onClick={() => handleOpenModal(item)}
-                                                className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </button>
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            {isDraft && (
+                                                <button
+                                                    onClick={() => handleApprove(item.id)}
+                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50/50 rounded-md transition-colors"
+                                                    title="Approve"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {!isScanning && (
+                                                <button
+                                                    onClick={() => handleOpenModal(item)}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50/50 rounded-md transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleDelete(item.id)}
                                                 disabled={deletingId === item.id}
@@ -549,7 +676,8 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                                )
+                            })
                         )}
                     </TableBody>
                     {expenses.length > 0 && (
@@ -645,6 +773,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                 title={editingId ? 'Edit Catatan Pengeluaran' : 'Catat Pengeluaran'}
                 maxWidth="lg"
                 footer={
+                    (modalTab === 'manual' || editingId) ? (
                     <div className="flex justify-end gap-2">
                         <button
                             type="button"
@@ -668,8 +797,166 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                             {editingId ? 'Simpan Perubahan' : 'Simpan Pengeluaran'}
                         </button>
                     </div>
+                    ) : undefined
                 }
             >
+                {/* Tabs (only show when not editing) */}
+                {!editingId && (
+                    <div className="flex bg-muted rounded-lg p-0.5 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setModalTab('manual')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                                modalTab === 'manual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            <FileText className="w-4 h-4" />
+                            Input Manual
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setModalTab('scan')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                                modalTab === 'scan' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            <ScanLine className="w-4 h-4" />
+                            Scan Struk
+                        </button>
+                    </div>
+                )}
+
+                {/* Scan Tab */}
+                {modalTab === 'scan' && !editingId && (
+                    <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-foreground">
+                                Kategori <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative" ref={scanCategoryDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsScanCategoryDropdownOpen(!isScanCategoryDropdownOpen)}
+                                    className="w-full flex items-center justify-between px-3 py-2 border border-border bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-left"
+                                >
+                                    <span className={scanCategoryId ? "text-foreground" : "text-muted-foreground"}>
+                                        {scanCategoryId
+                                            ? categories.find(c => c.id === scanCategoryId)?.name || 'Pilih Kategori'
+                                            : 'Pilih Kategori'}
+                                    </span>
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                </button>
+                                {isScanCategoryDropdownOpen && (
+                                    <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-lg shadow-lg overflow-hidden flex flex-col">
+                                        <div className="p-2 border-b border-border shrink-0">
+                                            <div className="relative">
+                                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Cari kategori..."
+                                                    value={scanCategorySearchQuery}
+                                                    onChange={(e) => setScanCategorySearchQuery(e.target.value)}
+                                                    className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-transparent focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-md outline-none transition-all"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                            {categories.filter(c => c.name.toLowerCase().includes(scanCategorySearchQuery.toLowerCase())).map(cat => (
+                                                <button
+                                                    key={cat.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setScanCategoryId(cat.id)
+                                                        setIsScanCategoryDropdownOpen(false)
+                                                        setScanCategorySearchQuery('')
+                                                    }}
+                                                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${scanCategoryId === cat.id
+                                                        ? 'bg-primary/10 text-primary font-medium'
+                                                        : 'hover:bg-muted text-foreground'
+                                                    }`}
+                                                >
+                                                    {cat.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium text-foreground">
+                                Foto Struk <span className="text-red-500">*</span>
+                            </label>
+                            {!scanPreviewImage ? (
+                                <>
+                                    <input
+                                        type="file"
+                                        id="scan-file-input"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={handleScanFileChange}
+                                        className="hidden"
+                                    />
+                                    <div
+                                        onClick={() => {
+                                            if (!scanCategoryId) {
+                                                showError('Pilih kategori terlebih dahulu!')
+                                                return
+                                            }
+                                            document.getElementById('scan-file-input')?.click()
+                                        }}
+                                        className={`flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                                            !scanCategoryId ? 'border-border' : 'border-primary/30 hover:border-primary hover:bg-primary/5'
+                                        }`}
+                                    >
+                                        <ScanLine className="w-10 h-10 text-primary/60" />
+                                        <div className="text-center">
+                                            <span className="text-sm font-semibold text-foreground">Ambil foto atau pilih dari galeri</span>
+                                            <p className="text-xs text-muted-foreground mt-1">Klik untuk membuka kamera atau pilih file</p>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="relative border border-border rounded-xl overflow-hidden">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={scanPreviewImage} alt="Preview struk" className="w-full max-h-64 object-contain bg-muted/30" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setScanPreviewImage(null)}
+                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors"
+                                        title="Hapus foto"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+                            {!scanCategoryId && (
+                                <p className="text-xs text-amber-600 font-medium">Pilih kategori terlebih dahulu</p>
+                            )}
+                        </div>
+
+                        {scanPreviewImage && (
+                            <button
+                                type="button"
+                                onClick={handleScanConfirm}
+                                disabled={isScanUploading || !scanCategoryId}
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+                            >
+                                {isScanUploading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <ScanLine className="w-4 h-4" />
+                                )}
+                                {isScanUploading ? 'Memproses...' : 'Scan Sekarang'}
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Manual Tab (existing form) */}
+                {(modalTab === 'manual' || editingId) && (
                 <form id="expense-form" onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
@@ -806,6 +1093,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                         )}
                     </div>
                 </form>
+                )}
             </Modal>
 
             {/* Image Preview Modal */}
@@ -822,6 +1110,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                     </div>
                 )}
             </Modal>
+
         </div>
     )
 }

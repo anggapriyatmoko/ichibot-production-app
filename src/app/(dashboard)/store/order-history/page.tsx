@@ -4,7 +4,6 @@ import { requireAuth, isAllowedForPage } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import OrderHistoryView from './order-history-view'
 
-export const dynamic = 'force-dynamic'
 
 export default async function StoreOrderHistoryPage() {
     const session = await requireAuth();

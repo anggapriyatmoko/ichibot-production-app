@@ -7,7 +7,6 @@ export const metadata = {
   description: "Kelola invoice dalam bahasa Indonesia",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function InvoiceIDPage() {
   await requireAuth();

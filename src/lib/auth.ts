@@ -1,16 +1,21 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { getRbacConfig } from '@/app/actions/rbac'
+import { cache } from 'react'
 
 // Roles that have admin-level access (legacy fallback when no RBAC config)
 const ADMIN_ROLES = ['ADMIN', 'HRD', 'ADMINISTRASI']
 
-export async function getSession() {
+/**
+ * Cached session getter - deduplicated within a single request.
+ * All auth functions use this instead of calling getServerSession directly.
+ */
+export const getSession = cache(async () => {
     return await getServerSession(authOptions)
-}
+})
 
 export async function getCurrentUser() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
     return session?.user
 }
 
@@ -24,7 +29,7 @@ export async function getCurrentUser() {
  *                   (RBAC enforcement happens elsewhere via RbacGuard).
  */
 export async function requireAdmin(pathname?: string) {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         throw new Error('Unauthorized: Please login')
@@ -68,7 +73,7 @@ export async function requireAdmin(pathname?: string) {
 }
 
 export async function requireAuth() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         throw new Error('Unauthorized: Please login')
@@ -78,7 +83,7 @@ export async function requireAuth() {
 }
 
 export async function getUserRole() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
     return session?.user?.role || null
 }
 
@@ -93,7 +98,7 @@ export function isAdminRole(role: string | undefined | null): boolean {
  * If RBAC config doesn't exist, uses the provided allowedRoles (legacy).
  */
 export async function isAllowedForPage(pathname: string, legacyAllowedRoles?: string[]): Promise<boolean> {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
     if (!session?.user) return false
 
     const userRole = session.user.role || 'USER'

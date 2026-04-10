@@ -7,7 +7,6 @@ import { Building2 } from 'lucide-react'
 
 import { getSystemSetting } from '@/app/actions/system-settings'
 
-export const dynamic = 'force-dynamic'
 
 async function BankAccountsContent() {
     const [accounts, kursYuanStr, kursUsdStr] = await Promise.all([

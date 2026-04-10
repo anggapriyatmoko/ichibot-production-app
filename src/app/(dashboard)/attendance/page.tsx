@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import AttendanceManager from '@/components/attendance/attendance-manager'
@@ -14,14 +13,13 @@ export const metadata = {
     description: 'Kelola data absensi karyawan'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function AttendancePage({
     searchParams
 }: {
     searchParams: Promise<{ month?: string; year?: string }>
 }) {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         redirect('/login')

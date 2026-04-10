@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isAllowedForPage } from '@/lib/auth'
 import ExpenseCategoryManager from '@/components/keuangan/expense-category-manager'
@@ -10,10 +9,9 @@ export const metadata = {
     description: 'Manajemen kategori pengeluaran'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function KeuanganSettingPage() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         redirect('/login')

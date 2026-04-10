@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { requireAuth, isAllowedForPage } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 
 export default async function HumanResourcePage() {
     await requireAuth()

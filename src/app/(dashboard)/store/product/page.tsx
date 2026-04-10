@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import StoreSkeleton from '@/components/store/store-skeleton';
 
-export const dynamic = 'force-dynamic';
 
 async function StoreProductContent() {
     const products = await getStoreProducts();

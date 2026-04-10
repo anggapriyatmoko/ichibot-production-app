@@ -5,15 +5,13 @@ import Link from 'next/link'
 import ProductionPlanModal from './components/add-plan-modal'
 import AnalysisTable from './components/analysis-table'
 import PlanTargetEdit from './components/plan-target-edit'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import ImportPlanModal from './components/import-plan-modal'
 import { ExportButton } from './components/export-button'
 import DeletePlanButton from './components/delete-plan-button'
 import { isAllowedForPage } from '@/lib/auth'
 import MonthYearFilter from './components/month-year-filter'
 
-export const dynamic = 'force-dynamic'
 
 export default async function ProductionPlanPage({
     searchParams,
@@ -22,7 +20,7 @@ export default async function ProductionPlanPage({
 }) {
     const today = new Date()
     const sp = await searchParams
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
     const currentMonth = sp.month ? parseInt(sp.month) : today.getMonth() + 1
     const currentYear = sp.year ? parseInt(sp.year) : today.getFullYear()
 

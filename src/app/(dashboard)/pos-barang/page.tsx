@@ -1,9 +1,7 @@
 import prisma from '@/lib/prisma'
 import POSBarangSystem from '@/components/pos/pos-barang-system'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 
 export default async function POSBarangPage() {
     // 1. Fetch Production Products
@@ -16,7 +14,7 @@ export default async function POSBarangPage() {
         orderBy: { name: 'asc' }
     })
 
-    const session = await getServerSession(authOptions)
+    const session = await getSession()
     const userName = session?.user?.name || "Unknown User"
 
     return (

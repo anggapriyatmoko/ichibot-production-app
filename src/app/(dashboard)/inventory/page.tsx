@@ -1,9 +1,7 @@
 import ProductList from '@/components/inventory/product-list'
 import prisma from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 
 export default async function InventoryPage({
     searchParams
@@ -11,7 +9,7 @@ export default async function InventoryPage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
     const params = await searchParams
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 20
     const search = typeof params.search === 'string' ? params.search : ''

@@ -7,7 +7,6 @@ import UnitCardMobile from './components/unit-card-mobile'
 import IssueAnalysisTable from './components/issue-analysis-table'
 import AI_SparepartAnalysis from './components/ai-sparepart-analysis'
 
-export const dynamic = 'force-dynamic'
 
 export default async function PlanDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params

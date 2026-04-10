@@ -1,19 +1,15 @@
 import { requireAuth } from '@/lib/auth'
 import { getLogActivities, getUsersForLog } from '@/app/actions/log-activity'
 import LogActivityManager from '@/components/log-activity/log-activity-manager'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 
 export const metadata = {
     title: 'Log Activity | Ichibot Production',
     description: 'Catat aktivitas harian dan masalah yang ditemukan.',
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function LogActivityPage() {
-    await requireAuth()
-    const session: any = await getServerSession(authOptions)
+    const session: any = await requireAuth()
 
     // Initial fetch: current user's logs
     const logs = await getLogActivities()

@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { isAllowedForPage } from '@/lib/auth'
@@ -26,11 +25,10 @@ export const metadata = {
     description: 'Dashboard HR untuk monitoring karyawan'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function HRDDashboardPage(props: { searchParams: Promise<{ month?: string, year?: string, attMonth?: string, attYear?: string }> }) {
     const searchParams = await props.searchParams
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         redirect('/login')

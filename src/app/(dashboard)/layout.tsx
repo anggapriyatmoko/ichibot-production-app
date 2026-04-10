@@ -7,8 +7,7 @@ import ChatWidget from '@/components/chat/chat-widget'
 import RbacGuard from '@/components/providers/rbac-guard'
 import MoodProvider from '@/components/providers/mood-provider'
 
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { getSession } from "@/lib/auth"
 import { getRbacConfig } from "@/app/actions/rbac"
 
 /**
@@ -26,9 +25,12 @@ export default async function DashboardLayout({
 }: {
     children: React.ReactNode
 }) {
-    const session: any = await getServerSession(authOptions)
-    const rbacConfig = await getRbacConfig()
-    const userRole = session?.user?.role || ""
+    const [session, rbacConfig] = await Promise.all([
+        getSession(),
+        getRbacConfig(),
+    ])
+    const typedSession: any = session
+    const userRole = (typedSession as any)?.user?.role || ""
 
     return (
         <SidebarProvider>
