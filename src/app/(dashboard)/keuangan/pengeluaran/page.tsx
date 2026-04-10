@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import ExpenseListUser from '@/components/keuangan/expense-list-user'
 import { getExpenses } from '@/app/actions/expense'
@@ -10,10 +9,9 @@ export const metadata = {
     description: 'Manajemen pengeluaran user'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function PengeluaranPage() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         redirect('/login')

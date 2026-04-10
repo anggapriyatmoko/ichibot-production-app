@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isAllowedForPage } from '@/lib/auth'
 import ExpenseDashboardAdmin from '@/components/keuangan/expense-dashboard-admin'
@@ -9,10 +8,9 @@ export const metadata = {
     description: 'Rekapitulasi pengeluaran seluruh user'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function KeuanganDashboardPage() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         redirect('/login')

@@ -1,9 +1,7 @@
 import prisma from '@/lib/prisma'
 import POSIchicraftSystem from '@/components/pos/pos-ichicraft-system'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic'
 
 export const metadata = {
     title: 'POS Ichicraft | Ichibot Production',
@@ -15,7 +13,7 @@ export default async function POSIchicraftPage() {
         orderBy: { name: 'asc' }
     })
 
-    const session = await getServerSession(authOptions)
+    const session = await getSession()
     const userName = session?.user?.name || "Admin"
 
     return (

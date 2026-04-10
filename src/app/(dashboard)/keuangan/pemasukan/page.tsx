@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Construction } from 'lucide-react'
 
@@ -9,7 +8,7 @@ export const metadata = {
 }
 
 export default async function PemasukanPage() {
-    const session: any = await getServerSession(authOptions)
+    const session: any = await getSession()
 
     if (!session?.user) {
         redirect('/login')

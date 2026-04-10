@@ -1,8 +1,7 @@
 import { getItems } from "@/app/actions/item";
 import ItemManager from "@/components/administrasi/item-manager";
 import { Metadata } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getSession } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: "Permintaan Barang | Ichibot Production",
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
 export default async function PermintaanBarangPage() {
   const [result, session] = await Promise.all([
     getItems(),
-    getServerSession(authOptions),
+    getSession(),
   ]);
 
   const userRole = (session as any)?.user?.role || "";
