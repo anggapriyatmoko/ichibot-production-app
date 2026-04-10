@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import { Search, X, RefreshCw, Trash2, CreditCard, Plus, Loader2, Link2, Copy, Check, ExternalLink } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/utils/format'
 import { checkPaymentStatus, deletePayment } from '@/app/actions/store-payment'
 import { useAlert } from '@/hooks/use-alert'
@@ -43,17 +42,20 @@ interface StorePaymentListProps {
     initialPayments?: Payment[]
 }
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-    pending: { label: 'Pending', className: 'bg-orange-600 text-white' },
-    lunas: { label: 'Lunas', className: 'bg-green-600 text-white' },
-    gagal: { label: 'Gagal', className: 'bg-red-600 text-white' },
-    expired: { label: 'Expired', className: 'bg-gray-600 text-white' },
+const statusConfig: Record<string, { label: string; bg: string }> = {
+    pending: { label: 'Pending', bg: '#ea580c' },
+    lunas: { label: 'Lunas', bg: '#16a34a' },
+    gagal: { label: 'Gagal', bg: '#dc2626' },
+    expired: { label: 'Expired', bg: '#4b5563' },
 }
 
 function StatusBadge({ status }: { status: string }) {
     const config = statusConfig[status] || statusConfig.pending
     return (
-        <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm', config.className)}>
+        <span
+            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm"
+            style={{ backgroundColor: config.bg, color: '#fff' }}
+        >
             {config.label}
         </span>
     )
@@ -71,6 +73,7 @@ export default function StorePaymentList({ initialPayments = [] }: StorePaymentL
     const { showError, showAlert } = useAlert()
     const { showConfirmation } = useConfirmation()
     const router = useRouter()
+
 
     const handleCopyLink = async (url: string) => {
         await navigator.clipboard.writeText(url)
