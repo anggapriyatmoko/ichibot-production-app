@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { encrypt, decrypt } from '@/lib/crypto'
 import { requireAdmin } from '@/lib/auth'
+import { cache } from 'react'
 
 const RBAC_KEY = 'RBAC_CONFIG'
 
@@ -11,8 +12,9 @@ export type RbacConfig = Record<string, string[]> // href -> allowed roles
 
 /**
  * Get the RBAC configuration from database (decrypted)
+ * Wrapped with React cache() to deduplicate within a single request
  */
-export async function getRbacConfig(): Promise<RbacConfig | null> {
+export const getRbacConfig = cache(async (): Promise<RbacConfig | null> => {
     try {
         const setting = await prisma.systemSetting.findUnique({
             where: { key: RBAC_KEY }
@@ -28,7 +30,7 @@ export async function getRbacConfig(): Promise<RbacConfig | null> {
         console.error('Error getting RBAC config:', error)
         return null
     }
-}
+})
 
 /**
  * Save RBAC configuration to database (encrypted)
