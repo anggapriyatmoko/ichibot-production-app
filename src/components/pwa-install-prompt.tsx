@@ -57,7 +57,6 @@ export function PwaInstallPrompt() {
         // Only show if not already visible from event
         setIsVisible(prev => {
           if (prev) return prev;
-          console.log(`Showing ${ios ? 'iOS' : 'Desktop'} manual prompt suggestion`);
           return true;
         });
       }, 5000); // 5 seconds delay for desktop/ios
@@ -65,7 +64,6 @@ export function PwaInstallPrompt() {
     }
 
     const handler = (e: Event) => {
-      console.log('beforeinstallprompt fired');
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       setIsVisible(true)
@@ -84,7 +82,6 @@ export function PwaInstallPrompt() {
 
     await deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
-    console.log(`User response to the install prompt: ${outcome}`)
 
     setDeferredPrompt(null)
     setIsVisible(false)
