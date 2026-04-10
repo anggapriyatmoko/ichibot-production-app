@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
+import { getSystemSetting } from '@/app/actions/system-settings';
 
-const MASTER_API_URL = "http://localhost:8000/api/web-access-users";
+async function getMasterApiUrl() {
+    const endpoint = await getSystemSetting('API_ENDPOINT');
+    if (!endpoint) throw new Error('API Endpoint belum dikonfigurasi di Settings');
+    return `${endpoint.replace(/\/$/, '')}/web-access-users`;
+}
 
 export async function PUT(
     request: Request,
@@ -9,6 +14,7 @@ export async function PUT(
 ) {
     try {
         await requireAdmin();
+        const MASTER_API_URL = await getMasterApiUrl();
         const { id } = await params;
         const body = await request.json();
 
@@ -37,6 +43,7 @@ export async function DELETE(
 ) {
     try {
         await requireAdmin();
+        const MASTER_API_URL = await getMasterApiUrl();
         const { id } = await params;
 
         const res = await fetch(`${MASTER_API_URL}/${id}`, {
