@@ -1,7 +1,5 @@
 import AssetManager from '@/components/assets/asset-manager'
 import prisma from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { requireAuth, isAllowedForPage } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
@@ -10,19 +8,17 @@ export const metadata = {
     description: 'Kelola aset mesin dan alat produksi'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function AssetsPage({
     searchParams
 }: {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-    const sessionSession: any = await requireAuth()
+    const session: any = await requireAuth()
     const allowed = await isAllowedForPage('/assets');
     if (!allowed) redirect('/dashboard');
 
     const params = await searchParams
-    const session: any = await getServerSession(authOptions)
     const page = typeof params.page === 'string' ? parseInt(params.page) : 1
     const search = typeof params.search === 'string' ? params.search : ''
     const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 10
