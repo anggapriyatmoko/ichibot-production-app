@@ -34,10 +34,8 @@ async function deleteOldImage(imagePath: string | null) {
 
         const filePath = path.join(uploadDir, filename)
         await unlink(filePath)
-        console.log('Deleted old product image:', filePath)
     } catch {
         // File might not exist, ignore error
-        console.log('Could not delete old product image (may not exist):', imagePath)
     }
 }
 
@@ -150,7 +148,6 @@ export async function createProduct(formData: FormData) {
                     description: 'Initial Stock'
                 }
             })
-            console.log('Transaction created with userId:', session?.user?.id || 'system')
         }
     } catch (error: unknown) {
         const err = error as { code?: string; meta?: { target?: string[] } };
@@ -307,10 +304,6 @@ export async function updateProduct(formData: FormData) {
 export async function addStock(productId: string, quantity: number) {
     const session = await getServerSession(authOptions) as AppSession
 
-    console.log('=== ADD STOCK DEBUG ===')
-    console.log('Session:', JSON.stringify(session, null, 2))
-    console.log('User ID:', session?.user?.id)
-    console.log('User:', session?.user)
 
     await prisma.$transaction([
         prisma.product.update({
