@@ -1,6 +1,13 @@
+import { getSystemSetting } from '@/app/actions/system-settings';
+
 export async function syncToCiGenerate(method: string, data: Record<string, unknown>) {
     try {
-        const ciGenerateUrl = "http://localhost:8000/api/web-access-users"; // Replace with production domain later
+        const endpoint = await getSystemSetting('API_ENDPOINT');
+        if (!endpoint) {
+            console.warn('Sync skipped: API Endpoint not configured');
+            return;
+        }
+        const ciGenerateUrl = `${endpoint.replace(/\/$/, '')}/web-access-users`;
         const authKey = process.env.AUTH_KEY;
 
         let url = ciGenerateUrl;
