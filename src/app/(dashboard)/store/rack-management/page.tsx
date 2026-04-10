@@ -1,6 +1,4 @@
 import { requireAuth, isAllowedForPage } from "@/lib/auth"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import StoreRackManager from "@/components/store/store-rack-manager"
 import { redirect } from 'next/navigation'
 
@@ -10,8 +8,7 @@ export const metadata = {
 }
 
 export default async function StoreRackManagementPage() {
-    await requireAuth()
-    const session: any = await getServerSession(authOptions)
+    const session: any = await requireAuth()
     const userRole = session?.user?.role
 
     const allowed = await isAllowedForPage('/store/rack-management');

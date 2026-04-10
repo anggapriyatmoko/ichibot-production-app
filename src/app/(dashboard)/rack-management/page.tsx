@@ -1,6 +1,4 @@
 import { requireAuth } from "@/lib/auth"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import RackManager from "@/components/settings/rack-manager"
 
 export const metadata = {
@@ -9,8 +7,7 @@ export const metadata = {
 }
 
 export default async function RackManagementPage() {
-    await requireAuth()
-    const session: any = await getServerSession(authOptions)
+    const session: any = await requireAuth()
     const userRole = session?.user?.role
 
     return (

@@ -1,6 +1,4 @@
 import { requireAuth, isAllowedForPage } from '@/lib/auth'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import ServiceRobotManager from '@/components/service-robot/service-robot-manager'
@@ -10,16 +8,14 @@ export const metadata = {
     description: 'Kelola service dan maintenance robot'
 }
 
-export const dynamic = 'force-dynamic'
 
 export default async function ServiceRobotPage({
     searchParams
 }: {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-    await requireAuth()
+    const session: any = await requireAuth()
     const params = await searchParams
-    const session: any = await getServerSession(authOptions)
 
     // Only allow those configured in RBAC, fallback to ADMIN/TEKNISI
     const isAllowed = await isAllowedForPage('/service-robot')
