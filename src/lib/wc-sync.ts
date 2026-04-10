@@ -2,7 +2,6 @@ import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
 export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
-    console.log(`[WC Sync] Starting syncSingleStoreProduct for ID: ${wcId}${parentId ? ` (parent: ${parentId})` : ''}...`);
 
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL;
     const WC_KEY = process.env.WC_CONSUMER_KEY;
@@ -88,7 +87,6 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
 
         // If variable product and NOT a variation itself, sync its variations too
         if (!parentId && product.type === 'variable') {
-            console.log(`Product ${product.id} is variable, syncing variations...`);
             const varUrl = `${baseUrl}/wp-json/wc/v3/products/${product.id}/variations?per_page=100&orderby=id&order=asc`;
             const varResponse = await fetch(varUrl, {
                 headers: { 'Authorization': `Basic ${auth}` },
