@@ -30,10 +30,8 @@ async function deleteOldImage(imagePath: string | null) {
 
         const filePath = path.join(uploadDir, filename)
         await unlink(filePath)
-        console.log('Deleted old image:', filePath)
     } catch (error) {
         // File might not exist, ignore error
-        console.log('Could not delete old image (may not exist):', imagePath)
     }
 }
 
