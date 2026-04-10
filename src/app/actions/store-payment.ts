@@ -44,7 +44,7 @@ export async function createPayment(data: {
                 invoice_number: invoiceNumber,
             },
             payment: {
-                payment_due_date: data.paymentDueMinutes || 60,
+                payment_due_date: data.paymentDueMinutes || PAYMENT_DUE_MINUTES,
             },
             customer: {
                 name: data.nama,
@@ -115,8 +115,21 @@ export async function createPayment(data: {
     }
 }
 
+const PAYMENT_DUE_MINUTES = 60
+
 export async function getPayments() {
     try {
+        // Auto-expire pending payments that have passed their due time
+        // DOKU does not always send webhook for expired payments
+        const expiryCutoff = new Date(Date.now() - PAYMENT_DUE_MINUTES * 60 * 1000)
+        await prisma.storePayment.updateMany({
+            where: {
+                status: 'pending',
+                createdAt: { lt: expiryCutoff },
+            },
+            data: { status: 'expired' },
+        })
+
         const payments = await prisma.storePayment.findMany({
             orderBy: { createdAt: 'desc' },
         })
