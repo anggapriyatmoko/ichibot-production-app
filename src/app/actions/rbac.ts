@@ -57,7 +57,7 @@ export async function saveRbacConfig(config: RbacConfig): Promise<{ success: boo
             create: { key: RBAC_KEY, value: encryptedValue }
         })
 
-        revalidateTag('rbac-config')
+        revalidateTag('rbac-config', 'max')
         revalidatePath('/settings')
         revalidatePath('/')
         return { success: true }
