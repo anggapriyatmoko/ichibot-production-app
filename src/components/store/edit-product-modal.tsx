@@ -82,6 +82,7 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
         status: product?.status || 'publish',
         weight: product?.weight && parseFloat(product.weight.toString()) !== 0 ? product.weight.toString() : '',
         description: product?.description || '',
+        shortDescription: product?.shortDescription || '',
         categoryId: getInitialCategoryId()
     })
 
@@ -156,6 +157,16 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
             setFormData(prev => ({
                 ...prev,
                 description: cleaned
+            }))
+        }
+    }, [])
+
+    const handleShortDescriptionChange = useCallback((value: string) => {
+        const cleaned = value === '<p><br></p>' ? '' : value
+        if (cleaned.length <= 3000) {
+            setFormData(prev => ({
+                ...prev,
+                shortDescription: cleaned
             }))
         }
     }, [])
@@ -288,6 +299,7 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
 
     // Strip HTML tags for character count
     const descriptionTextLength = formData.description.replace(/<[^>]*>/g, '').length
+    const shortDescTextLength = formData.shortDescription.replace(/<[^>]*>/g, '').length
 
     return (
         <Modal
@@ -537,6 +549,31 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                             />
                             <p className="text-[10px] text-muted-foreground italic">Kosongkan untuk menghapus harga sale dan kembali ke harga reguler.</p>
                         </div>
+
+                        {/* Short Description WYSIWYG */}
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                                    <FileText className="w-3 h-3" /> Deskripsi Singkat Produk
+                                </label>
+                                <span className={cn(
+                                    "text-[10px] font-medium",
+                                    shortDescTextLength > 2800 ? "text-destructive" : "text-muted-foreground"
+                                )}>
+                                    {shortDescTextLength.toLocaleString()}/3.000
+                                </span>
+                            </div>
+                            <div className="product-wysiwyg-editor product-wysiwyg-short">
+                                <ReactQuill
+                                    theme="snow"
+                                    value={formData.shortDescription}
+                                    onChange={handleShortDescriptionChange}
+                                    modules={quillModules}
+                                    formats={quillFormats}
+                                    placeholder="Masukkan deskripsi singkat produk..."
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     {/* RIGHT COLUMN: WYSIWYG Description */}
@@ -610,6 +647,14 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     min-height: 350px;
                     padding: 12px 16px;
                     line-height: 1.6;
+                }
+                
+                /* Custom styles for the short description editor */
+                .product-wysiwyg-short {
+                    min-height: 200px !important;
+                }
+                .product-wysiwyg-short .ql-editor {
+                    min-height: 150px !important;
                 }
                 .product-wysiwyg-editor .ql-editor.ql-blank::before {
                     color: var(--muted-foreground, #9ca3af);

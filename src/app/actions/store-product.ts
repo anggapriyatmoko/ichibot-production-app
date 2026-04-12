@@ -1167,6 +1167,7 @@ export async function updateWooCommerceProduct(wcId: number, data: {
     weight?: number | null
     backupGudang?: string
     description?: string
+    shortDescription?: string
     categoryId?: number | null
     parentId?: number
     imageUrls?: string[]
@@ -1207,6 +1208,10 @@ export async function updateWooCommerceProduct(wcId: number, data: {
 
         if (data.description !== undefined) {
             wcPayload.description = data.description
+        }
+
+        if (data.shortDescription !== undefined) {
+            wcPayload.short_description = data.shortDescription
         }
 
         if (data.categoryId !== undefined) {
@@ -1271,6 +1276,7 @@ export async function updateWooCommerceProduct(wcId: number, data: {
                 weight: data.weight !== undefined ? (data.weight === null ? null : parseFloat(data.weight.toString())) : undefined,
                 backupGudang: data.backupGudang !== undefined ? data.backupGudang : undefined,
                 description: data.description !== undefined ? data.description : undefined,
+                shortDescription: data.shortDescription !== undefined ? data.shortDescription : undefined,
                 categories: updatedWcProduct.categories ? JSON.stringify(updatedWcProduct.categories) : undefined,
                 images: updatedWcProduct.images ? JSON.stringify(updatedWcProduct.images) : undefined,
                 price: parseFloat(updatedWcProduct.price) || 0, // Get calculated price from WC
@@ -1377,6 +1383,7 @@ export async function createWooCommerceProduct(data: {
     weight?: number | null
     backupGudang?: string
     description?: string
+    shortDescription?: string
     categoryId?: number | null
     imageUrls?: string[]
 }) {
@@ -1403,6 +1410,7 @@ export async function createWooCommerceProduct(data: {
         if (data.regularPrice !== undefined) wcPayload.regular_price = data.regularPrice?.toString() || ""
         if (data.salePrice !== undefined) wcPayload.sale_price = data.salePrice?.toString() || ""
         if (data.description !== undefined) wcPayload.description = data.description
+        if (data.shortDescription !== undefined) wcPayload.short_description = data.shortDescription
 
         if (data.categoryId !== undefined) {
             wcPayload.categories = data.categoryId ? [{ id: data.categoryId }] : []
