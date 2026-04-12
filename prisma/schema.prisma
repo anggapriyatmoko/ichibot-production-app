@@ -877,6 +877,8 @@ model expense {
 
   @@index([userId])
   @@index([categoryId])
+  @@index([userId, date])
+  @@index([date])
   @@map("Expense")
 }
 
@@ -961,4 +963,27 @@ model IchicraftOrderItem {
 
   @@index([orderId])
   @@map("IchicraftOrderItem")
+}
+
+model StorePayment {
+  id              String    @id @default(cuid())
+  invoiceNumber   String    @unique
+  nama            String
+  keterangan      String?   @db.Text
+  nominal         Float
+  status          String    @default("pending")
+  paymentUrl      String?   @db.Text
+  tokenId         String?
+  sessionId       String?
+  paymentMethod   String?
+  paymentChannel  String?
+  dokuRequestId   String?
+  dokuResponse    Json?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("StorePayment")
 }

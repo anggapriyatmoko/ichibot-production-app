@@ -6,7 +6,7 @@ import { id as localeId } from 'date-fns/locale'
 import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X, BarChart3, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
-import { getAllExpenses, updateExpenseAdmin, ExpenseData, getAllExpensesForYear } from '@/app/actions/expense'
+import { getAllExpenses, updateExpenseAdmin, ExpenseData, getAllExpensesForYear, getExpenseImage } from '@/app/actions/expense'
 import { getExpenseCategories } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
 import {
@@ -39,7 +39,7 @@ interface Expense {
     name: string
     amount: string
     categoryId: string
-    image: string | null
+    hasImage?: boolean
     createdAt?: string | Date
     category?: Category
     userName?: string
@@ -244,16 +244,22 @@ export default function ExpenseDashboardAdmin() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    const handleOpenModal = (expense: Expense) => {
+    const handleOpenModal = async (expense: Expense) => {
         setEditingId(expense.id)
         setFormData({
             name: expense.name,
             amount: expense.amount,
             categoryId: expense.categoryId,
             date: new Date(expense.date).toISOString().substring(0, 10),
-            image: expense.image
+            image: null
         })
         setIsModalOpen(true)
+        if (expense.hasImage) {
+            const res = await getExpenseImage(expense.id)
+            if (res.success && res.data) {
+                setFormData(prev => ({ ...prev, image: res.data }))
+            }
+        }
     }
 
     const handleCloseModal = () => {
@@ -533,11 +539,14 @@ export default function ExpenseDashboardAdmin() {
 
                         <TableMobileCardFooter>
                             <div>
-                                {item.image ? (
+                                {item.hasImage ? (
                                     <button
-                                        onClick={() => {
-                                            setPreviewImage(item.image)
-                                            setIsPreviewOpen(true)
+                                        onClick={async () => {
+                                            const res = await getExpenseImage(item.id)
+                                            if (res.success && res.data) {
+                                                setPreviewImage(res.data)
+                                                setIsPreviewOpen(true)
+                                            }
                                         }}
                                         className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2.5 py-1.5 rounded-lg transition-all hover:bg-primary/20"
                                     >
@@ -603,11 +612,14 @@ export default function ExpenseDashboardAdmin() {
                                         {formatCurrency(item.amount)}
                                     </TableCell>
                                     <TableCell align="center">
-                                        {item.image ? (
+                                        {item.hasImage ? (
                                             <button
-                                                onClick={() => {
-                                                    setPreviewImage(item.image)
-                                                    setIsPreviewOpen(true)
+                                                onClick={async () => {
+                                                    const res = await getExpenseImage(item.id)
+                                                    if (res.success && res.data) {
+                                                        setPreviewImage(res.data)
+                                                        setIsPreviewOpen(true)
+                                                    }
                                                 }}
                                                 className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors inline-block"
                                                 title="Lihat Foto"

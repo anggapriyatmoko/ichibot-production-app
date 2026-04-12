@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info, Calendar, Check, ScanLine, FileText } from 'lucide-react'
-import { getExpenses, createExpense, updateExpense, deleteExpense, approveExpense, createExpenseDraft, ExpenseData } from '@/app/actions/expense'
+import { getExpenses, createExpense, updateExpense, deleteExpense, approveExpense, createExpenseDraft, getExpenseImage, ExpenseData } from '@/app/actions/expense'
 import { useAlert } from '@/hooks/use-alert'
 import {
     Table,
@@ -36,7 +36,7 @@ interface Expense {
     name: string
     amount: string
     categoryId: string
-    image: string | null
+    hasImage?: boolean
     status?: string
     createdAt?: string | Date
     category?: Category
@@ -91,6 +91,10 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
     const [isScanCategoryDropdownOpen, setIsScanCategoryDropdownOpen] = useState(false)
     const [scanCategorySearchQuery, setScanCategorySearchQuery] = useState('')
     const scanCategoryDropdownRef = useRef<HTMLDivElement>(null)
+
+    // Track deleted IDs & scan abort controllers to prevent resurrection
+    const deletedIdsRef = useRef<Set<string>>(new Set())
+    const scanAbortControllersRef = useRef<Map<string, AbortController>>(new Map())
 
     // Category Dropdown State
     const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
@@ -157,7 +161,8 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
 
             const res = await getExpenses(userId, start?.toISOString(), end?.toISOString())
             if (res.success && res.data) {
-                setExpenses(res.data as Expense[])
+                const filtered = (res.data as Expense[]).filter(e => !deletedIdsRef.current.has(e.id))
+                setExpenses(filtered)
             } else {
                 showError(res.error || 'Gagal memuat rekapitulasi')
             }
@@ -183,14 +188,19 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
+    // Stable boolean: only changes when scanning state actually flips
+    const hasScanning = useMemo(
+        () => expenses.some(e => e.status === 'scanning'),
+        [expenses]
+    )
+
     // Auto-refresh when scanning items exist (silent = no table loading flash)
     useEffect(() => {
-        const hasScanning = expenses.some(e => e.status === 'scanning')
         if (!hasScanning) return
         const interval = setInterval(() => { fetchExpenses(true) }, 5000)
         return () => clearInterval(interval)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [expenses])
+    }, [hasScanning])
 
     const filteredCategories = categories.filter(cat =>
         cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
@@ -218,7 +228,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
     const [formData, setFormData] = useState(defaultFormData)
     const [deletingId, setDeletingId] = useState<string | null>(null)
 
-    const handleOpenModal = (expense?: Expense) => {
+    const handleOpenModal = async (expense?: Expense) => {
         if (expense) {
             setEditingId(expense.id)
             setFormData({
@@ -226,8 +236,17 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                 amount: expense.amount,
                 categoryId: expense.categoryId,
                 date: new Date(expense.date).toISOString().substring(0, 10),
-                image: expense.image
+                image: null
             })
+            setIsModalOpen(true)
+            // Load image on-demand if exists
+            if (expense.hasImage) {
+                const res = await getExpenseImage(expense.id)
+                if (res.success && res.data) {
+                    setFormData(prev => ({ ...prev, image: res.data }))
+                }
+            }
+            return
         } else {
             setEditingId(null)
             setFormData({ ...defaultFormData })
@@ -315,14 +334,27 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
 
         setDeletingId(id)
         try {
+            // Abort ongoing scan request if exists
+            const controller = scanAbortControllersRef.current.get(id)
+            if (controller) {
+                controller.abort()
+                scanAbortControllersRef.current.delete(id)
+            }
+
+            // Track as deleted to prevent resurrection from polling
+            deletedIdsRef.current.add(id)
+
             const res = await deleteExpense(id)
             if (res.success) {
                 showAlert('Catatan berhasil dihapus')
                 setExpenses(prev => prev.filter(c => c.id !== id))
             } else {
+                // Rollback: remove from deleted set if delete failed
+                deletedIdsRef.current.delete(id)
                 showError(res.error || 'Gagal menghapus pengeluaran')
             }
         } catch (error) {
+            deletedIdsRef.current.delete(id)
             console.error(error)
             showError('Terjadi kesalahan sistem')
         } finally {
@@ -366,13 +398,20 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                 setScanPreviewImage(null)
                 showAlert('Foto diunggah, sedang diproses AI...')
 
+                const abortController = new AbortController()
+                scanAbortControllersRef.current.set(res.data.id, abortController)
+
                 fetch('/api/scan-receipt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ expenseId: res.data.id, imageBase64: scanPreviewImage }),
+                    signal: abortController.signal,
                 }).then(() => {
+                    scanAbortControllersRef.current.delete(res.data!.id)
                     fetchExpenses(true)
-                }).catch(console.error)
+                }).catch(err => {
+                    if (err.name !== 'AbortError') console.error(err)
+                })
             } else {
                 showError(res.error || 'Gagal menyimpan draft')
             }
@@ -548,11 +587,14 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
 
                         <TableMobileCardFooter>
                             <div>
-                                {item.image ? (
+                                {item.hasImage ? (
                                     <button
-                                        onClick={() => {
-                                            setPreviewImage(item.image)
-                                            setIsPreviewOpen(true)
+                                        onClick={async () => {
+                                            const res = await getExpenseImage(item.id)
+                                            if (res.success && res.data) {
+                                                setPreviewImage(res.data)
+                                                setIsPreviewOpen(true)
+                                            }
                                         }}
                                         className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2.5 py-1.5 rounded-lg transition-all hover:bg-primary/20"
                                     >
@@ -626,11 +668,14 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                                         ) : formatCurrency(item.amount)}
                                     </TableCell>
                                     <TableCell align="center">
-                                        {item.image ? (
+                                        {item.hasImage ? (
                                             <button
-                                                onClick={() => {
-                                                    setPreviewImage(item.image)
-                                                    setIsPreviewOpen(true)
+                                                onClick={async () => {
+                                                    const res = await getExpenseImage(item.id)
+                                                    if (res.success && res.data) {
+                                                        setPreviewImage(res.data)
+                                                        setIsPreviewOpen(true)
+                                                    }
                                                 }}
                                                 className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors inline-block"
                                                 title="Lihat Foto"

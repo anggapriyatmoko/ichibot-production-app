@@ -35,7 +35,8 @@ import {
   Wallet,
   TrendingDown,
   TrendingUp,
-  PieChart
+  PieChart,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/providers/sidebar-provider";
@@ -101,6 +102,7 @@ export const navigationGroups = [
     excludeRoles: ["EXTERNAL"],
     items: [
       { name: "POS Store", href: "/store/pos", icon: Store },
+      { name: "Payment", href: "/store/payment", icon: CreditCard },
       {
         name: "Store Product",
         icon: Package,

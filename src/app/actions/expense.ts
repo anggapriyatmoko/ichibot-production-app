@@ -37,9 +37,17 @@ export async function getExpenses(userId: string, startDateIso?: string, endDate
         })
 
         const decryptedExpenses = expenses.map((expense: any) => ({
-            ...expense,
+            id: expense.id,
+            userId: expense.userId,
+            categoryId: expense.categoryId,
+            date: expense.date,
+            status: expense.status,
+            createdAt: expense.createdAt,
+            updatedAt: expense.updatedAt,
+            category: expense.category,
             amount: decrypt(expense.amountEnc) || '0',
-            name: decrypt(expense.nameEnc) || 'Unknown'
+            name: decrypt(expense.nameEnc) || 'Unknown',
+            hasImage: !!expense.image,
         }))
 
         return { success: true, data: decryptedExpenses }
@@ -76,10 +84,18 @@ export async function getAllExpenses(startDateIso?: string, endDateIso?: string)
         })
 
         const decryptedExpenses = expenses.map((expense: any) => ({
-            ...expense,
+            id: expense.id,
+            userId: expense.userId,
+            categoryId: expense.categoryId,
+            date: expense.date,
+            status: expense.status,
+            createdAt: expense.createdAt,
+            updatedAt: expense.updatedAt,
+            category: expense.category,
             amount: decrypt(expense.amountEnc) || '0',
             name: decrypt(expense.nameEnc) || 'Unknown',
-            userName: decrypt(expense.user?.nameEnc) || 'Unknown'
+            userName: decrypt(expense.user?.nameEnc) || 'Unknown',
+            hasImage: !!expense.image,
         }))
 
         return { success: true, data: decryptedExpenses }
@@ -263,6 +279,12 @@ export async function createExpenseDraft(data: { categoryId: string; date: Date;
 
 export async function updateExpenseFromScan(id: string, name: string, amount: string) {
     try {
+        // Cek apakah expense masih ada (belum dihapus user)
+        const existing = await (prisma as any).expense.findUnique({ where: { id } })
+        if (!existing) {
+            return { success: false, error: 'Expense already deleted' }
+        }
+
         const nameEnc = encrypt(name)
         const amountEnc = encrypt(amount)
 
@@ -339,5 +361,28 @@ export async function getAllExpensesForYear(year: number, categoryIds?: string[]
     } catch (error) {
         console.error('Error fetching yearly expenses:', error)
         return { success: false, error: 'Failed to fetch yearly expenses: ' + (error as any).message }
+    }
+}
+
+export async function getExpenseImage(id: string) {
+    try {
+        const session: any = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+            return { success: false, error: 'Unauthorized' }
+        }
+
+        const expense = await (prisma as any).expense.findUnique({
+            where: { id },
+            select: { image: true, userId: true }
+        })
+
+        if (!expense) {
+            return { success: false, error: 'Expense not found' }
+        }
+
+        return { success: true, data: expense.image }
+    } catch (error) {
+        console.error('Error fetching expense image:', error)
+        return { success: false, error: 'Failed to fetch image' }
     }
 }

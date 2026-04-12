@@ -1,10 +1,10 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 import { encrypt, decrypt } from '@/lib/crypto'
 import { requireAdmin } from '@/lib/auth'
-import { cache } from 'react'
 
 const RBAC_KEY = 'RBAC_CONFIG'
 
@@ -12,25 +12,29 @@ export type RbacConfig = Record<string, string[]> // href -> allowed roles
 
 /**
  * Get the RBAC configuration from database (decrypted)
- * Wrapped with React cache() to deduplicate within a single request
+ * Cached across requests with 60s TTL + tag-based invalidation on save
  */
-export const getRbacConfig = cache(async (): Promise<RbacConfig | null> => {
-    try {
-        const setting = await prisma.systemSetting.findUnique({
-            where: { key: RBAC_KEY }
-        })
+export const getRbacConfig = unstable_cache(
+    async (): Promise<RbacConfig | null> => {
+        try {
+            const setting = await prisma.systemSetting.findUnique({
+                where: { key: RBAC_KEY }
+            })
 
-        if (!setting) return null
+            if (!setting) return null
 
-        const decrypted = decrypt(setting.value)
-        if (!decrypted) return null
+            const decrypted = decrypt(setting.value)
+            if (!decrypted) return null
 
-        return JSON.parse(decrypted) as RbacConfig
-    } catch (error) {
-        console.error('Error getting RBAC config:', error)
-        return null
-    }
-})
+            return JSON.parse(decrypted) as RbacConfig
+        } catch (error) {
+            console.error('Error getting RBAC config:', error)
+            return null
+        }
+    },
+    ['rbac-config'],
+    { revalidate: 60, tags: ['rbac-config'] }
+)
 
 /**
  * Save RBAC configuration to database (encrypted)
@@ -53,6 +57,7 @@ export async function saveRbacConfig(config: RbacConfig): Promise<{ success: boo
             create: { key: RBAC_KEY, value: encryptedValue }
         })
 
+        revalidateTag('rbac-config')
         revalidatePath('/settings')
         revalidatePath('/')
         return { success: true }
