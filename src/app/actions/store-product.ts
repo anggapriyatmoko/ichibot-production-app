@@ -1169,6 +1169,8 @@ export async function updateWooCommerceProduct(wcId: number, data: {
     description?: string
     categoryId?: number | null
     parentId?: number
+    imageUrls?: string[]
+    existingImageIds?: number[]
 }) {
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
     const WC_KEY = process.env.WC_CONSUMER_KEY
@@ -1220,6 +1222,24 @@ export async function updateWooCommerceProduct(wcId: number, data: {
             ]
         }
 
+        // Build images array: existing images by ID + new images by URL
+        if (data.existingImageIds !== undefined || (data.imageUrls && data.imageUrls.length > 0)) {
+            const imagesPayload: any[] = []
+            // Keep existing images by their WC ID (order matters: first = featured)
+            if (data.existingImageIds) {
+                for (const imgId of data.existingImageIds) {
+                    imagesPayload.push({ id: imgId })
+                }
+            }
+            // Append new images by temporary URL
+            if (data.imageUrls && data.imageUrls.length > 0) {
+                for (const imgUrl of data.imageUrls) {
+                    imagesPayload.push({ src: imgUrl })
+                }
+            }
+            wcPayload.images = imagesPayload
+        }
+
 
         const response = await fetch(url, {
             method: 'PUT',
@@ -1238,7 +1258,7 @@ export async function updateWooCommerceProduct(wcId: number, data: {
 
         const updatedWcProduct = await response.json()
 
-        // Sync to local database
+        // Sync to local database (include updated images from WC response)
         await prisma.storeProduct.update({
             where: { wcId },
             data: {
@@ -1252,10 +1272,27 @@ export async function updateWooCommerceProduct(wcId: number, data: {
                 backupGudang: data.backupGudang !== undefined ? data.backupGudang : undefined,
                 description: data.description !== undefined ? data.description : undefined,
                 categories: updatedWcProduct.categories ? JSON.stringify(updatedWcProduct.categories) : undefined,
+                images: updatedWcProduct.images ? JSON.stringify(updatedWcProduct.images) : undefined,
                 price: parseFloat(updatedWcProduct.price) || 0, // Get calculated price from WC
                 updatedAt: new Date()
             }
         })
+
+        // Cleanup temporary images after WooCommerce has downloaded them
+        if (data.imageUrls && data.imageUrls.length > 0) {
+            const uploadDir = getUploadDir()
+            for (const imgUrl of data.imageUrls) {
+                try {
+                    const filename = imgUrl.split('/').pop()
+                    if (filename) {
+                        const filePath = path.join(uploadDir, filename)
+                        await unlink(filePath)
+                    }
+                } catch (cleanupError) {
+                    console.error('Failed to cleanup temporary image:', imgUrl, cleanupError)
+                }
+            }
+        }
 
         revalidatePath('/store/product')
         revalidatePath('/store/low-stock')
@@ -1264,6 +1301,21 @@ export async function updateWooCommerceProduct(wcId: number, data: {
         return { success: true, product: updatedWcProduct }
     } catch (error: any) {
         console.error('Error in updateWooCommerceProduct:', error)
+
+        // Cleanup temp images even on error
+        if (data.imageUrls && data.imageUrls.length > 0) {
+            const uploadDir = getUploadDir()
+            for (const imgUrl of data.imageUrls) {
+                try {
+                    const filename = imgUrl.split('/').pop()
+                    if (filename) {
+                        const filePath = path.join(uploadDir, filename)
+                        await unlink(filePath).catch(() => { })
+                    }
+                } catch (e) { }
+            }
+        }
+
         return { success: false, error: error.message || 'Terjadi kesalahan sistem' }
     }
 }

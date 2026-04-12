@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Trash2, X, Save, Loader2, Upload, ImageIcon, Plus, Tag } from 'lucide-react'
+import { Trash2, X, Save, Loader2, Upload, ImageIcon, Plus, Tag, GripVertical } from 'lucide-react'
 import { updateWooCommerceProduct, createWooCommerceProduct, deleteWooCommerceProduct, uploadStoreProductImages, getWooCommerceCategories } from '@/app/actions/store-product'
 import { formatNumber } from '@/utils/format'
 import { useAlert } from '@/hooks/use-alert'
@@ -10,6 +10,13 @@ import { cn } from '@/lib/utils'
 import Modal from '@/components/ui/modal'
 import { Combobox } from '@/components/ui/combobox'
 import { useEffect } from 'react'
+
+interface ExistingImage {
+    id: number
+    src: string
+    name?: string
+    alt?: string
+}
 
 interface EditProductModalProps {
     product: any // If null, mode is 'add'
@@ -27,6 +34,22 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
     const [imagePreviews, setImagePreviews] = useState<string[]>([])
     const [categories, setCategories] = useState<any[]>([])
     const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+
+    // Existing images from WooCommerce (edit mode only)
+    const [existingImages, setExistingImages] = useState<ExistingImage[]>(() => {
+        if (!product?.images || isAddMode) return []
+        try {
+            const imgs = Array.isArray(product.images) ? product.images : JSON.parse(product.images)
+            return imgs.filter((img: any) => img?.id && img?.src).map((img: any) => ({
+                id: img.id,
+                src: img.src,
+                name: img.name || '',
+                alt: img.alt || ''
+            }))
+        } catch (e) {
+            return []
+        }
+    })
 
     // Parse existing categories for edit mode
     const getInitialCategoryId = () => {
@@ -56,6 +79,10 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
         description: product?.description || '',
         categoryId: getInitialCategoryId()
     })
+
+    // Total images (existing + new) must be <= 5
+    const totalImageCount = existingImages.length + selectedImages.length
+    const remainingSlots = 5 - totalImageCount
 
     // Fetch categories on mount
     useEffect(() => {
@@ -96,26 +123,33 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])
-        const remainingSlots = 5 - selectedImages.length
-        const newFiles = files.slice(0, remainingSlots)
+        const slotsAvailable = 5 - totalImageCount
+        const newFiles = files.slice(0, slotsAvailable)
 
-        if (files.length > remainingSlots) {
-            showAlert('Maksimal 5 gambar diperbolehkan.', 'Informasi')
+        if (files.length > slotsAvailable) {
+            showAlert(`Maksimal 5 gambar diperbolehkan. Sisa slot: ${slotsAvailable}`, 'Informasi')
         }
 
         setSelectedImages(prev => [...prev, ...newFiles])
 
         const newPreviews = newFiles.map(file => URL.createObjectURL(file))
         setImagePreviews(prev => [...prev, ...newPreviews])
+
+        // Reset input value so same file can be selected again
+        e.target.value = ''
     }
 
-    const removeImage = (index: number) => {
+    const removeNewImage = (index: number) => {
         setSelectedImages(prev => prev.filter((_, i) => i !== index))
         setImagePreviews(prev => {
             const newPreviews = [...prev]
             URL.revokeObjectURL(newPreviews[index])
             return newPreviews.filter((_, i) => i !== index)
         })
+    }
+
+    const removeExistingImage = (index: number) => {
+        setExistingImages(prev => prev.filter((_, i) => i !== index))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -125,8 +159,8 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
         try {
             let imageUrls: string[] = []
 
-            // Handle image uploads for NEW products
-            if (isAddMode && selectedImages.length > 0) {
+            // Handle image uploads (both add and edit mode)
+            if (selectedImages.length > 0) {
                 const uploadResult = await uploadStoreProductImages(selectedImages)
                 if (uploadResult.success) {
                     imageUrls = uploadResult.urls
@@ -152,9 +186,14 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     imageUrls
                 })
             } else {
+                // Build existing image IDs to keep (in current order)
+                const existingImageIds = existingImages.map(img => img.id)
+
                 result = await updateWooCommerceProduct(product.wcId, {
                     ...payload,
-                    parentId: product.parentId
+                    parentId: product.parentId,
+                    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+                    existingImageIds: existingImageIds
                 })
             }
 
@@ -200,6 +239,12 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                 }
             }
         })
+    }
+
+    // Get the global index for display (existing + new combined)
+    const getGlobalIndex = (type: 'existing' | 'new', localIndex: number) => {
+        if (type === 'existing') return localIndex
+        return existingImages.length + localIndex
     }
 
     return (
@@ -266,45 +311,81 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                     />
                 </div>
 
-                {isAddMode && (
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                            <ImageIcon className="w-3 h-3" /> Foto Produk (Maks 5)
-                        </label>
-                        <div className="grid grid-cols-5 gap-2">
-                            {imagePreviews.map((preview, index) => (
-                                <div key={index} className="relative aspect-square rounded-lg border border-border overflow-hidden bg-muted group">
-                                    <img src={preview} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImage(index)}
-                                        className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <X className="w-2.5 h-2.5" />
-                                    </button>
-                                    {index === 0 && (
-                                        <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
-                                            Utama
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                            {selectedImages.length < 5 && (
-                                <label className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleImageChange}
-                                        className="hidden"
-                                    />
-                                    <Plus className="w-5 h-5 mb-1" />
-                                    <span className="text-[8px] font-bold uppercase">Upload</span>
-                                </label>
-                            )}
-                        </div>
+                {/* Image Management Section - Both Add & Edit Mode */}
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                        <ImageIcon className="w-3 h-3" /> Foto Produk (Maks 5)
+                    </label>
+                    <div className="grid grid-cols-5 gap-2">
+                        {/* Existing images from WooCommerce (edit mode) */}
+                        {existingImages.map((img, index) => (
+                            <div key={`existing-${img.id}`} className="relative aspect-square rounded-lg border border-border overflow-hidden bg-muted group">
+                                <img src={img.src} alt={img.alt || `Image ${index}`} className="w-full h-full object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => removeExistingImage(index)}
+                                    className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                                {getGlobalIndex('existing', index) === 0 && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
+                                        Utama
+                                    </div>
+                                )}
+                                {getGlobalIndex('existing', index) !== 0 && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white/80 text-center py-0.5 font-medium">
+                                        Gallery
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {/* New image previews */}
+                        {imagePreviews.map((preview, index) => (
+                            <div key={`new-${index}`} className="relative aspect-square rounded-lg border-2 border-dashed border-emerald-300 overflow-hidden bg-emerald-50/30 group">
+                                <img src={preview} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => removeNewImage(index)}
+                                    className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                                {getGlobalIndex('new', index) === 0 && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
+                                        Utama
+                                    </div>
+                                )}
+                                {getGlobalIndex('new', index) !== 0 && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-600/70 text-[8px] text-white text-center py-0.5 font-medium">
+                                        Baru
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {/* Upload button if slots available */}
+                        {totalImageCount < 5 && (
+                            <label className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleImageChange}
+                                    className="hidden"
+                                />
+                                <Plus className="w-5 h-5 mb-1" />
+                                <span className="text-[8px] font-bold uppercase">Upload</span>
+                            </label>
+                        )}
                     </div>
-                )}
+                    {totalImageCount > 0 && (
+                        <p className="text-[10px] text-muted-foreground italic">
+                            {totalImageCount}/5 gambar • Gambar pertama = gambar utama produk
+                        </p>
+                    )}
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -413,19 +494,19 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
 
                 <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Deskripsi Produk (Maks 3000 karkater)</label>
+                        <label className="text-xs font-bold text-muted-foreground uppercase">Deskripsi Produk (Maks 10.000 karakter)</label>
                         <span className={cn(
                             "text-[10px] font-medium",
-                            formData.description.length > 2800 ? "text-destructive" : "text-muted-foreground"
+                            formData.description.length > 9500 ? "text-destructive" : "text-muted-foreground"
                         )}>
-                            {formData.description.length}/3000
+                            {formData.description.length}/10000
                         </span>
                     </div>
                     <textarea
                         name="description"
                         value={formData.description}
                         onChange={handleChange}
-                        maxLength={3000}
+                        maxLength={10000}
                         rows={4}
                         className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all resize-none min-h-[100px]"
                         placeholder="Masukkan rincian produk..."

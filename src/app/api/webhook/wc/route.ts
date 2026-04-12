@@ -2,8 +2,39 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/prisma';
 import fs from 'fs';
+import path from 'path';
 import { syncSingleStoreProduct } from '@/lib/wc-sync';
 import { revalidatePath } from 'next/cache';
+
+/**
+ * Safety net: Clean up temp-prod-* image files older than 10 minutes.
+ * Called after product webhook to prevent storage bloat if primary cleanup fails.
+ */
+async function cleanupOldTempImages() {
+    try {
+        let uploadDir = process.env.UPLOAD_DIR
+        if (!uploadDir) {
+            uploadDir = path.join(process.cwd(), 'uploads')
+        }
+        if (!fs.existsSync(uploadDir)) return
+
+        const files = fs.readdirSync(uploadDir)
+        const now = Date.now()
+        const TEN_MINUTES = 10 * 60 * 1000
+
+        for (const file of files) {
+            if (!file.startsWith('temp-prod-')) continue
+            const filePath = path.join(uploadDir, file)
+            try {
+                const stat = fs.statSync(filePath)
+                if (now - stat.mtimeMs > TEN_MINUTES) {
+                    fs.unlinkSync(filePath)
+                    debugLog(`Cleaned up old temp image: ${file}`)
+                }
+            } catch (e) { /* ignore individual file errors */ }
+        }
+    } catch (e) { /* ignore cleanup errors */ }
+}
 
 // Fallback to legacy secret if specific ones aren't defined
 
@@ -242,6 +273,9 @@ export async function POST(request: Request) {
                 revalidatePath('/store/low-stock');
                 revalidatePath('/store/purchased');
             }
+
+            // Safety net: Clean up any orphaned temp images
+            cleanupOldTempImages();
 
             return new NextResponse('OK', { status: 200 });
         }
