@@ -699,6 +699,7 @@ export default function StoreProductList({
                 }, 0),
             withPurchasePrice: physicalProducts.filter(p => p.purchasePrice && p.purchasePrice > 0).length,
             withoutPurchasePrice: physicalProducts.filter(p => !p.purchasePrice || p.purchasePrice <= 0).length,
+            withWholesale: physicalProducts.filter(p => p.wholesalePrices && p.wholesalePrices.length > 0).length,
             avgLaba: 0,
             avgMargin: 0
         }
@@ -1481,6 +1482,16 @@ export default function StoreProductList({
                                     <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Harga {!hideStokColumn && '& Stok'}</p>
                                     <div className="flex flex-col">
                                         <span className="text-sm font-black text-foreground">{formatCurrency(product.price || 0)}</span>
+                                        {product.wholesalePrices && product.wholesalePrices.length > 0 && (
+                                            <div className="flex flex-col gap-0.5 mt-1 border-l-2 border-emerald-500/30 pl-1.5 py-0.5">
+                                                <span className="text-[8px] font-black uppercase text-emerald-700/60 leading-none">Grosir:</span>
+                                                {product.wholesalePrices.map((tier: any, idx: number) => (
+                                                    <div key={idx} className="text-[10px] font-black text-emerald-600 leading-none">
+                                                        {tier.minQty}+ pcs @ {formatCurrency(parseFloat(tier.price))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                         {!hideStokColumn && (
                                             <span className={cn(
                                                 "text-xs font-bold",
@@ -1995,9 +2006,20 @@ export default function StoreProductList({
                                                             <div className="flex items-center flex-shrink-0 gap-1.5 h-fit">
                                                                 <Tag className="w-3 h-3 text-emerald-600/80" />
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <span className="text-xs font-bold text-emerald-700">
-                                                                        {formatCurrency(product.price || 0)}
-                                                                    </span>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs font-bold text-emerald-700">
+                                                                            {formatCurrency(product.price || 0)}
+                                                                        </span>
+                                                                        {product.wholesalePrices && product.wholesalePrices.length > 0 && (
+                                                                            <div className="flex flex-col gap-0.5 mt-0.5">
+                                                                                {product.wholesalePrices.map((tier: any, idx: number) => (
+                                                                                    <div key={idx} className="text-[9px] font-bold text-emerald-600 leading-none">
+                                                                                        {tier.minQty}+ @ {formatCurrency(parseFloat(tier.price))}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                     {product.salePrice > 0 && product.salePrice < product.regularPrice && (
                                                                         <span className="text-[10px] text-emerald-600/60 line-through">
                                                                             {formatCurrency(product.regularPrice)}
@@ -2084,6 +2106,16 @@ export default function StoreProductList({
                                             <TableCell align="right" className="whitespace-nowrap">
                                                 <div className="flex flex-col items-end">
                                                     <div className="text-sm font-medium text-foreground">{formatCurrency(product.price || 0)}</div>
+                                                    {product.wholesalePrices && product.wholesalePrices.length > 0 && (
+                                                        <div className="flex flex-col items-end gap-0.5 mt-1 border-r-2 border-emerald-500/30 pr-1.5 py-0.5">
+                                                            <span className="text-[8px] font-black uppercase text-emerald-700/60 leading-none mb-0.5 text-right">Harga Grosir</span>
+                                                            {product.wholesalePrices.map((tier: any, idx: number) => (
+                                                                <div key={idx} className="text-[10px] font-black text-emerald-600 leading-none text-right">
+                                                                    {tier.minQty}+ pcs @ {formatCurrency(parseFloat(tier.price))}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                     {product.salePrice > 0 && product.salePrice < product.regularPrice && (
                                                         <div className="text-[10px] text-muted-foreground line-through">
                                                             {formatCurrency(product.regularPrice)}
@@ -2840,6 +2872,13 @@ export default function StoreProductList({
                     <div className="p-4 rounded-xl bg-red-50/50 border border-red-100/50">
                         <p className="text-xs font-semibold text-red-600/70 uppercase tracking-wider mb-1">Stok Kosong (≤ 0)</p>
                         <p className="text-2xl font-bold text-red-600">{formatNumber(analysis.outOfStock)}</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50">
+                        <p className="text-xs font-semibold text-emerald-600/70 uppercase tracking-wider mb-1">Produk Grosir</p>
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-2xl font-bold text-emerald-600">{formatNumber(analysis.withWholesale)}</p>
+                            <span className="text-[10px] font-medium text-emerald-600/60 font-bold uppercase">Produk</span>
+                        </div>
                     </div>
                     {!isAnalisaHarga && (
                         showPurchaseColumns ? (

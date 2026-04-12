@@ -61,6 +61,17 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
             backupGudang: product.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
         };
 
+        // Extract wholesale prices
+        const wholesalePrices: any[] = [];
+        for (let i = 1; i <= 5; i++) {
+            const minQty = product.meta_data?.find((m: any) => m.key === `_grosir_min_qty_${i}`)?.value;
+            const priceVal = product.meta_data?.find((m: any) => m.key === `_grosir_price_${i}`)?.value;
+            if (minQty) {
+                wholesalePrices.push({ minQty: minQty.toString(), price: priceVal ? priceVal.toString() : '' });
+            }
+        }
+        productData.wholesalePrices = wholesalePrices.length > 0 ? JSON.stringify(wholesalePrices) : null;
+
         if (!parentId) {
             productData.type = product.type;
             productData.description = product.description;
@@ -116,6 +127,16 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
                         backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
                     };
 
+                    const varWholesalePrices: any[] = [];
+                    for (let i = 1; i <= 5; i++) {
+                        const vMinQty = variation.meta_data?.find((m: any) => m.key === `_grosir_min_qty_${i}`)?.value;
+                        const vPriceVal = variation.meta_data?.find((m: any) => m.key === `_grosir_price_${i}`)?.value;
+                        if (vMinQty) {
+                            varWholesalePrices.push({ minQty: vMinQty.toString(), price: vPriceVal ? vPriceVal.toString() : '' });
+                        }
+                    }
+                    (varData as any).wholesalePrices = varWholesalePrices.length > 0 ? JSON.stringify(varWholesalePrices) : null;
+
                     await prisma.storeProduct.upsert({
                         where: { wcId: variation.id },
                         update: varData,
@@ -139,12 +160,14 @@ export async function syncSingleStoreProduct(wcId: number, parentId?: number) {
             ...syncedProduct,
             images: [],
             categories: [],
-            attributes: []
+            attributes: [],
+            wholesalePrices: []
         };
 
         try { if (syncedProduct.images) result.images = JSON.parse(syncedProduct.images); } catch (e) { }
         try { if (syncedProduct.categories) result.categories = JSON.parse(syncedProduct.categories); } catch (e) { }
         try { if (syncedProduct.attributes) result.attributes = JSON.parse(syncedProduct.attributes); } catch (e) { }
+        try { if (syncedProduct.wholesalePrices) result.wholesalePrices = JSON.parse(syncedProduct.wholesalePrices); } catch (e) { }
 
         return { success: true, product: result };
     } catch (error: any) {

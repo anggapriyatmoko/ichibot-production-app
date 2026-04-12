@@ -692,6 +692,7 @@ model StoreProduct {
   priority         Boolean   @default(false)
   simulationQty    Int       @default(0)
   simulationPrice  Float?
+  wholesalePrices  String?   @db.Text
 
   @@map("StoreProduct")
 }

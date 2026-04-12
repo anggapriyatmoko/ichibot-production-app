@@ -230,6 +230,15 @@ export async function performStoreSync(onLog?: (msg: string) => void) {
                         updatedAt: new Date(),
                         isMissingFromWoo: false,
                         backupGudang: product.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                        wholesalePrices: (() => {
+                            const tiers: any[] = [];
+                            for (let i = 1; i <= 5; i++) {
+                                const minQty = product.meta_data?.find((m: any) => m.key === `_grosir_min_qty_${i}`)?.value;
+                                const priceVal = product.meta_data?.find((m: any) => m.key === `_grosir_price_${i}`)?.value;
+                                if (minQty) tiers.push({ minQty: minQty.toString(), price: priceVal ? priceVal.toString() : '' });
+                            }
+                            return tiers.length > 0 ? JSON.stringify(tiers) : null;
+                        })()
                     },
                     create: {
                         wcId: product.id,
@@ -251,6 +260,15 @@ export async function performStoreSync(onLog?: (msg: string) => void) {
                         purchased: false,
                         isMissingFromWoo: false,
                         backupGudang: product.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                        wholesalePrices: (() => {
+                            const tiers: any[] = [];
+                            for (let i = 1; i <= 5; i++) {
+                                const minQty = product.meta_data?.find((m: any) => m.key === `_grosir_min_qty_${i}`)?.value;
+                                const priceVal = product.meta_data?.find((m: any) => m.key === `_grosir_price_${i}`)?.value;
+                                if (minQty) tiers.push({ minQty: minQty.toString(), price: priceVal ? priceVal.toString() : '' });
+                            }
+                            return tiers.length > 0 ? JSON.stringify(tiers) : null;
+                        })()
                     }
                 });
                 syncedCount++;
@@ -299,6 +317,15 @@ export async function performStoreSync(onLog?: (msg: string) => void) {
                                             updatedAt: new Date(),
                                             isMissingFromWoo: false,
                                             backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                                            wholesalePrices: (() => {
+                                                const tiers: any[] = [];
+                                                for (let i = 1; i <= 5; i++) {
+                                                    const minQty = variation.meta_data?.find((m: any) => m.key === `_grosir_min_qty_${i}`)?.value;
+                                                    const priceVal = variation.meta_data?.find((m: any) => m.key === `_grosir_price_${i}`)?.value;
+                                                    if (minQty) tiers.push({ minQty: minQty.toString(), price: priceVal ? priceVal.toString() : '' });
+                                                }
+                                                return tiers.length > 0 ? JSON.stringify(tiers) : null;
+                                            })()
                                         },
                                         create: {
                                             wcId: variation.id,
@@ -319,6 +346,15 @@ export async function performStoreSync(onLog?: (msg: string) => void) {
                                             purchased: false,
                                             isMissingFromWoo: false,
                                             backupGudang: variation.meta_data?.find((m: any) => m.key === 'backup_gudang' || m.key === '_pos_barcode')?.value?.toString() || null,
+                                            wholesalePrices: (() => {
+                                                const tiers: any[] = [];
+                                                for (let i = 1; i <= 5; i++) {
+                                                    const minQty = variation.meta_data?.find((m: any) => m.key === `_grosir_min_qty_${i}`)?.value;
+                                                    const priceVal = variation.meta_data?.find((m: any) => m.key === `_grosir_price_${i}`)?.value;
+                                                    if (minQty) tiers.push({ minQty: minQty.toString(), price: priceVal ? priceVal.toString() : '' });
+                                                }
+                                                return tiers.length > 0 ? JSON.stringify(tiers) : null;
+                                            })()
                                         }
                                     });
                                     syncedCount++;
@@ -503,12 +539,19 @@ export async function getStoreProducts() {
             } catch (e) {
                 console.error(`Invalid attributes JSON for product ${p.wcId}:`, p.attributes);
             }
+            let wholesalePrices = [];
+            try {
+                if (p.wholesalePrices) wholesalePrices = JSON.parse(p.wholesalePrices);
+            } catch (e) {
+                console.error(`Invalid wholesalePrices JSON for product ${p.wcId}:`, p.wholesalePrices);
+            }
 
             return {
                 ...p,
                 images,
                 categories,
-                attributes
+                attributes,
+                wholesalePrices
             };
         })
     } catch (error) {
@@ -569,6 +612,8 @@ export async function searchStoreProducts(query: string, page: number = 1, perPa
             try { if (p.images) images = JSON.parse(p.images) } catch (e) { }
             let attributes: any[] = []
             try { if (p.attributes) attributes = JSON.parse(p.attributes) } catch (e) { }
+            let wholesalePrices: any[] = []
+            try { if (p.wholesalePrices) wholesalePrices = JSON.parse(p.wholesalePrices) } catch (e) { }
 
             return {
                 id: p.wcId,
@@ -586,6 +631,7 @@ export async function searchStoreProducts(query: string, page: number = 1, perPa
                 barcode: p.backupGudang || null,
                 slug: p.slug || '',
                 parentId: p.parentId || undefined,
+                wholesalePrices
             }
         })
 
@@ -699,12 +745,19 @@ export async function getStoreLowStockProducts() {
             } catch (e) {
                 console.error(`Invalid attributes JSON for product ${p.wcId}:`, p.attributes);
             }
+            let wholesalePrices = [];
+            try {
+                if (p.wholesalePrices) wholesalePrices = JSON.parse(p.wholesalePrices);
+            } catch (e) {
+                console.error(`Invalid wholesalePrices JSON for product ${p.wcId}:`, p.wholesalePrices);
+            }
 
             return {
                 ...p,
                 images,
                 categories,
-                attributes
+                attributes,
+                wholesalePrices
             };
         })
     } catch (error) {
@@ -910,12 +963,19 @@ export async function getStorePurchasedProducts() {
             } catch (e) {
                 console.error(`Invalid attributes JSON for product ${p.wcId}:`, p.attributes);
             }
+            let wholesalePrices = [];
+            try {
+                if (p.wholesalePrices) wholesalePrices = JSON.parse(p.wholesalePrices);
+            } catch (e) {
+                console.error(`Invalid wholesalePrices JSON for product ${p.wcId}:`, p.wholesalePrices);
+            }
 
             return {
                 ...p,
                 images,
                 categories,
-                attributes
+                attributes,
+                wholesalePrices
             };
         })
     } catch (error) {
@@ -1172,6 +1232,7 @@ export async function updateWooCommerceProduct(wcId: number, data: {
     parentId?: number
     imageUrls?: string[]
     existingImageIds?: number[]
+    wholesalePrices?: { minQty: string, price: string }[]
 }) {
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
     const WC_KEY = process.env.WC_CONSUMER_KEY
@@ -1218,13 +1279,21 @@ export async function updateWooCommerceProduct(wcId: number, data: {
             wcPayload.categories = data.categoryId ? [{ id: data.categoryId }] : []
         }
 
+        wcPayload.meta_data = []
+
         if (data.backupGudang !== undefined) {
-            wcPayload.meta_data = [
-                {
-                    key: 'backup_gudang',
-                    value: data.backupGudang
-                }
-            ]
+            wcPayload.meta_data.push({
+                key: 'backup_gudang',
+                value: data.backupGudang
+            })
+        }
+
+        if (data.wholesalePrices !== undefined) {
+            for (let i = 1; i <= 5; i++) {
+                const w = data.wholesalePrices[i - 1]
+                wcPayload.meta_data.push({ key: `_grosir_min_qty_${i}`, value: w?.minQty || '' })
+                wcPayload.meta_data.push({ key: `_grosir_price_${i}`, value: w?.price || '' })
+            }
         }
 
         // Build images array: existing images by ID + new images by URL
@@ -1279,6 +1348,7 @@ export async function updateWooCommerceProduct(wcId: number, data: {
                 shortDescription: data.shortDescription !== undefined ? data.shortDescription : undefined,
                 categories: updatedWcProduct.categories ? JSON.stringify(updatedWcProduct.categories) : undefined,
                 images: updatedWcProduct.images ? JSON.stringify(updatedWcProduct.images) : undefined,
+                wholesalePrices: data.wholesalePrices !== undefined ? (data.wholesalePrices.length > 0 ? JSON.stringify(data.wholesalePrices.filter(w => w.minQty && w.price)) : null) : undefined,
                 price: parseFloat(updatedWcProduct.price) || 0, // Get calculated price from WC
                 updatedAt: new Date()
             }
@@ -1386,6 +1456,7 @@ export async function createWooCommerceProduct(data: {
     shortDescription?: string
     categoryId?: number | null
     imageUrls?: string[]
+    wholesalePrices?: { minQty: string, price: string }[]
 }) {
     const WC_URL = process.env.NEXT_PUBLIC_WC_URL
     const WC_KEY = process.env.WC_CONSUMER_KEY
@@ -1427,13 +1498,21 @@ export async function createWooCommerceProduct(data: {
             wcPayload.weight = data.weight?.toString() || ""
         }
 
+        wcPayload.meta_data = []
+
         if (data.backupGudang !== undefined) {
-            wcPayload.meta_data = [
-                {
-                    key: 'backup_gudang',
-                    value: data.backupGudang
-                }
-            ]
+            wcPayload.meta_data.push({
+                key: 'backup_gudang',
+                value: data.backupGudang
+            })
+        }
+
+        if (data.wholesalePrices !== undefined) {
+            for (let i = 1; i <= 5; i++) {
+                const w = data.wholesalePrices[i - 1]
+                wcPayload.meta_data.push({ key: `_grosir_min_qty_${i}`, value: w?.minQty || '' })
+                wcPayload.meta_data.push({ key: `_grosir_price_${i}`, value: w?.price || '' })
+            }
         }
 
         // Add images to payload
@@ -1478,6 +1557,7 @@ export async function createWooCommerceProduct(data: {
                 weight: parseFloat(newWcProduct.weight) || 0,
                 images: JSON.stringify(newWcProduct.images),
                 categories: JSON.stringify(newWcProduct.categories),
+                wholesalePrices: data.wholesalePrices && data.wholesalePrices.length > 0 ? JSON.stringify(data.wholesalePrices.filter(w => w.minQty && w.price)) : null,
                 purchased: false,
                 isMissingFromWoo: false,
                 backupGudang: data.backupGudang || null,

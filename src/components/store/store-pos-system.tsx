@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, ShoppingCart, Minus, Plus, Trash2, Package, Eye, X, ChevronLeft, ChevronRight, User, Check, Edit2, Home, Store, Clock, StickyNote } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, Package, Eye, X, ChevronLeft, ChevronRight, User, Check, Edit2, Home, Store, Clock, StickyNote, Tag } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatNumber } from '@/utils/format'
@@ -32,10 +32,13 @@ type WooCommerceProduct = {
     barcode: string | null
     slug: string
     parentId?: number
+    wholesalePrices?: { minQty: string, price: string }[]
 }
 
 type CartItem = WooCommerceProduct & {
     quantity: number
+    isManualPrice?: boolean
+    basePrice: number // Reference price before wholesale/manual
 }
 
 export default function StorePOSSystem({ userName = 'Admin' }: { userName?: string }) {
@@ -46,6 +49,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const [totalPages, setTotalPages] = useState(0)
     const [totalItems, setTotalItems] = useState(0)
     const [cart, setCart] = useState<CartItem[]>([])
+
     const [loading, setLoading] = useState(false)
     const [isCheckingOut, setIsCheckingOut] = useState(false)
     const [hasSearched, setHasSearched] = useState(false)
@@ -70,6 +74,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const [syncingProductId, setSyncingProductId] = useState<number | null>(null)
     const [syncStatusMap, setSyncStatusMap] = useState<Record<number, 'loading' | 'success' | 'error'>>({})
     const [syncProductName, setSyncProductName] = useState('')
+    const [wholesaleDetailProduct, setWholesaleDetailProduct] = useState<WooCommerceProduct | null>(null)
 
     const lastSearchedRef = useRef<string | null>(null)
     const lastPageRef = useRef(1)
@@ -135,26 +140,52 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
         }
     }, [debouncedTerm, page, handleSearch])
 
+    // Helper to calculate effective price based on quantity and wholesale tiers
+    const getEffectivePrice = (product: WooCommerceProduct, quantity: number, fallbackPrice?: number) => {
+        if (!product.wholesalePrices || product.wholesalePrices.length === 0) {
+            return fallbackPrice ?? product.price
+        }
+
+        // Sort by minQty descending to find the highest qualifying tier
+        const tiers = [...product.wholesalePrices]
+            .map(t => ({ minQty: parseInt(t.minQty) || 0, price: parseFloat(t.price) || 0 }))
+            .filter(t => t.minQty > 0 && t.price > 0)
+            .sort((a, b) => b.minQty - a.minQty)
+
+        const matchingTier = tiers.find(t => quantity >= t.minQty)
+        return matchingTier ? matchingTier.price : (fallbackPrice ?? product.price)
+    }
 
     const addToCart = (product: WooCommerceProduct) => {
         const existing = cart.find(item => item.id === product.id)
         if (existing) {
-            // Move to top and increment quantity
+            const newQty = existing.quantity + 1
+            const newPrice = existing.isManualPrice ? existing.price : getEffectivePrice(product, newQty, existing.basePrice)
+            
             setCart([
-                { ...existing, quantity: existing.quantity + 1 },
+                { ...existing, quantity: newQty, price: newPrice },
                 ...cart.filter(item => item.id !== product.id)
             ])
         } else {
-            // Add new item to top
-            setCart([{ ...product, quantity: 1 }, ...cart])
+            const initialQty = 1
+            // Use product.price as basePrice and fallback
+            const initialPrice = getEffectivePrice(product, initialQty, product.price)
+            setCart([{ 
+                ...product, 
+                quantity: initialQty, 
+                price: initialPrice,
+                basePrice: product.price,
+                isManualPrice: false 
+            }, ...cart])
         }
     }
 
     const updateQuantity = (id: number, delta: number) => {
         setCart(cart.map(item => {
             if (item.id === id) {
-                const newQty = item.quantity + delta
-                return newQty > 0 ? { ...item, quantity: newQty } : item
+                const newQty = Math.max(1, item.quantity + delta)
+                const newPrice = item.isManualPrice ? item.price : getEffectivePrice(item, newQty, item.basePrice)
+                return { ...item, quantity: newQty, price: newPrice }
             }
             return item
         }))
@@ -163,8 +194,9 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const setQuantity = (id: number, value: number) => {
         setCart(cart.map(item => {
             if (item.id === id) {
-                // Allow intermediate 0 or smaller for flexibility while typing
-                return { ...item, quantity: value }
+                const newQty = Math.max(0, value)
+                const newPrice = item.isManualPrice ? item.price : getEffectivePrice(item, newQty, item.basePrice)
+                return { ...item, quantity: newQty, price: newPrice }
             }
             return item
         }))
@@ -173,7 +205,13 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
     const setPrice = (id: number, value: number) => {
         setCart(cart.map(item => {
             if (item.id === id) {
-                return { ...item, price: value }
+                // If the user manually sets a price, we flag it as manual
+                // and keep it even if quantity changes later
+                return { 
+                    ...item, 
+                    price: value, 
+                    isManualPrice: true 
+                }
             }
             return item
         }))
@@ -359,6 +397,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                     barcode: synced.backupGudang || null,
                     slug: synced.slug || '',
                     parentId: synced.parentId || undefined,
+                    wholesalePrices: synced.wholesalePrices || []
                 }
                 setProducts(prev => prev.map(p => p.id === updated.id ? updated : p))
                 // Also update variations if they're loaded
@@ -606,7 +645,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                 )}
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-0">
                                                     <span className="text-primary font-bold">{formatCurrency(product.price)}</span>
-                                                    <div className="flex items-center gap-1">
+                                                     <div className="flex items-center gap-1">
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
@@ -633,6 +672,18 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                                 <RefreshCw className="w-3 h-3" />
                                                             )}
                                                         </button>
+                                                        {product.wholesalePrices && product.wholesalePrices.some(t => parseInt(t.minQty) > 0) && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setWholesaleDetailProduct(product)
+                                                                }}
+                                                                className="p-1 rounded text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                                                title="Detail Harga Grosir"
+                                                            >
+                                                                <Tag className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                         <span className={cn(
                                                             "text-xs px-2 py-1 rounded font-bold w-fit",
                                                             product.stockQuantity <= 0
@@ -849,7 +900,7 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                     <div className="mt-2 space-y-2">
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <div className="flex items-center gap-2">
+                                                 <div className="flex items-center gap-2">
                                                     <div className="relative group/price">
                                                         <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-xs font-bold text-primary pointer-events-none">Rp</span>
                                                         <input
@@ -861,12 +912,21 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                                 setPrice(item.id, num);
                                                             }}
                                                             onFocus={(e) => e.target.select()}
-                                                            className="pl-7 pr-1 h-8 text-sm font-black bg-transparent border border-transparent focus:border-primary/20 focus:bg-background rounded-md outline-none transition-all text-primary"
+                                                            className={cn(
+                                                                "pl-7 pr-1 h-8 text-sm font-black bg-transparent border border-transparent focus:border-primary/20 focus:bg-background rounded-md outline-none transition-all",
+                                                                item.isManualPrice ? "text-orange-600" : "text-primary"
+                                                            )}
                                                             style={{
                                                                 width: `${(formatNumber(item.price).length || 1) + 3.5}ch`,
                                                                 minWidth: '5rem'
                                                             }}
                                                         />
+                                                        {item.isManualPrice && (
+                                                            <div className="absolute -top-3 left-0 text-[8px] font-bold text-orange-600 uppercase tracking-tighter bg-orange-50 px-1 rounded border border-orange-100">Manual</div>
+                                                        )}
+                                                        {!item.isManualPrice && item.price < item.basePrice && (
+                                                            <div className="absolute -top-3 left-0 text-[8px] font-bold text-emerald-600 uppercase tracking-tighter bg-emerald-50 px-1 rounded border border-emerald-100 animate-pulse">Grosir</div>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-0.5 bg-background border border-border rounded-lg p-[2px] transition-all">
                                                         <button
@@ -903,7 +963,12 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                                                         </button>
                                                     </div>
                                                 </div>
-                                                {item.regularPrice > item.price && (
+                                                {!item.isManualPrice && item.price < item.basePrice && (
+                                                    <span className="text-[10px] text-muted-foreground line-through ml-7 leading-none">
+                                                        {formatCurrency(item.basePrice)}
+                                                    </span>
+                                                )}
+                                                {item.regularPrice > item.price && item.price === item.basePrice && (
                                                     <span className="text-[10px] text-muted-foreground line-through ml-7 leading-none">
                                                         {formatCurrency(item.regularPrice)}
                                                     </span>
@@ -1324,6 +1389,55 @@ export default function StorePOSSystem({ userName = 'Admin' }: { userName?: stri
                         </p>
                     </div>
                 </div>
+            </Modal>
+            
+            {/* Wholesale Price Detail Modal */}
+            <Modal
+                isOpen={wholesaleDetailProduct !== null}
+                onClose={() => setWholesaleDetailProduct(null)}
+                title="Detail Harga Grosir"
+                maxWidth="sm"
+            >
+                {wholesaleDetailProduct && (
+                    <div className="space-y-4">
+                        <div className="flex flex-col gap-1">
+                            <h4 className="font-bold text-sm text-foreground line-clamp-2">{wholesaleDetailProduct.name}</h4>
+                            <p className="text-xs text-muted-foreground">Harga Normal: <span className="font-bold text-primary">{formatCurrency(wholesaleDetailProduct.price)}</span></p>
+                        </div>
+                        
+                        <div className="border border-border rounded-xl overflow-hidden">
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-muted text-muted-foreground uppercase tracking-wider font-bold">
+                                    <tr>
+                                        <th className="px-3 py-2 border-b border-border">Qty Minimum</th>
+                                        <th className="px-3 py-2 border-b border-border text-right">Harga Grosir</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {wholesaleDetailProduct.wholesalePrices
+                                        ?.filter(t => parseInt(t.minQty) > 0)
+                                        .map((tier, idx) => (
+                                            <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                                                <td className="px-3 py-2 font-medium">{tier.minQty} pcs</td>
+                                                <td className="px-3 py-2 text-right font-black text-emerald-600 italic">
+                                                    {formatCurrency(parseFloat(tier.price) || 0)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setWholesaleDetailProduct(null)}
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all shadow-sm"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     )

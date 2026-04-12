@@ -83,6 +83,18 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
         weight: product?.weight && parseFloat(product.weight.toString()) !== 0 ? product.weight.toString() : '',
         description: product?.description || '',
         shortDescription: product?.shortDescription || '',
+        wholesalePrices: (() => {
+            const defaultW = Array(5).fill({ minQty: '', price: '' });
+            if (product?.wholesalePrices) {
+                try {
+                    const parsed = typeof product.wholesalePrices === 'string' ? JSON.parse(product.wholesalePrices) : product.wholesalePrices;
+                    for (let i = 0; i < Math.min(5, parsed.length); i++) {
+                        defaultW[i] = { minQty: parsed[i].minQty || '', price: parsed[i].price || '' };
+                    }
+                } catch (e) { }
+            }
+            return defaultW;
+        })(),
         categoryId: getInitialCategoryId()
     })
 
@@ -148,6 +160,15 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
             ...prev,
             [name]: numericValue
         }))
+    }
+
+    const handleWholesaleChange = (index: number, field: 'minQty' | 'price', value: string) => {
+        const numericValue = value.replace(/\D/g, '')
+        setFormData(prev => {
+            const newWholesale = [...prev.wholesalePrices]
+            newWholesale[index] = { ...newWholesale[index], [field]: numericValue }
+            return { ...prev, wholesalePrices: newWholesale }
+        })
     }
 
     const handleDescriptionChange = useCallback((value: string) => {
@@ -548,6 +569,40 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                                 className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
                             />
                             <p className="text-[10px] text-muted-foreground italic">Kosongkan untuk menghapus harga sale dan kembali ke harga reguler.</p>
+                        </div>
+
+                        {/* Wholesale Prices (Tier 1 - 5) */}
+                        <div className="space-y-3 pt-3 border-t border-border">
+                            <label className="text-xs font-bold text-muted-foreground uppercase">Harga Grosir (Tier 1 - 5)</label>
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-4 mb-2 px-1">
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase">Min Qty</div>
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase">Harga Grosir (Satuan Rp)</div>
+                                </div>
+                                {formData.wholesalePrices.map((tier, index) => (
+                                    <div key={index} className="grid grid-cols-2 gap-4 items-center">
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={tier.minQty ? formatNumber(tier.minQty) : ''}
+                                                onChange={(e) => handleWholesaleChange(index, 'minQty', e.target.value)}
+                                                placeholder={`Min Qty ${index + 1}`}
+                                                className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
+                                            />
+                                            <span className="absolute -left-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground/30 bg-background px-1 border border-border rounded shadow-sm">
+                                                {index + 1}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={tier.price ? formatNumber(tier.price) : ''}
+                                            onChange={(e) => handleWholesaleChange(index, 'price', e.target.value)}
+                                            placeholder={`Harga Grosir ${index + 1}`}
+                                            className="w-full px-3 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Short Description WYSIWYG */}
