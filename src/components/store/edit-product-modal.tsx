@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Trash2, X, Save, Loader2, Upload, ImageIcon, Plus, Tag, GripVertical } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { Trash2, X, Save, Loader2, Upload, ImageIcon, Plus, Tag, FileText } from 'lucide-react'
 import { updateWooCommerceProduct, createWooCommerceProduct, deleteWooCommerceProduct, uploadStoreProductImages, getWooCommerceCategories } from '@/app/actions/store-product'
 import { formatNumber } from '@/utils/format'
 import { useAlert } from '@/hooks/use-alert'
@@ -10,6 +10,11 @@ import { cn } from '@/lib/utils'
 import Modal from '@/components/ui/modal'
 import { Combobox } from '@/components/ui/combobox'
 import { useEffect } from 'react'
+import dynamic from 'next/dynamic'
+
+// Load Quill dynamically (SSR not supported)
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false })
+import 'react-quill-new/dist/quill.snow.css'
 
 interface ExistingImage {
     id: number
@@ -82,7 +87,30 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
 
     // Total images (existing + new) must be <= 5
     const totalImageCount = existingImages.length + selectedImages.length
-    const remainingSlots = 5 - totalImageCount
+
+    // Quill toolbar modules
+    const quillModules = useMemo(() => ({
+        toolbar: [
+            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['blockquote'],
+            ['link'],
+            ['clean']
+        ]
+    }), [])
+
+    const quillFormats = useMemo(() => [
+        'header',
+        'bold', 'italic', 'underline', 'strike',
+        'color', 'background',
+        'list',
+        'align',
+        'blockquote',
+        'link'
+    ], [])
 
     // Fetch categories on mount
     useEffect(() => {
@@ -120,6 +148,17 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
             [name]: numericValue
         }))
     }
+
+    const handleDescriptionChange = useCallback((value: string) => {
+        // Quill returns '<p><br></p>' for empty, normalize to empty string
+        const cleaned = value === '<p><br></p>' ? '' : value
+        if (cleaned.length <= 10000) {
+            setFormData(prev => ({
+                ...prev,
+                description: cleaned
+            }))
+        }
+    }, [])
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])
@@ -247,11 +286,15 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
         return existingImages.length + localIndex
     }
 
+    // Strip HTML tags for character count
+    const descriptionTextLength = formData.description.replace(/<[^>]*>/g, '').length
+
     return (
         <Modal
             isOpen={true}
             onClose={onClose}
             title={isAddMode ? 'Tambah Produk Store' : 'Edit Produk Store'}
+            maxWidth="5xl"
             headerActions={!isAddMode && (
                 <button
                     type="button"
@@ -298,221 +341,298 @@ export default function EditProductModal({ product, onClose, onSuccess }: EditPr
                 </div>
             }
         >
-            <form id="edit-product-form" onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase">Nama Produk</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
-                        required
-                    />
-                </div>
+            <form id="edit-product-form" onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* LEFT COLUMN: Product Info */}
+                    <div className="space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase">Nama Produk</label>
+                            <input
+                                type="text"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
+                                required
+                            />
+                        </div>
 
-                {/* Image Management Section - Both Add & Edit Mode */}
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                        <ImageIcon className="w-3 h-3" /> Foto Produk (Maks 5)
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                        {/* Existing images from WooCommerce (edit mode) */}
-                        {existingImages.map((img, index) => (
-                            <div key={`existing-${img.id}`} className="relative aspect-square rounded-lg border border-border overflow-hidden bg-muted group">
-                                <img src={img.src} alt={img.alt || `Image ${index}`} className="w-full h-full object-cover" />
-                                <button
-                                    type="button"
-                                    onClick={() => removeExistingImage(index)}
-                                    className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <X className="w-2.5 h-2.5" />
-                                </button>
-                                {getGlobalIndex('existing', index) === 0 && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
-                                        Utama
-                                    </div>
-                                )}
-                                {getGlobalIndex('existing', index) !== 0 && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white/80 text-center py-0.5 font-medium">
-                                        Gallery
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-
-                        {/* New image previews */}
-                        {imagePreviews.map((preview, index) => (
-                            <div key={`new-${index}`} className="relative aspect-square rounded-lg border-2 border-dashed border-emerald-300 overflow-hidden bg-emerald-50/30 group">
-                                <img src={preview} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                                <button
-                                    type="button"
-                                    onClick={() => removeNewImage(index)}
-                                    className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <X className="w-2.5 h-2.5" />
-                                </button>
-                                {getGlobalIndex('new', index) === 0 && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
-                                        Utama
-                                    </div>
-                                )}
-                                {getGlobalIndex('new', index) !== 0 && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-600/70 text-[8px] text-white text-center py-0.5 font-medium">
-                                        Baru
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-
-                        {/* Upload button if slots available */}
-                        {totalImageCount < 5 && (
-                            <label className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handleImageChange}
-                                    className="hidden"
-                                />
-                                <Plus className="w-5 h-5 mb-1" />
-                                <span className="text-[8px] font-bold uppercase">Upload</span>
+                        {/* Image Management Section */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                                <ImageIcon className="w-3 h-3" /> Foto Produk (Maks 5)
                             </label>
-                        )}
-                    </div>
-                    {totalImageCount > 0 && (
-                        <p className="text-[10px] text-muted-foreground italic">
-                            {totalImageCount}/5 gambar • Gambar pertama = gambar utama produk
-                        </p>
-                    )}
-                </div>
+                            <div className="grid grid-cols-5 gap-2">
+                                {/* Existing images from WooCommerce */}
+                                {existingImages.map((img, index) => (
+                                    <div key={`existing-${img.id}`} className="relative aspect-square rounded-lg border border-border overflow-hidden bg-muted group">
+                                        <img src={img.src} alt={img.alt || `Image ${index}`} className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeExistingImage(index)}
+                                            className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-2.5 h-2.5" />
+                                        </button>
+                                        {getGlobalIndex('existing', index) === 0 && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
+                                                Utama
+                                            </div>
+                                        )}
+                                        {getGlobalIndex('existing', index) !== 0 && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-[8px] text-white/80 text-center py-0.5 font-medium">
+                                                Gallery
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">SKU</label>
-                        <input
-                            type="text"
-                            name="sku"
-                            value={formData.sku}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all font-mono"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Backup Gudang</label>
-                        <input
-                            type="text"
-                            name="backupGudang"
-                            value={formData.backupGudang}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-blue-50/50 border border-blue-100 rounded-lg text-sm focus:border-primary outline-none transition-all font-bold text-blue-700"
-                        />
-                    </div>
-                </div>
+                                {/* New image previews */}
+                                {imagePreviews.map((preview, index) => (
+                                    <div key={`new-${index}`} className="relative aspect-square rounded-lg border-2 border-dashed border-emerald-300 overflow-hidden bg-emerald-50/30 group">
+                                        <img src={preview} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeNewImage(index)}
+                                            className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-2.5 h-2.5" />
+                                        </button>
+                                        {getGlobalIndex('new', index) === 0 && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-primary/80 text-[8px] text-white text-center py-0.5 font-bold uppercase">
+                                                Utama
+                                            </div>
+                                        )}
+                                        {getGlobalIndex('new', index) !== 0 && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-emerald-600/70 text-[8px] text-white text-center py-0.5 font-medium">
+                                                Baru
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
 
-                <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
-                        <Tag className="w-3 h-3" /> Kategori Produk
-                    </label>
-                    <Combobox
-                        options={categories.map((cat: any) => ({
-                            id: cat.id.toString(),
-                            label: cat.name
-                        }))}
-                        value={formData.categoryId}
-                        onChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-                        placeholder="Cari atau pilih kategori..."
-                        disabled={isLoadingCategories}
-                    />
-                    {isLoadingCategories && <p className="text-[10px] text-muted-foreground italic mt-1">Memuat kategori...</p>}
-                </div>
+                                {/* Upload button */}
+                                {totalImageCount < 5 && (
+                                    <label className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                        <Plus className="w-5 h-5 mb-1" />
+                                        <span className="text-[8px] font-bold uppercase">Upload</span>
+                                    </label>
+                                )}
+                            </div>
+                            {totalImageCount > 0 && (
+                                <p className="text-[10px] text-muted-foreground italic">
+                                    {totalImageCount}/5 gambar • Gambar pertama = gambar utama produk
+                                </p>
+                            )}
+                        </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Stok</label>
-                        <input
-                            type="number"
-                            name="stockQuantity"
-                            value={formData.stockQuantity}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Status Produk</label>
-                        <select
-                            name="status"
-                            value={formData.status}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all appearance-none cursor-pointer"
-                        >
-                            <option value="publish">Publish</option>
-                            <option value="draft">Draft</option>
-                            <option value="private">Private</option>
-                            <option value="pending">Pending</option>
-                        </select>
-                    </div>
-                </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground uppercase">SKU</label>
+                                <input
+                                    type="text"
+                                    name="sku"
+                                    value={formData.sku}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all font-mono"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground uppercase">Backup Gudang</label>
+                                <input
+                                    type="text"
+                                    name="backupGudang"
+                                    value={formData.backupGudang}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-blue-50/50 border border-blue-100 rounded-lg text-sm focus:border-primary outline-none transition-all font-bold text-blue-700"
+                                />
+                            </div>
+                        </div>
 
-                <div className="grid grid-cols-2 gap-2 gap-x-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Harga Reguler</label>
-                        <input
-                            type="text"
-                            name="regularPrice"
-                            value={formData.regularPrice ? formatNumber(formData.regularPrice) : ''}
-                            onChange={handlePriceChange}
-                            placeholder="0"
-                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Berat (kg)</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            name="weight"
-                            value={formData.weight}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                    </div>
-                </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                                <Tag className="w-3 h-3" /> Kategori Produk
+                            </label>
+                            <Combobox
+                                options={categories.map((cat: any) => ({
+                                    id: cat.id.toString(),
+                                    label: cat.name
+                                }))}
+                                value={formData.categoryId}
+                                onChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+                                placeholder="Cari atau pilih kategori..."
+                                disabled={isLoadingCategories}
+                            />
+                            {isLoadingCategories && <p className="text-[10px] text-muted-foreground italic mt-1">Memuat kategori...</p>}
+                        </div>
 
-                <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase">Harga Sale (Opsional)</label>
-                    <input
-                        type="text"
-                        name="salePrice"
-                        value={formData.salePrice ? formatNumber(formData.salePrice) : ''}
-                        onChange={handlePriceChange}
-                        placeholder="0"
-                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">Kosongkan untuk menghapus harga sale dan kembali ke harga reguler.</p>
-                </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground uppercase">Stok</label>
+                                <input
+                                    type="number"
+                                    name="stockQuantity"
+                                    value={formData.stockQuantity}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground uppercase">Status Produk</label>
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all appearance-none cursor-pointer"
+                                >
+                                    <option value="publish">Publish</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="private">Private</option>
+                                    <option value="pending">Pending</option>
+                                </select>
+                            </div>
+                        </div>
 
-                <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-muted-foreground uppercase">Deskripsi Produk (Maks 10.000 karakter)</label>
-                        <span className={cn(
-                            "text-[10px] font-medium",
-                            formData.description.length > 9500 ? "text-destructive" : "text-muted-foreground"
-                        )}>
-                            {formData.description.length}/10000
-                        </span>
+                        <div className="grid grid-cols-2 gap-2 gap-x-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground uppercase">Harga Reguler</label>
+                                <input
+                                    type="text"
+                                    name="regularPrice"
+                                    value={formData.regularPrice ? formatNumber(formData.regularPrice) : ''}
+                                    onChange={handlePriceChange}
+                                    placeholder="0"
+                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-muted-foreground uppercase">Berat (kg)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    name="weight"
+                                    value={formData.weight}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-muted-foreground uppercase">Harga Sale (Opsional)</label>
+                            <input
+                                type="text"
+                                name="salePrice"
+                                value={formData.salePrice ? formatNumber(formData.salePrice) : ''}
+                                onChange={handlePriceChange}
+                                placeholder="0"
+                                className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all"
+                            />
+                            <p className="text-[10px] text-muted-foreground italic">Kosongkan untuk menghapus harga sale dan kembali ke harga reguler.</p>
+                        </div>
                     </div>
-                    <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        maxLength={10000}
-                        rows={4}
-                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm focus:border-primary outline-none transition-all resize-none min-h-[100px]"
-                        placeholder="Masukkan rincian produk..."
-                    />
+
+                    {/* RIGHT COLUMN: WYSIWYG Description */}
+                    <div className="flex flex-col h-full">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2">
+                                <FileText className="w-3 h-3" /> Deskripsi Produk
+                            </label>
+                            <span className={cn(
+                                "text-[10px] font-medium",
+                                descriptionTextLength > 9500 ? "text-destructive" : "text-muted-foreground"
+                            )}>
+                                {descriptionTextLength.toLocaleString()}/10.000
+                            </span>
+                        </div>
+                        <div className="flex-1 min-h-0 product-wysiwyg-editor">
+                            <ReactQuill
+                                theme="snow"
+                                value={formData.description}
+                                onChange={handleDescriptionChange}
+                                modules={quillModules}
+                                formats={quillFormats}
+                                placeholder="Masukkan rincian produk..."
+                                className="h-full"
+                            />
+                        </div>
+                    </div>
                 </div>
             </form>
+
+            {/* Scoped WYSIWYG editor styles */}
+            <style jsx global>{`
+                .product-wysiwyg-editor {
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 400px;
+                }
+                .product-wysiwyg-editor .quill {
+                    display: flex;
+                    flex-direction: column;
+                    flex: 1;
+                    min-height: 0;
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                    border: 1px solid var(--border, #e5e7eb);
+                }
+                .product-wysiwyg-editor .ql-toolbar {
+                    border: none !important;
+                    border-bottom: 1px solid var(--border, #e5e7eb) !important;
+                    background: var(--muted, #f9fafb);
+                    padding: 6px 8px !important;
+                    flex-shrink: 0;
+                }
+                .product-wysiwyg-editor .ql-toolbar .ql-formats {
+                    margin-right: 8px !important;
+                }
+                .product-wysiwyg-editor .ql-toolbar button {
+                    width: 26px !important;
+                    height: 26px !important;
+                    padding: 2px !important;
+                }
+                .product-wysiwyg-editor .ql-container {
+                    border: none !important;
+                    flex: 1;
+                    min-height: 0;
+                    font-size: 14px;
+                    font-family: inherit;
+                    overflow-y: auto;
+                }
+                .product-wysiwyg-editor .ql-editor {
+                    min-height: 350px;
+                    padding: 12px 16px;
+                    line-height: 1.6;
+                }
+                .product-wysiwyg-editor .ql-editor.ql-blank::before {
+                    color: var(--muted-foreground, #9ca3af);
+                    font-style: italic;
+                    font-size: 14px;
+                }
+                .product-wysiwyg-editor .ql-editor h1 { font-size: 1.5em; font-weight: 700; margin-bottom: 0.5em; }
+                .product-wysiwyg-editor .ql-editor h2 { font-size: 1.3em; font-weight: 700; margin-bottom: 0.4em; }
+                .product-wysiwyg-editor .ql-editor h3 { font-size: 1.15em; font-weight: 600; margin-bottom: 0.3em; }
+                .product-wysiwyg-editor .ql-editor p { margin-bottom: 0.5em; }
+                .product-wysiwyg-editor .ql-editor ul,
+                .product-wysiwyg-editor .ql-editor ol { padding-left: 1.5em; margin-bottom: 0.5em; }
+                .product-wysiwyg-editor .ql-editor blockquote {
+                    border-left: 3px solid var(--primary, #2563eb);
+                    padding-left: 12px;
+                    margin: 0.5em 0;
+                    color: var(--muted-foreground, #6b7280);
+                }
+                .product-wysiwyg-editor .ql-editor a { color: var(--primary, #2563eb); text-decoration: underline; }
+                .product-wysiwyg-editor .ql-snow .ql-picker.ql-header {
+                    width: 100px !important;
+                }
+            `}</style>
         </Modal>
     )
 }
