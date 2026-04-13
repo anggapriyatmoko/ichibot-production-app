@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info, Calendar, Check, ScanLine, FileText } from 'lucide-react'
 import { getExpenses, createExpense, updateExpense, deleteExpense, approveExpense, createExpenseDraft, getExpenseImage, ExpenseData } from '@/app/actions/expense'
+import { processImageFile } from '@/utils/image-compression'
 import { useAlert } from '@/hooks/use-alert'
 import {
     Table,
@@ -261,15 +262,18 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         setScanPreviewImage(null)
     }
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (file) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, image: reader.result as string }))
-            }
-            reader.readAsDataURL(file)
+        if (!file) return
+
+        const processed = await processImageFile(file, showError, 700, 1600)
+        if (!processed) return
+
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setFormData(prev => ({ ...prev, image: reader.result as string }))
         }
+        reader.readAsDataURL(processed)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -362,64 +366,82 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         }
     }
 
-    const handleScanFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleScanFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+        e.target.value = ''
+
+        const processed = await processImageFile(file, showError, 700, 1600)
+        if (!processed) return
+
         const reader = new FileReader()
         reader.onloadend = () => {
             setScanPreviewImage(reader.result as string)
         }
-        reader.readAsDataURL(file)
-        e.target.value = ''
+        reader.readAsDataURL(processed)
     }
 
     const handleScanConfirm = async () => {
         if (!scanPreviewImage || !scanCategoryId) return
 
-        setIsScanUploading(true)
+        const imageToUpload = scanPreviewImage
+        const categoryIdToUse = scanCategoryId
+        const addedCat = categories.find(c => c.id === categoryIdToUse)
+        const tempId = `temp-${Date.now()}`
+
+        // Close modal immediately so user doesn't wait for server response
+        setIsModalOpen(false)
+        setScanPreviewImage(null)
+        setIsScanUploading(false)
+        showAlert('Foto diunggah, sedang diproses AI...')
+
+        // Optimistic UI: add placeholder with tempId
+        setExpenses(prev => [{
+            id: tempId,
+            date: new Date(),
+            name: 'Sedang memproses...',
+            amount: '0',
+            categoryId: categoryIdToUse,
+            status: 'scanning',
+            hasImage: true,
+            category: addedCat,
+        } as Expense, ...prev])
+
         try {
             const res = await createExpenseDraft({
-                categoryId: scanCategoryId,
+                categoryId: categoryIdToUse,
                 date: new Date(),
-                image: scanPreviewImage,
+                image: imageToUpload,
             })
 
             if (res.success && res.data) {
-                const addedCat = categories.find(c => c.id === scanCategoryId)
-                setExpenses(prev => [{
-                    ...(res.data as any),
-                    name: 'Sedang memproses...',
-                    amount: '0',
-                    status: 'scanning',
-                    category: addedCat,
-                } as Expense, ...prev])
-
-                setIsModalOpen(false)
-                setScanPreviewImage(null)
-                showAlert('Foto diunggah, sedang diproses AI...')
+                const realId = res.data.id
+                setExpenses(prev => prev.map(e =>
+                    e.id === tempId ? { ...e, id: realId } : e
+                ))
 
                 const abortController = new AbortController()
-                scanAbortControllersRef.current.set(res.data.id, abortController)
+                scanAbortControllersRef.current.set(realId, abortController)
 
                 fetch('/api/scan-receipt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ expenseId: res.data.id, imageBase64: scanPreviewImage }),
+                    body: JSON.stringify({ expenseId: realId, imageBase64: imageToUpload }),
                     signal: abortController.signal,
                 }).then(() => {
-                    scanAbortControllersRef.current.delete(res.data!.id)
+                    scanAbortControllersRef.current.delete(realId)
                     fetchExpenses(true)
                 }).catch(err => {
                     if (err.name !== 'AbortError') console.error(err)
                 })
             } else {
+                setExpenses(prev => prev.filter(e => e.id !== tempId))
                 showError(res.error || 'Gagal menyimpan draft')
             }
         } catch (error) {
             console.error(error)
+            setExpenses(prev => prev.filter(e => e.id !== tempId))
             showError('Terjadi kesalahan saat upload')
-        } finally {
-            setIsScanUploading(false)
         }
     }
 
@@ -545,7 +567,23 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                     <TableMobileCard key={item.id}>
                         <TableMobileCardHeader>
                             <div className="flex flex-col gap-0.5">
-                                <h4 className="font-bold text-sm tracking-tight text-foreground">{item.name}</h4>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    {item.status === 'scanning' ? (
+                                        <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                                    ) : (
+                                        <h4 className="font-bold text-sm tracking-tight text-foreground">{item.name}</h4>
+                                    )}
+                                    {item.status === 'draft' && (
+                                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded border border-amber-200">
+                                            Draft
+                                        </span>
+                                    )}
+                                    {item.status === 'scanning' && (
+                                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-700 rounded border border-blue-200 animate-pulse">
+                                            Scanning
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
                                     <Calendar className="w-3 h-3" />
                                     {format(new Date(item.date), 'dd MMM yyyy', { locale: localeId })}
@@ -554,12 +592,23 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <button
-                                    onClick={() => handleOpenModal(item)}
-                                    className="p-2 text-blue-600 bg-blue-500/10 rounded-lg transition-colors"
-                                >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                </button>
+                                {item.status === 'draft' && (
+                                    <button
+                                        onClick={() => handleApprove(item.id)}
+                                        className="p-2 text-emerald-600 bg-emerald-500/10 rounded-lg transition-colors"
+                                        title="Approve"
+                                    >
+                                        <Check className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                                {item.status !== 'scanning' && (
+                                    <button
+                                        onClick={() => handleOpenModal(item)}
+                                        className="p-2 text-blue-600 bg-blue-500/10 rounded-lg transition-colors"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => handleDelete(item.id)}
                                     disabled={deletingId === item.id}
@@ -579,9 +628,13 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                                 <span className="px-2 py-1 bg-white border border-border text-foreground rounded-lg text-[10px] font-bold shadow-sm">
                                     {item.category?.name || 'Umum'}
                                 </span>
-                                <span className="font-black text-sm text-foreground tabular-nums">
-                                    {formatCurrency(item.amount)}
-                                </span>
+                                {item.status === 'scanning' ? (
+                                    <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                                ) : (
+                                    <span className="font-black text-sm text-foreground tabular-nums">
+                                        {formatCurrency(item.amount)}
+                                    </span>
+                                )}
                             </div>
                         </TableMobileCardContent>
 
