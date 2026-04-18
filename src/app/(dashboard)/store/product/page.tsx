@@ -1,5 +1,5 @@
 import StoreProductList from '@/components/store/store-product-list';
-import { getStoreProducts } from '@/app/actions/store-product';
+import { getStoreProductsPaginated } from '@/app/actions/store-product';
 import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -7,14 +7,18 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 
 
 async function StoreProductContent() {
-    const products = await getStoreProducts();
+    const result = await getStoreProductsPaginated({ page: 1, perPage: 20 });
     return (
         <StoreProductList
-            initialProducts={products}
+            initialProducts={result.products}
+            initialTotalCount={result.totalCount}
+            initialTotalPages={result.totalPages}
+            serverSidePagination={true}
             showSupplierColumn={false}
             showPurchasedColumn={false}
             showExportButton={true}
             exportFilenamePrefix="PRODUK STORE"
+            showFilterButton={false}
         />
     );
 }

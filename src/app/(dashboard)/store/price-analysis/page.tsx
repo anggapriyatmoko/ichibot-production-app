@@ -1,5 +1,5 @@
 import StoreProductList from '@/components/store/store-product-list';
-import { getStoreProducts } from '@/app/actions/store-product';
+import { getStoreProductsPaginated } from '@/app/actions/store-product';
 import { getSystemSetting } from '@/app/actions/system-settings';
 import { requireAuth, isAllowedForPage } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -9,10 +9,10 @@ import StoreSkeleton from '@/components/store/store-skeleton';
 
 async function PriceAnalysisContent() {
     const [
-        products, kursYuanStr, kursUsdStr, additionalFeeStr,
+        result, kursYuanStr, kursUsdStr, additionalFeeStr,
         shopeeAdminStr, shopeeServiceStr, tokpedAdminStr, tokpedServiceStr
     ] = await Promise.all([
-        getStoreProducts(),
+        getStoreProductsPaginated({ page: 1, perPage: 20 }),
         getSystemSetting('KURS_YUAN'),
         getSystemSetting('KURS_USD'),
         getSystemSetting('STORE_ADDITIONAL_FEE'),
@@ -32,13 +32,17 @@ async function PriceAnalysisContent() {
 
     return (
         <StoreProductList
-            initialProducts={products}
+            initialProducts={result.products}
+            initialTotalCount={result.totalCount}
+            initialTotalPages={result.totalPages}
+            serverSidePagination={true}
             showSupplierColumn={false}
             showPurchasedColumn={false}
             showPurchaseColumns={true}
             showQuantityColumn={false}
             showSyncButton={false}
             showAddButton={false}
+            showFilterButton={false}
             hideSupplierInput={false}
             hideSkuColumn={true}
             hideTotalsInCells={true}

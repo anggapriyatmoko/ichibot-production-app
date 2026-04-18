@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Search, Package, ExternalLink, ChevronRight, AlertTriangle, CheckCircle2, Circle, X, ChevronDown, Edit2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber, formatCurrency } from '@/utils/format'
 import { toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct } from '@/app/actions/store-product'
+import { getStoreLowStockProductsPaginated } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import { useConfirmation } from '@/components/providers/modal-provider'
@@ -28,7 +29,8 @@ import {
     TableMobileCard,
     TableMobileCardHeader,
     TableMobileCardContent,
-    TableMobileCardFooter
+    TableMobileCardFooter,
+    TableFooter
 } from '@/components/ui/table'
 
 function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { key: string, direction: 'asc' | 'desc' | null } }) {
@@ -42,6 +44,10 @@ function SortIcon({ columnKey, sortConfig }: { columnKey: string, sortConfig: { 
 
 export default function StoreLowStockList({
     initialProducts,
+    initialTotalCount = 0,
+    initialTotalPages = 0,
+    initialTotalSimulationQty = 0,
+    serverSidePagination = false,
     suppliers = [],
     kursYuan,
     kursUsd,
@@ -52,6 +58,10 @@ export default function StoreLowStockList({
     tokpedServiceFee = 0
 }: {
     initialProducts: any[],
+    initialTotalCount?: number,
+    initialTotalPages?: number,
+    initialTotalSimulationQty?: number,
+    serverSidePagination?: boolean,
     suppliers?: any[],
     kursYuan?: number,
     kursUsd?: number,
@@ -62,8 +72,13 @@ export default function StoreLowStockList({
     tokpedServiceFee?: number
 }) {
     const [searchTerm, setSearchTerm] = useState('')
+    const [pendingSearch, setPendingSearch] = useState('')
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(20)
+    const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount)
+    const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages)
+    const [serverTotalSimQty, setServerTotalSimQty] = useState(initialTotalSimulationQty)
+    const [isServerLoading, setIsServerLoading] = useState(false)
     const [syncingItems, setSyncingItems] = useState<Set<number>>(new Set())
     const [finishedItems, setFinishedItems] = useState<Set<number>>(new Set())
     const [localProducts, setLocalProducts] = useState(initialProducts)
@@ -182,11 +197,79 @@ export default function StoreLowStockList({
     }
 
     const handleSort = (key: string) => {
-        setSortConfig(prev => ({
-            key,
-            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-        }))
+        setSortConfig(prev => {
+            const direction = prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+            if (serverSidePagination) {
+                setCurrentPage(1)
+                fetchServerData({ page: 1, sortKey: key, sortDirection: direction })
+            }
+            return { key, direction }
+        })
     }
+
+    const filtersRef = useRef({ suppliers: selectedSuppliers, showOnlySimulation })
+    filtersRef.current = { suppliers: selectedSuppliers, showOnlySimulation }
+
+    const flattenProducts = (products: any[]) => {
+        if (!serverSidePagination) return products
+        const flat: any[] = []
+        products.forEach((p: any) => {
+            const { _variations, ...parent } = p
+            flat.push({ ...parent, hasVariations: _variations && _variations.length > 0 })
+            if (_variations) {
+                _variations.forEach((v: any) => {
+                    flat.push({ ...v, isVariation: true })
+                })
+            }
+        })
+        return flat
+    }
+
+    const fetchServerData = useCallback(async (params: {
+        page?: number,
+        perPage?: number,
+        search?: string,
+        sortKey?: string,
+        sortDirection?: 'asc' | 'desc' | null,
+        filters?: any
+    }) => {
+        if (!serverSidePagination) return
+        setIsServerLoading(true)
+        try {
+            const result = await getStoreLowStockProductsPaginated({
+                page: params.page ?? 1,
+                perPage: params.perPage ?? itemsPerPage,
+                search: params.search ?? searchTerm,
+                sortKey: params.sortKey ?? sortConfig.key,
+                sortDirection: params.sortDirection !== undefined ? params.sortDirection : sortConfig.direction,
+                filters: params.filters ?? filtersRef.current,
+            })
+            const flatProducts = flattenProducts(result.products)
+            setLocalProducts(flatProducts)
+            setServerTotalCount(result.totalCount)
+            setServerTotalPages(result.totalPages)
+            setServerTotalSimQty(result.totalSimulationQty || 0)
+        } catch (error) {
+            console.error('Server fetch error:', error)
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, itemsPerPage, searchTerm, sortConfig])
+
+    const isFirstRender = useRef(true)
+
+    useEffect(() => {
+        if (!serverSidePagination) return
+        if (isFirstRender.current) {
+            isFirstRender.current = false
+            const flat = flattenProducts(initialProducts)
+            setLocalProducts(flat)
+            return
+        }
+        setCurrentPage(1)
+        fetchServerData({ page: 1 })
+    }, [selectedSuppliers, showOnlySimulation])
+
 
     const filteredProducts = useMemo(() => {
         const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(Boolean)
@@ -344,13 +427,22 @@ export default function StoreLowStockList({
     }, [localProducts, searchTerm, selectedSuppliers, showOnlySimulation, expandedRows, sortConfig])
 
     // Pagination calculation
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
+    const totalPages = serverSidePagination ? serverTotalPages : Math.ceil(filteredProducts.length / itemsPerPage)
     const startIndex = (currentPage - 1) * itemsPerPage
-    const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
+    const paginatedProducts = serverSidePagination ? localProducts : filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
     const handlePageChange = (page: number) => {
-        setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+        const newPage = Math.max(1, Math.min(page, totalPages))
+        setCurrentPage(newPage)
+        if (serverSidePagination) {
+            fetchServerData({ page: newPage })
+        }
     }
+
+    const totalSimQty = useMemo(() => {
+        if (serverSidePagination) return serverTotalSimQty;
+        return filteredProducts.reduce((sum, p) => sum + (p.simulationQty || 0), 0)
+    }, [filteredProducts, serverSidePagination, serverTotalSimQty])
 
     return (
         <div className="space-y-6">
@@ -364,9 +456,16 @@ export default function StoreLowStockList({
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <input
                                 type="text"
-                                placeholder="Cari produk atau supplier..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder={serverSidePagination ? "Ketik & tekan Enter untuk mencari..." : "Cari produk atau supplier..."}
+                                value={serverSidePagination ? pendingSearch : searchTerm}
+                                onChange={(e) => { if (serverSidePagination) { setPendingSearch(e.target.value) } else { setSearchTerm(e.target.value) } }}
+                                onKeyDown={(e) => {
+                                    if (serverSidePagination && e.key === 'Enter') {
+                                        setSearchTerm(pendingSearch)
+                                        setCurrentPage(1)
+                                        fetchServerData({ page: 1, search: pendingSearch })
+                                    }
+                                }}
                                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                             />
                         </div>
@@ -1044,13 +1143,25 @@ export default function StoreLowStockList({
                                     icon={<Package className="w-12 h-12 opacity-10" />}
                                     message="Tidak ada produk low stock ditemukan."
                                     description={searchTerm ? (
-                                        <button onClick={() => setSearchTerm('')} className="text-primary text-xs hover:underline mt-1 font-medium">
+                                        <button onClick={() => { setSearchTerm(''); setPendingSearch(''); if(serverSidePagination) { setCurrentPage(1); fetchServerData({ page: 1, search: '' }); } }} className="text-primary text-xs hover:underline mt-1 font-medium">
                                             Hapus filter pencarian
                                         </button>
                                     ) : undefined}
                                 />
                             )}
                         </TableBody>
+                        <TableFooter>
+                            <TableRow>
+                                <TableCell colSpan={8} className="font-bold text-right text-muted-foreground mr-6">
+                                    Total Kebutuhan Qty
+                                </TableCell>
+                                <TableCell align="right">
+                                    <span className="text-sm font-black text-amber-600">
+                                        {formatNumber(totalSimQty || 0)}
+                                    </span>
+                                </TableCell>
+                            </TableRow>
+                        </TableFooter>
                     </Table>
                 </TableResponsive>
 

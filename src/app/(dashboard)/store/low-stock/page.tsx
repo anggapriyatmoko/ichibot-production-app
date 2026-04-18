@@ -1,5 +1,5 @@
 import StoreLowStockList from '@/components/store/store-low-stock-list';
-import { getStoreLowStockProducts } from '@/app/actions/store-product';
+import { getStoreLowStockProductsPaginated } from '@/app/actions/store-product';
 import { getStoreSuppliers } from '@/app/actions/store-supplier';
 import { getSystemSetting } from '@/app/actions/system-settings';
 import { requireAuth, isAllowedForPage } from '@/lib/auth';
@@ -7,10 +7,9 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import StoreSkeleton from '@/components/store/store-skeleton';
 
-
 async function StoreLowStockContent() {
     const [
-        products, 
+        result, 
         suppliers, 
         kursYuanRaw, 
         kursUsdRaw,
@@ -20,7 +19,7 @@ async function StoreLowStockContent() {
         tokpedAdminFeeStr,
         tokpedServiceFeeStr
     ] = await Promise.all([
-        getStoreLowStockProducts(),
+        getStoreLowStockProductsPaginated({ page: 1, perPage: 20 }),
         getStoreSuppliers(),
         getSystemSetting('KURS_YUAN'),
         getSystemSetting('KURS_USD'),
@@ -29,7 +28,6 @@ async function StoreLowStockContent() {
         getSystemSetting('STORE_SHOPEE_SERVICE_FEE'),
         getSystemSetting('STORE_TOKOPEDIA_ADMIN_FEE'),
         getSystemSetting('STORE_TOKOPEDIA_SERVICE_FEE')
-
     ]);
 
     const kursYuan = kursYuanRaw ? parseFloat(kursYuanRaw) : undefined;
@@ -42,7 +40,10 @@ async function StoreLowStockContent() {
 
     return (
         <StoreLowStockList 
-            initialProducts={products} 
+            initialProducts={result.products} 
+            initialTotalCount={result.totalCount}
+            initialTotalPages={result.totalPages}
+            serverSidePagination={true}
             suppliers={suppliers} 
             kursYuan={kursYuan} 
             kursUsd={kursUsd}

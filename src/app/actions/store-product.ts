@@ -1725,3 +1725,301 @@ export async function clearAllStoreProductSimulationSettings() {
         return { success: false, error: error.message }
     }
 }
+
+
+export async function getStoreLowStockProductsPaginated(params: {
+    page?: number
+    perPage?: number
+    search?: string
+    sortKey?: string
+    sortDirection?: 'asc' | 'desc' | null
+    filters?: any
+}) {
+    try {
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        
+        const page = params.page || 1
+        const perPage = params.perPage || 20
+        const search = params.search || ''
+        const sortKey = params.sortKey || 'stok'
+        const sortDirection = params.sortDirection || 'asc'
+        const filters = params.filters || {}
+        
+        let where: any = { AND: [] }
+        where.AND.push({ purchased: false })
+        where.AND.push({ parentId: null })
+        
+        if (search) {
+            const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+            words.forEach(word => {
+                where.AND.push({
+                    OR: [
+                        { name: { contains: word } },
+                        { sku: { contains: word } },
+                        { storeName: { contains: word } },
+                    ]
+                })
+            })
+        }
+        
+        if (filters.suppliers && filters.suppliers.length > 0) {
+            const suppliers = filters.suppliers;
+            where.AND.push({
+                OR: suppliers.map((s: string) => ({
+                    storeName: { contains: s }
+                }))
+            })
+        }
+        
+        if (filters.showOnlySimulation) {
+            const variationsWithSim = await prisma.storeProduct.findMany({
+                where: { simulationQty: { gt: 0 }, parentId: { not: null } },
+                select: { parentId: true }
+            });
+            const parentIds = variationsWithSim.map((v: any) => v.parentId).filter(Boolean);
+            
+            where.AND.push({
+                OR: [
+                    { simulationQty: { gt: 0 } },
+                    ...(parentIds.length > 0 ? [{ wcId: { in: parentIds } }] : [])
+                ]
+            });
+        }
+        
+        if (where.AND.length === 0) delete where.AND;
+
+        let orderBy: any = []
+        if (sortDirection) {
+            if (sortKey === 'stok') {
+                orderBy.push({ priority: 'desc' })
+                orderBy.push({ stockQuantity: sortDirection })
+            } else if (sortKey === 'name') {
+                orderBy.push({ name: sortDirection })
+            } else if (sortKey === 'supplier') {
+                orderBy.push({ storeName: sortDirection })
+            } else if (sortKey === 'price') {
+                orderBy.push({ price: sortDirection })
+            } else if (sortKey === 'simulationQty') {
+                orderBy.push({ simulationQty: sortDirection })
+            } else {
+                orderBy.push({ stockQuantity: sortDirection })
+            }
+        } else {
+           orderBy.push({ stockQuantity: 'asc' })
+        }
+
+        const totalCount = await prisma.storeProduct.count({ where });
+        const totalPages = Math.ceil(totalCount / perPage);
+        
+        // Sum simulationQty
+        let simWhere: any = { AND: [] };
+        simWhere.AND.push({ purchased: false });
+        if (search) {
+             const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+             words.forEach(word => {
+                 simWhere.AND.push({
+                     OR: [
+                         { name: { contains: word } },
+                         { sku: { contains: word } },
+                         { storeName: { contains: word } },
+                     ]
+                 })
+             })
+        }
+        if (filters.suppliers && filters.suppliers.length > 0) {
+            const suppliers = filters.suppliers;
+            simWhere.AND.push({
+                OR: suppliers.map((s: string) => ({
+                    storeName: { contains: s }
+                }))
+            })
+        }
+        const simRows = await prisma.storeProduct.aggregate({
+            _sum: { simulationQty: true },
+            where: simWhere.AND.length > 0 ? simWhere : {}
+        });
+        const totalSimulationQty = simRows._sum.simulationQty || 0;
+
+        const parents = await prisma.storeProduct.findMany({
+            where,
+            orderBy,
+            skip: (page - 1) * perPage,
+            take: perPage,
+        })
+        
+        const fetchedParentIds = parents.map((p: any) => p.wcId)
+        let variations: any[] = []
+        if (fetchedParentIds.length > 0) {
+            variations = await prisma.storeProduct.findMany({
+                where: {
+                    parentId: { in: fetchedParentIds },
+                    purchased: false
+                },
+                orderBy: { wcId: 'asc' }
+            })
+        }
+        
+        const mappedParents = parents.map((p: any) => {
+            const pVars = variations.filter((v: any) => v.parentId === p.wcId)
+            const mapProps = (item: any) => {
+                let images = [], categories = [], attributes = [], wholesalePrices = [];
+                try { if (item.images) images = JSON.parse(item.images) } catch(e){}
+                try { if (item.categories) categories = JSON.parse(item.categories) } catch(e){}
+                try { if (item.attributes) attributes = JSON.parse(item.attributes) } catch(e){}
+                try { if (item.wholesalePrices) wholesalePrices = JSON.parse(item.wholesalePrices) } catch(e){}
+                return { ...item, images, categories, attributes, wholesalePrices }
+            }
+            return {
+                ...mapProps(p),
+                _variations: pVars.map(mapProps)
+            }
+        })
+
+        return {
+            products: mappedParents,
+            totalCount,
+            totalPages,
+            totalSimulationQty,
+            page,
+            perPage
+        }
+    } catch(err: any) {
+        console.error('Error in getStoreLowStockProductsPaginated:', err.message);
+        return { products: [], totalCount: 0, totalPages: 0, totalSimulationQty: 0, page: 1, perPage: 20 }
+    }
+}
+
+
+export async function getStoreProductsPaginated(params: {
+    page?: number
+    perPage?: number
+    search?: string
+    sortKey?: string
+    sortDirection?: 'asc' | 'desc' | null
+    filters?: any
+}) {
+    try {
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        
+        const page = params.page || 1
+        const perPage = params.perPage || 10
+        const search = params.search || ''
+        const sortKey = params.sortKey || 'name'
+        const sortDirection = params.sortDirection || 'asc'
+        const filters = params.filters || {}
+        
+        let where: any = { AND: [] }
+        where.AND.push({ parentId: null })
+        
+        if (search) {
+            const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+            words.forEach(word => {
+                where.AND.push({
+                    OR: [
+                        { name: { contains: word } },
+                        { sku: { contains: word } },
+                        { storeName: { contains: word } },
+                    ]
+                })
+            })
+        }
+        
+        if (filters.sku === 'with') where.AND.push({ sku: { not: null } })
+        if (filters.sku === 'without') where.AND.push({ OR: [{ sku: null }, { sku: '' }] })
+
+        if (filters.type === 'variable') where.AND.push({ type: 'variable' })
+
+        if (filters.discount === 'with') where.AND.push({ salePrice: { gt: 0 } })
+        if (filters.discount === 'without') where.AND.push({ OR: [{ salePrice: null }, { salePrice: 0 }] })
+
+        if (filters.photo === 'with') where.AND.push({ images: { not: null } })
+        if (filters.photo === 'without') where.AND.push({ OR: [{ images: null }, { images: '' }] })
+
+        if (filters.price === 'with') where.AND.push({ price: { gt: 0 } })
+        if (filters.price === 'without') where.AND.push({ OR: [{ price: null }, { price: 0 }] })
+
+        if (filters.weight === 'with') where.AND.push({ weight: { gt: 0 } })
+        if (filters.weight === 'without') where.AND.push({ OR: [{ weight: null }, { weight: 0 }] })
+
+        if (filters.backup === 'with') where.AND.push({ backupGudang: { not: null } })
+        if (filters.backup === 'without') where.AND.push({ OR: [{ backupGudang: null }, { backupGudang: '' }] })
+
+        if (filters.stockCategory === 'red') where.AND.push({ stockQuantity: { lte: 0 } })
+        if (filters.stockCategory === 'yellow') where.AND.push({ stockQuantity: { gt: 0, lte: 10 } })
+        if (filters.stockCategory === 'green') where.AND.push({ stockQuantity: { gt: 10 } })
+        if (filters.stockCategory === 'available') where.AND.push({ stockQuantity: { gt: 0 } })
+        if (filters.stockCategory === 'empty') where.AND.push({ OR: [{ stockQuantity: 0 }, { stockQuantity: null }] })
+
+        if (filters.status === 'publish') where.AND.push({ status: 'publish' })
+        if (filters.status === 'draft') where.AND.push({ status: 'draft' })
+
+        if (filters.purchased === 'purchased') where.AND.push({ purchased: true })
+        if (filters.purchased === 'unpurchased') where.AND.push({ purchased: false })
+
+        if (filters.priority === 'priority') where.AND.push({ priority: true })
+        
+        if (where.AND.length === 0) delete where.AND;
+
+        const totalCount = await prisma.storeProduct.count({ where });
+        const totalPages = Math.ceil(totalCount / perPage);
+
+        let orderBy: any = {}
+        if (sortDirection) {
+            if (sortKey === 'stok') orderBy = { stockQuantity: sortDirection }
+            else if (sortKey === 'jumlahBeli') orderBy = { purchaseQty: sortDirection }
+            else if (sortKey === 'priority') orderBy = { priority: sortDirection }
+            else if (sortKey === 'name') orderBy = { name: sortDirection }
+            else if (sortKey === 'supplier') orderBy = { storeName: sortDirection }
+            else if (sortKey === 'sku') orderBy = { sku: sortDirection }
+            else if (sortKey === 'cny') orderBy = { purchasePrice: sortDirection }
+            else orderBy = { name: sortDirection }
+        } else {
+            orderBy = { name: 'asc' }
+        }
+
+        const parents = await prisma.storeProduct.findMany({
+            where,
+            orderBy,
+            skip: (page - 1) * perPage,
+            take: perPage,
+        })
+        
+        const fetchedParentIds = parents.map((p: any) => p.wcId)
+        let variations: any[] = []
+        if (fetchedParentIds.length > 0) {
+            variations = await prisma.storeProduct.findMany({
+                where: { parentId: { in: fetchedParentIds } },
+                orderBy: { wcId: 'asc' }
+            })
+        }
+        
+        const mappedParents = parents.map((p: any) => {
+            const pVars = variations.filter((v: any) => v.parentId === p.wcId)
+            const mapProps = (item: any) => {
+                let images = [], categories = [], attributes = [], wholesalePrices = [];
+                try { if (item.images) images = JSON.parse(item.images) } catch(e){}
+                try { if (item.categories) categories = JSON.parse(item.categories) } catch(e){}
+                try { if (item.attributes) attributes = JSON.parse(item.attributes) } catch(e){}
+                try { if (item.wholesalePrices) wholesalePrices = JSON.parse(item.wholesalePrices) } catch(e){}
+                return { ...item, images, categories, attributes, wholesalePrices }
+            }
+            return {
+                ...mapProps(p),
+                _variations: pVars.map(mapProps)
+            }
+        })
+
+        return {
+            products: mappedParents,
+            totalCount,
+            totalPages,
+            page,
+            perPage
+        }
+    } catch(err: any) {
+        console.error('Error in getStoreProductsPaginated:', err.message);
+        return { products: [], totalCount: 0, totalPages: 0, page: 1, perPage: 20 }
+    }
+}

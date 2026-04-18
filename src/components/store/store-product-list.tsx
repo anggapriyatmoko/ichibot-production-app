@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Search, RefreshCw, Package, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckCircle2, Circle, ChevronDown, HelpCircle, Edit2, Plus, Filter, X, Image as ImageIcon, Weight, DollarSign, Tag, Info, ArrowUpDown, ArrowUp, ArrowDown, ShoppingCart, Star, TrendingUp, TrendingDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as XLSX from 'xlsx'
 
 import { formatNumber, formatCurrency, formatDateTime } from '@/utils/format'
-import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts, updateStoreProductSimulationSettings, clearAllStoreProductSimulationSettings } from '@/app/actions/store-product'
+import { syncStoreProducts, toggleStoreProductPurchased, toggleStoreProductPriority, syncSingleStoreProduct, getStoreProducts, getStoreProductsPaginated, updateStoreProductSimulationSettings, clearAllStoreProductSimulationSettings } from '@/app/actions/store-product'
 import { useAlert } from '@/hooks/use-alert'
 import { useRouter } from 'next/navigation'
 import SupplierPicker from './supplier-picker'
@@ -119,7 +119,11 @@ export default function StoreProductList({
     useProductPriceOnly = false,
     hideResetButton = false,
     showExportButton = false,
-    exportFilenamePrefix = 'EXPORT'
+    exportFilenamePrefix = 'EXPORT',
+    serverSidePagination = false,
+    initialTotalCount = 0,
+    initialTotalPages = 0,
+    showFilterButton = true
 }: {
     initialProducts: any[],
     showPurchasedStyles?: boolean,
@@ -141,6 +145,7 @@ export default function StoreProductList({
     shopeeServiceFee?: number,
     tokpedAdminFee?: number,
     tokpedServiceFee?: number,
+    showFilterButton?: boolean,
     hideLabaColumn?: boolean,
     hideStokColumn?: boolean,
     hideSimulasiColumn?: boolean,
@@ -150,7 +155,10 @@ export default function StoreProductList({
     useProductPriceOnly?: boolean,
     hideResetButton?: boolean,
     showExportButton?: boolean,
-    exportFilenamePrefix?: string
+    exportFilenamePrefix?: string,
+    serverSidePagination?: boolean,
+    initialTotalCount?: number,
+    initialTotalPages?: number
 }) {
 
 
@@ -175,11 +183,28 @@ export default function StoreProductList({
         </div>
     )
 
+    // Flatten products from server-side paginated response (which includes _variations)
+    const flattenProducts = (products: any[]) => {
+        if (!serverSidePagination) return products
+        const flat: any[] = []
+        products.forEach((p: any) => {
+            const { _variations, ...parent } = p
+            flat.push({ ...parent, hasVariations: _variations && _variations.length > 0 })
+            if (_variations) {
+                _variations.forEach((v: any) => {
+                    flat.push({ ...v, isVariation: true })
+                })
+            }
+        })
+        return flat
+    }
+
     const [searchTerm, setSearchTerm] = useState('')
+    const [pendingSearch, setPendingSearch] = useState('')
     const [isSyncing, setIsSyncing] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage, setItemsPerPage] = useState(10)
-    const [localProducts, setLocalProducts] = useState(initialProducts)
+    const [itemsPerPage, setItemsPerPage] = useState(20)
+    const [localProducts, setLocalProducts] = useState(() => flattenProducts(initialProducts))
     const [hoveredImage, setHoveredImage] = useState<string | null>(null)
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
     const [expandedRows, setExpandedRows] = useState<number[]>([])
@@ -207,6 +232,13 @@ export default function StoreProductList({
     const [finishedItems, setFinishedItems] = useState<Set<number>>(new Set())
     const [activeLabaDetail, setActiveLabaDetail] = useState<string | null>(null)
 
+    // Server-side pagination states
+    const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount)
+    const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages)
+    const [isServerLoading, setIsServerLoading] = useState(false)
+    const filtersRef = useRef(filters)
+    filtersRef.current = filters
+
     // Sync Log Modal States
     const [showSyncModal, setShowSyncModal] = useState(false)
     const [syncLogs, setSyncLogs] = useState<{ message: string, timestamp: string }[]>([])
@@ -217,9 +249,50 @@ export default function StoreProductList({
     const { showAlert, showError } = useAlert()
     const router = useRouter()
 
+    // Server-side fetch function
+    const fetchServerData = useCallback(async (params: {
+        page?: number,
+        perPage?: number,
+        search?: string,
+        sortKey?: string,
+        sortDirection?: 'asc' | 'desc' | null,
+        filters?: any
+    }) => {
+        if (!serverSidePagination) return
+        setIsServerLoading(true)
+        try {
+            const result = await getStoreProductsPaginated({
+                page: params.page ?? 1,
+                perPage: params.perPage ?? itemsPerPage,
+                search: params.search ?? searchTerm,
+                sortKey: params.sortKey,
+                sortDirection: params.sortDirection,
+                filters: params.filters ?? filtersRef.current,
+            })
+            // Flatten variations into the product list for display
+            const flatProducts: any[] = []
+            result.products.forEach((p: any) => {
+                const { _variations, ...parent } = p
+                flatProducts.push({ ...parent, hasVariations: _variations && _variations.length > 0 })
+                if (_variations) {
+                    _variations.forEach((v: any) => {
+                        flatProducts.push({ ...v, isVariation: true })
+                    })
+                }
+            })
+            setLocalProducts(flatProducts)
+            setServerTotalCount(result.totalCount)
+            setServerTotalPages(result.totalPages)
+        } catch (error) {
+            console.error('Server fetch error:', error)
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, itemsPerPage, searchTerm])
+
     // Update local products when initialProducts change (e.g., after sync)
     useEffect(() => {
-        setLocalProducts(initialProducts)
+        setLocalProducts(flattenProducts(initialProducts))
         // Also update simulation data if it's new from DB
         const data: Record<number, number> = {}
         const priceData: Record<number, number> = {}
@@ -231,10 +304,33 @@ export default function StoreProductList({
         setSimulationPriceData(priceData)
     }, [initialProducts])
 
-    // Reset page to 1 when search term changes
+    // Reset page to 1 when search term changes (client-side mode only)
     useEffect(() => {
-        setCurrentPage(1)
-    }, [searchTerm])
+        if (!serverSidePagination) {
+            setCurrentPage(1)
+        }
+    }, [searchTerm, serverSidePagination])
+
+    // Server-side: re-fetch when filters change
+    const filtersKey = JSON.stringify(filters)
+    const isFirstRender = useRef(true)
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false
+            return
+        }
+        if (serverSidePagination) {
+            setCurrentPage(1)
+            fetchServerData({
+                page: 1,
+                search: searchTerm,
+                sortKey: sortConfig.key,
+                sortDirection: sortConfig.direction,
+                filters,
+            })
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filtersKey])
 
     // Set default sort to priority for Analisa Harga
     useEffect(() => {
@@ -353,9 +449,18 @@ export default function StoreProductList({
 
             setIsSyncComplete(true)
             // Refresh local state without reload
-            const updatedProducts = await getStoreProducts()
-            setLocalProducts(updatedProducts)
-            // router.refresh()
+            if (serverSidePagination) {
+                setCurrentPage(1)
+                await fetchServerData({
+                    page: 1,
+                    search: searchTerm,
+                    sortKey: sortConfig.key,
+                    sortDirection: sortConfig.direction,
+                })
+            } else {
+                const updatedProducts = await getStoreProducts()
+                setLocalProducts(updatedProducts)
+            }
         } catch (error: any) {
             setHasSyncError(true)
             setIsSyncComplete(true)
@@ -850,6 +955,17 @@ export default function StoreProductList({
             direction = null
         }
         setSortConfig({ key, direction })
+
+        // Server-side sort: re-fetch from DB
+        if (serverSidePagination) {
+            setCurrentPage(1)
+            fetchServerData({
+                page: 1,
+                search: searchTerm,
+                sortKey: key,
+                sortDirection: direction,
+            })
+        }
     }
 
     const filteredProducts = useMemo(() => {
@@ -1129,12 +1245,23 @@ export default function StoreProductList({
     }, [localProducts, searchTerm, expandedRows, filters, sortConfig, simulationData, kursYuan, kursUsd, additionalFee])
 
     // Pagination calculation
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
+    const totalPages = serverSidePagination ? serverTotalPages : Math.ceil(filteredProducts.length / itemsPerPage)
     const startIndex = (currentPage - 1) * itemsPerPage
-    const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage)
+    const paginatedProducts = serverSidePagination ? localProducts : filteredProducts.slice(startIndex, startIndex + itemsPerPage)
 
     const handlePageChange = (page: number) => {
-        setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+        const newPage = Math.max(1, Math.min(page, totalPages))
+        setCurrentPage(newPage)
+
+        // Server-side pagination: fetch new page
+        if (serverSidePagination) {
+            fetchServerData({
+                page: newPage,
+                search: searchTerm,
+                sortKey: sortConfig.key,
+                sortDirection: sortConfig.direction,
+            })
+        }
     }
 
     return (
@@ -1150,28 +1277,67 @@ export default function StoreProductList({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder={showSupplierColumn ? "Cari produk, SKU, atau supplier..." : "Cari produk atau SKU..."}
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder={serverSidePagination ? "Cari lalu tekan Enter..." : (showSupplierColumn ? "Cari produk, SKU, atau supplier..." : "Cari produk atau SKU...")}
+                                    value={serverSidePagination ? pendingSearch : searchTerm}
+                                    onChange={(e) => {
+                                        if (serverSidePagination) {
+                                            setPendingSearch(e.target.value)
+                                        } else {
+                                            setSearchTerm(e.target.value)
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (serverSidePagination && e.key === 'Enter') {
+                                            const newSearch = pendingSearch.trim()
+                                            setSearchTerm(newSearch)
+                                            setCurrentPage(1)
+                                            fetchServerData({
+                                                page: 1,
+                                                search: newSearch,
+                                                sortKey: sortConfig.key,
+                                                sortDirection: sortConfig.direction,
+                                            })
+                                        }
+                                    }}
                                     className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                                 />
+                                {serverSidePagination && pendingSearch && (
+                                    <button
+                                        onClick={() => {
+                                            setPendingSearch('')
+                                            setSearchTerm('')
+                                            setCurrentPage(1)
+                                            fetchServerData({
+                                                page: 1,
+                                                search: '',
+                                                sortKey: sortConfig.key,
+                                                sortDirection: sortConfig.direction,
+                                            })
+                                        }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
                             </div>
                             <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide w-full sm:w-auto">
-                                <button
-                                    onClick={() => setShowFilters(!showFilters)}
-                                    className={cn(
-                                        "flex items-center justify-center gap-2 px-4 h-9 rounded-lg text-sm font-bold transition-all border shadow-sm whitespace-nowrap",
-                                        showFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"
-                                    )}
-                                >
-                                    <Filter className="w-4 h-4" />
-                                    Filters
-                                    {Object.values(filters).some(v => v !== 'all' && v !== '') && (
-                                        <span className="flex items-center justify-center w-5 h-5 bg-white text-primary rounded-full text-[10px]">
-                                            {Object.values(filters).filter(v => v !== 'all' && v !== '').length}
-                                        </span>
-                                    )}
-                                </button>
+                                {showFilterButton && (
+                                    <button
+                                        onClick={() => setShowFilters(!showFilters)}
+                                        className={cn(
+                                            "flex items-center justify-center gap-2 px-4 h-9 rounded-lg text-sm font-bold transition-all border shadow-sm whitespace-nowrap",
+                                            showFilters ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"
+                                        )}
+                                    >
+                                        <Filter className="w-4 h-4" />
+                                        Filters
+                                        {Object.values(filters).some(v => v !== 'all' && v !== '') && (
+                                            <span className="flex items-center justify-center w-5 h-5 bg-white text-primary rounded-full text-[10px]">
+                                                {Object.values(filters).filter(v => v !== 'all' && v !== '').length}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
                                 {isAnalisaHarga && !hideResetButton && (
                                     <button
                                         onClick={handleClearSimulation}
@@ -1218,7 +1384,7 @@ export default function StoreProductList({
                     }
                 />
 
-                {showFilters && (
+                {showFilterButton && showFilters && (
                     <div className="bg-muted/10 border-b border-border p-6 animate-in slide-in-from-top-4 duration-200">
                         <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-border/50">
                             <div className="flex items-center gap-2">
@@ -2695,6 +2861,15 @@ export default function StoreProductList({
                     </Table>
                 </TableResponsive>
 
+                {isServerLoading && (
+                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl">
+                        <div className="flex items-center gap-3 bg-card px-5 py-3 rounded-xl border border-border shadow-lg">
+                            <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">Memuat data...</span>
+                        </div>
+                    </div>
+                )}
+
                 <TablePagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -2703,8 +2878,17 @@ export default function StoreProductList({
                     onItemsPerPageChange={(count) => {
                         setItemsPerPage(count)
                         setCurrentPage(1)
+                        if (serverSidePagination) {
+                            fetchServerData({
+                                page: 1,
+                                perPage: count,
+                                search: searchTerm,
+                                sortKey: sortConfig.key,
+                                sortDirection: sortConfig.direction,
+                            })
+                        }
                     }}
-                    totalCount={filteredProducts.length}
+                    totalCount={serverSidePagination ? serverTotalCount : filteredProducts.length}
                 />
             </TableWrapper>
 
@@ -2856,6 +3040,19 @@ export default function StoreProductList({
 
 
             {/* Product Analysis Section */}
+            {serverSidePagination ? (
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-muted/50 rounded-lg">
+                            <Package className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-muted-foreground">Analisa Produk</h2>
+                            <p className="text-xs text-muted-foreground/70">Fitur analisa produk dinonaktifkan sementara pada mode server-side pagination. Fitur ini perlu mengambil semua data dari database.</p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
             <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-6">
                     <div className="p-2 bg-primary/10 rounded-lg">
@@ -3060,6 +3257,7 @@ export default function StoreProductList({
                     </div>
                 </div>
             </div>
+            )}
 
             {/* Floating Image Preview */}
             {
