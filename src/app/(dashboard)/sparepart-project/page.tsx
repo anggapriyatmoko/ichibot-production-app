@@ -1,40 +1,11 @@
 import SparepartProjectList from '@/components/sparepart-project/sparepart-project-list'
-import prisma from '@/lib/prisma'
+import { getSparepartProjectsPaginated } from '@/app/actions/sparepart-project'
 import { getSession } from '@/lib/auth'
 
 
-export default async function SparepartProjectPage({
-    searchParams
-}: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
-    const params = await searchParams
+export default async function SparepartProjectPage() {
     const session: any = await getSession()
-    const page = typeof params.page === 'string' ? parseInt(params.page) : 1
-    const search = typeof params.search === 'string' ? params.search : ''
-    const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 20
-    const skip = (page - 1) * limit
-
-    const where: any = search ? {
-        AND: search.split(/\s+/).filter(Boolean).map(word => ({
-            OR: [
-                { name: { contains: word } },
-                { notes: { contains: word } }
-            ]
-        }))
-    } : {}
-
-    const [items, totalCount] = await prisma.$transaction([
-        prisma.sparepartProject.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-            take: limit,
-            skip: skip
-        }),
-        prisma.sparepartProject.count({ where })
-    ])
-
-    const totalPages = Math.ceil(totalCount / limit)
+    const result = await getSparepartProjectsPaginated({ page: 1, perPage: 20 })
 
     return (
         <div className="space-y-8">
@@ -44,12 +15,11 @@ export default async function SparepartProjectPage({
             </div>
 
             <SparepartProjectList
-                initialItems={items}
+                initialItems={result.items}
+                initialTotalCount={result.totalCount}
+                initialTotalPages={result.totalPages}
+                serverSidePagination={true}
                 userRole={session?.user?.role}
-                totalPages={totalPages}
-                currentPage={page}
-                totalCount={totalCount}
-                itemsPerPage={limit}
             />
         </div>
     )

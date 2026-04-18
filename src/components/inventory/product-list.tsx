@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport, moveToSparepartProject } from '@/app/actions/product'
+import { useState, useCallback, useRef } from 'react'
+import { createProduct, deleteProduct, addStock, updateProduct, getAllProductsForExport, moveToSparepartProject, getInventoryProductsPaginated } from '@/app/actions/product'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
 import { Plus, Trash2, AlertTriangle, Search, PackagePlus, ImageIcon, Edit, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, Camera, Pencil, X, FolderKanban, Package, Weight, Box, Info, Loader2 } from 'lucide-react'
 import { processImageFile } from '@/utils/image-compression'
@@ -60,18 +60,27 @@ type SortConfig = {
 
 export default function ProductList({
     initialProducts,
-    totalPages,
-    currentPage,
+    totalPages: totalPagesProp,
+    currentPage: currentPageProp,
     itemsPerPage: initialItemsPerPage = 20,
     totalItems,
-    userRole
+    userRole,
+    serverSidePagination = false,
+    initialTotalCount = 0,
+    initialTotalPages = 1,
 }: {
     initialProducts: Product[]
-    totalPages: number
-    currentPage: number
+    totalPages?: number
+    currentPage?: number
     itemsPerPage?: number
     totalItems?: number
     userRole?: string
+    /** Enable server-side pagination mode per `standard-table-get-data.md`.
+     *  When true, the component owns its own page state and refetches via
+     *  `getInventoryProductsPaginated` on page/perPage/search/sort change. */
+    serverSidePagination?: boolean
+    initialTotalCount?: number
+    initialTotalPages?: number
 }) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -101,12 +110,24 @@ export default function ProductList({
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search')?.toString() || '')
+    const [pendingSearch, setPendingSearch] = useState('')
     const [imagePreview, setImagePreview] = useState<{ url: string, name: string } | null>(null)
     const [imageSize, setImageSize] = useState<string>('')
     const [fileSize, setFileSize] = useState<string>('')
 
-    // Sync URL with Search Term (Debounced)
+    // Server-side pagination state (active when serverSidePagination=true).
+    // Owned here instead of synced to URL because standard-table-get-data.md
+    // keeps state inside the component to avoid router churn on pagination.
+    const [localProducts, setLocalProducts] = useState<Product[]>(initialProducts)
+    const [serverCurrentPage, setServerCurrentPage] = useState(1)
+    const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount)
+    const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages)
+    const [isServerLoading, setIsServerLoading] = useState(false)
+
+    // Sync URL with Search Term (Debounced). Skipped in SSP mode — there
+    // search is enter-commit and state lives internally.
     useEffect(() => {
+        if (serverSidePagination) return
         const timeoutId = setTimeout(() => {
             const params = new URLSearchParams(searchParams)
             const currentSearch = params.get('search') || ''
@@ -124,7 +145,7 @@ export default function ProductList({
         }, 300)
 
         return () => clearTimeout(timeoutId)
-    }, [searchTerm, replace, pathname, searchParams])
+    }, [searchTerm, replace, pathname, searchParams, serverSidePagination])
 
     // Sorting State (Sync with URL)
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(() => {
@@ -224,6 +245,7 @@ export default function ProductList({
             type: 'confirm',
             action: async () => {
                 await deleteProduct(id)
+                if (serverSidePagination) fetchServerData({})
             }
         })
     }
@@ -238,7 +260,11 @@ export default function ProductList({
                 try {
                     const result = await moveToSparepartProject(product.id)
                     if (result.success) {
-                        router.refresh()
+                        if (serverSidePagination) {
+                            fetchServerData({})
+                        } else {
+                            router.refresh()
+                        }
                     } else {
                         showError(result.error || 'Gagal memindah produk')
                     }
@@ -276,6 +302,7 @@ export default function ProductList({
             setAddImagePreview(null)
             setAddImageFile(null)
             setAddForm({ name: '', sku: '', stock: '', lowStockThreshold: 5, notes: '' })
+            if (serverSidePagination) fetchServerData({})
         } catch (error: any) {
             console.error(error)
             showError(simplifyErrorMessage(error))
@@ -302,6 +329,7 @@ export default function ProductList({
             setEditImagePreview(null)
             setEditImageFile(null)
             setRemoveImage(false)
+            if (serverSidePagination) fetchServerData({})
         } catch (error: any) {
             console.error(error)
             showError(simplifyErrorMessage(error))
@@ -317,6 +345,7 @@ export default function ProductList({
         await addStock(stockModalProduct.id, quantity)
         setIsLoading(false)
         setStockModalProduct(null)
+        if (serverSidePagination) fetchServerData({})
     }
 
     async function handleExport() {
@@ -346,19 +375,63 @@ export default function ProductList({
         }
     }
 
+    /**
+     * Server-side fetcher for SSP mode. Callers pass the dimensions that
+     * changed; anything omitted falls back to current state. See
+     * `standard-table-get-data.md` for the full contract.
+     */
+    const fetchServerData = useCallback(async (params: {
+        page?: number
+        perPage?: number
+        search?: string
+        sortKey?: string
+        sortDirection?: 'asc' | 'desc' | null
+    }) => {
+        if (!serverSidePagination) return
+        setIsServerLoading(true)
+        try {
+            const result = await getInventoryProductsPaginated({
+                page: params.page ?? serverCurrentPage,
+                perPage: params.perPage ?? itemsPerPage,
+                search: params.search ?? searchTerm,
+                sortKey: params.sortKey ?? sortConfig?.key,
+                sortDirection: params.sortDirection ?? sortConfig?.direction ?? null,
+            })
+            setLocalProducts(result.products as Product[])
+            setServerTotalCount(result.totalCount)
+            setServerTotalPages(result.totalPages)
+            setServerCurrentPage(result.page)
+        } catch (error) {
+            console.error('Server fetch error:', error)
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, serverCurrentPage, itemsPerPage, searchTerm, sortConfig])
+
     const handleSort = (key: keyof Product) => {
         const newDirection = sortConfig?.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
+        setSortConfig({ key, direction: newDirection })
+        if (serverSidePagination) {
+            fetchServerData({ page: 1, sortKey: key, sortDirection: newDirection })
+            return
+        }
         const params = new URLSearchParams(searchParams)
         params.set('sortBy', key)
         params.set('order', newDirection)
         params.set('page', '1') // Reset to page 1 on sort
         replace(`${pathname}?${params.toString()}`)
-        setSortConfig({ key, direction: newDirection })
     }
 
-    const filteredProducts = initialProducts
+    // In SSP mode `filteredProducts` is just the server payload (already
+    // filtered + paginated). In client mode it stays as the full list the
+    // parent passed in, which the existing client-side pagination slices.
+    const filteredProducts = serverSidePagination ? localProducts : initialProducts
 
     const handlePageChange = (newPage: number) => {
+        if (serverSidePagination) {
+            fetchServerData({ page: newPage })
+            return
+        }
         const params = new URLSearchParams(searchParams)
         params.set('page', newPage.toString())
         params.set('limit', itemsPerPage.toString())
@@ -367,10 +440,25 @@ export default function ProductList({
 
     const handleItemsPerPageChange = (count: number) => {
         setItemsPerPage(count)
+        if (serverSidePagination) {
+            fetchServerData({ page: 1, perPage: count })
+            return
+        }
         const params = new URLSearchParams(searchParams)
         params.set('page', '1')
         params.set('limit', count.toString())
         replace(`${pathname}?${params.toString()}`)
+    }
+
+    const handleSearchCommit = () => {
+        setSearchTerm(pendingSearch)
+        fetchServerData({ page: 1, search: pendingSearch })
+    }
+
+    const handleSearchClear = () => {
+        setPendingSearch('')
+        setSearchTerm('')
+        fetchServerData({ page: 1, search: '' })
     }
 
     // Helper to render sort icon
@@ -394,11 +482,30 @@ export default function ProductList({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder="Cari produk atau SKU..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                                    placeholder={serverSidePagination ? "Cari lalu tekan Enter..." : "Cari produk atau SKU..."}
+                                    value={serverSidePagination ? pendingSearch : searchTerm}
+                                    onChange={(e) => {
+                                        if (serverSidePagination) setPendingSearch(e.target.value)
+                                        else setSearchTerm(e.target.value)
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (serverSidePagination && e.key === 'Enter') {
+                                            e.preventDefault()
+                                            handleSearchCommit()
+                                        }
+                                    }}
+                                    className="w-full pl-10 pr-10 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                                 />
+                                {serverSidePagination && (pendingSearch || searchTerm) && (
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchClear}
+                                        aria-label="Hapus pencarian"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
                             <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide w-full sm:w-auto">
                                 <div className="flex items-center gap-2">
@@ -1326,6 +1433,15 @@ export default function ProductList({
                 )}
 
                 {/* Desktop Table View */}
+                <div className="relative">
+                    {isServerLoading && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-lg">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-3 py-2 rounded-lg border border-border shadow-sm">
+                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                Memuat data...
+                            </div>
+                        </div>
+                    )}
                 <TableScrollArea className="hidden md:block">
                     <Table>
                         <TableHeader>
@@ -1475,14 +1591,15 @@ export default function ProductList({
                         </TableBody>
                     </Table>
                 </TableScrollArea>
+                </div>
 
                 <TablePagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
+                    currentPage={serverSidePagination ? serverCurrentPage : (currentPageProp ?? 1)}
+                    totalPages={serverSidePagination ? serverTotalPages : (totalPagesProp ?? 1)}
                     onPageChange={handlePageChange}
                     itemsPerPage={itemsPerPage}
                     onItemsPerPageChange={handleItemsPerPageChange}
-                    totalCount={totalItems}
+                    totalCount={serverSidePagination ? serverTotalCount : totalItems}
                 />
             </TableWrapper>
 

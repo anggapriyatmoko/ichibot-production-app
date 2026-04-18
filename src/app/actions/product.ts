@@ -560,6 +560,79 @@ export async function importProducts(products: {
     return { success: successCount, failed: errorCount, errors }
 }
 
+/**
+ * Paginated inventory product list — follows the project standard in
+ * `standard-table-get-data.md` (server-side mode embedded in the list
+ * component via `serverSidePagination` prop).
+ *
+ * Return shape: `{ products, totalCount, totalPages, page, perPage }`.
+ *
+ * search: AND across whitespace-separated tokens, matched on name/sku.
+ * sortKey is whitelisted via INVENTORY_PRODUCT_SORT_MAP to prevent
+ * arbitrary-column injection.
+ */
+const INVENTORY_PRODUCT_SORT_MAP: Record<string, string> = {
+    name: 'name',
+    sku: 'sku',
+    stock: 'stock',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+}
+
+export async function getInventoryProductsPaginated(params: {
+    page?: number
+    perPage?: number
+    search?: string
+    sortKey?: string
+    sortDirection?: 'asc' | 'desc' | null
+}) {
+    await requireAuth()
+    const page = Math.max(1, params.page ?? 1)
+    const perPage = Math.max(1, Math.min(200, params.perPage ?? 20))
+    const search = (params.search ?? '').trim()
+    const sortKey = params.sortKey
+    const sortDirection: 'asc' | 'desc' = params.sortDirection === 'asc' ? 'asc' : 'desc'
+
+    try {
+        const where: any = search
+            ? {
+                AND: search.split(/\s+/).filter(Boolean).map((word: string) => ({
+                    OR: [
+                        { name: { contains: word } },
+                        { sku: { contains: word } },
+                    ]
+                })),
+            }
+            : {}
+
+        const mappedField = sortKey ? INVENTORY_PRODUCT_SORT_MAP[sortKey] : undefined
+        const orderBy: any = mappedField
+            ? { [mappedField]: sortDirection }
+            : { createdAt: 'desc' }
+
+        const [totalCount, products] = await prisma.$transaction([
+            prisma.product.count({ where }),
+            prisma.product.findMany({
+                where,
+                orderBy,
+                skip: (page - 1) * perPage,
+                take: perPage,
+            }),
+        ])
+
+        return {
+            products,
+            totalCount,
+            totalPages: Math.max(1, Math.ceil(totalCount / perPage)),
+            page,
+            perPage,
+        }
+    } catch (error) {
+        console.error('Error fetching paginated inventory products:', error)
+        return { products: [] as product[], totalCount: 0, totalPages: 1, page, perPage }
+    }
+}
+
 export async function getAllProductsForExport(baseUrl: string) {
     await requireAdmin()
     const products = await prisma.product.findMany({

@@ -10,6 +10,105 @@ type CheckoutItem = {
     source: 'production' | 'project'
 }
 
+/**
+ * Paginated product search for POS Barang — follows the standard in
+ * `standard-table-get-data.md`. The POS unifies two sources (production
+ * `product` table + `sparepartProject` table) behind a single searchable
+ * grid, capped at `perPage` results.
+ *
+ * search: AND across whitespace-separated tokens over name + sku.
+ * source: 'all' | 'production' | 'project' — when not 'all' we only hit
+ * the corresponding table, saving the other query entirely.
+ *
+ * Return shape: `{ products, totalCount, page, perPage }`.
+ * `products` is the combined + sorted page; items carry a `source` tag.
+ */
+export async function getPosBarangProductsPaginated(params: {
+    search?: string
+    source?: 'all' | 'production' | 'project'
+    page?: number
+    perPage?: number
+}) {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    const search = (params.search ?? '').trim()
+    const source = params.source ?? 'all'
+    const page = Math.max(1, params.page ?? 1)
+    const perPage = Math.max(1, Math.min(200, params.perPage ?? 50))
+
+    const tokens = search ? search.split(/\s+/).filter(Boolean) : []
+    const buildWhere = () => (
+        tokens.length === 0
+            ? {}
+            : {
+                AND: tokens.map(word => ({
+                    OR: [
+                        { name: { contains: word } },
+                        { sku: { contains: word } },
+                    ]
+                }))
+            }
+    )
+
+    try {
+        const where: any = buildWhere()
+        // We need the overall total for the banner / "more results"
+        // indicator, plus the page slice. Keep total logic simple: count
+        // both tables when source='all', otherwise just the selected one.
+        let productionItems: any[] = []
+        let projectItems: any[] = []
+        let productionTotal = 0
+        let projectTotal = 0
+
+        if (source === 'all' || source === 'production') {
+            const [count, rows] = await Promise.all([
+                prisma.product.count({ where }),
+                prisma.product.findMany({
+                    where,
+                    orderBy: { name: 'asc' },
+                    // Over-fetch so we can merge+sort+slice across both tables.
+                    take: source === 'all' ? perPage * page : perPage,
+                    skip: source === 'production' ? (page - 1) * perPage : 0,
+                }),
+            ])
+            productionTotal = count
+            productionItems = rows.map(r => ({ ...r, source: 'production' as const, sku: r.sku || '' }))
+        }
+
+        if (source === 'all' || source === 'project') {
+            const [count, rows] = await Promise.all([
+                prisma.sparepartProject.count({ where }),
+                prisma.sparepartProject.findMany({
+                    where,
+                    orderBy: { name: 'asc' },
+                    take: source === 'all' ? perPage * page : perPage,
+                    skip: source === 'project' ? (page - 1) * perPage : 0,
+                }),
+            ])
+            projectTotal = count
+            projectItems = rows.map(r => ({ ...r, source: 'project' as const, sku: r.sku || '' }))
+        }
+
+        const combined = [...productionItems, ...projectItems]
+            .sort((a, b) => a.name.localeCompare(b.name))
+
+        const totalCount = productionTotal + projectTotal
+        const start = source === 'all' ? (page - 1) * perPage : 0
+        const products = combined.slice(start, start + perPage)
+
+        return {
+            products,
+            totalCount,
+            page,
+            perPage,
+        }
+    } catch (error) {
+        console.error('Error fetching POS Barang products:', error)
+        return { products: [] as any[], totalCount: 0, page, perPage }
+    }
+}
+
 // Generate order number format: ORDB-YYYYMMDD-XXX (B for Barang/Unified)
 async function generateOrderNumber(): Promise<string> {
     const today = new Date()

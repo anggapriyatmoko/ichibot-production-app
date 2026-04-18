@@ -1,24 +1,34 @@
 import { requireAuth, isAllowedForPage } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getBankAccounts } from '@/app/actions/bank-account'
+import { getBankAccountsPaginated } from '@/app/actions/bank-account'
 import AccountSummaryList from '@/components/keuangan/account-summary'
 import { Suspense } from 'react'
-import { Building2 } from 'lucide-react'
 
 import { getSystemSetting } from '@/app/actions/system-settings'
 
 
 async function BankAccountsContent() {
-    const [accounts, kursYuanStr, kursUsdStr] = await Promise.all([
-        getBankAccounts(),
+    const [kursYuanStr, kursUsdStr] = await Promise.all([
         getSystemSetting('KURS_YUAN'),
-        getSystemSetting('KURS_USD')
+        getSystemSetting('KURS_USD'),
     ]);
 
     const kursYuan = kursYuanStr ? parseFloat(kursYuanStr) : 0;
     const kursUsd = kursUsdStr ? parseFloat(kursUsdStr) : 0;
 
-    return <AccountSummaryList initialData={accounts} kursYuan={kursYuan} kursUsd={kursUsd} />
+    const result = await getBankAccountsPaginated({ page: 1, perPage: 50, kursYuan, kursUsd })
+
+    return (
+        <AccountSummaryList
+            initialItems={result.items}
+            initialTotalCount={result.totalCount}
+            initialTotalPages={result.totalPages}
+            initialTotals={result.totals}
+            serverSidePagination={true}
+            kursYuan={kursYuan}
+            kursUsd={kursUsd}
+        />
+    )
 }
 
 export default async function RingkasanAkunPage() {

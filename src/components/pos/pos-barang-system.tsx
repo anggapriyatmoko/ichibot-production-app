@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { processBatchCheckoutBarang } from '@/app/actions/pos-barang'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { processBatchCheckoutBarang, getPosBarangProductsPaginated } from '@/app/actions/pos-barang'
 import { getOrderHistory } from '@/app/actions/order'
-import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, Download, History } from 'lucide-react'
+import { Search, ShoppingCart, Minus, Plus, Trash2, X, Printer, Package, Download, History, Loader2 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import { cn } from '@/lib/utils'
@@ -41,30 +41,24 @@ type OrderHistoryItem = {
 }
 
 export default function POSBarangSystem({
-    productionProducts,
-    projectProducts,
+    initialProducts,
+    initialTotalCount,
+    perPage = 50,
     userName = 'Admin'
 }: {
-    productionProducts: any[],
-    projectProducts: any[],
+    initialProducts: any[],
+    initialTotalCount: number,
+    perPage?: number,
     userName?: string
 }) {
     const CART_STORAGE_KEY = 'pos_barang_cart'
 
-    // Combine and normalize products
-    const products = useMemo(() => {
-        const normalizedProduction = productionProducts.map(p => ({
-            ...p,
-            source: 'production' as const,
-            sku: p.sku || ''
-        }))
-        const normalizedProject = projectProducts.map(p => ({
-            ...p,
-            source: 'project' as const,
-            sku: p.sku || ''
-        }))
-        return [...normalizedProduction, ...normalizedProject]
-    }, [productionProducts, projectProducts])
+    // Server-backed product list. initialProducts is the first page rendered
+    // by the server; subsequent search / source-filter changes trigger a
+    // server refetch (see fetchServerProducts below).
+    const [products, setProducts] = useState<any[]>(initialProducts)
+    const [totalCount, setTotalCount] = useState<number>(initialTotalCount)
+    const [isServerLoading, setIsServerLoading] = useState(false)
 
     // Load cart from localStorage on mount
     const [cart, setCart] = useState<CartItem[]>(() => {
@@ -82,6 +76,7 @@ export default function POSBarangSystem({
     })
 
     const [searchTerm, setSearchTerm] = useState('')
+    const [pendingSearch, setPendingSearch] = useState('')
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [showReceipt, setShowReceipt] = useState(false)
@@ -234,24 +229,50 @@ export default function POSBarangSystem({
         window.open(whatsappUrl, '_blank')
     }
 
-    // Multi-word search
-    const filteredProducts = useMemo(() => {
-        let result = products
-
-        if (filterSource !== 'all') {
-            result = result.filter(p => p.source === filterSource)
-        }
-
-        const searchWords = searchTerm.toLowerCase().split(/\s+/).filter(w => w.length > 0)
-        if (searchWords.length > 0) {
-            result = result.filter(p => {
-                const productText = `${p.name} ${p.sku || ''}`.toLowerCase()
-                return searchWords.every(word => productText.includes(word))
+    // Server-backed product fetcher. Drops stale responses using reqIdRef
+    // so a slow earlier request can't overwrite a later one.
+    const reqIdRef = useRef(0)
+    const fetchServerProducts = useCallback(async (params: {
+        search?: string
+        source?: 'all' | 'production' | 'project'
+    }) => {
+        const reqId = ++reqIdRef.current
+        setIsServerLoading(true)
+        try {
+            const result = await getPosBarangProductsPaginated({
+                page: 1,
+                perPage,
+                search: params.search ?? searchTerm,
+                source: params.source ?? filterSource,
             })
+            if (reqId !== reqIdRef.current) return
+            setProducts(result.products)
+            setTotalCount(result.totalCount)
+        } catch (err) {
+            if (reqId === reqIdRef.current) console.error('POS fetch error:', err)
+        } finally {
+            if (reqId === reqIdRef.current) setIsServerLoading(false)
         }
+    }, [perPage, searchTerm, filterSource])
 
-        return result.sort((a, b) => a.name.localeCompare(b.name))
-    }, [products, searchTerm, filterSource])
+    // Server already filtered + sorted + limited. Render the list as-is.
+    const filteredProducts = products
+
+    const handleSearchCommit = () => {
+        setSearchTerm(pendingSearch)
+        fetchServerProducts({ search: pendingSearch })
+    }
+
+    const handleSearchClear = () => {
+        setPendingSearch('')
+        setSearchTerm('')
+        fetchServerProducts({ search: '' })
+    }
+
+    const handleSourceChange = (next: 'all' | 'production' | 'project') => {
+        setFilterSource(next)
+        fetchServerProducts({ source: next })
+    }
 
     const addToCart = (product: Product) => {
         if (product.stock <= 0) return
@@ -365,16 +386,32 @@ export default function POSBarangSystem({
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Search materials..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary transition-all font-medium shadow-sm text-sm"
+                            placeholder="Cari nama / SKU lalu tekan Enter..."
+                            value={pendingSearch}
+                            onChange={(e) => setPendingSearch(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleSearchCommit()
+                                }
+                            }}
+                            className="w-full pl-10 pr-10 py-2 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary transition-all font-medium shadow-sm text-sm"
                         />
+                        {(pendingSearch || searchTerm) && (
+                            <button
+                                type="button"
+                                onClick={handleSearchClear}
+                                aria-label="Hapus pencarian"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
                     </div>
                     {/* Source Toggle */}
                     <div className="flex gap-1 bg-background border border-border rounded-xl p-1 shadow-sm">
                         <button
-                            onClick={() => setFilterSource('all')}
+                            onClick={() => handleSourceChange('all')}
                             className={cn(
                                 "px-3 py-1 flex-1 text-xs font-bold rounded-lg transition-all",
                                 filterSource === 'all' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
@@ -383,7 +420,7 @@ export default function POSBarangSystem({
                             ALL
                         </button>
                         <button
-                            onClick={() => setFilterSource('production')}
+                            onClick={() => handleSourceChange('production')}
                             className={cn(
                                 "px-3 py-1 flex-1 text-xs font-bold rounded-lg transition-all",
                                 filterSource === 'production' ? "bg-amber-500 text-white" : "text-muted-foreground hover:bg-muted"
@@ -392,7 +429,7 @@ export default function POSBarangSystem({
                             PROD
                         </button>
                         <button
-                            onClick={() => setFilterSource('project')}
+                            onClick={() => handleSourceChange('project')}
                             className={cn(
                                 "px-3 py-1 flex-1 text-xs font-bold rounded-lg transition-all",
                                 filterSource === 'project' ? "bg-blue-600 text-white" : "text-muted-foreground hover:bg-muted"
@@ -403,7 +440,28 @@ export default function POSBarangSystem({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 pb-0 lg:p-4 bg-background/50">
+                <div className="flex items-center justify-between gap-2 px-4 py-1.5 text-[11px] text-muted-foreground border-b border-border bg-muted/20">
+                    <span className="flex items-center gap-1.5">
+                        {isServerLoading && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                        {searchTerm
+                            ? <>Menampilkan <strong className="text-foreground">{filteredProducts.length}</strong> dari <strong className="text-foreground">{totalCount.toLocaleString('id-ID')}</strong> hasil untuk &quot;{searchTerm}&quot;</>
+                            : <>Menampilkan {filteredProducts.length} dari <strong className="text-foreground">{totalCount.toLocaleString('id-ID')}</strong> produk (maks {perPage})</>
+                        }
+                    </span>
+                    {!searchTerm && totalCount > perPage && (
+                        <span className="italic">Gunakan pencarian untuk menemukan produk spesifik.</span>
+                    )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 pb-0 lg:p-4 bg-background/50 relative">
+                    {isServerLoading && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-3 py-2 rounded-lg border border-border shadow-sm">
+                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                Memuat data...
+                            </div>
+                        </div>
+                    )}
                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 pb-0 lg:pb-0">
                         {filteredProducts.map(product => (
                             <button

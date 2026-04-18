@@ -1,42 +1,11 @@
 import ProductList from '@/components/inventory/product-list'
-import prisma from '@/lib/prisma'
+import { getInventoryProductsPaginated } from '@/app/actions/product'
 import { getSession } from '@/lib/auth'
 
 
-export default async function InventoryPage({
-    searchParams
-}: {
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
-    const params = await searchParams
+export default async function InventoryPage() {
     const session: any = await getSession()
-    const page = typeof params.page === 'string' ? parseInt(params.page) : 1
-    const limit = typeof params.limit === 'string' ? parseInt(params.limit) : 20
-    const search = typeof params.search === 'string' ? params.search : ''
-    const sortBy = typeof params.sortBy === 'string' ? params.sortBy : 'createdAt'
-    const order = typeof params.order === 'string' ? params.order : 'desc'
-    const skip = (page - 1) * limit
-
-    const where: any = search ? {
-        AND: search.split(/\s+/).filter(Boolean).map(word => ({
-            OR: [
-                { name: { contains: word } },
-                { sku: { contains: word } }
-            ]
-        }))
-    } : {}
-
-    const [products, totalCount] = await prisma.$transaction([
-        prisma.product.findMany({
-            where,
-            orderBy: { [sortBy]: order },
-            take: limit,
-            skip: skip
-        }),
-        prisma.product.count({ where })
-    ])
-
-    const totalPages = Math.ceil(totalCount / limit)
+    const result = await getInventoryProductsPaginated({ page: 1, perPage: 20 })
 
     return (
         <div className="space-y-8">
@@ -46,11 +15,10 @@ export default async function InventoryPage({
             </div>
 
             <ProductList
-                initialProducts={products}
-                totalPages={totalPages}
-                currentPage={page}
-                itemsPerPage={limit}
-                totalItems={totalCount}
+                initialProducts={result.products}
+                initialTotalCount={result.totalCount}
+                initialTotalPages={result.totalPages}
+                serverSidePagination={true}
                 userRole={session?.user?.role}
             />
         </div>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Building2, Edit2, Trash2, Wallet, Info, Activity } from 'lucide-react'
-import { BankAccountData, deleteBankAccount } from '@/app/actions/bank-account'
+import { useState, useCallback } from 'react'
+import { Plus, Building2, Edit2, Trash2, Wallet, Info, Activity, Loader2 } from 'lucide-react'
+import { BankAccountData, deleteBankAccount, getBankAccountsPaginated } from '@/app/actions/bank-account'
 import { useAlert } from '@/hooks/use-alert'
 import { useConfirmation } from '@/components/providers/modal-provider'
 import AccountFormModal from './account-form-modal'
@@ -15,6 +15,7 @@ import {
     TableHead,
     TableCell,
     TableEmpty,
+    TablePagination,
     TableHeaderContent,
     TableResponsive,
     TableMobileCard,
@@ -24,13 +25,29 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
+type Totals = {
+    idr: { total: number; totalIdr: number; count: number }
+    usd: { total: number; totalIdr: number; count: number }
+    cny: { total: number; totalIdr: number; count: number }
+    totalBalanceIdr: number
+}
+
 export default function AccountSummaryList({
-    initialData,
+    initialItems,
+    initialTotalCount = 0,
+    initialTotalPages = 1,
+    initialTotals,
+    serverSidePagination = false,
     kursYuan = 0,
-    kursUsd = 0
+    kursUsd = 0,
 }: {
-    initialData: BankAccountData[],
-    kursYuan?: number,
+    initialItems: BankAccountData[]
+    initialTotalCount?: number
+    initialTotalPages?: number
+    initialTotals: Totals
+    /** Enable server-side pagination mode per `standard-table-get-data.md`. */
+    serverSidePagination?: boolean
+    kursYuan?: number
     kursUsd?: number
 }) {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false)
@@ -38,30 +55,53 @@ export default function AccountSummaryList({
     const { showError } = useAlert()
     const { showConfirmation } = useConfirmation()
 
+    // Server-side pagination state
+    const [items, setItems] = useState<BankAccountData[]>(initialItems)
+    const [totals, setTotals] = useState<Totals>(initialTotals)
+    const [totalCount, setTotalCount] = useState(initialTotalCount)
+    const [totalPages, setTotalPages] = useState(initialTotalPages)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(50)
+    const [isServerLoading, setIsServerLoading] = useState(false)
+
+    const fetchServerData = useCallback(async (params: { page?: number; perPage?: number }) => {
+        if (!serverSidePagination) return
+        setIsServerLoading(true)
+        try {
+            const result = await getBankAccountsPaginated({
+                page: params.page ?? currentPage,
+                perPage: params.perPage ?? itemsPerPage,
+                kursYuan,
+                kursUsd,
+            })
+            setItems(result.items)
+            setTotalCount(result.totalCount)
+            setTotalPages(result.totalPages)
+            setTotals(result.totals)
+            setCurrentPage(result.page)
+        } catch (error) {
+            console.error('Bank accounts fetch error:', error)
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, currentPage, itemsPerPage, kursYuan, kursUsd])
+
+    const refreshData = () => {
+        if (serverSidePagination) fetchServerData({})
+    }
+
     const getBalanceInIdr = (account: BankAccountData) => {
         if (account.currency === 'USD') return account.balance * kursUsd
         if (account.currency === 'CNY') return account.balance * kursYuan
         return account.balance
     }
 
-    const totalBalance = initialData.reduce((acc, curr) => acc + getBalanceInIdr(curr), 0)
-
-    // Currency breakdowns
-    const currencyBreakdown = (() => {
-        const idrAccounts = initialData.filter(a => a.currency === 'IDR')
-        const usdAccounts = initialData.filter(a => a.currency === 'USD')
-        const cnyAccounts = initialData.filter(a => a.currency === 'CNY')
-
-        const idrTotal = idrAccounts.reduce((acc, curr) => acc + curr.balance, 0)
-        const usdTotal = usdAccounts.reduce((acc, curr) => acc + curr.balance, 0)
-        const cnyTotal = cnyAccounts.reduce((acc, curr) => acc + curr.balance, 0)
-
-        return {
-            idr: { total: idrTotal, totalIdr: idrTotal, count: idrAccounts.length },
-            usd: { total: usdTotal, totalIdr: usdTotal * kursUsd, count: usdAccounts.length },
-            cny: { total: cnyTotal, totalIdr: cnyTotal * kursYuan, count: cnyAccounts.length },
-        }
-    })()
+    const totalBalance = totals.totalBalanceIdr
+    const currencyBreakdown = {
+        idr: totals.idr,
+        usd: totals.usd,
+        cny: totals.cny,
+    }
 
     const handleDelete = (account: BankAccountData) => {
         showConfirmation({
@@ -74,6 +114,8 @@ export default function AccountSummaryList({
                 const result = await deleteBankAccount(account.id)
                 if (!result.success) {
                     showError(result.error || 'Gagal menghapus akun')
+                } else {
+                    refreshData()
                 }
             }
         })
@@ -86,8 +128,17 @@ export default function AccountSummaryList({
 
     return (
         <div className="space-y-6">
+            <div className="relative">
+                {isServerLoading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-xl">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-3 py-2 rounded-lg border border-border shadow-sm">
+                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                            Memuat data...
+                        </div>
+                    </div>
+                )}
             <TableResponsive
-                data={initialData}
+                data={items}
                 header={
                     <TableHeaderContent
                         title="Ringkasan Akun Bank"
@@ -188,8 +239,8 @@ export default function AccountSummaryList({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {initialData.length > 0 ? (
-                            initialData.map((account) => (
+                        {items.length > 0 ? (
+                            items.map((account) => (
                                 <TableRow key={account.id}>
                                     <TableCell>
                                         <div className="flex flex-col">
@@ -272,8 +323,23 @@ export default function AccountSummaryList({
                 </Table>
             </TableResponsive>
 
+            {serverSidePagination && totalPages > 1 && (
+                <TablePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(p) => fetchServerData({ page: p })}
+                    itemsPerPage={itemsPerPage}
+                    totalCount={totalCount}
+                    onItemsPerPageChange={(val) => {
+                        setItemsPerPage(val)
+                        fetchServerData({ page: 1, perPage: val })
+                    }}
+                />
+            )}
+            </div>
+
             {/* Analytics Section */}
-            {initialData.length > 0 && (
+            {items.length > 0 && (
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
                         <div className="p-2 bg-primary/10 rounded-lg">
@@ -350,14 +416,14 @@ export default function AccountSummaryList({
 
                             <div className="mt-3 flex gap-2 p-2 bg-muted/50 rounded text-xs items-center">
                                 <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                                <span className="text-muted-foreground leading-tight">Total dari {initialData.length} akun bank aktif.</span>
+                                <span className="text-muted-foreground leading-tight">Total dari {totalCount} akun bank aktif.</span>
                             </div>
                         </div>
 
                         <div className="md:col-span-2 space-y-4">
                             <h3 className="text-sm font-semibold text-foreground border-b border-border pb-2">Distribusi Aset</h3>
                             <div className="space-y-3">
-                                {initialData.map((account) => {
+                                {items.map((account) => {
                                     const accountBalanceIdr = getBalanceInIdr(account)
                                     const percentage = totalBalance > 0 ? (accountBalanceIdr / totalBalance) * 100 : 0
                                     return (
@@ -398,7 +464,10 @@ export default function AccountSummaryList({
             <AccountFormModal
                 isOpen={isFormModalOpen}
                 initialData={editingAccount}
-                onClose={() => setIsFormModalOpen(false)}
+                onClose={() => {
+                    setIsFormModalOpen(false)
+                    refreshData()
+                }}
                 kursYuan={kursYuan}
                 kursUsd={kursUsd}
             />

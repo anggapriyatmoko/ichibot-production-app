@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createSparepartProject, deleteSparepartProject, addSparepartProjectStock, updateSparepartProject, reduceSparepartProjectStock, moveToProduction, getAllSparepartProjectsForExport } from '@/app/actions/sparepart-project'
+import { useState, useEffect, useCallback } from 'react'
+import { createSparepartProject, deleteSparepartProject, addSparepartProjectStock, updateSparepartProject, reduceSparepartProjectStock, moveToProduction, getAllSparepartProjectsForExport, getSparepartProjectsPaginated } from '@/app/actions/sparepart-project'
 import { getRacksWithUnusedDrawers } from '@/app/actions/rack'
-import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera, Pencil, X, FileDown } from 'lucide-react'
+import { Plus, Trash2, Search, PackagePlus, ImageIcon, Edit, PackageMinus, ChevronLeft, ChevronRight, ArrowRightCircle, Camera, Pencil, X, FileDown, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatNumber } from '@/utils/format'
 import Image from 'next/image'
@@ -48,10 +48,13 @@ type SparepartProject = {
 export default function SparepartProjectList({
     initialItems,
     userRole,
-    totalPages = 1,
-    currentPage = 1,
-    itemsPerPage = 20,
-    totalCount = 0
+    totalPages: totalPagesProp = 1,
+    currentPage: currentPageProp = 1,
+    itemsPerPage: initialItemsPerPage = 20,
+    totalCount: totalCountProp = 0,
+    serverSidePagination = false,
+    initialTotalCount = 0,
+    initialTotalPages = 1,
 }: {
     initialItems: SparepartProject[]
     userRole?: string
@@ -59,6 +62,12 @@ export default function SparepartProjectList({
     currentPage?: number
     itemsPerPage?: number
     totalCount?: number
+    /** Enable server-side pagination mode per `standard-table-get-data.md`.
+     *  When true, the component owns its page state and refetches via
+     *  `getSparepartProjectsPaginated` on page/perPage/search/sort change. */
+    serverSidePagination?: boolean
+    initialTotalCount?: number
+    initialTotalPages?: number
 }) {
     const router = useRouter()
     const { showConfirmation } = useConfirmation()
@@ -75,7 +84,62 @@ export default function SparepartProjectList({
     const [editingItem, setEditingItem] = useState<SparepartProject | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
+    const [pendingSearch, setPendingSearch] = useState('')
     const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null)
+
+    // Server-side pagination state (active when serverSidePagination=true)
+    const [localItems, setLocalItems] = useState<SparepartProject[]>(initialItems)
+    const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage)
+    const [serverCurrentPage, setServerCurrentPage] = useState(1)
+    const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount)
+    const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages)
+    const [isServerLoading, setIsServerLoading] = useState(false)
+
+    const fetchServerData = useCallback(async (params: {
+        page?: number
+        perPage?: number
+        search?: string
+    }) => {
+        if (!serverSidePagination) return
+        setIsServerLoading(true)
+        try {
+            const result = await getSparepartProjectsPaginated({
+                page: params.page ?? serverCurrentPage,
+                perPage: params.perPage ?? itemsPerPage,
+                search: params.search ?? searchTerm,
+            })
+            setLocalItems(result.items as SparepartProject[])
+            setServerTotalCount(result.totalCount)
+            setServerTotalPages(result.totalPages)
+            setServerCurrentPage(result.page)
+        } catch (error) {
+            console.error('Server fetch error:', error)
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, serverCurrentPage, itemsPerPage, searchTerm])
+
+    const handleSearchCommit = () => {
+        setSearchTerm(pendingSearch)
+        fetchServerData({ page: 1, search: pendingSearch })
+    }
+
+    const handleSearchClear = () => {
+        setPendingSearch('')
+        setSearchTerm('')
+        fetchServerData({ page: 1, search: '' })
+    }
+
+    /** Refresh the table after a CRUD action. In SSP mode we refetch the
+     *  current page; otherwise we fall back to refreshData() which
+     *  re-runs the page server component. */
+    const refreshData = () => {
+        if (serverSidePagination) {
+            fetchServerData({})
+        } else {
+            refreshData()
+        }
+    }
 
     // Stock Modal State
     const [stockModalItem, setStockModalItem] = useState<SparepartProject | null>(null)
@@ -279,7 +343,7 @@ export default function SparepartProjectList({
             type: 'confirm',
             action: async () => {
                 await deleteSparepartProject(id)
-                router.refresh()
+                refreshData()
             }
         })
     }
@@ -308,7 +372,7 @@ export default function SparepartProjectList({
             setAddImagePreview(null)
             setAddImageFile(null)
             setAddForm({ name: '', sku: '', stock: '', notes: '' })
-            router.refresh()
+            refreshData()
         } catch (error: any) {
             console.error(error)
             showError(simplifyErrorMessage(error))
@@ -335,7 +399,7 @@ export default function SparepartProjectList({
             setEditImagePreview(null)
             setEditImageFile(null)
             setRemoveImage(false)
-            router.refresh()
+            refreshData()
         } catch (error: any) {
             console.error(error)
             showError(simplifyErrorMessage(error))
@@ -351,7 +415,7 @@ export default function SparepartProjectList({
         await addSparepartProjectStock(stockModalItem.id, quantity)
         setIsLoading(false)
         setStockModalItem(null)
-        router.refresh()
+        refreshData()
     }
 
     async function handleTakeStock(formData: FormData) {
@@ -365,7 +429,7 @@ export default function SparepartProjectList({
             return
         }
         setTakeModalItem(null)
-        router.refresh()
+        refreshData()
     }
 
     async function handleMoveToProduction() {
@@ -379,7 +443,7 @@ export default function SparepartProjectList({
         }
         setMoveModalItem(null)
         setMoveSku('')
-        router.refresh()
+        refreshData()
     }
 
     async function handleExport() {
@@ -403,15 +467,19 @@ export default function SparepartProjectList({
         }
     }
 
-    // Filter items based on search
-    const filteredItems = initialItems.filter(item => {
-        if (!searchTerm) return true
-        const searchLower = searchTerm.toLowerCase()
-        return (
-            item.name.toLowerCase().includes(searchLower) ||
-            (item.notes && item.notes.toLowerCase().includes(searchLower))
-        )
-    })
+    // Filter items based on search. In SSP mode the server already returned
+    // the filtered page, so we render `localItems` directly; client-side
+    // mode keeps the old in-memory filter.
+    const filteredItems = serverSidePagination
+        ? localItems
+        : initialItems.filter(item => {
+            if (!searchTerm) return true
+            const searchLower = searchTerm.toLowerCase()
+            return (
+                item.name.toLowerCase().includes(searchLower) ||
+                (item.notes && item.notes.toLowerCase().includes(searchLower))
+            )
+        })
 
     return (
         <div className="space-y-6">
@@ -426,11 +494,30 @@ export default function SparepartProjectList({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="text"
-                                    placeholder="Search items..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
+                                    placeholder={serverSidePagination ? "Cari lalu tekan Enter..." : "Search items..."}
+                                    value={serverSidePagination ? pendingSearch : searchTerm}
+                                    onChange={(e) => {
+                                        if (serverSidePagination) setPendingSearch(e.target.value)
+                                        else setSearchTerm(e.target.value)
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (serverSidePagination && e.key === 'Enter') {
+                                            e.preventDefault()
+                                            handleSearchCommit()
+                                        }
+                                    }}
+                                    className="w-full pl-10 pr-10 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:border-primary outline-none transition-all shadow-sm"
                                 />
+                                {serverSidePagination && (pendingSearch || searchTerm) && (
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchClear}
+                                        aria-label="Hapus pencarian"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
                             <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide w-full sm:w-auto">
                                 <button
@@ -1405,7 +1492,15 @@ export default function SparepartProjectList({
                 )}
 
                 {/* Desktop Table View */}
-                <div className="hidden md:block">
+                <div className="relative hidden md:block">
+                    {isServerLoading && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-lg">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card px-3 py-2 rounded-lg border border-border shadow-sm">
+                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                Memuat data...
+                            </div>
+                        </div>
+                    )}
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -1528,16 +1623,25 @@ export default function SparepartProjectList({
                 </div>
 
                 <TablePagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
+                    currentPage={serverSidePagination ? serverCurrentPage : currentPageProp}
+                    totalPages={serverSidePagination ? serverTotalPages : totalPagesProp}
                     onPageChange={(page) => {
+                        if (serverSidePagination) {
+                            fetchServerData({ page })
+                            return
+                        }
                         const params = new URLSearchParams(window.location.search)
                         params.set('page', page.toString())
                         router.push(`/sparepart-project?${params.toString()}`)
                     }}
                     itemsPerPage={itemsPerPage}
-                    totalCount={totalCount}
+                    totalCount={serverSidePagination ? serverTotalCount : totalCountProp}
                     onItemsPerPageChange={(count) => {
+                        setItemsPerPage(count)
+                        if (serverSidePagination) {
+                            fetchServerData({ page: 1, perPage: count })
+                            return
+                        }
                         const params = new URLSearchParams(window.location.search)
                         params.set('page', '1')
                         params.set('limit', count.toString())

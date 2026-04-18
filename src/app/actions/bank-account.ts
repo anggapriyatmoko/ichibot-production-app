@@ -49,6 +49,99 @@ export async function getBankAccounts(): Promise<BankAccountData[]> {
     }
 }
 
+/**
+ * Paginated bank account list — follows the project standard in
+ * `standard-table-get-data.md`. Bank accounts are typically few (<50) and
+ * bank name is stored encrypted, so we don't expose a search field.
+ *
+ * The response includes a `totals` aggregate (total balance in IDR + per-
+ * currency breakdown) computed from ALL accounts — not just the current
+ * page — so the summary cards stay correct even when pagination activates.
+ */
+export async function getBankAccountsPaginated(params: {
+    page?: number
+    perPage?: number
+    kursYuan?: number
+    kursUsd?: number
+}) {
+    const page = Math.max(1, params.page ?? 1)
+    const perPage = Math.max(1, Math.min(200, params.perPage ?? 50))
+    const kursYuan = params.kursYuan ?? 0
+    const kursUsd = params.kursUsd ?? 0
+
+    try {
+        const [totalCount, allAccounts, pageAccounts] = await Promise.all([
+            prisma.bankAccount.count(),
+            // Fetch all rows for the totals aggregate. Safe because bank
+            // accounts are a naturally-small table (tens of rows).
+            prisma.bankAccount.findMany({
+                orderBy: { updatedAt: 'desc' },
+                select: {
+                    balanceEnc: true,
+                    currency: true,
+                },
+            }),
+            prisma.bankAccount.findMany({
+                orderBy: { updatedAt: 'desc' },
+                skip: (page - 1) * perPage,
+                take: perPage,
+            }),
+        ])
+
+        // Totals are always computed from ALL rows so summary cards stay
+        // correct when the user navigates between pages.
+        let idrTotal = 0, usdTotal = 0, cnyTotal = 0
+        let idrCount = 0, usdCount = 0, cnyCount = 0
+        for (const a of allAccounts as any[]) {
+            const bal = decryptNumber(a.balanceEnc)
+            const cur = a.currency || 'IDR'
+            if (cur === 'USD') { usdTotal += bal; usdCount++ }
+            else if (cur === 'CNY') { cnyTotal += bal; cnyCount++ }
+            else { idrTotal += bal; idrCount++ }
+        }
+        const totals = {
+            idr: { total: idrTotal, totalIdr: idrTotal, count: idrCount },
+            usd: { total: usdTotal, totalIdr: usdTotal * kursUsd, count: usdCount },
+            cny: { total: cnyTotal, totalIdr: cnyTotal * kursYuan, count: cnyCount },
+            totalBalanceIdr: idrTotal + (usdTotal * kursUsd) + (cnyTotal * kursYuan),
+        }
+
+        const items: BankAccountData[] = (pageAccounts as any[]).map((account) => ({
+            id: account.id,
+            bankName: decrypt(account.bankNameEnc) || 'Unknown Bank',
+            accountNumber: decrypt(account.accountNumberEnc) || '',
+            accountName: decrypt(account.accountNameEnc) || '',
+            balance: decryptNumber(account.balanceEnc),
+            currency: account.currency || 'IDR',
+            updatedAt: account.updatedAt,
+        }))
+
+        return {
+            items,
+            totalCount,
+            totalPages: Math.max(1, Math.ceil(totalCount / perPage)),
+            page,
+            perPage,
+            totals,
+        }
+    } catch (error) {
+        console.error('Failed to get paginated bank accounts:', error)
+        return {
+            items: [] as BankAccountData[],
+            totalCount: 0,
+            totalPages: 1,
+            page,
+            perPage,
+            totals: {
+                idr: { total: 0, totalIdr: 0, count: 0 },
+                usd: { total: 0, totalIdr: 0, count: 0 },
+                cny: { total: 0, totalIdr: 0, count: 0 },
+                totalBalanceIdr: 0,
+            },
+        }
+    }
+}
+
 export async function createBankAccount(data: {
     bankName: string,
     accountNumber: string,
