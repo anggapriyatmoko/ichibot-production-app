@@ -61,7 +61,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Startup script: waits for MySQL to be ready before starting the app.
 # Prevents "Service not reachable" on VPS restart when MySQL starts slower than the app.
-COPY --chmod=755 start.sh ./start.sh
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh && chown nextjs:nodejs ./start.sh
 
 USER nextjs
 
