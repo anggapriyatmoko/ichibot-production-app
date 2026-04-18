@@ -1,8 +1,10 @@
 # Standard Pattern: Server-Side Table Pagination
 
-## Catatan Penting
+## Catatan Penting (WAJIB DIBACA)
 
-Setiap kali membuat tabel baru atau mengoptimasi tabel yang sudah ada, **ikuti pola ini** agar pengambilan data konsisten dan performa optimal.
+1. **Fokus pada Data Fetching**: Implementasi ini **HANYA** mengubah cara pengambilan data dari database ke klien agar sesuai porsi yang ditampilkan (misal: hanya ambil 20 data untuk halaman aktif).
+2. **JANGAN Merubah Tampilan**: Dilarang keras merubah User Interface, struktur HTML tabel, kolom data, atau desain visual yang sudah ada. Tampilan dan fungsionalitas visual tabel **harus 100% sama persis** dengan versi client-side paginasi sebelumnya.
+3. Setiap kali mengoptimasi tabel yang sudah ada ke server-side pagination, **ikuti pola di bawah ini** agar performa ringan tanpa merusak *user experience*.
 
 ---
 
@@ -97,10 +99,12 @@ initialTotalPages?: number        // total halaman dari server
 - State `isServerLoading` → tampilkan overlay transparan di atas tabel
 - Overlay: `bg-background/60 backdrop-blur-[1px]` dengan spinner
 
-### 6. Data Display
-- `paginatedProducts = serverSidePagination ? localProducts : filteredProducts.slice(...)`
-- `totalPages = serverSidePagination ? serverTotalPages : Math.ceil(...)`
-- `totalCount = serverSidePagination ? serverTotalCount : filteredProducts.length`
+### 6. Data Display (Tanpa Merubah UI Header/Row)
+- JANGAN merubah `TableRow`, `TableCell`, warna, formating angka, atau letak tombol aksi di dalam component.
+- Cukup rubah variabel sumber data tabelnya saja dari array asli menjadi versi paginated lokal:
+  - `paginatedProducts = serverSidePagination ? localProducts : filteredProducts.slice(...)`
+  - `totalPages = serverSidePagination ? serverTotalPages : Math.ceil(...)`
+  - `totalCount = serverSidePagination ? serverTotalCount : filteredProducts.length`
 
 ### 7. Analisa / Statistik Section
 - **DISABLE** section yang membutuhkan semua data (seperti "Analisa Produk")

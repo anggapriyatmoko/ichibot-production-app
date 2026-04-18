@@ -386,3 +386,128 @@ export async function getExpenseImage(id: string) {
         return { success: false, error: 'Failed to fetch image' }
     }
 }
+
+
+export async function getExpensesPaginated(params: {
+    page?: number
+    perPage?: number
+    search?: string
+    sortKey?: string
+    sortDirection?: 'asc' | 'desc' | null
+    filters?: {
+        userId?: string
+        startDateIso?: string
+        endDateIso?: string
+        [key: string]: any
+    }
+}) {
+    try {
+        const { decrypt } = require('@/lib/crypto');
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        
+        const page = params.page || 1;
+        const perPage = params.perPage || 10;
+        const search = (params.search || '').trim().toLowerCase();
+        const sortKey = params.sortKey || 'date';
+        const sortDirection = params.sortDirection || 'desc';
+        const filters = params.filters || {};
+        
+        const whereClause: any = {};
+        if (filters.userId) {
+            whereClause.userId = filters.userId;
+        }
+        if (filters.startDateIso && filters.endDateIso) {
+            whereClause.date = {
+                gte: new Date(filters.startDateIso),
+                lte: new Date(filters.endDateIso)
+            };
+        }
+        
+        // Fetch ALL matching the date/userId filter to decrypt
+        const expenses = await prisma.expense.findMany({
+            where: whereClause,
+            include: {
+                category: true,
+                user: {
+                    select: {
+                        nameEnc: true
+                    }
+                }
+            },
+            orderBy: [
+                { date: 'desc' },
+                { createdAt: 'desc' }
+            ]
+        });
+
+        let decryptedExpenses = expenses.map((expense: any) => ({
+            ...expense,
+            amount: decrypt(expense.amountEnc) || '0',
+            name: decrypt(expense.nameEnc) || 'Unknown',
+            userName: expense.user ? decrypt(expense.user.nameEnc) || 'Unknown' : undefined,
+            hasImage: !!expense.image,
+        }));
+
+        // In-memory Search Filter
+        if (search) {
+            decryptedExpenses = decryptedExpenses.filter((e: any) => 
+                e.name.toLowerCase().includes(search) || 
+                (e.category && e.category.name.toLowerCase().includes(search)) ||
+                (e.userName && e.userName.toLowerCase().includes(search))
+            );
+        }
+
+        // In-memory Sort
+        if (sortKey) {
+            decryptedExpenses.sort((a: any, b: any) => {
+                let valA = a[sortKey];
+                let valB = b[sortKey];
+                
+                if (sortKey === 'amount') {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                } else if (sortKey === 'category') {
+                    valA = a.category?.name || '';
+                    valB = b.category?.name || '';
+                } else if (sortKey === 'user') {
+                    valA = a.userName || '';
+                    valB = b.userName || '';
+                } else if (sortKey === 'date') {
+                    valA = new Date(valA).getTime();
+                    valB = new Date(valB).getTime();
+                }
+
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        const totalCount = decryptedExpenses.length;
+        const totalPages = Math.ceil(totalCount / perPage);
+        
+        const totalAmount = decryptedExpenses.reduce((acc: number, curr: any) => {
+            if (curr.status === 'approved' || !curr.status) {
+                const val = parseFloat(curr.amount);
+                return acc + (isNaN(val) ? 0 : val);
+            }
+            return acc;
+        }, 0);
+
+        const paginated = decryptedExpenses.slice((page - 1) * perPage, page * perPage);
+
+        return {
+            success: true,
+            products: paginated,
+            totalCount,
+            totalPages,
+            totalAmount,
+            page,
+            perPage
+        }
+    } catch (error: any) {
+        console.error('Error fetching paginated expenses:', error);
+        return { success: false, error: 'Failed', products: [], totalCount: 0, totalPages: 0, totalAmount: 0 }
+    }
+}

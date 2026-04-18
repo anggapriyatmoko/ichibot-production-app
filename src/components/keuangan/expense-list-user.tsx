@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
 import { id as localeId } from 'date-fns/locale'
 import { Plus, Pencil, Trash2, Loader2, Save, X, ImageIcon, ChevronDown, Search, Activity, ReceiptText, Info, Calendar, Check, ScanLine, FileText } from 'lucide-react'
-import { getExpenses, createExpense, updateExpense, deleteExpense, approveExpense, createExpenseDraft, getExpenseImage, ExpenseData } from '@/app/actions/expense'
+import { getExpenses, getExpensesPaginated, createExpense, updateExpense, deleteExpense, approveExpense, createExpenseDraft, getExpenseImage, ExpenseData } from '@/app/actions/expense'
 import { useAlert } from '@/hooks/use-alert'
 import {
     Table,
@@ -46,6 +46,9 @@ interface Props {
     userId: string
     initialExpenses: Expense[]
     categories: Category[]
+    initialTotalCount?: number
+    initialTotalPages?: number
+    serverSidePagination?: boolean
 }
 
 // Helper functions for week picker
@@ -67,12 +70,18 @@ function getDateOfISOWeek(w: number, y: number) {
     return ISOweekStart
 }
 
-export default function ExpenseListUser({ userId, initialExpenses, categories }: Props) {
+export default function ExpenseListUser({ userId, initialExpenses, categories, initialTotalCount = 0, initialTotalPages = 0, serverSidePagination = false }: Props) {
     const { showAlert, showError } = useAlert()
     const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
     const [isLoadingData, setIsLoadingData] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
+    
+    // Server-side state
+    const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount)
+    const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages)
+    const [serverTotalAmount, setServerTotalAmount] = useState(0)
+    const [isServerLoading, setIsServerLoading] = useState(false)
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -144,9 +153,64 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
         }
     }, [periodType, selectedDate])
 
+    const isFirstRender = useRef(true)
+
+    const fetchServerData = useCallback(async (params: { page?: number, perPage?: number }) => {
+        if (!serverSidePagination) return;
+        setIsServerLoading(true)
+        try {
+            const start = startDate ? new Date(startDate) : undefined
+            if (start) start.setHours(0, 0, 0, 0)
+            const end = endDate ? new Date(endDate) : undefined
+            if (end) end.setHours(23, 59, 59, 999)
+
+            const res = await getExpensesPaginated({
+                page: params.page ?? currentPage,
+                perPage: params.perPage ?? itemsPerPage,
+                sortKey: 'date',
+                sortDirection: 'desc',
+                filters: {
+                   userId,
+                   startDateIso: start?.toISOString(),
+                   endDateIso: end?.toISOString()
+                }
+            })
+            if (res.success && res.products) {
+                setExpenses(res.products)
+                setServerTotalCount(res.totalCount)
+                setServerTotalPages(res.totalPages)
+                setServerTotalAmount(res.totalAmount)
+            } else {
+                showError(res.error || 'Gagal memuat rekapitulasi')
+            }
+        } catch (error) {
+            console.error(error)
+            showError('Terjadi kesalahan saat memuat data')
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, itemsPerPage, currentPage, startDate, endDate, userId, showError])
+
     // Auto-fetch on date change
     useEffect(() => {
-        fetchExpenses()
+        if (serverSidePagination) {
+            if (isFirstRender.current) {
+                isFirstRender.current = false;
+                const amt = initialExpenses.reduce((acc, curr) => {
+                    if (curr.status === 'approved' || !curr.status) {
+                        const val = parseFloat(curr.amount);
+                        return acc + (isNaN(val) ? 0 : val);
+                    }
+                    return acc;
+                }, 0);
+                setServerTotalAmount(amt);
+                return;
+            }
+            setCurrentPage(1);
+            fetchServerData({ page: 1 });
+        } else {
+            fetchExpenses()
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startDate, endDate])
 
@@ -440,10 +504,12 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
 
     const approvedExpenses = expenses.filter(e => e.status === 'approved' || !e.status)
 
-    const totalAmount = approvedExpenses.reduce((acc, current) => {
+    const _totalAmountClient = approvedExpenses.reduce((acc, current) => {
         const val = parseFloat(current.amount)
         return acc + (isNaN(val) ? 0 : val)
     }, 0)
+
+    const totalAmount = serverSidePagination ? serverTotalAmount : _totalAmountClient
 
     const categoryDistribution = approvedExpenses.reduce((acc, exp) => {
         const catName = exp.category?.name || 'Lainnya'
@@ -459,8 +525,8 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
     return (
         <div className="space-y-6">
             <TableResponsive
-                data={expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
-                loading={isLoadingData}
+                data={serverSidePagination ? expenses : expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+                loading={isLoadingData || isServerLoading}
                 header={
                     <TableHeaderContent
                         title="Riwayat Pengeluaran"
@@ -627,7 +693,7 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
                         {expenses.length === 0 ? (
                             <TableEmpty colSpan={7} message="Belum ada riwayat pengeluaran" />
                         ) : (
-                            expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => {
+                            (serverSidePagination ? expenses : expenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)).map((item, idx) => {
                                 const isScanning = item.status === 'scanning'
                                 const isDraft = item.status === 'draft'
 
@@ -742,16 +808,16 @@ export default function ExpenseListUser({ userId, initialExpenses, categories }:
             {expenses.length > 0 && (
                 <TablePagination
                     currentPage={currentPage}
-                    totalPages={Math.ceil(expenses.length / itemsPerPage)}
-                    onPageChange={setCurrentPage}
+                    totalPages={serverSidePagination ? serverTotalPages : Math.ceil(expenses.length / itemsPerPage)}
+                    onPageChange={(p) => { setCurrentPage(p); if (serverSidePagination) fetchServerData({ page: p }) }}
                     itemsPerPage={itemsPerPage}
-                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
-                    totalCount={expenses.length}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); if (serverSidePagination) fetchServerData({ page: 1, perPage: val }) }}
+                    totalCount={serverSidePagination ? serverTotalCount : expenses.length}
                 />
             )}
 
             {/* Analytics Section */}
-            {expenses.length > 0 && (
+            {expenses.length > 0 && !serverSidePagination && (
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
                         <div className="p-2 bg-primary/10 rounded-lg">

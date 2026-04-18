@@ -6,7 +6,7 @@ import { id as localeId } from 'date-fns/locale'
 import { Loader2, Search, ImageIcon, ChevronUp, ChevronDown, Activity, ReceiptText, Info, Users, PieChart, Pencil, Save, X, BarChart3, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
-import { getAllExpenses, updateExpenseAdmin, ExpenseData, getAllExpensesForYear, getExpenseImage } from '@/app/actions/expense'
+import { getAllExpenses, getExpensesPaginated, updateExpenseAdmin, ExpenseData, getAllExpensesForYear, getExpenseImage } from '@/app/actions/expense'
 import { getExpenseCategories } from '@/app/actions/expense-category'
 import { useAlert } from '@/hooks/use-alert'
 import {
@@ -64,12 +64,30 @@ function getDateOfISOWeek(w: number, y: number) {
     return ISOweekStart
 }
 
-export default function ExpenseDashboardAdmin() {
+interface Props {
+    initialExpenses?: Expense[]
+    initialTotalCount?: number
+    initialTotalPages?: number
+    serverSidePagination?: boolean
+}
+
+export default function ExpenseDashboardAdmin({ 
+    initialExpenses = [], 
+    initialTotalCount = 0, 
+    initialTotalPages = 0, 
+    serverSidePagination = false 
+}: Props = {}) {
     const { showAlert, showError } = useAlert()
-    const [expenses, setExpenses] = useState<Expense[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
+    const [isLoading, setIsLoading] = useState(false)
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(10)
+
+    // Server-side state
+    const [serverTotalCount, setServerTotalCount] = useState(initialTotalCount)
+    const [serverTotalPages, setServerTotalPages] = useState(initialTotalPages)
+    const [serverTotalAmount, setServerTotalAmount] = useState(0)
+    const [isServerLoading, setIsServerLoading] = useState(false)
 
     // Sort state (Default: terbaru = date desc)
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' })
@@ -157,6 +175,46 @@ export default function ExpenseDashboardAdmin() {
         }).format(num)
     }
 
+    const isFirstRender = React.useRef(true)
+
+    const fetchServerData = useCallback(async (params: { page?: number, perPage?: number, sortKey?: string, sortDirection?: 'asc'|'desc' }) => {
+        if (!serverSidePagination) return;
+        setIsServerLoading(true)
+        try {
+            const start = startDate ? new Date(startDate) : undefined
+            if (start) start.setHours(0, 0, 0, 0)
+            const end = endDate ? new Date(endDate) : undefined
+            if (end) end.setHours(23, 59, 59, 999)
+
+            const sKey = params.sortKey ?? sortConfig.key;
+            const sDir = params.sortDirection ?? sortConfig.direction;
+
+            const res = await getExpensesPaginated({
+                page: params.page ?? currentPage,
+                perPage: params.perPage ?? itemsPerPage,
+                sortKey: sKey,
+                sortDirection: sDir,
+                filters: {
+                   startDateIso: start?.toISOString(),
+                   endDateIso: end?.toISOString()
+                }
+            })
+            if (res.success && res.products) {
+                setExpenses(res.products)
+                setServerTotalCount(res.totalCount)
+                setServerTotalPages(res.totalPages)
+                setServerTotalAmount(res.totalAmount)
+            } else {
+                showError(res.error || 'Gagal memuat rekapitulasi')
+            }
+        } catch (error) {
+            console.error(error)
+            showError('Terjadi kesalahan saat memuat data')
+        } finally {
+            setIsServerLoading(false)
+        }
+    }, [serverSidePagination, itemsPerPage, currentPage, sortConfig, startDate, endDate, showError])
+
     const fetchExpenses = useCallback(async () => {
         setIsLoading(true)
         try {
@@ -199,8 +257,22 @@ export default function ExpenseDashboardAdmin() {
 
     // Fetch on initial load and when month changes
     useEffect(() => {
-        fetchExpenses()
-    }, [fetchExpenses])
+        if (serverSidePagination) {
+            if (isFirstRender.current) {
+                isFirstRender.current = false;
+                const amt = initialExpenses.reduce((acc, curr) => {
+                    const val = parseFloat(curr.amount);
+                    return acc + (isNaN(val) ? 0 : val);
+                }, 0);
+                setServerTotalAmount(amt);
+                return;
+            }
+            setCurrentPage(1);
+            fetchServerData({ page: 1 });
+        } else {
+            fetchExpenses()
+        }
+    }, [startDate, endDate])
 
     const fetchYearlyData = useCallback(async () => {
         if (!isChartCategoriesInitialized) return
@@ -322,10 +394,11 @@ export default function ExpenseDashboardAdmin() {
         cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
     )
 
-    const totalAmount = expenses.reduce((acc, current) => {
+    const _totalAmountClient = expenses.reduce((acc, current) => {
         const val = parseFloat(current.amount)
         return acc + (isNaN(val) ? 0 : val)
     }, 0)
+    const totalAmount = serverSidePagination ? serverTotalAmount : _totalAmountClient
 
     const categoryDistribution = expenses.reduce((acc, exp) => {
         const catName = exp.category?.name || 'Lainnya'
@@ -372,6 +445,10 @@ export default function ExpenseDashboardAdmin() {
             direction = 'desc'
         }
         setSortConfig({ key, direction })
+        if (serverSidePagination) {
+            setCurrentPage(1);
+            fetchServerData({ page: 1, sortKey: key, sortDirection: direction });
+        }
     }
 
     const sortedExpenses = [...expenses].sort((a, b) => {
@@ -423,8 +500,8 @@ export default function ExpenseDashboardAdmin() {
     return (
         <div className="space-y-4">
             <TableResponsive
-                data={sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
-                loading={isLoading}
+                data={serverSidePagination ? expenses : sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+                loading={isLoading || isServerLoading}
                 header={
                     <TableHeaderContent
                         title="Riwayat Semua Pengeluaran"
@@ -587,10 +664,10 @@ export default function ExpenseDashboardAdmin() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sortedExpenses.length === 0 && !isLoading ? (
+                        {sortedExpenses.length === 0 && (!isLoading && !isServerLoading) ? (
                             <TableEmpty colSpan={7} message="Tidak ada data pengeluaran pada rentang tanggal ini." />
                         ) : (
-                            sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, idx) => (
+                            (serverSidePagination ? expenses : sortedExpenses.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)).map((item, idx) => (
                                 <TableRow key={item.id}>
                                     <TableCell align="center" className="text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
                                     <TableCell className="font-medium whitespace-nowrap">
@@ -643,7 +720,7 @@ export default function ExpenseDashboardAdmin() {
                             ))
                         )}
                     </TableBody>
-                    {expenses.length > 0 && !isLoading && (
+                    {expenses.length > 0 && (!isLoading && !isServerLoading) && (
                         <TableFooter>
                             <TableRow hoverable={false}>
                                 <TableCell colSpan={5} className="text-right font-bold py-4 text-muted-foreground uppercase text-xs tracking-wider">
@@ -659,19 +736,19 @@ export default function ExpenseDashboardAdmin() {
                 </Table>
             </TableResponsive>
 
-            {expenses.length > 0 && !isLoading && (
+            {expenses.length > 0 && (!isLoading && !isServerLoading) && (
                 <TablePagination
                     currentPage={currentPage}
-                    totalPages={Math.ceil(sortedExpenses.length / itemsPerPage)}
-                    onPageChange={setCurrentPage}
+                    totalPages={serverSidePagination ? serverTotalPages : Math.ceil(sortedExpenses.length / itemsPerPage)}
+                    onPageChange={(p) => { setCurrentPage(p); if (serverSidePagination) fetchServerData({ page: p }) }}
                     itemsPerPage={itemsPerPage}
-                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
-                    totalCount={sortedExpenses.length}
+                    onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); if (serverSidePagination) fetchServerData({ page: 1, perPage: val }) }}
+                    totalCount={serverSidePagination ? serverTotalCount : sortedExpenses.length}
                 />
             )}
 
             {/* Analytics Section */}
-            {expenses.length > 0 && !isLoading && (
+            {expenses.length > 0 && (!isLoading && !isServerLoading) && !serverSidePagination && (
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm mt-6">
                     <div className="flex items-center gap-2 mb-6">
                         <div className="p-2 bg-primary/10 rounded-lg">

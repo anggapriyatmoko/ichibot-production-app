@@ -1,7 +1,7 @@
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import ExpenseListUser from '@/components/keuangan/expense-list-user'
-import { getExpenses } from '@/app/actions/expense'
+import { getExpenses, getExpensesPaginated } from '@/app/actions/expense'
 import { getExpenseCategories } from '@/app/actions/expense-category'
 
 export const metadata = {
@@ -28,11 +28,21 @@ export default async function PengeluaranPage() {
     endOfMonth.setHours(23, 59, 59, 999)
 
     const [expensesRes, categoriesRes] = await Promise.all([
-        getExpenses(userId, startOfMonth.toISOString(), endOfMonth.toISOString()),
+        getExpensesPaginated({
+            page: 1,
+            perPage: 10,
+            filters: {
+                userId,
+                startDateIso: startOfMonth.toISOString(),
+                endDateIso: endOfMonth.toISOString(),
+            }
+        }),
         getExpenseCategories()
     ])
 
-    const expenses = expensesRes.success && expensesRes.data ? expensesRes.data : []
+    const expenses = expensesRes.success && expensesRes.products ? expensesRes.products : []
+    const totalCount = expensesRes.success ? expensesRes.totalCount : 0
+    const totalPages = expensesRes.success ? expensesRes.totalPages : 0
     const categories = categoriesRes.success && categoriesRes.data ? categoriesRes.data : []
 
     return (
@@ -42,7 +52,14 @@ export default async function PengeluaranPage() {
                 <p className="text-muted-foreground">Catat dan kelola riwayat pengeluaran pribadi Anda.</p>
             </div>
 
-            <ExpenseListUser userId={userId} initialExpenses={expenses} categories={categories} />
+            <ExpenseListUser 
+                userId={userId} 
+                initialExpenses={expenses} 
+                initialTotalCount={totalCount}
+                initialTotalPages={totalPages}
+                serverSidePagination={true}
+                categories={categories} 
+            />
         </div>
     )
 }
